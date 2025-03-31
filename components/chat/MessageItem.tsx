@@ -39,12 +39,12 @@ export function MessageItem({ message }: MessageItemProps) {
             return (
               <pre key={index} className="bg-gray-100 dark:bg-gray-900 p-3 rounded-md overflow-x-auto my-2 text-xs font-mono">
                 {language && <code className="block text-muted-foreground mb-1">{language}</code>}
-                <code>{code}</code>
+                <code className="whitespace-pre-wrap break-words">{code}</code>
               </pre>
             );
           } else {
             // Regular text part
-            return <p key={index} className="whitespace-pre-wrap leading-relaxed">{part}</p>;
+            return <p key={index} className="whitespace-pre-wrap leading-relaxed break-words">{part}</p>;
           }
         })}
       </div>
