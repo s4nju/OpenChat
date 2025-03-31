@@ -126,12 +126,6 @@ export default function ChatApp() {
     }
   }, [])
 
-  // Save sidebar state to localStorage
-  useEffect(() => {
-    localStorage.setItem("sidebar_collapsed", String(isSidebarCollapsed));
-  }, [isSidebarCollapsed]);
-
-
   // --- Functions ---
 
   const fetchModels = async (currentApiKey: string) => {
@@ -377,18 +371,21 @@ export default function ChatApp() {
 
   return (
     <TooltipProvider> {/* Keep TooltipProvider wrapping the whole layout */}
-      <div className="flex h-screen w-screen bg-background text-foreground">
-        {/* --- Sidebar --- */}
-        <Sidebar
-          isCollapsed={isSidebarCollapsed}
-          onNewChat={clearChat}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onToggleSettings={toggleSettings} // Pass the function to trigger sheet
-          onToggleSidebar={toggleSidebar}
-        />
+      {/* Add relative positioning context and overflow-hidden */}
+      <div className="relative flex h-screen w-screen bg-background text-foreground overflow-hidden">
+        {/* --- Sidebar Wrapper for Absolute Positioning --- */}
+        <div className="absolute top-0 left-0 h-full z-10"> {/* Added wrapper with absolute positioning */}
+          <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onNewChat={clearChat}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onToggleSettings={toggleSettings} // Pass the function to trigger sheet
+            onToggleSidebar={toggleSidebar}
+          />
+        </div> {/* Close sidebar wrapper */}
 
-        {/* --- Settings Sheet --- */}
+        {/* --- Settings Sheet (Keep outside the main content flow) --- */}
         <SettingsSheet
           isOpen={settingsOpen}
           onOpenChange={setSettingsOpen}
@@ -404,8 +401,12 @@ export default function ChatApp() {
           selectedModel={selectedModel}
         />
 
-        {/* --- Main Chat Area --- */}
-        <div className="flex flex-1 flex-col">
+        {/* --- Main Chat Area (Adjust margin based on sidebar state) --- */}
+        {/* Added transition-all, duration, ease, and dynamic margin */}
+        <div className={cn(
+            "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+            isSidebarCollapsed ? 'ml-16' : 'ml-64' // Dynamic margin
+          )}>
           {/* Chat Header */}
           <ChatHeader
             selectedModel={selectedModel}
@@ -432,8 +433,8 @@ export default function ChatApp() {
             onStopGenerating={handleStopGenerating}
             isLoading={chatLoading}
           />
-        </div>
-      </div>
+        </div> {/* Close main chat area div */}
+      </div> {/* Close main container div */}
     </TooltipProvider>
   )
 }
