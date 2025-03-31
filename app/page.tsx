@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/sheet"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils" // Import cn utility
+import { useIsMobile } from "@/hooks/use-mobile" // <-- Import useIsMobile
 
 // Types (keep as is)
 interface Message {
@@ -73,6 +74,7 @@ export default function ChatApp() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const { theme, setTheme } = useTheme()
+  const isMobile = useIsMobile(); // <-- Use the hook
 
   // --- Effects ---
   // Load API key & theme from localStorage on mount
@@ -82,10 +84,32 @@ export default function ChatApp() {
       setApiKey(storedApiKey)
       setTempApiKey(storedApiKey)
     }
-    const collapsed = localStorage.getItem("sidebar_collapsed") === "true";
-    setIsSidebarCollapsed(collapsed);
+    // Fetch models regardless of sidebar state
     fetchModels(storedApiKey || "")
-  }, [])
+  }, []) // This effect only handles API key loading and initial model fetch
+
+  // Effect to set initial sidebar state based on mobile status and localStorage
+  useEffect(() => {
+    // Only run when isMobile is determined (not undefined)
+    if (isMobile !== undefined) {
+      const storedCollapsed = localStorage.getItem("sidebar_collapsed") === "true";
+      // Prioritize mobile: if mobile, collapse. Otherwise, use stored value.
+      setIsSidebarCollapsed(isMobile ? true : storedCollapsed);
+    }
+  }, [isMobile]); // Dependency array ensures this runs when isMobile changes (from undefined to boolean)
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    // Avoid saving during the initial render cycle when isMobile might be undefined
+    // or when the initial state is being set by the effect above.
+    // We only want to save *user-initiated* changes or changes after the initial mobile check.
+    if (isMobile !== undefined) {
+       localStorage.setItem("sidebar_collapsed", String(isSidebarCollapsed));
+    }
+    // Note: Depending only on isSidebarCollapsed might be sufficient if the initial
+    // state setting effect runs reliably before any user interaction.
+    // Adding isMobile ensures we don't save the potentially incorrect default state.
+  }, [isSidebarCollapsed, isMobile]);
 
   // Fetch models when API key changes
   useEffect(() => {
