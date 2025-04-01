@@ -26,7 +26,8 @@ export function ChatInput({
     // Apply conditional fixed positioning and padding
     <div className={cn(
       "border-t border-border bg-background",
-      isMobile ? "fixed bottom-0 left-0 right-0 p-2 z-20" : "p-4 md:p-6" // Added z-index for mobile
+      // Add bottom safe area padding to the existing padding for mobile
+      isMobile ? "fixed bottom-0 left-0 right-0 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-20" : "p-4 md:p-6"
     )}>
       {/* Apply conditional width */}
       <form

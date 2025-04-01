@@ -22,9 +22,8 @@ export function MessageList({
   messagesEndRef,
   isMobile, // <-- Destructure isMobile
 }: MessageListProps) {
-  // Estimate padding based on typical input height + some buffer
-  // Adjust "pb-24" if the input height changes significantly
-  const bottomPadding = isMobile ? "pb-24" : "";
+  // Estimate padding based on typical input height (pb-24 ~ 6rem) + safe area
+  const bottomPadding = isMobile ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "";
 
   return (
     // Apply conditional padding and ensure vertical scroll

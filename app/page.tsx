@@ -410,7 +410,8 @@ export default function ChatApp() {
           )}
 
           {/* --- Main Chat Area (Flex Child) --- */}
-          <div className="flex flex-1 flex-col overflow-hidden"> {/* Removed margin, added overflow-hidden */}
+          {/* Add top safe area padding */}
+          <div className="flex flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top)]">
             {/* Chat Header */}
             <ChatHeader
               selectedModel={selectedModel}
@@ -451,8 +452,8 @@ export default function ChatApp() {
           <SheetHeader>
             <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
           </SheetHeader>
-          {/* Replicate Sidebar content structure here */}
-          <div className="flex h-full flex-col p-2">
+          {/* Replicate Sidebar content structure here, adding safe area padding to existing p-2 */}
+          <div className="flex h-full flex-col p-2 pt-[calc(0.5rem+env(safe-area-inset-top))] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[calc(0.5rem+env(safe-area-inset-left))]">
             {/* Two Separate Buttons with same variant */}
             <div className="flex items-center gap-2 mb-4"> {/* Use gap-2 */}
               {/* Button 1: + New Chat */}
