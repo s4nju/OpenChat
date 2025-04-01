@@ -4,42 +4,21 @@ import type React from "react" // Ensure React type import is present
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-// Removed Card imports as we are not using the main card structure anymore
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Loader2,
-  Send,
+
   Settings,
-  MessageSquare,
-  AlertCircle,
-  StopCircle,
   Plus,
   Sun,
   Moon,
-  User,
-  Bot,
-  PanelLeftClose, // Icon for collapsing
-  PanelRightClose, // Icon for expanding
-  Menu, // <-- Add Menu icon for mobile trigger
   X, // <-- Add X icon for close button
 } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-// Re-add missing Tooltip imports and keep TooltipProvider
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   Sheet,
   SheetContent, // Keep Sheet components for Settings
   SheetHeader,  // Remove duplicate imports
   SheetTitle,   // Remove duplicate imports
-  SheetTrigger, // Keep SheetTrigger if needed elsewhere, otherwise remove if only used in Sidebar
-  SheetFooter,
-  SheetClose,
 } from "@/components/ui/sheet"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
@@ -117,10 +96,16 @@ export default function ChatApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey])
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when new user messages are added or on initial load
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    // Only scroll automatically for user messages or when chat is empty
+    const isUserMessageAdded = messages.length > 0 && messages[messages.length - 1].role === "user";
+    const isEmpty = messages.length === 0;
+    
+    if ((isUserMessageAdded || isEmpty) && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages.length]); // Only depend on message count, not content
 
   // Cleanup function for abort controller
   useEffect(() => {
@@ -327,20 +312,27 @@ export default function ChatApp() {
 
               if (contentChunk) {
                 if (firstChunk) {
-                  setMessages((prev) => [...prev, assistantMessage])
+                  setMessages((prev) => [...prev, { ...assistantMessage, content: contentChunk }])
                   firstChunk = false
-                }
-                setMessages((prev) => {
-                  const lastMsgIndex = prev.length - 1
-                  if (lastMsgIndex >= 0 && prev[lastMsgIndex].role === "assistant") {
-                    const updatedMsg = {
-                      ...prev[lastMsgIndex],
-                      content: prev[lastMsgIndex].content + contentChunk,
+                  // Scroll to bottom with first chunk
+                  messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" })
+                } else {
+                  setMessages((prev) => {
+                    const lastMsgIndex = prev.length - 1
+                    if (lastMsgIndex >= 0 && prev[lastMsgIndex].role === "assistant") {
+                      const updatedMsg = {
+                        ...prev[lastMsgIndex],
+                        content: prev[lastMsgIndex].content + contentChunk,
+                      }
+                      // Schedule a scroll for after this update
+                      setTimeout(() => {
+                        messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" })
+                      }, 0)
+                      return [...prev.slice(0, lastMsgIndex), updatedMsg]
                     }
-                    return [...prev.slice(0, lastMsgIndex), updatedMsg]
-                  }
-                  return prev
-                })
+                    return prev
+                  })
+                }
               }
             } catch (e) {
               console.error("Error parsing SSE data:", e, "Data:", data)
@@ -396,7 +388,7 @@ export default function ChatApp() {
       {/* Mobile Sheet Wrapper */}
       <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
         {/* Main Layout Container */}
-        <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden">
+        <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden overscroll-none">
           {/* --- Desktop Sidebar (Conditionally Rendered) --- */}
           {!isMobile && (
             <Sidebar

@@ -27,8 +27,13 @@ export function MessageList({
 
   return (
     // Apply conditional padding and ensure vertical scroll
-    <ScrollArea className={cn("flex-1 p-2 md:p-4 overflow-y-auto", bottomPadding)}>
-      <div className="max-w-3xl mx-auto space-y-6">
+    <ScrollArea className={cn(
+      "flex-1 p-2 md:p-4 overflow-y-auto",
+      "overscroll-none scroll-smooth",  // Add smooth scrolling globally
+      "scroll-pt-4 scroll-pb-24", // Add scroll padding
+      bottomPadding
+    )}>
+      <div className="max-w-3xl mx-auto space-y-6 relative">
         {error && !chatLoading && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
