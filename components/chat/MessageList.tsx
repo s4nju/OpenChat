@@ -22,7 +22,7 @@ export function MessageList({
   messagesEndRef,
 }: MessageListProps) {
   return (
-    <ScrollArea className="flex-1 p-4 md:p-6">
+    <ScrollArea className="flex-1 p-2 md:p-4 overflow-hidden"> {/* Reduced padding, added overflow */}
       <div className="max-w-3xl mx-auto space-y-6">
         {error && !chatLoading && (
           <Alert variant="destructive" className="mb-4">
