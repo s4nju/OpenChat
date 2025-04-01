@@ -77,7 +77,7 @@ export function SettingsSheet({
             Refresh Models
           </Button>
           {/* Debug Info */}
-          <div className="mt-6 p-4 border rounded-md bg-muted/50 dark:bg-gray-800/50">
+          <div className="mt-6 p-4 border rounded-md bg-muted">
             <h3 className="font-medium mb-2 text-sm">Connection Details</h3>
             <div className="text-xs space-y-1 text-muted-foreground">
               <p>API Key Set: {apiKey ? "Yes" : "No"}</p>

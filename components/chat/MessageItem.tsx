@@ -1,5 +1,4 @@
 import React from "react";
-import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/lib/types";
 
@@ -17,10 +16,10 @@ export function MessageItem({ message }: MessageItemProps) {
 
       {/* Message Content Bubble */}
       <div className={cn(
-        "rounded-lg p-3 text-sm overflow-hidden", // Base styles without max-width
+        "rounded-lg p-3 text-sm overflow-hidden",
         message.role === 'user'
-        ? 'max-w-[85%] md:max-w-[75%] bg-primary text-primary-foreground' // User specific styles including max-width
-        : 'bg-transparent' // Assistant specific styles (no max-width here)
+          ? 'bg-primary text-primary-foreground max-w-[85%] md:max-w-[75%]' // Added max-width for user messages
+          : 'bg-transparent w-full' // Keep full width for assistant messages
       )}
       >
       {/* Basic Markdown-like rendering for code blocks */}

@@ -27,8 +27,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Add overflow-hidden to prevent body scroll when sidebar/sheet is open */}
-      <body className={`${inter.className} overflow-hidden`}>
+      {/* Remove overflow-hidden to rely on Sheet/Dialog scroll locking */}
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

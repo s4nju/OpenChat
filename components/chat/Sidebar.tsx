@@ -39,7 +39,7 @@ export function Sidebar({
     <TooltipProvider>
       <div
         className={cn(
-          "flex h-full flex-col bg-muted p-2 dark:bg-gray-900 border-r border-border transition-all duration-300 ease-in-out overflow-hidden", // Removed /50 opacity
+          "flex h-full flex-col bg-muted p-2 border-r border-border transition-all duration-300 ease-in-out overflow-hidden",
           isCollapsed ? "w-16 px-1" : "w-64" // Adjust width and padding when collapsed
         )}
       >
