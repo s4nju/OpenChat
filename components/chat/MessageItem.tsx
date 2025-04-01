@@ -14,12 +14,6 @@ export function MessageItem({ message }: MessageItemProps) {
         message.role === 'user' ? 'justify-end' : 'justify-start'
       )}
     >
-      {/* AI Icon (Rendered first for AI) */}
-      {message.role === 'assistant' && (
-        <div className="flex-shrink-0 p-1.5 rounded-full bg-muted">
-          <Bot className="w-4 h-4" />
-        </div>
-      )}
 
       {/* Message Content Bubble */}
       <div className={cn(
@@ -49,12 +43,6 @@ export function MessageItem({ message }: MessageItemProps) {
         })}
       </div>
 
-      {/* User Icon (Rendered last for User) */}
-       {message.role === 'user' && (
-         <div className="flex-shrink-0 p-1.5 rounded-full bg-primary text-primary-foreground">
-           <User className="w-4 h-4" />
-         </div>
-       )}
     </div>
   );
 }
