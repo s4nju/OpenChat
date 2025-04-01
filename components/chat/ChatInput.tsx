@@ -20,7 +20,7 @@ export function ChatInput({
   isLoading,
 }: ChatInputProps) {
   return (
-    <div className="p-4 md:p-6 border-t border-border bg-background">
+    <div className="p-4 md:p-6 border-border bg-background">
       <form
           onSubmit={onSubmit}
           className="max-w-3xl mx-auto flex items-end gap-2 relative"
