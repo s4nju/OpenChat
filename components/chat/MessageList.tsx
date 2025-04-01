@@ -52,9 +52,6 @@ export function MessageList({
         {/* Specific loading indicator for assistant response */}
         {chatLoading && (
           <div className="flex w-full items-start gap-3 justify-start"> {/* Always justify-start for loading */}
-             <div className="flex-shrink-0 p-1.5 rounded-full bg-muted">
-                <Bot className="w-4 h-4" />
-             </div>
             <div className="flex-1 rounded-lg p-3 bg-muted/50 dark:bg-gray-800/50 max-w-[80%]">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
