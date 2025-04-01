@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Bot, Loader2 } from "lucide-react"; // Remove User icon import
+import { AlertCircle, Bot } from "lucide-react"; // Remove Loader2 import
 import { cn } from "@/lib/utils";
 import type { Message } from "@/lib/types";
 import { MessageItem } from "./MessageItem"; // <-- Import the actual MessageItem
@@ -22,18 +22,19 @@ export function MessageList({
   messagesEndRef,
   isMobile, // <-- Destructure isMobile
 }: MessageListProps) {
-  // Estimate padding based on typical input height (pb-24 ~ 6rem) + safe area
-  const bottomPadding = isMobile ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "";
+  // For mobile, we need bottom padding to prevent content from being hidden under the fixed input
+  // For desktop, we want no padding for seamless integration
+  const bottomPadding = isMobile ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : "";
 
   return (
-    // Apply conditional padding and ensure vertical scroll
+    // Keep pb-0 for desktop, but use the dynamic bottomPadding for mobile
     <ScrollArea className={cn(
-      "flex-1 p-2 md:p-4 overflow-y-auto",
+      "flex-1 px-2 pt-2 md:px-4 md:pt-4 overflow-y-auto",
       "overscroll-none scroll-smooth",  // Add smooth scrolling globally
-      "scroll-pt-4 scroll-pb-24", // Add scroll padding
-      bottomPadding
+      "scroll-pt-4", // Removed scroll-pb-24 padding
+      bottomPadding // This will apply padding only on mobile
     )}>
-      <div className="max-w-3xl mx-auto space-y-6 relative">
+      <div className="max-w-3xl mx-auto space-y-3 relative">
         {error && !chatLoading && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -54,18 +55,14 @@ export function MessageList({
             <MessageItem key={message.id} message={message} />
           ))
         )}
-        {/* Specific loading indicator for assistant response */}
-        {chatLoading && (
-          <div className="flex w-full items-start gap-3 justify-start"> {/* Always justify-start for loading */}
-            <div className="flex-1 rounded-lg p-3 bg-muted/50 dark:bg-gray-800/50 max-w-[80%]">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>AI is thinking...</span>
-              </div>
-            </div>
-          </div>
+        
+        {/* Add extra phantom space at the end for mobile view only */}
+        {isMobile && messages.length > 0 && (
+          <div className="h-4" /> // 2rem (32px) of invisible space
         )}
-        <div ref={messagesEndRef} />
+        
+        {/* Scrolling anchor point */}
+        <div ref={messagesEndRef} className={isMobile ? "h-2" : ""} />
       </div>
     </ScrollArea>
   );
