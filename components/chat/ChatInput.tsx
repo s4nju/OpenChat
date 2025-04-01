@@ -25,9 +25,11 @@ export function ChatInput({
   return (
     // Apply conditional fixed positioning and padding
     <div className={cn(
-      "border-t border-border bg-background",
-      // Add bottom safe area padding to the existing padding for mobile
-      isMobile ? "fixed bottom-0 left-0 right-0 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-20" : "p-4 md:p-6"
+      "bg-background",
+      // Add bottom safe area padding to the existing padding for mobile, with top padding set to zero
+      isMobile 
+      ? "fixed bottom-0 left-0 right-0 pt-2 pr-2 pl-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-20" 
+      : "p-4 pt-2 md:p-6 md:pt-2"
     )}>
       {/* Apply conditional width */}
       <form
@@ -39,7 +41,7 @@ export function ChatInput({
       >
         <Textarea
           id="chat-input"
-          placeholder="Message OpenChat..."
+          placeholder="Ask Anything..."
           value={input}
           onChange={onInputChange}
           className="flex-1 resize-none pr-16 min-h-[40px] max-h-[200px] text-sm py-2"
@@ -77,12 +79,6 @@ export function ChatInput({
           )}
         </div>
       </form>
-      {/* Conditionally render disclaimer - Removed duplicated closing tags */}
-       {!isMobile && (
-         <p className="text-xs text-center text-muted-foreground mt-2">
-            OpenChat can make mistakes. Consider checking important information.
-         </p>
-       )}
     </div>
   );
 }
