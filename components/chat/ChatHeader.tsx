@@ -28,7 +28,7 @@ export function ChatHeader({
   onToggleMobileSheet, // <-- Destructure handler
 }: ChatHeaderProps) {
   return (
-    <div className="flex w-full items-center justify-between p-2 border-b border-border h-14"> {/* Ensure consistent height, justify-between */}
+    <div className="flex w-full items-center justify-between pt-[calc(0.5rem+env(safe-area-inset-top))] pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-2 border-b border-border h-14"> {/* Apply safe area padding */}
       <div className="flex items-center gap-2"> {/* Group trigger and select */}
         {/* Mobile Sheet Trigger */}
         {isMobile && (
