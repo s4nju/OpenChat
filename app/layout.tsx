@@ -1,15 +1,23 @@
 // app/layout.tsx
 import type React from "react"
 import "./globals.css" // Make sure this imports the updated globals.css
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next" // Import Viewport
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider" // Ensure this path is correct
 
 const inter = Inter({ subsets: ["latin"] })
 
+// Define viewport settings separately
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
   title: "OpenChat", // Updated title
   description: "A secure client-side AI chat application using OpenRouter", // Keep description relevant
+  // Viewport settings removed from here
 }
 
 export default function RootLayout({
