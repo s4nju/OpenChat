@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Send, StopCircle } from "lucide-react";
+import { cn } from "@/lib/utils"; // <-- Add import for cn
 
 interface ChatInputProps {
   input: string;
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onSubmit: (e?: React.FormEvent<HTMLFormElement>) => void;
   onStopGenerating: () => void;
-  isLoading: boolean; // Renamed from chatLoading for clarity in this context
+  isLoading: boolean;
+  isMobile: boolean; // <-- Add isMobile prop
 }
 
 export function ChatInput({
@@ -18,15 +20,24 @@ export function ChatInput({
   onSubmit,
   onStopGenerating,
   isLoading,
+  isMobile, // <-- Destructure isMobile
 }: ChatInputProps) {
   return (
-    <div className="p-4 md:p-6 border-border bg-background">
+    // Apply conditional fixed positioning and padding
+    <div className={cn(
+      "border-t border-border bg-background",
+      isMobile ? "fixed bottom-0 left-0 right-0 p-2 z-20" : "p-4 md:p-6" // Added z-index for mobile
+    )}>
+      {/* Apply conditional width */}
       <form
           onSubmit={onSubmit}
-          className="max-w-3xl mx-auto flex items-end gap-2 relative"
+          className={cn(
+            "flex items-end gap-2 relative",
+            isMobile ? "w-full" : "max-w-3xl mx-auto"
+          )}
       >
         <Textarea
-          id="chat-input" // Keep ID if needed for external label or focus management
+          id="chat-input"
           placeholder="Message OpenChat..."
           value={input}
           onChange={onInputChange}
@@ -42,6 +53,7 @@ export function ChatInput({
           }}
           disabled={isLoading}
         />
+        {/* Buttons remain absolutely positioned relative to the form */}
         <div className="absolute bottom-1.5 right-1.5 flex items-center">
           {isLoading ? (
             <Tooltip>
@@ -64,9 +76,12 @@ export function ChatInput({
           )}
         </div>
       </form>
-       <p className="text-xs text-center text-muted-foreground mt-2">
-          OpenChat can make mistakes. Consider checking important information.
-       </p>
+      {/* Conditionally render disclaimer - Removed duplicated closing tags */}
+       {!isMobile && (
+         <p className="text-xs text-center text-muted-foreground mt-2">
+            OpenChat can make mistakes. Consider checking important information.
+         </p>
+       )}
     </div>
   );
 }

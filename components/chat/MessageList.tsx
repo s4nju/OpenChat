@@ -11,8 +11,8 @@ interface MessageListProps {
   messages: Message[];
   error: string | null;
   chatLoading: boolean;
-  // Explicitly match the ref type from the parent component
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  isMobile: boolean; // <-- Add isMobile prop
 }
 
 export function MessageList({
@@ -20,9 +20,15 @@ export function MessageList({
   error,
   chatLoading,
   messagesEndRef,
+  isMobile, // <-- Destructure isMobile
 }: MessageListProps) {
+  // Estimate padding based on typical input height + some buffer
+  // Adjust "pb-24" if the input height changes significantly
+  const bottomPadding = isMobile ? "pb-24" : "";
+
   return (
-    <ScrollArea className="flex-1 p-2 md:p-4 overflow-hidden"> {/* Reduced padding, added overflow */}
+    // Apply conditional padding and ensure vertical scroll
+    <ScrollArea className={cn("flex-1 p-2 md:p-4 overflow-y-auto", bottomPadding)}>
       <div className="max-w-3xl mx-auto space-y-6">
         {error && !chatLoading && (
           <Alert variant="destructive" className="mb-4">

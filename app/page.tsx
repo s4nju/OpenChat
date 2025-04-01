@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import type React from "react" // Ensure React type import is present
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,8 @@ import {
   Bot,
   PanelLeftClose, // Icon for collapsing
   PanelRightClose, // Icon for expanding
+  Menu, // <-- Add Menu icon for mobile trigger
+  X, // <-- Add X icon for close button
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
@@ -62,7 +64,8 @@ export default function ChatApp() {
   const [chatLoading, setChatLoading] = useState<boolean>(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [tempApiKey, setTempApiKey] = useState("")
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // <-- New state for sidebar
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for desktop sidebar
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false); // <-- New state for mobile sheet
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null) // Explicitly allow null in the ref type
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -367,26 +370,15 @@ export default function ChatApp() {
 
   const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
-  const toggleSettings = () => setSettingsOpen(!settingsOpen); // Function to toggle sheet
+  const toggleSettings = () => setSettingsOpen(!settingsOpen); // Function to toggle settings sheet
+
+  // Function to close mobile sheet if needed when clicking items inside
+  const closeMobileSheet = () => setMobileSheetOpen(false);
 
   return (
-    <TooltipProvider> {/* Keep TooltipProvider wrapping the whole layout */}
-      {/* Add relative positioning context and overflow-hidden */}
-      <div className="relative flex h-screen w-screen bg-background text-foreground overflow-hidden">
-        {/* --- Sidebar Wrapper for Absolute Positioning --- */}
-        <div className="absolute top-0 left-0 h-full z-10"> {/* Added wrapper with absolute positioning */}
-          <Sidebar
-            isCollapsed={isSidebarCollapsed}
-            onNewChat={clearChat}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-            onToggleSettings={toggleSettings} // Pass the function to trigger sheet
-            onToggleSidebar={toggleSidebar}
-          />
-        </div> {/* Close sidebar wrapper */}
-
-        {/* --- Settings Sheet (Keep outside the main content flow) --- */}
-        <SettingsSheet
+    <TooltipProvider>
+      {/* Settings Sheet remains outside the main layout flow */}
+      <SettingsSheet
           isOpen={settingsOpen}
           onOpenChange={setSettingsOpen}
           apiKey={apiKey}
@@ -401,40 +393,122 @@ export default function ChatApp() {
           selectedModel={selectedModel}
         />
 
-        {/* --- Main Chat Area (Adjust margin based on sidebar state) --- */}
-        {/* Added transition-all, duration, ease, and dynamic margin */}
-        <div className={cn(
-            "flex flex-1 flex-col transition-all duration-300 ease-in-out",
-            isSidebarCollapsed ? 'ml-16' : 'ml-64' // Dynamic margin
-          )}>
-          {/* Chat Header */}
-          <ChatHeader
-            selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
-            isLoading={isLoading}
-            models={models}
-            filteredModels={filteredModels}
-            error={error}
-          />
+      {/* Mobile Sheet Wrapper */}
+      <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+        {/* Main Layout Container */}
+        <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden">
+          {/* --- Desktop Sidebar (Conditionally Rendered) --- */}
+          {!isMobile && (
+            <Sidebar
+              isCollapsed={isSidebarCollapsed}
+              onNewChat={clearChat}
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              onToggleSettings={toggleSettings}
+              onToggleSidebar={toggleSidebar}
+            />
+          )}
 
-          {/* Message List */}
-          <MessageList
-            messages={messages}
-            error={error}
-            chatLoading={chatLoading}
-            messagesEndRef={messagesEndRef}
-          />
+          {/* --- Main Chat Area (Flex Child) --- */}
+          <div className="flex flex-1 flex-col overflow-hidden"> {/* Removed margin, added overflow-hidden */}
+            {/* Chat Header */}
+            <ChatHeader
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+              isLoading={isLoading}
+              models={models}
+              filteredModels={filteredModels}
+              error={error}
+              isMobile={isMobile} // Pass isMobile
+              onToggleMobileSheet={() => setMobileSheetOpen(true)} // Pass handler to open sheet
+            />
 
-          {/* Chat Input */}
-          <ChatInput
-            input={input}
-            onInputChange={handleInputChange}
-            onSubmit={handleSubmit}
-            onStopGenerating={handleStopGenerating}
-            isLoading={chatLoading}
-          />
-        </div> {/* Close main chat area div */}
-      </div> {/* Close main container div */}
+            {/* Message List */}
+            <MessageList
+              messages={messages}
+              error={error}
+              chatLoading={chatLoading}
+              messagesEndRef={messagesEndRef}
+              isMobile={isMobile} // Pass isMobile
+            />
+
+            {/* Chat Input */}
+            <ChatInput
+              input={input}
+              onInputChange={handleInputChange}
+              onSubmit={handleSubmit}
+              onStopGenerating={handleStopGenerating}
+              isLoading={chatLoading}
+              isMobile={isMobile} // Pass isMobile
+            />
+          </div> {/* Close main chat area div */}
+        </div> {/* Close main flex container div */}
+
+        {/* --- Mobile Sheet Content --- */}
+        {/* Pass showClose={false} to SheetContent if that prop exists, otherwise need CSS */}
+        <SheetContent side="left" className="p-0 w-64 bg-muted/50 dark:bg-gray-900/50 border-r border-border">
+          {/* Add Header and visually hidden Title for accessibility */}
+          <SheetHeader>
+            <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
+          </SheetHeader>
+          {/* Replicate Sidebar content structure here */}
+          <div className="flex h-full flex-col p-2">
+            {/* Two Separate Buttons with same variant */}
+            <div className="flex items-center gap-2 mb-4"> {/* Use gap-2 */}
+              {/* Button 1: + New Chat */}
+              <Button
+                variant="outline" // Use the same variant
+                className="flex-1 justify-start gap-2" // Allow button to grow
+                onClick={() => { clearChat(); closeMobileSheet(); }}
+              >
+                <Plus className="h-4 w-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">New Chat</span>
+              </Button>
+              {/* Button 2: X (Close) - Using onClick handler */}
+              <Button
+                variant="outline" // Use the same variant
+                size="icon"
+                className="flex-shrink-0" // Prevent shrinking
+                onClick={closeMobileSheet} // Add onClick handler
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            {/* Chat History Area (Placeholder) */}
+            <ScrollArea className="flex-1">
+              <div className="text-sm text-muted-foreground p-2">Chat history (coming soon)</div>
+            </ScrollArea>
+
+            {/* Bottom Controls */}
+            <div className="mt-auto border-t border-border pt-2">
+              {/* Theme Toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => { toggleTheme(); closeMobileSheet(); }}
+              >
+                {theme === "light" ? <Moon className="h-4 w-4 flex-shrink-0" /> : <Sun className="h-4 w-4 flex-shrink-0" />}
+                <span className="whitespace-nowrap">{theme === "light" ? "Dark" : "Light"} Mode</span>
+              </Button>
+
+              {/* Settings Trigger */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => { toggleSettings(); closeMobileSheet(); }}
+              >
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Settings</span>
+              </Button>
+              {/* No Collapse button needed in mobile sheet */}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet> {/* Close Mobile Sheet Wrapper */}
     </TooltipProvider>
   )
 }

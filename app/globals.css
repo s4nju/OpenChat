@@ -92,3 +92,8 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide default shadcn Sheet close button */
+.fixed.z-50 .absolute.right-4.top-4 {
+  display: none !important;
+}
