@@ -39,43 +39,43 @@ export function ChatHeader({
             </Button>
           </SheetTrigger>
         )}
-
         {/* Model Selector */}
         <Select value={selectedModel} onValueChange={onModelChange} disabled={isLoading || models.length === 0}>
-          {/* Add max-width and truncate for mobile */}
-          <SelectTrigger className="w-auto md:max-w-none h-9 text-sm">
-            <SelectValue placeholder={isLoading ? "Loading models..." : "Select a model"} />
+          {/* Dynamic width for mobile, auto for desktop */}
+          <SelectTrigger className="max-w-[calc(100vw-4rem)] md:w-auto h-9 text-sm">
+            <SelectValue className="truncate" placeholder={isLoading ? "Loading models..." : "Select a model"} />
           </SelectTrigger>
-        <SelectContent className="w-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center p-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </div>
-          ) : models.length === 0 ? (
-            <div className="p-2 text-center text-sm text-muted-foreground">
-              {error ? "Error loading models" : "No models found. Check Settings."}
-            </div>
-          ) : (
-            filteredModels.map((model) => (
-              <SelectItem key={model.id} value={model.id} className="text-sm">
-                <div className="flex items-center justify-between w-full gap-2">
-                  {/* Add truncate to prevent overflow on mobile */}
-                  <span title={model.name} className="truncate">
-                    {model.name}
-                  </span>
-                  {model.isFree && (
-                    <Badge variant="outline" className="text-xs flex-shrink-0">
-                      Free
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
+          <SelectContent className="max-w-[calc(100vw-4rem)] md:w-auto h-[300px]"> {/* Dynamic width for mobile, auto for desktop */}
+            {isLoading ? (
+              <div className="flex items-center justify-center p-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            ) : models.length === 0 ? (
+              <div className="p-2 text-center text-sm text-muted-foreground">
+                {error ? "Error loading models" : "No models found. Check Settings."}
+              </div>
+            ) : (
+              filteredModels.map((model) => (
+                <SelectItem key={model.id} value={model.id} className="text-sm">
+                  {/* Ensure full width for flex layout */}
+                  <div className="flex items-center gap-2 w-full">
+                    <span className="truncate flex-1 min-w-0" title={model.name}>
+                      {model.name}
+                    </span>
+                    {model.isFree && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        Free
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+
       </div> {/* <-- Close the grouping div */}
       {/* Optional: Add other header elements here if needed, outside the group */}
-    </div>
+    </div >
   )
 };
