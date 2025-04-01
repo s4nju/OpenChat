@@ -447,7 +447,8 @@ export default function ChatApp() {
 
         {/* --- Mobile Sheet Content --- */}
         {/* Pass showClose={false} to SheetContent if that prop exists, otherwise need CSS */}
-        <SheetContent side="left" className="p-0 w-64 bg-muted/50 dark:bg-gray-900/50 border-r border-border">
+        {/* Explicitly adding bg-background to ensure opacity */}
+        <SheetContent side="left" className="p-0 w-64 border-r border-border bg-background">
           {/* Add Header and visually hidden Title for accessibility */}
           <SheetHeader>
             <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
