@@ -13,6 +13,8 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   isMobile: boolean;
   onExampleClick?: (text: string) => void;
+  onEditMessage?: (id: string, content?: string) => void;
+  onRegenerateMessage?: (id: string) => void;
 }
 
 export function MessageList({
@@ -22,9 +24,16 @@ export function MessageList({
   messagesEndRef,
   isMobile,
   onExampleClick,
+  onEditMessage,
+  onRegenerateMessage,
 }: MessageListProps) {
   // Keep minimal padding for mobile but none for desktop
   const bottomPadding = isMobile ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]" : "pb-0";
+
+  // Find the last assistant message index
+  const lastAssistantMessageIndex = chatLoading 
+    ? messages.map(m => m.role).lastIndexOf('assistant')
+    : -1;
 
   return (
     <ScrollArea 
@@ -89,8 +98,14 @@ export function MessageList({
             "flex flex-col space-y-2",
             isMobile ? "py-4" : "pt-4 pb-0"
           )}>
-            {messages.map((message) => (
-              <MessageItem key={message.id} message={message} />
+            {messages.map((message, index) => (
+              <MessageItem 
+                key={message.id} 
+                message={message} 
+                onEdit={onEditMessage}
+                onRegenerate={onRegenerateMessage}
+                isGenerating={chatLoading && message.role === 'assistant' && index === lastAssistantMessageIndex}
+              />
             ))}
             
             {/* Empty space only visible during loading to indicate something is happening */}
