@@ -92,7 +92,11 @@ export function ChatHeader({
           
           {/* Chat title without icon */}
           <div className="max-w-[120px] xs:max-w-[160px] sm:max-w-[200px] md:max-w-[300px]">
-            <span className="font-medium truncate text-sm" title={chatTitle}>
+            <span 
+              className="font-medium truncate text-sm cursor-pointer hover:underline" 
+              title={chatTitle}
+              onClick={handleOpenRenameDialog}
+            >
               {chatTitle}
             </span>
           </div>
