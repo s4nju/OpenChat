@@ -103,7 +103,7 @@ The application uses Zustand for state management, organized into three main sto
 │   │   ├── ChatInput.tsx        # Input component
 │   │   ├── MessageItem.tsx      # Individual message
 │   │   ├── MessageList.tsx      # List of messages
-│   │   ├── SettingsSheet.tsx    # Settings panel
+│   │   ├── SettingsDialog.tsx   # Settings panel
 │   │   └── Sidebar.tsx          # Chat sidebar
 │   ├── ui/               # shadcn/ui components
 │   └── theme-provider.tsx # Theme management

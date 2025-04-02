@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react" // Ensure React type import is present
+import React from "react" // Ensure React type import is present
 import { useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Sidebar } from "@/components/chat/Sidebar"
-import { SettingsSheet } from "@/components/chat/SettingsSheet"
+import { SettingsDialog } from "@/components/chat/SettingsDialog"
 import { ChatHeader } from "@/components/chat/ChatHeader"
 import { MessageList } from "@/components/chat/MessageList"
 import { ChatInput } from "@/components/chat/ChatInput" // <-- Import ChatInput
@@ -240,8 +240,8 @@ export default function ChatApp() {
 
   return (
     <TooltipProvider>
-      {/* Settings Sheet remains outside the main layout flow */}
-      <SettingsSheet
+      {/* Settings Dialog */}
+      <SettingsDialog
           isOpen={settingsOpen}
           onOpenChange={setSettingsOpen}
           apiKey={apiKey}
