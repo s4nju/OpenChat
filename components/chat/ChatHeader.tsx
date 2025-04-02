@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Menu, Share2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,15 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Model } from "@/lib/types";
 
@@ -25,6 +34,9 @@ interface ChatHeaderProps {
   isMobile: boolean;
   onToggleMobileSheet: () => void;
   chatTitle?: string;
+  currentChatId?: string;
+  onRenameChat?: (chatId: string, newTitle: string) => void;
+  onDeleteChat?: (chatId: string) => void;
 }
 
 export function ChatHeader({
@@ -37,9 +49,32 @@ export function ChatHeader({
   isMobile,
   onToggleMobileSheet,
   chatTitle = "New Chat",
+  currentChatId = "",
+  onRenameChat = () => {},
+  onDeleteChat = () => {},
 }: ChatHeaderProps) {
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
   const currentModel = filteredModels.find(model => model.id === selectedModel);
   const modelName = currentModel?.name || "Select model";
+  
+  const handleOpenRenameDialog = () => {
+    setNewTitle(chatTitle);
+    setIsRenameDialogOpen(true);
+  };
+  
+  const handleRenameChat = () => {
+    if (currentChatId && newTitle.trim()) {
+      onRenameChat(currentChatId, newTitle);
+      setIsRenameDialogOpen(false);
+    }
+  };
+  
+  const handleDeleteChat = () => {
+    if (currentChatId && window.confirm("Are you sure you want to delete this chat?")) {
+      onDeleteChat(currentChatId);
+    }
+  };
 
   return (
     <TooltipProvider>
@@ -158,14 +193,59 @@ export function ChatHeader({
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem className="text-xs py-3 sm:py-2">Rename chat</DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-xs py-3 sm:py-2"
+                disabled={!currentChatId}
+                onClick={handleOpenRenameDialog}
+              >
+                Rename chat
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-xs py-3 sm:py-2">Export chat</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs py-3 sm:py-2 text-destructive">Delete chat</DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-xs py-3 sm:py-2 text-destructive"
+                disabled={!currentChatId}
+                onClick={handleDeleteChat}
+              >
+                Delete chat
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
+      
+      {/* Rename Dialog */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Chat</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Enter a new title for this chat"
+              className="w-full"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleRenameChat();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter className="flex sm:justify-between">
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleRenameChat} disabled={!newTitle.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

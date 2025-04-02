@@ -1,11 +1,10 @@
 "use client"
 
 import type React from "react" // Ensure React type import is present
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
-
   Settings,
   Plus,
   Sun,
@@ -30,100 +29,110 @@ import { MessageList } from "@/components/chat/MessageList"
 import { ChatInput } from "@/components/chat/ChatInput" // <-- Import ChatInput
 import type { Message, Model, Chat } from "@/lib/types"
 
+// Import Zustand stores
+import { useChatStore } from "@/lib/stores/chat-store"
+import { useSettingsStore } from "@/lib/stores/settings-store"
+import { useUIStore } from "@/lib/stores/ui-store"
+
 export default function ChatApp() {
-  // State
-  const [apiKey, setApiKey] = useState<string>("")
-  const [selectedModel, setSelectedModel] = useState<string>("")
-  const [models, setModels] = useState<Model[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState<string>("")
-  const [chatLoading, setChatLoading] = useState<boolean>(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [tempApiKey, setTempApiKey] = useState("")
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for desktop sidebar
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false); // <-- New state for mobile sheet
+  // Create a messagesEndRef
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const { theme, setTheme } = useTheme();
   
-  // Chat history state
-  const [chats, setChats] = useState<Chat[]>([])
-  const [currentChatId, setCurrentChatId] = useState<string>("")
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null) // Explicitly allow null in the ref type
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const { theme, setTheme } = useTheme()
-  const isMobile = useIsMobile(); // <-- Use the hook
-
+  // Get state and actions from stores
+  const {
+    messages,
+    chats,
+    currentChatId,
+    chatLoading,
+    error,
+    input,
+    loadChats,
+    clearChat,
+    handleInputChange,
+    handleExampleClick,
+    handleSubmit,
+    handleStopGenerating,
+    renameChat,
+    deleteChat,
+    saveCurrentChat
+  } = useChatStore();
+  
+  const {
+    apiKey,
+    tempApiKey,
+    selectedModel,
+    models,
+    isLoading,
+    showFreeOnly,
+    settingsOpen,
+    setApiKey,
+    setTempApiKey,
+    setSelectedModel,
+    setShowFreeOnly,
+    fetchModels,
+    saveApiKey,
+    toggleSettings,
+    getFilteredModels,
+    setSettingsOpen
+  } = useSettingsStore();
+  
+  const {
+    isSidebarCollapsed,
+    mobileSheetOpen,
+    setIsMobile,
+    toggleSidebar,
+    setMobileSheetOpen,
+    initializeSidebarState
+  } = useUIStore();
+  
+  // Create toggleTheme function using next-themes hook
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+  
+  // Get filtered models
+  const filteredModels = getFilteredModels();
+  
+  // Handle mobile detection
+  const isMobileDetected = useIsMobile();
+  
   // --- Effects ---
+  // Initialize UI with mobile detection
+  useEffect(() => {
+    if (isMobileDetected !== undefined) {
+      setIsMobile(isMobileDetected);
+      initializeSidebarState();
+    }
+  }, [isMobileDetected, setIsMobile, initializeSidebarState]);
+  
   // Load API key, theme & chat history from localStorage on mount
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("openrouter_api_key")
+    const storedApiKey = localStorage.getItem("openrouter_api_key");
     if (storedApiKey) {
-      setApiKey(storedApiKey)
-      setTempApiKey(storedApiKey)
+      setApiKey(storedApiKey);
+      setTempApiKey(storedApiKey);
     }
 
     // Load chat history
-    loadChats()
+    loadChats();
 
-    // Fetch models regardless of sidebar state
-    fetchModels(storedApiKey || "")
-  }, []) // This effect only handles API key loading and initial model fetch
+    // Fetch models 
+    fetchModels(storedApiKey || "");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
-  // Effect to update localStorage when messages change
+  // Expose the stores to window for cross-store communication
   useEffect(() => {
-    if (currentChatId && messages.length > 0) {
-      saveCurrentChat();
-    }
-  }, [messages, currentChatId]);
-
-  // Effect to load messages when currentChatId changes
-  useEffect(() => {
-    if (currentChatId) {
-      const chat = chats.find(c => c.id === currentChatId);
-      if (chat) {
-        setMessages(chat.messages);
-        if (chat.model) {
-          setSelectedModel(chat.model);
-        }
-      }
-    }
-  }, [currentChatId]);
-
-  // Effect to set initial sidebar state based on mobile status and localStorage
-  useEffect(() => {
-    // Only run when isMobile is determined (not undefined)
-    if (isMobile !== undefined) {
-      const storedCollapsed = localStorage.getItem("sidebar_collapsed") === "true";
-      // Prioritize mobile: if mobile, collapse. Otherwise, use stored value.
-      setIsSidebarCollapsed(isMobile ? true : storedCollapsed);
-    }
-  }, [isMobile]); // Dependency array ensures this runs when isMobile changes (from undefined to boolean)
-
-  // Save sidebar state to localStorage
-  useEffect(() => {
-    // Avoid saving during the initial render cycle when isMobile might be undefined
-    // or when the initial state is being set by the effect above.
-    // We only want to save *user-initiated* changes or changes after the initial mobile check.
-    if (isMobile !== undefined) {
-       localStorage.setItem("sidebar_collapsed", String(isSidebarCollapsed));
-    }
-    // Note: Depending only on isSidebarCollapsed might be sufficient if the initial
-    // state setting effect runs reliably before any user interaction.
-    // Adding isMobile ensures we don't save the potentially incorrect default state.
-  }, [isSidebarCollapsed, isMobile]);
-
-  // Fetch models when API key changes
-  useEffect(() => {
-    if (apiKey) {
-      fetchModels(apiKey)
-    } else {
-      fetchModels("")
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey])
-
+    // Type casting to avoid TypeScript errors
+    (window as any).chatStore = useChatStore.getState;
+    (window as any).settingsStore = useSettingsStore.getState;
+    (window as any).uiStore = useUIStore.getState;
+    
+    return () => {
+      delete (window as any).chatStore;
+      delete (window as any).settingsStore;
+      delete (window as any).uiStore;
+    };
+  }, []);
+  
   // Scroll to bottom when new user messages are added or on initial load
   useEffect(() => {
     // Only scroll automatically for user messages or when chat is empty
@@ -134,407 +143,28 @@ export default function ChatApp() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages.length]); // Only depend on message count, not content
+  
+  // Get current chat title
+  const currentChat = chats.find(c => c.id === currentChatId);
+  const chatTitle = currentChat?.title || "New Chat";
 
-  // Cleanup function for abort controller
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort()
-    }
-  }, [])
-
-  // --- Chat History Functions ---
-  const loadChats = () => {
-    try {
-      const storedChats = localStorage.getItem("openchat_history");
-      if (storedChats) {
-        const parsedChats = JSON.parse(storedChats) as Chat[];
-        setChats(parsedChats);
-        
-        // If there are chats, set the most recent one as current
-        if (parsedChats.length > 0) {
-          const sortedChats = [...parsedChats].sort(
-            (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          );
-          setCurrentChatId(sortedChats[0].id);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load chats:", error);
-    }
+  // Create functions that bind the current state values
+  const boundClearChat = () => clearChat(selectedModel);
+  
+  const boundHandleExampleClick = (text: string) => {
+    handleExampleClick(text, apiKey, selectedModel);
   };
   
-  const saveChats = (updatedChats: Chat[]) => {
-    try {
-      localStorage.setItem("openchat_history", JSON.stringify(updatedChats));
-      setChats(updatedChats);
-    } catch (error) {
-      console.error("Failed to save chats:", error);
-    }
-  };
-  
-  const saveCurrentChat = () => {
-    if (!currentChatId) return;
-    
-    const now = new Date().toISOString();
-    const existingChatIndex = chats.findIndex(c => c.id === currentChatId);
-    
-    if (existingChatIndex >= 0) {
-      // Update existing chat
-      const updatedChats = [...chats];
-      updatedChats[existingChatIndex] = {
-        ...updatedChats[existingChatIndex],
-        messages,
-        model: selectedModel,
-        updatedAt: now,
-        // Generate title from first user message if not already set
-        title: updatedChats[existingChatIndex].title || 
-               (messages[0]?.content.slice(0, 30) + (messages[0]?.content.length > 30 ? '...' : ''))
-      };
-      saveChats(updatedChats);
-    }
-  };
-  
-  const createNewChat = () => {
-    const chatId = uuidv4();
-    const now = new Date().toISOString();
-    const newChat: Chat = {
-      id: chatId,
-      title: "New Chat",
-      messages: [],
-      model: selectedModel,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    const updatedChats = [newChat, ...chats];
-    saveChats(updatedChats);
-    setCurrentChatId(chatId);
-    return chatId;
-  };
-  
-  const deleteChat = (chatId: string) => {
-    const updatedChats = chats.filter(c => c.id !== chatId);
-    saveChats(updatedChats);
-    
-    if (currentChatId === chatId) {
-      if (updatedChats.length > 0) {
-        setCurrentChatId(updatedChats[0].id);
-      } else {
-        setCurrentChatId("");
-        setMessages([]);
-      }
-    }
-  };
-
-  const fetchModels = async (currentApiKey: string) => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const headers: HeadersInit = {
-        "HTTP-Referer": "https://openchat.dev",
-        "X-Title": "OpenChat",
-      }
-      if (currentApiKey) {
-        headers["Authorization"] = `Bearer ${currentApiKey}`
-      }
-
-      const response = await fetch("https://openrouter.ai/api/v1/models", { headers })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("Failed to fetch models:", response.status, errorText)
-        let userError = `Failed to fetch models: ${response.status} ${response.statusText}`
-        if (response.status === 401) {
-           userError = currentApiKey
-             ? "Failed to fetch models: Invalid API Key. Please check your key in Settings."
-             : "API Key needed to fetch all models. Add one in Settings or continue with public models."
-        }
-        setError(userError)
-        if (response.status !== 401 || currentApiKey) {
-            setModels([])
-            setSelectedModel("")
-        }
-        if (response.status === 401 && !currentApiKey) {
-           // Allow parsing public models
-        } else {
-            return
-        }
-      }
-
-      const data = await response.json()
-
-      if (data.data && Array.isArray(data.data)) {
-        const formattedModels = data.data.map((model: any) => {
-          // Determine the base name first
-          let baseName = model.name || model.id.split("/").pop() || model.id;
-
-          // Clean the name: remove "(free)" suffix, case-insensitive, handling potential spaces
-          const cleanedName = baseName.replace(/\s*\(free\)\s*$/i, '').trim();
-
-          // Determine if it's free based on multiple criteria
-          const isActuallyFree = Boolean(
-            (model.pricing?.prompt === "0" && model.pricing?.completion === "0") ||
-            model.id.endsWith(":free") ||
-            baseName.toLowerCase().includes("(free)") // Check original name too
-          );
-
-          return {
-            id: model.id,
-            name: cleanedName, // Use the cleaned name
-            provider: model.id.split("/")[0] || "Unknown",
-            isFree: isActuallyFree, // Use the determined free status
-          };
-        });
-
-        setModels(formattedModels)
-
-        const currentModelExists = formattedModels.some((m: Model) => m.id === selectedModel)
-        if ((!selectedModel || !currentModelExists) && formattedModels.length > 0) {
-          const preferredFreeModelId = "deepseek/deepseek-chat-v3-0324:free"
-          const preferredModel = formattedModels.find((m: Model) => m.id === preferredFreeModelId)
-          const firstFreeModel = formattedModels.find((m: Model) => m.isFree)
-          const firstModel = formattedModels[0]
-
-          if (preferredModel) setSelectedModel(preferredModel.id)
-          else if (firstFreeModel) setSelectedModel(firstFreeModel.id)
-          else if (firstModel) setSelectedModel(firstModel.id)
-        } else if (selectedModel && !currentModelExists) {
-            setSelectedModel("")
-        }
-
-      } else {
-        console.error("Invalid models data format:", data)
-        setError("Invalid response format from OpenRouter API")
-        setModels([])
-        setSelectedModel("")
-      }
-    } catch (err) {
-      console.error("Error fetching models:", err)
-      setError(`Failed to fetch models: ${err instanceof Error ? err.message : "Unknown error"}`)
-      setModels([])
-      setSelectedModel("")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const saveApiKey = () => {
-    const trimmedApiKey = tempApiKey.trim()
-    if (trimmedApiKey) {
-      localStorage.setItem("openrouter_api_key", trimmedApiKey)
-      setApiKey(trimmedApiKey)
-      setError(null)
-      setSettingsOpen(false)
-    } else {
-      localStorage.removeItem("openrouter_api_key")
-      setApiKey("")
-      setTempApiKey("")
-      setError("API Key removed.")
-      setSettingsOpen(false)
-    }
-  }
-
-  const clearChat = () => {
-    abortControllerRef.current?.abort()
-    abortControllerRef.current = null
-    setMessages([])
-    setChatLoading(false)
-    setError(null)
-    
-    // Create a new chat
-    createNewChat();
-  }
-
-  const handleStopGenerating = () => {
-    abortControllerRef.current?.abort()
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value)
-    e.target.style.height = 'auto';
-    e.target.style.height = `${e.target.scrollHeight}px`;
-  }
-
-  // Handler for example prompt clicks
-  const handleExampleClick = async (text: string) => {
-    setInput(text);
-    const textToSubmit = text;
-    
-    // If no current chat, create a new one
-    if (!currentChatId || chats.findIndex(c => c.id === currentChatId) === -1) {
-      const newChatId = createNewChat();
-      setCurrentChatId(newChatId);
-    }
-    
-    const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setChatLoading(true);
-
-    const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
-    if (textarea) {
-      textarea.style.height = 'auto';
-    }
-
-    await processChat(updatedMessages, textToSubmit.trim());
-    setInput("");
-  }
-
-  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
-    e?.preventDefault()
+  const boundHandleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    handleSubmit(e, apiKey, selectedModel);
     if (!apiKey) {
-      setError("Please set your OpenRouter API key in the settings.")
-      setSettingsOpen(true)
-      return
+      setSettingsOpen(true);
     }
-    if (!selectedModel) {
-      setError("Please select a model before sending a message.")
-      return
-    }
-    if (!input.trim()) return
-
-    // If no current chat, create a new one
-    if (!currentChatId || chats.findIndex(c => c.id === currentChatId) === -1) {
-      const newChatId = createNewChat();
-      setCurrentChatId(newChatId);
-    }
-
-    setError(null)
-    const userMessage: Message = { id: uuidv4(), role: "user", content: input.trim() }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInput("")
-    setChatLoading(true)
-
-    const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
-    if (textarea) {
-      textarea.style.height = 'auto';
-    }
-
-    // Process the chat with user input
-    processChat(updatedMessages, input.trim());
-  }
-
-  // Extract the chat processing logic to avoid duplication
-  const processChat = async (messagesToProcess: Message[], inputText: string) => {
-    abortControllerRef.current?.abort()
-    abortControllerRef.current = new AbortController()
-    const signal = abortControllerRef.current.signal
-
-    try {
-      const messagesToSend = messagesToProcess.map(({ role, content }) => ({ role, content }))
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messagesToSend, apiKey: apiKey.trim(), model: selectedModel }),
-        signal,
-      })
-
-      if (!response.ok || !response.body) {
-        let errorMessage = `Error: ${response.status} ${response.statusText}`
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch { /* Ignore parsing error */ }
-        throw new Error(errorMessage)
-      }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let assistantMessage: Message = { id: uuidv4(), role: "assistant", content: "" }
-      let firstChunk = true
-
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split("\n").filter((line) => line.trim() !== "")
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6)
-            if (data === "[DONE]") break
-
-            try {
-              const parsed = JSON.parse(data)
-              const contentChunk = parsed.choices[0]?.delta?.content || ""
-
-              if (contentChunk) {
-                if (firstChunk) {
-                  setMessages((prev) => [...prev, { ...assistantMessage, content: contentChunk }])
-                  firstChunk = false
-                  // Scroll to bottom with first chunk
-                  messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" })
-                } else {
-                  setMessages((prev) => {
-                    const lastMsgIndex = prev.length - 1
-                    if (lastMsgIndex >= 0 && prev[lastMsgIndex].role === "assistant") {
-                      const updatedMsg = {
-                        ...prev[lastMsgIndex],
-                        content: prev[lastMsgIndex].content + contentChunk,
-                      }
-                      // Schedule a scroll for after this update
-                      setTimeout(() => {
-                        messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" })
-                      }, 0)
-                      return [...prev.slice(0, lastMsgIndex), updatedMsg]
-                    }
-                    return prev
-                  })
-                }
-              }
-            } catch (e) {
-              console.error("Error parsing SSE data:", e, "Data:", data)
-            }
-          }
-        }
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name !== "AbortError") {
-        console.error("Chat error:", err)
-        setError(err.message || "An unknown error occurred")
-        setMessages((prev) => {
-            const lastMsg = prev[prev.length - 1];
-            if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content === '') {
-                return prev.slice(0, -1);
-            }
-            return prev;
-        });
-      }
-    } finally {
-      setChatLoading(false)
-      abortControllerRef.current = null
-    }
-  }
-
-  const filteredModels = showFreeOnly ? models.filter((model) => model.isFree) : models
-
-  const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
-  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
-  const toggleSettings = () => setSettingsOpen(!settingsOpen);
-  
-  const handleSelectChat = (chatId: string) => {
-    // Save current chat before switching
-    if (currentChatId) {
-      saveCurrentChat();
-    }
-    
-    setCurrentChatId(chatId);
-    const selectedChat = chats.find(c => c.id === chatId);
-    if (selectedChat) {
-      setMessages(selectedChat.messages);
-      if (selectedChat.model) {
-        setSelectedModel(selectedChat.model);
-      }
-    }
-    
-    // Close mobile sidebar on chat selection
-    setMobileSheetOpen(false);
   };
-
-  // Function to close mobile sheet if needed when clicking items inside
-  const closeMobileSheet = () => setMobileSheetOpen(false);
+  
+  const boundSaveCurrentChat = () => {
+    saveCurrentChat(selectedModel);
+  };
 
   return (
     <TooltipProvider>
@@ -548,7 +178,7 @@ export default function ChatApp() {
           showFreeOnly={showFreeOnly}
           onShowFreeOnlyChange={setShowFreeOnly}
           onSaveApiKey={saveApiKey}
-          onFetchModels={() => fetchModels(apiKey)} // Pass fetchModels bound with current apiKey
+          onFetchModels={() => fetchModels(apiKey)}
           isLoading={isLoading}
           models={models}
           selectedModel={selectedModel}
@@ -559,17 +189,31 @@ export default function ChatApp() {
         {/* Main Layout Container */}
         <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden overscroll-none">
           {/* --- Desktop Sidebar (Conditionally Rendered) --- */}
-          {!isMobile && (
+          {!isMobileDetected && (
             <Sidebar
               isCollapsed={isSidebarCollapsed}
-              onNewChat={clearChat}
+              onNewChat={boundClearChat}
               theme={theme}
               onToggleTheme={toggleTheme}
               onToggleSettings={toggleSettings}
               onToggleSidebar={toggleSidebar}
               chats={chats}
               currentChatId={currentChatId}
-              onSelectChat={handleSelectChat}
+              onSelectChat={(chatId) => {
+                // Save current chat before switching
+                if (currentChatId) {
+                  boundSaveCurrentChat();
+                }
+                
+                useChatStore.getState().setCurrentChatId(chatId);
+                const selectedChat = chats.find(c => c.id === chatId);
+                if (selectedChat) {
+                  useChatStore.getState().setMessages(selectedChat.messages);
+                  if (selectedChat.model) {
+                    setSelectedModel(selectedChat.model);
+                  }
+                }
+              }}
               onDeleteChat={deleteChat}
             />
           )}
@@ -585,8 +229,12 @@ export default function ChatApp() {
               models={models}
               filteredModels={filteredModels}
               error={error}
-              isMobile={isMobile} // Pass isMobile
+              isMobile={isMobileDetected} // Pass isMobile
               onToggleMobileSheet={() => setMobileSheetOpen(true)} // Pass handler to open sheet
+              chatTitle={chatTitle}
+              onRenameChat={renameChat}
+              onDeleteChat={deleteChat}
+              currentChatId={currentChatId}
             />
 
             {/* Message List */}
@@ -595,18 +243,18 @@ export default function ChatApp() {
               error={error}
               chatLoading={chatLoading}
               messagesEndRef={messagesEndRef}
-              isMobile={isMobile}
-              onExampleClick={handleExampleClick}
+              isMobile={isMobileDetected}
+              onExampleClick={boundHandleExampleClick}
             />
 
             {/* Chat Input */}
             <ChatInput
               input={input}
               onInputChange={handleInputChange}
-              onSubmit={handleSubmit}
+              onSubmit={boundHandleSubmit}
               onStopGenerating={handleStopGenerating}
               isLoading={chatLoading}
-              isMobile={isMobile} // Pass isMobile
+              isMobile={isMobileDetected} // Pass isMobile
             />
           </div> {/* Close main chat area div */}
         </div> {/* Close main flex container div */}
@@ -614,7 +262,7 @@ export default function ChatApp() {
         {/* Mobile Sidebar */}
         <Sidebar
           isCollapsed={false} // Mobile sidebar is never collapsed
-          onNewChat={clearChat}
+          onNewChat={boundClearChat}
           theme={theme}
           onToggleTheme={toggleTheme}
           onToggleSettings={toggleSettings}
@@ -624,7 +272,24 @@ export default function ChatApp() {
           onMobileOpenChange={setMobileSheetOpen}
           chats={chats}
           currentChatId={currentChatId}
-          onSelectChat={handleSelectChat}
+          onSelectChat={(chatId) => {
+            // Save current chat before switching
+            if (currentChatId) {
+              boundSaveCurrentChat();
+            }
+            
+            useChatStore.getState().setCurrentChatId(chatId);
+            const selectedChat = chats.find(c => c.id === chatId);
+            if (selectedChat) {
+              useChatStore.getState().setMessages(selectedChat.messages);
+              if (selectedChat.model) {
+                setSelectedModel(selectedChat.model);
+              }
+            }
+            
+            // Close mobile sidebar
+            setMobileSheetOpen(false);
+          }}
           onDeleteChat={deleteChat}
         />
       </Sheet> {/* Close Mobile Sheet Wrapper */}
