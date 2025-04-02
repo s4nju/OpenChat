@@ -4,6 +4,7 @@ export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  timestamp?: string; // ISO string format timestamp
 }
 
 export interface Model {

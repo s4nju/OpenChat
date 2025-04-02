@@ -223,7 +223,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       chatId = createNewChat(selectedModel);
     }
     
-    const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() };
+    const userMessage: Message = { 
+      id: uuidv4(), 
+      role: "user", 
+      content: textToSubmit.trim(),
+      timestamp: new Date().toISOString()
+    };
     const updatedMessages = [...messages, userMessage];
     set({ messages: updatedMessages, chatLoading: true });
 
@@ -259,13 +264,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     set({ error: null });
-    const userMessage: Message = { id: uuidv4(), role: "user", content: input.trim() };
+    const userMessage: Message = { 
+      id: uuidv4(), 
+      role: "user", 
+      content: input.trim(),
+      timestamp: new Date().toISOString()
+    };
     const updatedMessages = [...messages, userMessage];
     set({ 
       messages: updatedMessages,
       input: "",
       chatLoading: true 
     });
+
+    // Save the chat immediately after the user sends a message
+    // This updates the timestamp and places the chat at the top of the list
+    get().saveCurrentChat(selectedModel);
 
     const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
     if (textarea) {
@@ -311,7 +325,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage: Message = { id: uuidv4(), role: "assistant", content: "" };
+      let assistantMessage: Message = { 
+        id: uuidv4(), 
+        role: "assistant", 
+        content: "",
+        timestamp: new Date().toISOString()
+      };
       let firstChunk = true;
       const messagesEndRef = document.getElementById('messages-end');
 
@@ -380,6 +399,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         chatLoading: false,
         abortController: null
       });
+      
+      // Save the chat after the response is complete to ensure all AI-generated content is saved
+      // This also updates the chat's timestamp to reflect the most recent activity
+      if (get().messages.length > 0 && get().messages[get().messages.length - 1].role === 'assistant') {
+        get().saveCurrentChat(selectedModel);
+      }
     }
   }
 })); 
