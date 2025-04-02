@@ -242,6 +242,30 @@ export default function ChatApp() {
     e.target.style.height = `${e.target.scrollHeight}px`;
   }
 
+  // Handler for example prompt clicks
+  const handleExampleClick = (text: string) => {
+    // Set the input value first
+    setInput(text);
+    
+    // Create a copy of the text for direct submission
+    const textToSubmit = text;
+    
+    // Submit directly with the text without relying on state update
+    const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() }
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    setChatLoading(true)
+    
+    // Reset the textarea height
+    const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
+    if (textarea) {
+      textarea.style.height = 'auto';
+    }
+    
+    // Process the chat with the example text
+    processChat(updatedMessages, textToSubmit.trim());
+  }
+
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault()
     if (!apiKey) {
@@ -256,10 +280,6 @@ export default function ChatApp() {
     if (!input.trim()) return
 
     setError(null)
-    abortControllerRef.current?.abort()
-    abortControllerRef.current = new AbortController()
-    const signal = abortControllerRef.current.signal
-
     const userMessage: Message = { id: uuidv4(), role: "user", content: input.trim() }
     const updatedMessages = [...messages, userMessage]
     setMessages(updatedMessages)
@@ -268,11 +288,21 @@ export default function ChatApp() {
 
     const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
     if (textarea) {
-        textarea.style.height = 'auto';
+      textarea.style.height = 'auto';
     }
 
+    // Process the chat with user input
+    processChat(updatedMessages, input.trim());
+  }
+
+  // Extract the chat processing logic to avoid duplication
+  const processChat = async (messagesToProcess: Message[], inputText: string) => {
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     try {
-      const messagesToSend = updatedMessages.map(({ role, content }) => ({ role, content }))
+      const messagesToSend = messagesToProcess.map(({ role, content }) => ({ role, content }))
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -422,7 +452,8 @@ export default function ChatApp() {
               error={error}
               chatLoading={chatLoading}
               messagesEndRef={messagesEndRef}
-              isMobile={isMobile} // Pass isMobile
+              isMobile={isMobile}
+              onExampleClick={handleExampleClick}
             />
 
             {/* Chat Input */}

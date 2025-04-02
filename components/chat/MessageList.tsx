@@ -12,6 +12,7 @@ interface MessageListProps {
   chatLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   isMobile: boolean;
+  onExampleClick?: (text: string) => void;
 }
 
 export function MessageList({
@@ -20,6 +21,7 @@ export function MessageList({
   chatLoading,
   messagesEndRef,
   isMobile,
+  onExampleClick,
 }: MessageListProps) {
   // Keep minimal padding for mobile but none for desktop
   const bottomPadding = isMobile ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]" : "pb-0";
@@ -57,14 +59,23 @@ export function MessageList({
             
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 max-w-2xl">
               {[
-                { title: "Learn about Next.js", text: "Can you explain how Next.js rendering works?" },
-                { title: "Fix code errors", text: "Help me debug this React error: [your error here]" },
-                { title: "Optimize performance", text: "How can I improve the performance of my React app?" },
-                { title: "Design patterns", text: "What are the best React design patterns for large apps?" }
+                { title: "Next.js App Router", text: "Explain how Server Components and Client Components work together in Next.js 14" },
+                { title: "React Performance", text: "What are the most effective ways to optimize React component rendering and prevent unnecessary re-renders?" },
+                { title: "TypeScript Best Practices", text: "What TypeScript patterns should I use for type-safe React components with proper prop validation?" },
+                { title: "Modern UI Architecture", text: "How should I structure a large-scale Next.js application with multiple themes and authentication?" }
               ].map((suggestion, i) => (
                 <div 
                   key={i} 
-                  className="flex cursor-pointer flex-col rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+                  className="flex cursor-pointer flex-col rounded-lg border border-border p-4 transition-colors hover:bg-muted/50 active:bg-muted"
+                  onClick={() => onExampleClick?.(suggestion.text)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Use example: ${suggestion.title}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      onExampleClick?.(suggestion.text);
+                    }
+                  }}
                 >
                   <h3 className="text-sm font-medium">{suggestion.title}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{suggestion.text}</p>
@@ -75,7 +86,7 @@ export function MessageList({
         ) : (
           // Message list - remove bottom padding in desktop view
           <div className={cn(
-            "flex flex-col space-y-6",
+            "flex flex-col space-y-2",
             isMobile ? "py-4" : "pt-4 pb-0"
           )}>
             {messages.map((message) => (
@@ -86,7 +97,7 @@ export function MessageList({
             {chatLoading && <div className="h-2 w-full" aria-label="Loading response" />}
 
             {/* Extra space only for mobile */}
-            {isMobile && messages.length > 0 && <div className="h-2" />}
+            {isMobile && messages.length > 0 && <div className="h-6" />}
             
             {/* Scrolling anchor with no height in desktop mode */}
             <div ref={messagesEndRef} className={isMobile ? "h-2" : "h-0"} />
