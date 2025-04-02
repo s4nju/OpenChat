@@ -243,27 +243,21 @@ export default function ChatApp() {
   }
 
   // Handler for example prompt clicks
-  const handleExampleClick = (text: string) => {
-    // Set the input value first
+  const handleExampleClick = async (text: string) => {
     setInput(text);
-    
-    // Create a copy of the text for direct submission
     const textToSubmit = text;
-    
-    // Submit directly with the text without relying on state update
-    const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setChatLoading(true)
-    
-    // Reset the textarea height
+    const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setChatLoading(true);
+
     const textarea = document.getElementById('chat-input') as HTMLTextAreaElement | null;
     if (textarea) {
       textarea.style.height = 'auto';
     }
-    
-    // Process the chat with the example text
-    processChat(updatedMessages, textToSubmit.trim());
+
+    await processChat(updatedMessages, textToSubmit.trim());
+    setInput("");
   }
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
