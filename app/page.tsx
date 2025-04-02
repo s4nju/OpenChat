@@ -166,6 +166,78 @@ export default function ChatApp() {
     saveCurrentChat(selectedModel);
   };
 
+  // Add handlers for edit and regenerate functions
+  const handleEditMessage = (id: string, editedContent?: string) => {
+    // If we received edited content, this is a direct edit from the MessageItem component
+    if (editedContent) {
+      // Find the message to edit
+      const messageToEdit = messages.find(msg => msg.id === id);
+      const messageIndex = messages.findIndex(msg => msg.id === id);
+      
+      if (messageToEdit && messageIndex >= 0) {
+        // Create a new message array with the updated content
+        const messagesBeforeEdit = messages.slice(0, messageIndex);
+        const updatedMessage = {
+          ...messageToEdit,
+          content: editedContent,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Set messages to include all messages before this one, plus the edited message
+        useChatStore.getState().setMessages([...messagesBeforeEdit, updatedMessage]);
+        
+        // If there are messages after this one, regenerate responses
+        if (messageIndex < messages.length - 1) {
+          // Process the chat with the edited content to get new responses
+          useChatStore.getState().processChat(
+            [...messagesBeforeEdit, updatedMessage], 
+            editedContent, 
+            apiKey, 
+            selectedModel
+          );
+        }
+        
+        // Save the current chat
+        boundSaveCurrentChat();
+        return;
+      }
+    }
+    
+    // Original behavior for assistant messages or fallback
+    const messageToEdit = messages.find(msg => msg.id === id);
+    if (messageToEdit) {
+      // Set the input to the message content
+      useChatStore.getState().setInput(messageToEdit.content);
+      
+      // Remove this message and all messages after it
+      const messageIndex = messages.findIndex(msg => msg.id === id);
+      if (messageIndex >= 0) {
+        const newMessages = messages.slice(0, messageIndex);
+        useChatStore.getState().setMessages(newMessages);
+        boundSaveCurrentChat();
+      }
+    }
+  };
+
+  const handleRegenerateMessage = (id: string) => {
+    // Find the message to regenerate (which should be a user message)
+    const messageIndex = messages.findIndex(msg => msg.id === id);
+    if (messageIndex >= 0) {
+      // Keep messages up to and including this one, remove any after
+      const messagesToKeep = messages.slice(0, messageIndex + 1);
+      
+      // Extract the content from the user message
+      const userMessage = messages[messageIndex];
+      
+      // Set messages to just the ones we're keeping
+      useChatStore.getState().setMessages(messagesToKeep);
+      
+      // Process the chat with the user message content
+      useChatStore.getState().processChat(messagesToKeep, userMessage.content, apiKey, selectedModel);
+      boundSaveCurrentChat();
+    }
+  };
+
   return (
     <TooltipProvider>
       {/* Settings Sheet remains outside the main layout flow */}
@@ -200,10 +272,8 @@ export default function ChatApp() {
               chats={chats}
               currentChatId={currentChatId}
               onSelectChat={(chatId) => {
-                // Save current chat before switching
-                if (currentChatId) {
-                  boundSaveCurrentChat();
-                }
+                // Don't save current chat before switching
+                // This prevents updating the timestamp unnecessarily
                 
                 useChatStore.getState().setCurrentChatId(chatId);
                 const selectedChat = chats.find(c => c.id === chatId);
@@ -215,6 +285,7 @@ export default function ChatApp() {
                 }
               }}
               onDeleteChat={deleteChat}
+              onRenameChat={renameChat}
             />
           )}
 
@@ -245,6 +316,8 @@ export default function ChatApp() {
               messagesEndRef={messagesEndRef}
               isMobile={isMobileDetected}
               onExampleClick={boundHandleExampleClick}
+              onEditMessage={handleEditMessage}
+              onRegenerateMessage={handleRegenerateMessage}
             />
 
             {/* Chat Input */}
@@ -273,10 +346,8 @@ export default function ChatApp() {
           chats={chats}
           currentChatId={currentChatId}
           onSelectChat={(chatId) => {
-            // Save current chat before switching
-            if (currentChatId) {
-              boundSaveCurrentChat();
-            }
+            // Don't save the current chat when switching
+            // This prevents updating the timestamp unnecessarily
             
             useChatStore.getState().setCurrentChatId(chatId);
             const selectedChat = chats.find(c => c.id === chatId);
@@ -291,6 +362,7 @@ export default function ChatApp() {
             setMobileSheetOpen(false);
           }}
           onDeleteChat={deleteChat}
+          onRenameChat={renameChat}
         />
       </Sheet> {/* Close Mobile Sheet Wrapper */}
     </TooltipProvider>
