@@ -1,18 +1,17 @@
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Bot } from "lucide-react"; // Remove Loader2 import
+import { AlertCircle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/lib/types";
-import { MessageItem } from "./MessageItem"; // <-- Import the actual MessageItem
-
+import { MessageItem } from "./MessageItem";
 
 interface MessageListProps {
   messages: Message[];
   error: string | null;
   chatLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  isMobile: boolean; // <-- Add isMobile prop
+  isMobile: boolean;
 }
 
 export function MessageList({
@@ -20,49 +19,79 @@ export function MessageList({
   error,
   chatLoading,
   messagesEndRef,
-  isMobile, // <-- Destructure isMobile
+  isMobile,
 }: MessageListProps) {
-  // For mobile, we need bottom padding to prevent content from being hidden under the fixed input
-  // For desktop, we want no padding for seamless integration
-  const bottomPadding = isMobile ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : "";
+  // Keep minimal padding for mobile but none for desktop
+  const bottomPadding = isMobile ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]" : "pb-0";
 
   return (
-    // Keep pb-0 for desktop, but use the dynamic bottomPadding for mobile
-    <ScrollArea className={cn(
-      "flex-1 px-2 pt-2 md:px-4 md:pt-4 overflow-y-auto",
-      "overscroll-none scroll-smooth",  // Add smooth scrolling globally
-      "scroll-pt-4", // Removed scroll-pb-24 padding
-      bottomPadding // This will apply padding only on mobile
-    )}>
-      <div className="max-w-3xl mx-auto space-y-3 relative">
+    <ScrollArea 
+      className={cn(
+        "flex-1 overflow-y-auto",
+        "overscroll-none scroll-smooth",
+        "scroll-pt-4",
+        bottomPadding
+      )}
+    >
+      <div className="relative mx-auto max-w-3xl px-4 md:px-8">
+        {/* Error message */}
         {error && !chatLoading && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-4 mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Empty state */}
         {messages.length === 0 && !chatLoading ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-20">
-            <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
-              <Bot className="w-8 h-8 text-primary opacity-80" />
+          <div className="flex min-h-[calc(100vh-14rem)] flex-col items-center justify-center text-center">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/5 dark:bg-primary/10 mb-6 shadow-inner">
+              <Sparkles className="h-10 w-10 text-primary" />
             </div>
-            <p className="text-lg">How can I help you today?</p>
+            
+            <h2 className="text-xl font-medium mb-2">How can I assist you today?</h2>
+            <p className="text-muted-foreground max-w-md mb-8">
+              Start a conversation by typing a message below. I'm here to help with any questions or tasks.
+            </p>
+            
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 max-w-2xl">
+              {[
+                { title: "Learn about Next.js", text: "Can you explain how Next.js rendering works?" },
+                { title: "Fix code errors", text: "Help me debug this React error: [your error here]" },
+                { title: "Optimize performance", text: "How can I improve the performance of my React app?" },
+                { title: "Design patterns", text: "What are the best React design patterns for large apps?" }
+              ].map((suggestion, i) => (
+                <div 
+                  key={i} 
+                  className="flex cursor-pointer flex-col rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <h3 className="text-sm font-medium">{suggestion.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{suggestion.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
-          messages.map((message) => (
-            // Use the actual MessageItem component
-            <MessageItem key={message.id} message={message} />
-          ))
+          // Message list - remove bottom padding in desktop view
+          <div className={cn(
+            "flex flex-col space-y-6",
+            isMobile ? "py-4" : "pt-4 pb-0"
+          )}>
+            {messages.map((message) => (
+              <MessageItem key={message.id} message={message} />
+            ))}
+            
+            {/* Empty space only visible during loading to indicate something is happening */}
+            {chatLoading && <div className="h-2 w-full" aria-label="Loading response" />}
+
+            {/* Extra space only for mobile */}
+            {isMobile && messages.length > 0 && <div className="h-2" />}
+            
+            {/* Scrolling anchor with no height in desktop mode */}
+            <div ref={messagesEndRef} className={isMobile ? "h-2" : "h-0"} />
+          </div>
         )}
-        
-        {/* Add extra phantom space at the end for mobile view only */}
-        {isMobile && messages.length > 0 && (
-          <div className="h-4" /> // 2rem (32px) of invisible space
-        )}
-        
-        {/* Scrolling anchor point */}
-        <div ref={messagesEndRef} className={isMobile ? "h-2" : ""} />
       </div>
     </ScrollArea>
   );
