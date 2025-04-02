@@ -16,7 +16,10 @@ import {
   PanelRightClose,
   MessageSquare,
   X,
+  Trash2,
 } from "lucide-react";
+import type { Chat } from "@/lib/types";
+import { formatDistanceToNow } from "date-fns";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -28,6 +31,10 @@ interface SidebarProps {
   isMobile?: boolean;
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
+  chats?: Chat[];
+  currentChatId?: string;
+  onSelectChat?: (chatId: string) => void;
+  onDeleteChat?: (chatId: string) => void;
 }
 
 export function Sidebar({
@@ -40,18 +47,25 @@ export function Sidebar({
   isMobile = false,
   mobileOpen = false,
   onMobileOpenChange,
+  chats = [],
+  currentChatId = "",
+  onSelectChat = () => {},
+  onDeleteChat = () => {},
 }: SidebarProps) {
-  // Mock chat history for UI demonstration
-  const mockChats = [
-    { id: 1, name: "Getting started", date: "Just now" },
-    { id: 2, name: "Project ideas", date: "2h ago" },
-    { id: 3, name: "Tech recommendations", date: "Yesterday" },
-  ];
 
   // Function to close mobile sheet if in mobile mode
   const handleCloseMobileSheet = () => {
     if (isMobile && onMobileOpenChange) {
       onMobileOpenChange(false);
+    }
+  };
+
+  // Function to format date to relative time
+  const formatChatDate = (dateString: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch (error) {
+      return "Unknown date";
     }
   };
 
@@ -124,50 +138,82 @@ export function Sidebar({
         {/* Chat History Section */}
         <ScrollArea className="flex-1 px-2">
           <div className={cn("pt-2 transition-all duration-300 ease-in-out")}>
-            {(!isCollapsed || isMobile) && (
+            {(!isCollapsed || isMobile) && chats.length > 0 && (
               <div className="mb-2 px-1 py-1 opacity-100 transition-opacity duration-300 ease-in-out">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-muted-foreground">Recent Chats</h3>
                   <Badge variant="secondary" className="text-xs px-2 py-0 h-5">
-                    {mockChats.length}
+                    {chats.length}
                   </Badge>
                 </div>
               </div>
             )}
             
             <div className="space-y-1.5 transition-all duration-300 ease-in-out">
-              {mockChats.map((chat, index) => (
+              {chats.map((chat) => (
                 <Tooltip key={chat.id}>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={index === 0 ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full h-12 justify-start font-normal group relative transition-all duration-300 ease-in-out",
-                        isCollapsed && !isMobile ? "w-12 p-0 justify-center" : "px-2"
-                      )}
-                      onClick={handleCloseMobileSheet}
-                    >
-                      <div className={cn(
-                        "flex items-center transition-all duration-300 ease-in-out",
-                        isCollapsed && !isMobile ? "justify-center w-full" : "w-full"
-                      )}>
-                        <MessageSquare className={cn(
-                          "h-5 w-5 flex-shrink-0 transition-all duration-300 ease-in-out",
-                          index === 0 ? "text-primary" : "text-muted-foreground",
-                          (!isCollapsed || isMobile) && "mr-2"
-                        )} />
-                        {(!isCollapsed || isMobile) && (
-                          <div className="flex flex-col items-start text-sm overflow-hidden transition-opacity duration-300 ease-in-out">
-                            <span className="truncate w-full">{chat.name}</span>
-                            <span className="text-xs text-muted-foreground">{chat.date}</span>
-                          </div>
+                    <div className="relative group">
+                      <Button
+                        variant={chat.id === currentChatId ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full h-12 justify-start font-normal group relative transition-all duration-300 ease-in-out",
+                          isCollapsed && !isMobile ? "w-12 p-0 justify-center" : "px-2"
                         )}
-                      </div>
-                    </Button>
+                        onClick={() => {
+                          onSelectChat(chat.id);
+                          handleCloseMobileSheet();
+                        }}
+                      >
+                        <div className={cn(
+                          "flex items-center transition-all duration-300 ease-in-out",
+                          isCollapsed && !isMobile ? "justify-center w-full" : "w-full"
+                        )}>
+                          <MessageSquare className={cn(
+                            "h-5 w-5 flex-shrink-0 transition-all duration-300 ease-in-out",
+                            chat.id === currentChatId ? "text-primary" : "text-muted-foreground",
+                            (!isCollapsed || isMobile) && "mr-2"
+                          )} />
+                          {(!isCollapsed || isMobile) && (
+                            <div className="flex flex-col items-start text-sm overflow-hidden transition-opacity duration-300 ease-in-out">
+                              <span className="truncate w-full">{chat.title}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatChatDate(chat.updatedAt)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                      {(!isCollapsed || isMobile) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteChat(chat.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </TooltipTrigger>
-                  {isCollapsed && !isMobile && <TooltipContent side="right">{chat.name}</TooltipContent>}
+                  {isCollapsed && !isMobile && <TooltipContent side="right">{chat.title}</TooltipContent>}
                 </Tooltip>
               ))}
+              
+              {chats.length === 0 && (
+                <div className="px-2 py-3 text-center text-sm text-muted-foreground">
+                  {(!isCollapsed || isMobile) ? (
+                    <span>No chat history yet. Start a new chat!</span>
+                  ) : (
+                    <span className="flex justify-center">
+                      <MessageSquare className="h-5 w-5" />
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>
@@ -250,26 +296,21 @@ export function Sidebar({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={cn(
-                    "w-full h-12 justify-start hidden md:flex hover:bg-muted transition-all duration-300 ease-in-out",
-                    isCollapsed ? "w-12 p-0 justify-center" : ""
-                  )}
+                  className="hidden md:flex w-full h-12 justify-start hover:bg-muted transition-all duration-300 ease-in-out"
                   onClick={onToggleSidebar}
                 >
                   <div className={cn(
                     "flex items-center transition-all duration-300 ease-in-out",
                     isCollapsed ? "justify-center w-full" : "w-full"
                   )}>
-                    {isCollapsed ? (
-                      <PanelRightClose className="h-5 w-5 flex-shrink-0" />
-                    ) : (
-                      <PanelLeftClose className="h-5 w-5 flex-shrink-0" />
-                    )}
+                    {isCollapsed ? <PanelRightClose className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
                     {!isCollapsed && <span className="ml-2 text-sm transition-opacity duration-300">Collapse</span>}
                   </div>
                 </Button>
               </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Expand Sidebar</TooltipContent>}
+              <TooltipContent side="right">
+                {isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              </TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -277,32 +318,22 @@ export function Sidebar({
     </div>
   );
 
-  // Render based on mode
+  // For desktop we just render the content directly
+  if (!isMobile) {
+    return (
+      <aside className={cn(
+        "h-screen flex-col border-r border-border transition-all duration-300 ease-in-out hide-scrollbar",
+        isCollapsed ? "w-16" : "w-64",
+      )}>
+        <SidebarContent />
+      </aside>
+    );
+  }
+
+  // For mobile, wrap in Sheet.Content
   return (
-    <TooltipProvider>
-      {isMobile ? (
-        // Mobile Sheet with Sidebar Content
-        <SheetContent
-          side="left"
-          className="p-0 w-64 border-r border-border bg-background pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)]"
-        >
-          <SheetHeader>
-            <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
-          </SheetHeader>
-          <SidebarContent />
-        </SheetContent>
-      ) : (
-        // Desktop Sidebar
-        <div
-          data-collapsed={isCollapsed}
-          className={cn(
-            "group relative flex h-full flex-col bg-background border-r border-border transition-all duration-300 ease-in-out",
-            isCollapsed ? "w-16" : "w-64"
-          )}
-        >
-          <SidebarContent />
-        </div>
-      )}
-    </TooltipProvider>
+    <SheetContent side="left" className="p-0 w-full max-w-[280px] sm:max-w-[320px]">
+      <SidebarContent />
+    </SheetContent>
   );
 }

@@ -28,7 +28,7 @@ import { SettingsSheet } from "@/components/chat/SettingsSheet"
 import { ChatHeader } from "@/components/chat/ChatHeader"
 import { MessageList } from "@/components/chat/MessageList"
 import { ChatInput } from "@/components/chat/ChatInput" // <-- Import ChatInput
-import type { Message, Model } from "@/lib/types"
+import type { Message, Model, Chat } from "@/lib/types"
 
 export default function ChatApp() {
   // State
@@ -45,6 +45,10 @@ export default function ChatApp() {
   const [tempApiKey, setTempApiKey] = useState("")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for desktop sidebar
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false); // <-- New state for mobile sheet
+  
+  // Chat history state
+  const [chats, setChats] = useState<Chat[]>([])
+  const [currentChatId, setCurrentChatId] = useState<string>("")
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null) // Explicitly allow null in the ref type
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -52,16 +56,40 @@ export default function ChatApp() {
   const isMobile = useIsMobile(); // <-- Use the hook
 
   // --- Effects ---
-  // Load API key & theme from localStorage on mount
+  // Load API key, theme & chat history from localStorage on mount
   useEffect(() => {
     const storedApiKey = localStorage.getItem("openrouter_api_key")
     if (storedApiKey) {
       setApiKey(storedApiKey)
       setTempApiKey(storedApiKey)
     }
+
+    // Load chat history
+    loadChats()
+
     // Fetch models regardless of sidebar state
     fetchModels(storedApiKey || "")
   }, []) // This effect only handles API key loading and initial model fetch
+  
+  // Effect to update localStorage when messages change
+  useEffect(() => {
+    if (currentChatId && messages.length > 0) {
+      saveCurrentChat();
+    }
+  }, [messages, currentChatId]);
+
+  // Effect to load messages when currentChatId changes
+  useEffect(() => {
+    if (currentChatId) {
+      const chat = chats.find(c => c.id === currentChatId);
+      if (chat) {
+        setMessages(chat.messages);
+        if (chat.model) {
+          setSelectedModel(chat.model);
+        }
+      }
+    }
+  }, [currentChatId]);
 
   // Effect to set initial sidebar state based on mobile status and localStorage
   useEffect(() => {
@@ -114,7 +142,89 @@ export default function ChatApp() {
     }
   }, [])
 
-  // --- Functions ---
+  // --- Chat History Functions ---
+  const loadChats = () => {
+    try {
+      const storedChats = localStorage.getItem("openchat_history");
+      if (storedChats) {
+        const parsedChats = JSON.parse(storedChats) as Chat[];
+        setChats(parsedChats);
+        
+        // If there are chats, set the most recent one as current
+        if (parsedChats.length > 0) {
+          const sortedChats = [...parsedChats].sort(
+            (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+          setCurrentChatId(sortedChats[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load chats:", error);
+    }
+  };
+  
+  const saveChats = (updatedChats: Chat[]) => {
+    try {
+      localStorage.setItem("openchat_history", JSON.stringify(updatedChats));
+      setChats(updatedChats);
+    } catch (error) {
+      console.error("Failed to save chats:", error);
+    }
+  };
+  
+  const saveCurrentChat = () => {
+    if (!currentChatId) return;
+    
+    const now = new Date().toISOString();
+    const existingChatIndex = chats.findIndex(c => c.id === currentChatId);
+    
+    if (existingChatIndex >= 0) {
+      // Update existing chat
+      const updatedChats = [...chats];
+      updatedChats[existingChatIndex] = {
+        ...updatedChats[existingChatIndex],
+        messages,
+        model: selectedModel,
+        updatedAt: now,
+        // Generate title from first user message if not already set
+        title: updatedChats[existingChatIndex].title || 
+               (messages[0]?.content.slice(0, 30) + (messages[0]?.content.length > 30 ? '...' : ''))
+      };
+      saveChats(updatedChats);
+    }
+  };
+  
+  const createNewChat = () => {
+    const chatId = uuidv4();
+    const now = new Date().toISOString();
+    const newChat: Chat = {
+      id: chatId,
+      title: "New Chat",
+      messages: [],
+      model: selectedModel,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    const updatedChats = [newChat, ...chats];
+    saveChats(updatedChats);
+    setCurrentChatId(chatId);
+    return chatId;
+  };
+  
+  const deleteChat = (chatId: string) => {
+    const updatedChats = chats.filter(c => c.id !== chatId);
+    saveChats(updatedChats);
+    
+    if (currentChatId === chatId) {
+      if (updatedChats.length > 0) {
+        setCurrentChatId(updatedChats[0].id);
+      } else {
+        setCurrentChatId("");
+        setMessages([]);
+      }
+    }
+  };
 
   const fetchModels = async (currentApiKey: string) => {
     setIsLoading(true)
@@ -230,6 +340,9 @@ export default function ChatApp() {
     setMessages([])
     setChatLoading(false)
     setError(null)
+    
+    // Create a new chat
+    createNewChat();
   }
 
   const handleStopGenerating = () => {
@@ -246,6 +359,13 @@ export default function ChatApp() {
   const handleExampleClick = async (text: string) => {
     setInput(text);
     const textToSubmit = text;
+    
+    // If no current chat, create a new one
+    if (!currentChatId || chats.findIndex(c => c.id === currentChatId) === -1) {
+      const newChatId = createNewChat();
+      setCurrentChatId(newChatId);
+    }
+    
     const userMessage: Message = { id: uuidv4(), role: "user", content: textToSubmit.trim() };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -272,6 +392,12 @@ export default function ChatApp() {
       return
     }
     if (!input.trim()) return
+
+    // If no current chat, create a new one
+    if (!currentChatId || chats.findIndex(c => c.id === currentChatId) === -1) {
+      const newChatId = createNewChat();
+      setCurrentChatId(newChatId);
+    }
 
     setError(null)
     const userMessage: Message = { id: uuidv4(), role: "user", content: input.trim() }
@@ -386,7 +512,26 @@ export default function ChatApp() {
 
   const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
-  const toggleSettings = () => setSettingsOpen(!settingsOpen); // Function to toggle settings sheet
+  const toggleSettings = () => setSettingsOpen(!settingsOpen);
+  
+  const handleSelectChat = (chatId: string) => {
+    // Save current chat before switching
+    if (currentChatId) {
+      saveCurrentChat();
+    }
+    
+    setCurrentChatId(chatId);
+    const selectedChat = chats.find(c => c.id === chatId);
+    if (selectedChat) {
+      setMessages(selectedChat.messages);
+      if (selectedChat.model) {
+        setSelectedModel(selectedChat.model);
+      }
+    }
+    
+    // Close mobile sidebar on chat selection
+    setMobileSheetOpen(false);
+  };
 
   // Function to close mobile sheet if needed when clicking items inside
   const closeMobileSheet = () => setMobileSheetOpen(false);
@@ -422,6 +567,10 @@ export default function ChatApp() {
               onToggleTheme={toggleTheme}
               onToggleSettings={toggleSettings}
               onToggleSidebar={toggleSidebar}
+              chats={chats}
+              currentChatId={currentChatId}
+              onSelectChat={handleSelectChat}
+              onDeleteChat={deleteChat}
             />
           )}
 
@@ -473,6 +622,10 @@ export default function ChatApp() {
           isMobile={true}
           mobileOpen={mobileSheetOpen}
           onMobileOpenChange={setMobileSheetOpen}
+          chats={chats}
+          currentChatId={currentChatId}
+          onSelectChat={handleSelectChat}
+          onDeleteChat={deleteChat}
         />
       </Sheet> {/* Close Mobile Sheet Wrapper */}
     </TooltipProvider>

@@ -12,3 +12,12 @@ export interface Model {
   provider: string;
   isFree: boolean;
 }
+
+export interface Chat {
+  id: string;
+  title: string;
+  messages: Message[];
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+}
