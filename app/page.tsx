@@ -385,7 +385,7 @@ export default function ChatApp() {
           selectedModel={selectedModel}
         />
 
-      {/* Mobile Sheet Wrapper */}
+      {/* Sheet for mobile sidebar */}
       <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
         {/* Main Layout Container */}
         <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden overscroll-none">
@@ -437,71 +437,18 @@ export default function ChatApp() {
           </div> {/* Close main chat area div */}
         </div> {/* Close main flex container div */}
 
-        {/* --- Mobile Sheet Content --- */}
-        {/* Pass showClose={false} to SheetContent if that prop exists, otherwise need CSS */}
-        {/* Explicitly adding bg-background to ensure opacity */}
-        <SheetContent side="left" className="p-0 w-64 border-r border-border bg-background">
-          {/* Add Header and visually hidden Title for accessibility */}
-          <SheetHeader>
-            <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
-          </SheetHeader>
-          {/* Replicate Sidebar content structure here, adding safe area padding to existing p-2 */}
-          <div className="flex h-full flex-col p-2 pt-[calc(0.5rem+env(safe-area-inset-top))] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[calc(0.5rem+env(safe-area-inset-left))]">
-            {/* Two Separate Buttons with same variant */}
-            <div className="flex items-center gap-2 mb-4"> {/* Use gap-2 */}
-              {/* Button 1: + New Chat */}
-              <Button
-                variant="outline" // Use the same variant
-                className="flex-1 justify-start gap-2" // Allow button to grow
-                onClick={() => { clearChat(); closeMobileSheet(); }}
-              >
-                <Plus className="h-4 w-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">New Chat</span>
-              </Button>
-              {/* Button 2: X (Close) - Using onClick handler */}
-              <Button
-                variant="outline" // Use the same variant
-                size="icon"
-                className="flex-shrink-0" // Prevent shrinking
-                onClick={closeMobileSheet} // Add onClick handler
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </div>
-
-            {/* Chat History Area (Placeholder) */}
-            <ScrollArea className="flex-1">
-              <div className="text-sm text-muted-foreground p-2">Chat history (coming soon)</div>
-            </ScrollArea>
-
-            {/* Bottom Controls */}
-            <div className="mt-auto border-t border-border pt-2">
-              {/* Theme Toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => { toggleTheme(); closeMobileSheet(); }}
-              >
-                {theme === "light" ? <Moon className="h-4 w-4 flex-shrink-0" /> : <Sun className="h-4 w-4 flex-shrink-0" />}
-                <span className="whitespace-nowrap">{theme === "light" ? "Dark" : "Light"} Mode</span>
-              </Button>
-
-              {/* Settings Trigger */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => { toggleSettings(); closeMobileSheet(); }}
-              >
-                <Settings className="h-4 w-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Settings</span>
-              </Button>
-              {/* No Collapse button needed in mobile sheet */}
-            </div>
-          </div>
-        </SheetContent>
+        {/* Mobile Sidebar */}
+        <Sidebar
+          isCollapsed={false} // Mobile sidebar is never collapsed
+          onNewChat={clearChat}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onToggleSettings={toggleSettings}
+          onToggleSidebar={toggleSidebar}
+          isMobile={true}
+          mobileOpen={mobileSheetOpen}
+          onMobileOpenChange={setMobileSheetOpen}
+        />
       </Sheet> {/* Close Mobile Sheet Wrapper */}
     </TooltipProvider>
   )
