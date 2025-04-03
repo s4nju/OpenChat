@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Model } from '@/lib/types';
+import type { Model, ChatSettings, AppearanceSettings, AdvancedSettings } from '@/lib/types';
 
 interface SettingsState {
   // State
@@ -11,7 +11,12 @@ interface SettingsState {
   error: string | null;
   showFreeOnly: boolean;
   settingsOpen: boolean;
-  
+
+  // New settings state
+  chatSettings: ChatSettings;
+  appearanceSettings: AppearanceSettings;
+  advancedSettings: AdvancedSettings;
+
   // Actions
   setApiKey: (apiKey: string) => void;
   setTempApiKey: (tempApiKey: string) => void;
@@ -21,12 +26,19 @@ interface SettingsState {
   setError: (error: string | null) => void;
   setShowFreeOnly: (showFreeOnly: boolean) => void;
   setSettingsOpen: (isOpen: boolean) => void;
-  
+
+  // New settings actions
+  setChatSettings: (settings: Partial<ChatSettings>) => void;
+  setAppearanceSettings: (settings: Partial<AppearanceSettings>) => void;
+  setAdvancedSettings: (settings: Partial<AdvancedSettings>) => void;
+
   // Operations
   saveApiKey: () => void;
+  saveSettings: () => void;
+  loadSettings: () => void;
   fetchModels: (currentApiKey?: string) => Promise<void>;
   toggleSettings: () => void;
-  
+
   // Derived state
   getFilteredModels: () => Model[];
 }
@@ -41,7 +53,26 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   error: null,
   showFreeOnly: false,
   settingsOpen: false,
-  
+
+  // New settings state with defaults
+  chatSettings: {
+    messageHistoryLength: 100,
+    autoSaveChats: true,
+    sendWithEnter: true,
+    showTimestamps: false,
+  },
+  appearanceSettings: {
+    theme: 'system',
+    fontSize: 'medium',
+    compactMode: false,
+    messageSpacing: 'comfortable',
+  },
+  advancedSettings: {
+    debugMode: false,
+    clearCacheOnStartup: false,
+    maxTokensPerMessage: 4000,
+  },
+
   // Actions
   setApiKey: (apiKey) => set({ apiKey }),
   setTempApiKey: (tempApiKey) => set({ tempApiKey }),
@@ -51,22 +82,33 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setError: (error) => set({ error }),
   setShowFreeOnly: (showFreeOnly) => set({ showFreeOnly }),
   setSettingsOpen: (isOpen) => set({ settingsOpen: isOpen }),
-  
+
+  // New settings actions
+  setChatSettings: (settings) => set((state) => ({
+    chatSettings: { ...state.chatSettings, ...settings }
+  })),
+  setAppearanceSettings: (settings) => set((state) => ({
+    appearanceSettings: { ...state.appearanceSettings, ...settings }
+  })),
+  setAdvancedSettings: (settings) => set((state) => ({
+    advancedSettings: { ...state.advancedSettings, ...settings }
+  })),
+
   // Operations
   saveApiKey: () => {
     const { tempApiKey } = get();
     const trimmedApiKey = tempApiKey.trim();
-    
+
     if (trimmedApiKey) {
       localStorage.setItem("openrouter_api_key", trimmedApiKey);
-      set({ 
+      set({
         apiKey: trimmedApiKey,
         error: null,
         settingsOpen: false
       });
     } else {
       localStorage.removeItem("openrouter_api_key");
-      set({ 
+      set({
         apiKey: "",
         tempApiKey: "",
         error: "API Key removed.",
@@ -74,19 +116,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       });
     }
   },
-  
+
   fetchModels: async (currentApiKey) => {
     const { apiKey } = get();
     const keyToUse = currentApiKey !== undefined ? currentApiKey : apiKey;
-    
+
     set({ isLoading: true, error: null });
-    
+
     try {
       const headers: HeadersInit = {
         "HTTP-Referer": "https://openchat.dev",
         "X-Title": "OpenChat",
       };
-      
+
       if (keyToUse) {
         headers["Authorization"] = `Bearer ${keyToUse}`;
       }
@@ -97,19 +139,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         const errorText = await response.text();
         console.error("Failed to fetch models:", response.status, errorText);
         let userError = `Failed to fetch models: ${response.status} ${response.statusText}`;
-        
+
         if (response.status === 401) {
           userError = keyToUse
             ? "Failed to fetch models: Invalid API Key. Please check your key in Settings."
             : "API Key needed to fetch all models. Add one in Settings or continue with public models.";
         }
-        
+
         set({ error: userError });
-        
+
         if (response.status !== 401 || keyToUse) {
           set({ models: [], selectedModel: "" });
         }
-        
+
         if (response.status === 401 && !keyToUse) {
           // Allow parsing public models
         } else {
@@ -146,7 +188,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
         const { selectedModel } = get();
         const currentModelExists = formattedModels.some((m: Model) => m.id === selectedModel);
-        
+
         if ((!selectedModel || !currentModelExists) && formattedModels.length > 0) {
           const preferredFreeModelId = "deepseek/deepseek-chat-v3-0324:free";
           const preferredModel = formattedModels.find((m: Model) => m.id === preferredFreeModelId);
@@ -162,7 +204,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
       } else {
         console.error("Invalid models data format:", data);
-        set({ 
+        set({
           error: "Invalid response format from OpenRouter API",
           models: [],
           selectedModel: ""
@@ -170,7 +212,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
     } catch (err) {
       console.error("Error fetching models:", err);
-      set({ 
+      set({
         error: `Failed to fetch models: ${err instanceof Error ? err.message : "Unknown error"}`,
         models: [],
         selectedModel: ""
@@ -179,14 +221,120 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  
+
+  saveSettings: () => {
+    const { chatSettings, appearanceSettings, advancedSettings, showFreeOnly } = get();
+
+    // Save all settings to localStorage
+    localStorage.setItem("openchat_chat_settings", JSON.stringify(chatSettings));
+    localStorage.setItem("openchat_appearance_settings", JSON.stringify(appearanceSettings));
+    localStorage.setItem("openchat_advanced_settings", JSON.stringify(advancedSettings));
+    localStorage.setItem("openchat_show_free_only", JSON.stringify(showFreeOnly));
+
+    // Close settings dialog
+    set({ settingsOpen: false });
+  },
+
+  loadSettings: () => {
+    try {
+      // Load chat settings
+      const chatSettingsStr = localStorage.getItem("openchat_chat_settings");
+      if (chatSettingsStr) {
+        const chatSettings = JSON.parse(chatSettingsStr);
+        set((state) => ({
+          chatSettings: { ...state.chatSettings, ...chatSettings }
+        }));
+      }
+
+      // Load appearance settings
+      const appearanceSettingsStr = localStorage.getItem("openchat_appearance_settings");
+      if (appearanceSettingsStr) {
+        const appearanceSettings = JSON.parse(appearanceSettingsStr);
+        set((state) => ({
+          appearanceSettings: { ...state.appearanceSettings, ...appearanceSettings }
+        }));
+      }
+
+      // Load advanced settings
+      const advancedSettingsStr = localStorage.getItem("openchat_advanced_settings");
+      if (advancedSettingsStr) {
+        const advancedSettings = JSON.parse(advancedSettingsStr);
+        set((state) => ({
+          advancedSettings: { ...state.advancedSettings, ...advancedSettings }
+        }));
+      }
+
+      // Load show free only setting
+      const showFreeOnlyStr = localStorage.getItem("openchat_show_free_only");
+      if (showFreeOnlyStr) {
+        set({ showFreeOnly: JSON.parse(showFreeOnlyStr) });
+      }
+    } catch (err) {
+      console.error("Error loading settings:", err);
+      // If there's an error, we'll just use the defaults
+    }
+  },
+
+  saveSettings: () => {
+    const { chatSettings, appearanceSettings, advancedSettings, showFreeOnly } = get();
+
+    // Save all settings to localStorage
+    localStorage.setItem("openchat_chat_settings", JSON.stringify(chatSettings));
+    localStorage.setItem("openchat_appearance_settings", JSON.stringify(appearanceSettings));
+    localStorage.setItem("openchat_advanced_settings", JSON.stringify(advancedSettings));
+    localStorage.setItem("openchat_show_free_only", JSON.stringify(showFreeOnly));
+
+    // Close settings dialog
+    set({ settingsOpen: false });
+  },
+
+  loadSettings: () => {
+    try {
+      // Load chat settings
+      const chatSettingsStr = localStorage.getItem("openchat_chat_settings");
+      if (chatSettingsStr) {
+        const chatSettings = JSON.parse(chatSettingsStr);
+        set((state) => ({
+          chatSettings: { ...state.chatSettings, ...chatSettings }
+        }));
+      }
+
+      // Load appearance settings
+      const appearanceSettingsStr = localStorage.getItem("openchat_appearance_settings");
+      if (appearanceSettingsStr) {
+        const appearanceSettings = JSON.parse(appearanceSettingsStr);
+        set((state) => ({
+          appearanceSettings: { ...state.appearanceSettings, ...appearanceSettings }
+        }));
+      }
+
+      // Load advanced settings
+      const advancedSettingsStr = localStorage.getItem("openchat_advanced_settings");
+      if (advancedSettingsStr) {
+        const advancedSettings = JSON.parse(advancedSettingsStr);
+        set((state) => ({
+          advancedSettings: { ...state.advancedSettings, ...advancedSettings }
+        }));
+      }
+
+      // Load show free only setting
+      const showFreeOnlyStr = localStorage.getItem("openchat_show_free_only");
+      if (showFreeOnlyStr) {
+        set({ showFreeOnly: JSON.parse(showFreeOnlyStr) });
+      }
+    } catch (err) {
+      console.error("Error loading settings:", err);
+      // If there's an error, we'll just use the defaults
+    }
+  },
+
   toggleSettings: () => {
     set((state) => ({ settingsOpen: !state.settingsOpen }));
   },
-  
+
   // Derived state
   getFilteredModels: () => {
     const { models, showFreeOnly } = get();
     return showFreeOnly ? models.filter((model) => model.isFree) : models;
   }
-})); 
+}));

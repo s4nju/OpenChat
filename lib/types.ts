@@ -22,3 +22,24 @@ export interface Chat {
   createdAt: string;
   updatedAt: string;
 }
+
+// Settings types
+export interface ChatSettings {
+  messageHistoryLength: number;
+  autoSaveChats: boolean;
+  sendWithEnter: boolean;
+  showTimestamps: boolean;
+}
+
+export interface AppearanceSettings {
+  theme: "light" | "dark" | "system";
+  fontSize: "small" | "medium" | "large";
+  compactMode: boolean;
+  messageSpacing: "compact" | "comfortable" | "spacious";
+}
+
+export interface AdvancedSettings {
+  debugMode: boolean;
+  clearCacheOnStartup: boolean;
+  maxTokensPerMessage: number;
+}

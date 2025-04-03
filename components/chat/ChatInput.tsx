@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Send, StopCircle, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSettings } from "@/lib/contexts/settings-context";
 
 interface ChatInputProps {
   input: string;
@@ -23,16 +24,17 @@ export function ChatInput({
   isLoading,
   isMobile,
 }: ChatInputProps) {
+  const { chatSettings } = useSettings();
   return (
-    <div 
+    <div
       className={cn(
         "bg-background z-20",
-        isMobile 
-          ? "fixed bottom-0 left-0 right-0 pb-[calc(0.75rem+env(safe-area-inset-bottom))] px-2 pt-0" 
+        isMobile
+          ? "fixed bottom-0 left-0 right-0 pb-[calc(0.75rem+env(safe-area-inset-bottom))] px-2 pt-0"
           : "px-2 pt-0 pb-2"
       )}
     >
-      <div 
+      <div
         className={cn(
           "rounded-xl border border-input shadow-md bg-background/80 backdrop-blur-sm",
           isMobile ? "w-full" : "max-w-3xl mx-auto"
@@ -46,7 +48,7 @@ export function ChatInput({
             </div>
           </div>
         )}
-        
+
         <form
           onSubmit={onSubmit}
           className="relative"
@@ -69,7 +71,8 @@ export function ChatInput({
                 )}
                 rows={1}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  // Only handle Enter key if sendWithEnter is enabled
+                  if (e.key === "Enter" && !e.shiftKey && chatSettings.sendWithEnter) {
                     e.preventDefault()
                     if (!isLoading && input.trim()) {
                       onSubmit() // Call onSubmit without event arg
@@ -79,7 +82,7 @@ export function ChatInput({
                 disabled={isLoading}
               />
             </div>
-            
+
             {/* Footer with action buttons */}
             <div className="flex justify-between px-1">
               {/* Left side - hints and attachment */}
@@ -92,12 +95,14 @@ export function ChatInput({
                 >
                   <Paperclip className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                
+
                 <span className="ml-2 text-xs text-muted-foreground hidden sm:block">
-                  {isLoading ? "" : "Press Enter to send, Shift+Enter for new line"}
+                  {isLoading ? "" : chatSettings.sendWithEnter
+                    ? "Press Enter to send, Shift+Enter for new line"
+                    : "Press Ctrl+Enter to send"}
                 </span>
               </div>
-              
+
               {/* Right side - character count and send/stop button */}
               <div className="flex items-center">
                 {input.length > 0 && !isLoading && (
@@ -105,7 +110,7 @@ export function ChatInput({
                     {input.length}
                   </span>
                 )}
-                
+
                 <AnimatePresence mode="wait">
                   {isLoading ? (
                     <Tooltip>
@@ -151,7 +156,7 @@ export function ChatInput({
           </div>
         </form>
       </div>
-      
+
       {/* Add custom keyframe animation for the loading bar */}
       <style jsx global>{`
         @keyframes loading {

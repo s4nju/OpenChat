@@ -10,6 +10,23 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Safe area insets utilities */
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pr-safe-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pl-safe-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
 }
 
 @layer base {
@@ -101,4 +118,190 @@ body {
 /* Hide default shadcn Sheet close button */
 .fixed.z-50 .absolute.right-4.top-4 {
   display: none !important;
+}
+
+/* Settings-based styling */
+
+/* Font sizes */
+.font-size-small {
+  --base-font-size: 0.875rem; /* 14px */
+}
+
+.font-size-medium {
+  --base-font-size: 1rem; /* 16px */
+}
+
+.font-size-large {
+  --base-font-size: 1.125rem; /* 18px */
+}
+
+/* Apply font sizes to specific elements */
+.font-size-small body,
+.font-size-small p,
+.font-size-small div,
+.font-size-small span,
+.font-size-small button,
+.font-size-small input,
+.font-size-small textarea,
+.font-size-small .text-base,
+.font-size-small .group\/message {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-medium body,
+.font-size-medium p,
+.font-size-medium div,
+.font-size-medium span,
+.font-size-medium button,
+.font-size-medium input,
+.font-size-medium textarea,
+.font-size-medium .text-base,
+.font-size-medium .group\/message {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-large body,
+.font-size-large p,
+.font-size-large div,
+.font-size-large span,
+.font-size-large button,
+.font-size-large input,
+.font-size-large textarea,
+.font-size-large .text-base,
+.font-size-large .group\/message {
+  font-size: var(--base-font-size) !important;
+}
+
+/* Specific rules for message content */
+.font-size-small .message-content {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-medium .message-content {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-large .message-content {
+  font-size: var(--base-font-size) !important;
+}
+
+/* Make sure markdown content also gets the font size */
+.font-size-small .message-content p,
+.font-size-small .message-content li,
+.font-size-small .message-content code {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-medium .message-content p,
+.font-size-medium .message-content li,
+.font-size-medium .message-content code {
+  font-size: var(--base-font-size) !important;
+}
+
+.font-size-large .message-content p,
+.font-size-large .message-content li,
+.font-size-large .message-content code {
+  font-size: var(--base-font-size) !important;
+}
+
+/* Adjust headings in markdown content */
+.font-size-small .message-content h1 {
+  font-size: calc(var(--base-font-size) * 1.5) !important;
+}
+
+.font-size-small .message-content h2 {
+  font-size: calc(var(--base-font-size) * 1.3) !important;
+}
+
+.font-size-small .message-content h3 {
+  font-size: calc(var(--base-font-size) * 1.1) !important;
+}
+
+.font-size-medium .message-content h1 {
+  font-size: calc(var(--base-font-size) * 1.5) !important;
+}
+
+.font-size-medium .message-content h2 {
+  font-size: calc(var(--base-font-size) * 1.3) !important;
+}
+
+.font-size-medium .message-content h3 {
+  font-size: calc(var(--base-font-size) * 1.1) !important;
+}
+
+.font-size-large .message-content h1 {
+  font-size: calc(var(--base-font-size) * 1.5) !important;
+}
+
+.font-size-large .message-content h2 {
+  font-size: calc(var(--base-font-size) * 1.3) !important;
+}
+
+.font-size-large .message-content h3 {
+  font-size: calc(var(--base-font-size) * 1.1) !important;
+}
+
+/* Adjust text-sm and text-lg based on base font size */
+.font-size-small .text-sm {
+  font-size: calc(var(--base-font-size) * 0.875) !important;
+}
+
+.font-size-small .text-lg {
+  font-size: calc(var(--base-font-size) * 1.125) !important;
+}
+
+.font-size-medium .text-sm {
+  font-size: calc(var(--base-font-size) * 0.875) !important;
+}
+
+.font-size-medium .text-lg {
+  font-size: calc(var(--base-font-size) * 1.125) !important;
+}
+
+.font-size-large .text-sm {
+  font-size: calc(var(--base-font-size) * 0.875) !important;
+}
+
+.font-size-large .text-lg {
+  font-size: calc(var(--base-font-size) * 1.125) !important;
+}
+
+/* Compact mode */
+.compact-mode .p-6 {
+  padding: 0.75rem !important;
+}
+
+.compact-mode .p-4 {
+  padding: 0.5rem !important;
+}
+
+.compact-mode .p-3 {
+  padding: 0.375rem !important;
+}
+
+.compact-mode .p-2 {
+  padding: 0.25rem !important;
+}
+
+.compact-mode .space-y-4 > * {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.compact-mode .space-y-2 > * {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Message spacing */
+.message-spacing-compact .group\/message {
+  margin-bottom: 0.25rem !important;
+}
+
+.message-spacing-comfortable .group\/message {
+  margin-bottom: 0.75rem !important;
+}
+
+.message-spacing-spacious .group\/message {
+  margin-bottom: 1.5rem !important;
 }

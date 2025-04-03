@@ -3,7 +3,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Menu, Share2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   DropdownMenu, 
@@ -82,12 +81,10 @@ export function ChatHeader({
         <div className="flex items-center gap-2">
           {/* Mobile menu trigger */}
           {isMobile && (
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 -ml-1" onClick={onToggleMobileSheet}>
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Sidebar</span>
-              </Button>
-            </SheetTrigger>
+            <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 -ml-1" onClick={onToggleMobileSheet}>
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle Sidebar</span>
+            </Button>
           )}
           
           {/* Chat title without icon */}

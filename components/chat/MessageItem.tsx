@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/lib/types";
-import { Check, Copy, RotateCw, Pencil, X } from "lucide-react";
+import { Check, Copy, RotateCw, Pencil, X, Clock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight, oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useTheme } from "next-themes";
+import { useSettings } from "@/lib/contexts/settings-context";
 import { v4 as uuidv4 } from 'uuid';
 
 // Extend the Window interface to include our global store accessors
@@ -39,6 +40,7 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
   const [editedContent, setEditedContent] = useState(message.content);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { theme } = useTheme();
+  const { chatSettings } = useSettings();
 
   // Focus textarea when editing starts
   useEffect(() => {
@@ -50,22 +52,41 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
     }
   }, [isEditing]);
 
-  // Format timestamp
+  // Format timestamp with relative dates
   const formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return "";
-    
+
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) return "";
-      
-      // Format as "Mar 31 at 11:28 PM"
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: 'numeric',
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Format time as "11:28 PM"
+      const timeFormat = new Intl.DateTimeFormat('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
-      }).format(date);
+      });
+
+      // Check if the date is today, yesterday, or older
+      if (date >= today) {
+        return `Today at ${timeFormat.format(date)}`;
+      } else if (date >= yesterday) {
+        return `Yesterday at ${timeFormat.format(date)}`;
+      } else {
+        // Format as "Mar 31 at 11:28 PM"
+        return new Intl.DateTimeFormat('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).format(date);
+      }
     } catch (err) {
       console.error('Error formatting timestamp:', err);
       return "";
@@ -98,29 +119,29 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
       if (typeof window !== 'undefined' && window.chatStore) {
         const chatStore = window.chatStore();
         const currentMessages = chatStore.messages;
-        
+
         // Find the index of the current message
         const messageIndex = currentMessages.findIndex(msg => msg.id === message.id);
-        
+
         if (messageIndex >= 0) {
           // Keep all messages
           const messagesBeforeEdit = [...currentMessages];
-          
+
           // Update just this message with new content
           messagesBeforeEdit[messageIndex] = {
             ...messagesBeforeEdit[messageIndex],
             content: editedContent.trim(),
             timestamp: new Date().toISOString()
           };
-          
+
           // Set messages with the updated message
           chatStore.setMessages(messagesBeforeEdit);
-          
+
           // If we have a saved chat, update it
           if (chatStore.saveCurrentChat) {
             chatStore.saveCurrentChat();
           }
-          
+
           // Only regenerate responses if this is a user message
           // For assistant messages, we simply update the content
           if (message.role === 'user' && messageIndex < currentMessages.length - 1) {
@@ -131,10 +152,10 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
                 ...messagesToProcess[messageIndex],
                 content: editedContent.trim()
               };
-              
+
               const apiKey = window.settingsStore?.()?.apiKey;
               const selectedModel = window.settingsStore?.()?.selectedModel;
-              
+
               if (apiKey && selectedModel) {
                 chatStore.processChat(messagesToProcess, editedContent.trim(), apiKey, selectedModel);
               }
@@ -231,7 +252,7 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
         message.role === 'user' ? 'items-end' : 'items-start'
       )}>
         <div className={cn(
-          "rounded-lg p-3 text-sm overflow-hidden",
+          "rounded-lg p-3 text-sm overflow-hidden message-content",
           message.role === 'user'
             ? 'bg-primary text-primary-foreground max-w-[85%] md:max-w-[75%]'
             : 'bg-transparent w-full'
@@ -245,8 +266,8 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
                 onKeyDown={handleKeyDown}
                 className={cn(
                   "w-full resize-none outline-none border-none p-0 m-0",
-                  message.role === 'user' 
-                    ? "bg-transparent text-primary-foreground" 
+                  message.role === 'user'
+                    ? "bg-transparent text-primary-foreground"
                     : "bg-gray-100 dark:bg-gray-800 p-2 rounded"
                 )}
                 rows={Math.max(3, editedContent.split('\n').length)}
@@ -322,26 +343,26 @@ export function MessageItem({ message, onEdit, onRegenerate, isGenerating = fals
             </ReactMarkdown>
           )}
         </div>
-        
+
         {/* Message footer with buttons and timestamp - hide while generating */}
         {message.role === 'assistant' && !isGenerating && (
           <div className="flex justify-between items-center mt-1 w-full px-1 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200">
             <div className="flex gap-1.5">
               {renderActionButtons()}
             </div>
-            {message.timestamp && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+            {message.timestamp && (chatSettings.showTimestamps || false) && (
+              <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                <Clock className="h-3 w-3 mr-1" />
                 {formatTimestamp(message.timestamp)}
               </div>
             )}
           </div>
         )}
       </div>
-      
+
       {/* Action buttons for user messages - hide during AI generation */}
       {message.role === 'user' && !isEditing && !isGenerating && (
-        <div className="flex justify-between items-center mt-1 w-full max-w-[85%] md:max-w-[75%] px-1 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200">
-          <div className="flex-1"></div> {/* Spacer */}
+        <div className="flex justify-end items-center mt-1 w-full max-w-[85%] md:max-w-[75%] px-1 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200">
           <div className="flex gap-1.5">
             {renderActionButtons()}
           </div>
@@ -394,8 +415,8 @@ function CodeBlock({ language, code }: CodeBlockProps) {
         </button>
       </div>
       <div className="overflow-x-auto max-w-full">
-        <SyntaxHighlighter 
-          language={language} 
+        <SyntaxHighlighter
+          language={language}
           style={codeTheme}
           customStyle={{
             margin: 0,

@@ -4,6 +4,7 @@ import "./globals.css" // Make sure this imports the updated globals.css
 import type { Metadata, Viewport } from "next" // Import Viewport
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider" // Ensure this path is correct
+import { SettingsProvider } from "@/lib/contexts/settings-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange // Good for theme switching without flashes
         >
-          {children}
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
         </ThemeProvider>
       </body>
     </html>

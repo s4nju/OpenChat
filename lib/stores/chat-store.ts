@@ -11,7 +11,7 @@ interface ChatState {
   error: string | null;
   input: string;
   abortController: AbortController | null;
-  
+
   // Actions
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -22,7 +22,7 @@ interface ChatState {
   setError: (error: string | null) => void;
   setInput: (input: string) => void;
   setAbortController: (controller: AbortController | null) => void;
-  
+
   // Operations
   loadChats: () => void;
   saveChats: (updatedChats: Chat[]) => void;
@@ -47,11 +47,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   error: null,
   input: '',
   abortController: null,
-  
+
   // Actions
   setMessages: (messages) => set({ messages }),
-  addMessage: (message) => set((state) => ({ 
-    messages: [...state.messages, message] 
+  addMessage: (message) => set((state) => ({
+    messages: [...state.messages, message]
   })),
   updateLastMessage: (content) => set((state) => {
     const messages = [...state.messages];
@@ -70,7 +70,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setError: (error) => set({ error }),
   setInput: (input) => set({ input }),
   setAbortController: (controller) => set({ abortController: controller }),
-  
+
   // Operations
   loadChats: () => {
     try {
@@ -78,13 +78,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (storedChats) {
         const parsedChats = JSON.parse(storedChats) as Chat[];
         set({ chats: parsedChats });
-        
+
         // If there are chats, set the most recent one as current
         if (parsedChats.length > 0) {
           const sortedChats = [...parsedChats].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
-          set({ 
+          set({
             currentChatId: sortedChats[0].id,
             messages: sortedChats[0].messages
           });
@@ -94,7 +94,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.error("Failed to load chats:", error);
     }
   },
-  
+
   saveChats: (updatedChats) => {
     try {
       localStorage.setItem("openchat_history", JSON.stringify(updatedChats));
@@ -103,15 +103,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.error("Failed to save chats:", error);
     }
   },
-  
+
   saveCurrentChat: (selectedModel) => {
     const { currentChatId, chats, messages } = get();
-    
+
     if (!currentChatId) return;
-    
+
     const now = new Date().toISOString();
     const existingChatIndex = chats.findIndex(c => c.id === currentChatId);
-    
+
     if (existingChatIndex >= 0) {
       const updatedChats = [...chats];
       updatedChats[existingChatIndex] = {
@@ -120,17 +120,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         model: selectedModel || updatedChats[existingChatIndex].model,
         updatedAt: now,
         // Generate title from first user message if not already set
-        title: updatedChats[existingChatIndex].title || 
+        title: updatedChats[existingChatIndex].title ||
               (messages[0]?.content.slice(0, 30) + (messages[0]?.content.length > 30 ? '...' : ''))
       };
-      
+
       get().saveChats(updatedChats);
     }
   },
-  
+
   createNewChat: (selectedModel) => {
     const { chats, saveChats } = get();
-    
+
     const chatId = uuidv4();
     const now = new Date().toISOString();
     const newChat: Chat = {
@@ -141,22 +141,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: now,
       updatedAt: now
     };
-    
+
     const updatedChats = [newChat, ...chats];
     saveChats(updatedChats);
-    set({ 
+    set({
       currentChatId: chatId,
       messages: []
     });
-    
+
     return chatId;
   },
-  
+
   deleteChat: (chatId) => {
     const { chats, currentChatId } = get();
     const updatedChats = chats.filter(c => c.id !== chatId);
     get().saveChats(updatedChats);
-    
+
     if (currentChatId === chatId) {
       if (updatedChats.length > 0) {
         set({
@@ -171,7 +171,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
   },
-  
+
   clearChat: (selectedModel) => {
     const { abortController } = get();
     abortController?.abort();
@@ -181,51 +181,51 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
       abortController: null
     });
-    
+
     // Create a new chat with the selected model
     return get().createNewChat(selectedModel);
   },
-  
+
   renameChat: (chatId, newTitle) => {
     if (!newTitle.trim()) return;
-    
+
     const { chats } = get();
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, title: newTitle.trim() } 
+    const updatedChats = chats.map(chat =>
+      chat.id === chatId
+        ? { ...chat, title: newTitle.trim() }
         : chat
     );
-    
+
     get().saveChats(updatedChats);
   },
-  
+
   handleStopGenerating: () => {
     const { abortController } = get();
     abortController?.abort();
     set({ abortController: null });
   },
-  
+
   handleInputChange: (e) => {
     set({ input: e.target.value });
     e.target.style.height = 'auto';
     e.target.style.height = `${e.target.scrollHeight}px`;
   },
-  
+
   handleExampleClick: async (text, apiKey, selectedModel) => {
     const { currentChatId, chats, createNewChat, messages, processChat } = get();
-    
+
     set({ input: text });
     const textToSubmit = text;
-    
+
     // If no current chat, create a new one
     let chatId = currentChatId;
     if (!currentChatId || chats.findIndex(c => c.id === currentChatId) === -1) {
       chatId = createNewChat(selectedModel);
     }
-    
-    const userMessage: Message = { 
-      id: uuidv4(), 
-      role: "user", 
+
+    const userMessage: Message = {
+      id: uuidv4(),
+      role: "user",
       content: textToSubmit.trim(),
       timestamp: new Date().toISOString()
     };
@@ -240,22 +240,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     await processChat(updatedMessages, textToSubmit.trim(), apiKey, selectedModel);
     set({ input: "" });
   },
-  
+
   handleSubmit: async (e, apiKey, selectedModel) => {
     e?.preventDefault();
-    
+
     const { input, currentChatId, chats, createNewChat, messages, processChat } = get();
-    
+
     if (!apiKey) {
       set({ error: "Please set your OpenRouter API key in the settings." });
       return;
     }
-    
+
     if (!selectedModel) {
       set({ error: "Please select a model before sending a message." });
       return;
     }
-    
+
     if (!input.trim()) return;
 
     // If no current chat, create a new one
@@ -264,17 +264,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     set({ error: null });
-    const userMessage: Message = { 
-      id: uuidv4(), 
-      role: "user", 
+    const userMessage: Message = {
+      id: uuidv4(),
+      role: "user",
       content: input.trim(),
       timestamp: new Date().toISOString()
     };
     const updatedMessages = [...messages, userMessage];
-    set({ 
+    set({
       messages: updatedMessages,
       input: "",
-      chatLoading: true 
+      chatLoading: true
     });
 
     // Save the chat immediately after the user sends a message
@@ -289,13 +289,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Process the chat with user input
     processChat(updatedMessages, input.trim(), apiKey, selectedModel);
   },
-  
+
   processChat: async (messagesToProcess, inputText, apiKey, selectedModel) => {
     const { abortController, setAbortController } = get();
-    
+
     // Clean up any existing abort controller
     abortController?.abort();
-    
+
     // Create a new abort controller
     const newController = new AbortController();
     setAbortController(newController);
@@ -303,16 +303,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       const messagesToSend = messagesToProcess.map(({ role, content }) => ({ role, content }));
+
+      // Add request start time for client-side performance monitoring
+      const requestStartTime = performance.now();
+
+      // Use optimized API endpoint with retry and better error handling
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          messages: messagesToSend, 
-          apiKey: apiKey?.trim(), 
-          model: selectedModel 
+        headers: {
+          "Content-Type": "application/json",
+          "X-Client-Info": navigator.userAgent || 'unknown', // Help with debugging
+        },
+        body: JSON.stringify({
+          messages: messagesToSend,
+          apiKey: apiKey?.trim(),
+          model: selectedModel
         }),
         signal,
       });
+
+      // Log client-side performance metrics
+      const requestDuration = performance.now() - requestStartTime;
+      console.log(`Chat request completed in ${requestDuration.toFixed(2)}ms`);
 
       if (!response.ok || !response.body) {
         let errorMessage = `Error: ${response.status} ${response.statusText}`;
@@ -325,9 +337,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage: Message = { 
-        id: uuidv4(), 
-        role: "assistant", 
+      let assistantMessage: Message = {
+        id: uuidv4(),
+        role: "assistant",
         content: "",
         timestamp: new Date().toISOString()
       };
@@ -347,13 +359,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (data === "[DONE]") break;
 
             try {
-              const parsed = JSON.parse(data);
-              const contentChunk = parsed.choices[0]?.delta?.content || "";
+              // Skip empty data or malformed JSON
+              if (!data || data.trim() === '') continue;
+
+              // Log the raw data for debugging
+              console.debug('Received SSE data:', data);
+
+              let parsed;
+              try {
+                parsed = JSON.parse(data);
+              } catch (jsonError) {
+                console.warn('Failed to parse JSON:', jsonError, 'Raw data:', data);
+                continue; // Skip this chunk if JSON parsing fails
+              }
+
+              const contentChunk = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || "";
 
               if (contentChunk) {
                 if (firstChunk) {
-                  set((state) => ({ 
-                    messages: [...state.messages, { ...assistantMessage, content: contentChunk }] 
+                  set((state) => ({
+                    messages: [...state.messages, { ...assistantMessage, content: contentChunk }]
                   }));
                   firstChunk = false;
                   // Scroll to bottom with first chunk
@@ -395,11 +420,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
       }
     } finally {
-      set({ 
+      set({
         chatLoading: false,
         abortController: null
       });
-      
+
       // Save the chat after the response is complete to ensure all AI-generated content is saved
       // This also updates the chat's timestamp to reflect the most recent activity
       if (get().messages.length > 0 && get().messages[get().messages.length - 1].role === 'assistant') {
@@ -407,4 +432,4 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
   }
-})); 
+}));

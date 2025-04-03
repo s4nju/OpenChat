@@ -1,80 +1,87 @@
 // app/api/chat/route.ts
-export const maxDuration = 30
+// Simplified version to fix the 500 error
 
+// Set max duration for the API route
+export const maxDuration = 60;
+
+/**
+ * POST handler for chat completions
+ * Simplified version to fix compatibility issues
+ */
 export async function POST(req: Request) {
   try {
-    const { messages, apiKey, model } = await req.json()
+    // Parse request body
+    const { messages, apiKey, model } = await req.json();
 
-    // Validate required parameters
+    // Basic validation
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
-      })
+      });
     }
 
     if (!model) {
       return new Response(JSON.stringify({ error: "Model ID is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
-      })
+      });
     }
 
-    console.log("Processing request with model:", model)
-    console.log("API Key present:", !!apiKey)
+    // Process request with model
 
     try {
-      // Create a direct fetch to OpenRouter API
+      // Direct fetch to OpenRouter API
       const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://vercel.com", // Required by OpenRouter
-          "X-Title": "AI Chat App", // Optional but recommended
-          "OR-SITE-URL": "https://vercel.com", // Alternative to HTTP-Referer
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://openchat.dev",
+          "X-Title": "OpenChat",
+          "OR-SITE-URL": "https://openchat.dev",
         },
         body: JSON.stringify({
           model: model,
           messages: messages,
           stream: true,
+          max_tokens: 2048,
         }),
-      })
+      });
 
+      // Handle error responses
       if (!openRouterResponse.ok) {
-        let errorMessage = `OpenRouter API error: ${openRouterResponse.status} ${openRouterResponse.statusText}`
-        try {
-          const errorText = await openRouterResponse.text()
-          console.error("OpenRouter error response:", errorText)
+        let errorMessage = `OpenRouter API error: ${openRouterResponse.status} ${openRouterResponse.statusText}`;
 
+        try {
+          const errorText = await openRouterResponse.text();
           try {
-            const errorData = JSON.parse(errorText)
-            errorMessage = errorData.error?.message || errorData.error || errorMessage
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error?.message || errorData.error || errorMessage;
           } catch (parseError) {
             // If we can't parse JSON, use the raw text
-            errorMessage = errorText || errorMessage
+            errorMessage = errorText || errorMessage;
           }
         } catch (e) {
           // If we can't get the text, use the status
         }
 
-        console.error("OpenRouter API error:", errorMessage)
         return new Response(JSON.stringify({ error: errorMessage }), {
           status: openRouterResponse.status,
           headers: { "Content-Type": "application/json" },
-        })
+        });
       }
 
-      // Return the streaming response directly
+      // Return the streaming response with proper SSE formatting
       return new Response(openRouterResponse.body, {
         headers: {
           "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
+          "Cache-Control": "no-cache, no-transform",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no", // Disable buffering in Nginx
         },
-      })
+      });
     } catch (modelError: any) {
-      console.error("Error with OpenRouter API:", modelError)
       return new Response(
         JSON.stringify({
           error: `Error with OpenRouter API: ${modelError.message || "Unknown model error"}`,
@@ -83,10 +90,9 @@ export async function POST(req: Request) {
           status: 500,
           headers: { "Content-Type": "application/json" },
         },
-      )
+      );
     }
   } catch (error: any) {
-    console.error("API route error:", error)
     return new Response(
       JSON.stringify({
         error: `API error: ${error.message || "An unknown error occurred"}`,
@@ -95,7 +101,6 @@ export async function POST(req: Request) {
         status: 500,
         headers: { "Content-Type": "application/json" },
       },
-    )
+    );
   }
 }
-
