@@ -173,8 +173,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearChat: (selectedModel) => {
-    const { abortController } = get();
+    const { abortController, messages, currentChatId } = get();
     abortController?.abort();
+
+    // If the current chat is already empty, don't create a new chat
+    if (messages.length === 0 && currentChatId) {
+      set({
+        chatLoading: false,
+        error: null,
+        abortController: null
+      });
+      return currentChatId;
+    }
+
+    // Otherwise, clear the messages and create a new chat
     set({
       messages: [],
       chatLoading: false,

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Menu, Share2, MoreHorizontal, MessageSquare, Plus, Edit, Download, Trash2, ChevronDown, FileJson, FileText } from "lucide-react";
+import { Loader2, Menu, Share2, MoreHorizontal, Edit, Download, Trash2, FileJson, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -34,8 +34,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { Model, Chat } from "@/lib/types";
-import { useSettingsStore } from "@/lib/stores/settings-store";
+import type { Model } from "@/lib/types";
+
 import { useChatStore } from "@/lib/stores/chat-store";
 import { exportChat } from "@/lib/export-utils";
 
@@ -68,25 +68,11 @@ export function ChatHeader({
   currentChatId = "",
   onRenameChat = () => {},
   onDeleteChat = () => {},
-  onNewChat,
+
 }: ChatHeaderProps) {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const currentModel = filteredModels.find(model => model.id === selectedModel);
-  const modelName = currentModel?.name || "Select model";
-
-  // Create a new chat function
-  const handleNewChat = () => {
-    if (onNewChat) {
-      onNewChat();
-    } else {
-      // Fallback if onNewChat is not provided
-      const { clearChat } = useChatStore.getState();
-      const { selectedModel } = useSettingsStore.getState();
-      clearChat(selectedModel);
-    }
-  };
 
   const handleOpenRenameDialog = () => {
     setNewTitle(chatTitle);
@@ -168,7 +154,6 @@ export function ChatHeader({
                         placeholder={isLoading ? "Loading..." : "Select model"}
                       />
                     </div>
-                    <ChevronDown className="h-3 w-3 xs:h-3.5 xs:w-3.5 opacity-50 group-hover:opacity-100 transition-opacity ml-0.5 xs:ml-1 flex-shrink-0" />
                   </SelectTrigger>
                   <SelectContent
                     className={cn(
