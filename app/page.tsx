@@ -131,6 +131,12 @@ export default function ChatApp() {
     saveCurrentChat(selectedModel);
   }, [saveCurrentChat, selectedModel]);
 
+  // Function to create a new chat
+  const handleNewChat = useCallback(() => {
+    // Clear the current chat and start a new one
+    useChatStore.getState().clearChat(selectedModel);
+  }, [selectedModel]);
+
   // Add handlers for edit and regenerate functions
   const handleEditMessage = useCallback((id: string, editedContent?: string) => {
     // If we received edited content, this is a direct edit from the MessageItem component
@@ -244,6 +250,7 @@ export default function ChatApp() {
           onRenameChat={useChatStore.getState().renameChat}
           onDeleteChat={useChatStore.getState().deleteChat}
           currentChatId={currentChatId}
+          onNewChat={handleNewChat}
         />
 
         {/* Message List */}
