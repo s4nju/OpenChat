@@ -1,6 +1,7 @@
 import { History } from "@/app/components/history/history"
 import { createClient } from "@/app/lib/supabase/server"
 import { Database } from "@/app/types/database.types"
+import { ModeToggle } from "@/components/common/mode-toggle"
 import Link from "next/link"
 import { APP_NAME } from "../../lib/config"
 import { AppInfo } from "./app-info"
@@ -38,6 +39,7 @@ export async function Header() {
         {!isLoggedIn ? (
           <div className="flex items-center gap-4">
             <AppInfo />
+            <ModeToggle />
             <Link
               href="/auth"
               className="font-base text-muted-foreground hover:text-foreground text-base transition-colors"
@@ -52,6 +54,7 @@ export async function Header() {
               preferredModel={userData.preferred_model!}
             />
             <History />
+            <ModeToggle />
             <UserMenu user={userData} />
           </div>
         )}
