@@ -41,6 +41,7 @@ export default async function PrivatePage({
       content: message.content,
       experimental_attachments: message.attachments,
       role: message.role,
+      storedReasoning: (message as any).reasoning_content || undefined,
     })) || []
 
   if (messagesError || !messages) {

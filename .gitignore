@@ -34,6 +34,9 @@ next-env.d.ts
 # ai tools
 .aider*
 .cursor*
+docs*
+tasks*
 
 # vscode
 .vscode
+.clinerules

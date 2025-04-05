@@ -8,7 +8,10 @@ type MessageProps = {
   children: string
   id: string
   attachments?: MessageType["experimental_attachments"]
+  parts?: MessageType["parts"]
+  storedReasoning?: string
   isLast?: boolean
+  isStreaming?: boolean
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: () => void
@@ -20,7 +23,10 @@ export function Message({
   children,
   id,
   attachments,
+  parts,
+  storedReasoning,
   isLast,
+  isStreaming,
   onDelete,
   onEdit,
   onReload,
@@ -58,7 +64,10 @@ export function Message({
         copyToClipboard={copyToClipboard}
         onReload={onReload}
         isLast={isLast}
+        isStreaming={isStreaming}
         hasScrollAnchor={hasScrollAnchor}
+        parts={parts}
+        storedReasoning={storedReasoning}
       />
     )
   }

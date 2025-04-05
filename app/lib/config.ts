@@ -49,6 +49,7 @@ export type Model = {
   available?: boolean
   api_sdk?: any
   icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  think?: boolean
   features?: {
     id: string
     enabled: boolean
@@ -147,6 +148,7 @@ export const MODELS = [
         enabled: true,
       },
     ],
+    think: true,
     api_sdk: openrouter("google/gemini-2.5-pro-exp-03-25:free"),
     icon: Gemini,
   },
@@ -160,6 +162,7 @@ export const MODELS = [
         enabled: true,
       },
     ],
+    think: false,
     api_sdk: mistral("pixtral-large-latest"),
     icon: Mistral,
   },
@@ -173,6 +176,7 @@ export const MODELS = [
         enabled: false,
       },
     ],
+    think: false,
     api_sdk: mistral("mistral-large-latest"),
     icon: Mistral,
   },
@@ -187,11 +191,13 @@ export const MODELS = [
         enabled: false,
       },
     ],
+    think: false,
   },
   {
     id: "deepseek-r1",
     name: "DeepSeek R1",
     provider: "deepseek",
+    think: true,
     features: [
       {
         id: "file-upload",

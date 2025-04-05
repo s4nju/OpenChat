@@ -4,8 +4,14 @@ import {
   MessageActions,
   MessageContent,
 } from "@/components/prompt-kit/message"
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/prompt-kit/reasoning"
 import { cn } from "@/lib/utils"
-import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react"
+import { ArrowClockwise, Brain, Check, Copy } from "@phosphor-icons/react"
+import { useEffect, useState } from "react"
 
 type MessageAssistantProps = {
   children: string
@@ -14,6 +20,16 @@ type MessageAssistantProps = {
   copied?: boolean
   copyToClipboard?: () => void
   onReload?: () => void
+  isStreaming?: boolean
+  storedReasoning?: string
+  parts?: Array<{
+    type: string
+    text?: string
+    details?: Array<{
+      type: string
+      text?: string
+    }>
+  }>
 }
 
 export function MessageAssistant({
@@ -23,7 +39,52 @@ export function MessageAssistant({
   copied,
   copyToClipboard,
   onReload,
+  isStreaming = false,
+  storedReasoning,
+  parts,
 }: MessageAssistantProps) {
+  // State to control reasoning open/closed state
+  const [isReasoningOpen, setIsReasoningOpen] = useState(true)
+  const [hasStreamingCompleted, setHasStreamingCompleted] = useState(false)
+  
+  // Extract reasoning content from parts
+  const reasoningParts = parts?.filter(part => part.type === 'reasoning') || []
+  const hasReasoningParts = reasoningParts.length > 0
+  
+  // Combine reasoning text from details or use stored reasoning
+  const reasoningFromParts = hasReasoningParts 
+    ? reasoningParts
+        .map(part => 
+          part.details
+            ?.filter(detail => detail.type === 'text')
+            .map(detail => detail.text)
+            .join("")
+        )
+        .join("\n\n")
+    : ""
+  
+  // Use stored reasoning if available, otherwise use reasoning from parts
+  const reasoningText = storedReasoning || reasoningFromParts
+  const hasReasoning = !!reasoningText
+  
+  // Track streaming completion
+  useEffect(() => {
+    if (hasReasoning && !isStreaming && isLast && !hasStreamingCompleted) {
+      setHasStreamingCompleted(true)
+    }
+  }, [hasReasoning, isStreaming, isLast, hasStreamingCompleted])
+        
+  // Auto-collapse reasoning only after streaming completes
+  useEffect(() => {
+    if (hasReasoning && hasStreamingCompleted) {
+      const timer = setTimeout(() => {
+        setIsReasoningOpen(false)
+      }, 100) // Collapse 1 second after streaming completes
+      
+      return () => clearTimeout(timer)
+    }
+  }, [hasReasoning, hasStreamingCompleted])
+
   return (
     <Message
       className={cn(
@@ -32,6 +93,20 @@ export function MessageAssistant({
       )}
     >
       <div className={cn("flex min-w-full flex-col gap-2", isLast && "pb-8")}>
+        {hasReasoning && (
+          <Reasoning className="mt-2 mb-3" open={isReasoningOpen} onOpenChange={setIsReasoningOpen}>
+            <ReasoningTrigger className="text-xs text-muted-foreground hover:text-foreground">
+              <div className="flex items-center gap-2">
+                <Brain className="size-4" />
+                <span>Show reasoning</span>
+              </div>
+            </ReasoningTrigger>
+            <ReasoningContent className="mt-2 text-xm">
+              {reasoningText}
+            </ReasoningContent>
+          </Reasoning>
+        )}
+
         <MessageContent
           className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
           markdown={true}

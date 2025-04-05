@@ -14,6 +14,7 @@
 - **Image uploads** - Share images with AI for analysis and discussion
 - **Light and dark mode** - Work comfortably in any lighting condition
 - **Chat history** - Revisit and continue your previous conversations
+- **AI model reasoning display** - Show the reasoning process for thinking models
 
 ## 🛠️ Built with
 
@@ -26,7 +27,7 @@
 
 ## 🗺️ Roadmap
 
-- Additional language model integrations
+- Additional model integrations
 - Sidebar integration
 - PDF support
 - MCP integration
@@ -48,3 +49,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## ⚠️ Notes
 
 This is a beta release. The codebase is evolving and may undergo significant changes.
+
+This code is a heavily modified version of work by Julien Thibeaut, originally licensed under the Apache License 2.0.
+All significant changes were made by Ajan Raj in 2025.

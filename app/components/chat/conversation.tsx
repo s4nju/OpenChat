@@ -23,6 +23,7 @@ export function Conversation({
   const initialMessageCount = useRef(messages.length)
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const isStreaming = status === "streaming"
 
   return (
     <div className="relative flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto">
@@ -46,7 +47,10 @@ export function Conversation({
               id={message.id}
               variant={message.role}
               attachments={message.experimental_attachments}
+              parts={message.parts}
+              storedReasoning={(message as any).storedReasoning}
               isLast={isLast}
+              isStreaming={isLast && isStreaming}
               onDelete={onDelete}
               onEdit={onEdit}
               onReload={onReload}

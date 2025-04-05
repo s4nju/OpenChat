@@ -155,6 +155,7 @@ export type Database = {
           created_at: string | null
           id: number
           role: "system" | "user" | "assistant" | "data"
+          reasoning_content: string | null
         }
         Insert: {
           attachments?: Attachment[]
@@ -163,6 +164,7 @@ export type Database = {
           created_at?: string | null
           id?: number
           role: "system" | "user" | "assistant" | "data"
+          reasoning_content?: string | null
         }
         Update: {
           attachments?: Attachment[]
@@ -171,6 +173,7 @@ export type Database = {
           created_at?: string | null
           id?: number
           role?: "system" | "user" | "assistant" | "data"
+          reasoning_content?: string | null
         }
         Relationships: []
       }
