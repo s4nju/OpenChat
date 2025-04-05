@@ -1,106 +1,131 @@
-// app/api/chat/route.ts
-// Simplified version to fix the 500 error
+// /chat/api/chat.ts
+import { checkUsage, incrementUsage } from "@/app/lib/api"
+import { MODELS } from "@/app/lib/config"
+import { validateUserIdentity } from "@/app/lib/server/api"
+import { Attachment } from "@ai-sdk/ui-utils"
+import { Message, streamText } from "ai"
 
-// Set max duration for the API route
-export const maxDuration = 60;
+// Maximum allowed duration for streaming (in seconds)
+export const maxDuration = 30
 
-/**
- * POST handler for chat completions
- * Simplified version to fix compatibility issues
- */
+type ChatRequest = {
+  messages: Message[]
+  chatId: string
+  userId: string
+  model: string
+  isAuthenticated: boolean
+  systemPrompt: string
+}
+
 export async function POST(req: Request) {
   try {
-    // Parse request body
-    const { messages, apiKey, model } = await req.json();
+    const { messages, chatId, userId, model, isAuthenticated, systemPrompt } =
+      (await req.json()) as ChatRequest
 
-    // Basic validation
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "API key is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!model) {
-      return new Response(JSON.stringify({ error: "Model ID is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Process request with model
-
-    try {
-      // Direct fetch to OpenRouter API
-      const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://openchat.dev",
-          "X-Title": "OpenChat",
-          "OR-SITE-URL": "https://openchat.dev",
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: messages,
-          stream: true,
-          max_tokens: 2048,
-        }),
-      });
-
-      // Handle error responses
-      if (!openRouterResponse.ok) {
-        let errorMessage = `OpenRouter API error: ${openRouterResponse.status} ${openRouterResponse.statusText}`;
-
-        try {
-          const errorText = await openRouterResponse.text();
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error?.message || errorData.error || errorMessage;
-          } catch (parseError) {
-            // If we can't parse JSON, use the raw text
-            errorMessage = errorText || errorMessage;
-          }
-        } catch (e) {
-          // If we can't get the text, use the status
-        }
-
-        return new Response(JSON.stringify({ error: errorMessage }), {
-          status: openRouterResponse.status,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      // Return the streaming response with proper SSE formatting
-      return new Response(openRouterResponse.body, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache, no-transform",
-          "Connection": "keep-alive",
-          "X-Accel-Buffering": "no", // Disable buffering in Nginx
-        },
-      });
-    } catch (modelError: any) {
+    if (!messages || !chatId || !userId) {
       return new Response(
-        JSON.stringify({
-          error: `Error with OpenRouter API: ${modelError.message || "Unknown model error"}`,
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+        JSON.stringify({ error: "Error, missing information" }),
+        { status: 400 }
+      )
     }
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({
-        error: `API error: ${error.message || "An unknown error occurred"}`,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
+
+    const supabase = await validateUserIdentity(userId, isAuthenticated)
+
+    // First check if the user is within their usage limits
+    await checkUsage(supabase, userId)
+
+    const userMessage = messages[messages.length - 1]
+    if (userMessage && userMessage.role === "user") {
+      const { error: msgError } = await supabase.from("messages").insert({
+        chat_id: chatId,
+        role: "user",
+        content: userMessage.content,
+        attachments:
+          userMessage.experimental_attachments as unknown as Attachment[],
+      })
+      if (msgError) {
+        console.error("Error saving user message:", msgError)
+      } else {
+        console.log("User message saved successfully.")
+
+        // Increment usage only after confirming the message was saved
+        await incrementUsage(supabase, userId)
+      }
+    }
+
+    const result = streamText({
+      model: MODELS.find((m) => m.id === model)?.api_sdk!,
+      system: systemPrompt || "You are a helpful assistant.",
+      messages,
+      // When the response finishes, insert the assistant messages.
+      async onFinish({ response }) {
+        try {
+          for (const msg of response.messages) {
+            console.log("Response message role:", msg.role)
+            if (msg.content) {
+              let plainText = msg.content
+              try {
+                const parsed = msg.content
+                if (Array.isArray(parsed)) {
+                  // Join all parts of type "text"
+                  plainText = parsed
+                    .filter((part) => part.type === "text")
+                    .map((part) => part.text)
+                    .join(" ")
+                }
+              } catch (err) {
+                console.warn(
+                  "Could not parse message content as JSON, using raw content"
+                )
+              }
+
+              const { error: assistantError } = await supabase
+                .from("messages")
+                .insert({
+                  chat_id: chatId,
+                  role: "assistant",
+                  content: plainText.toString(),
+                })
+              if (assistantError) {
+                console.error("Error saving assistant message:", assistantError)
+              } else {
+                console.log("Assistant message saved successfully.")
+              }
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Error in onFinish while saving assistant messages:",
+            err
+          )
+        }
       },
-    );
+    })
+
+    // Ensure the stream is consumed so onFinish is triggered.
+    result.consumeStream()
+    const originalResponse = result.toDataStreamResponse()
+    // Optionally attach chatId in a custom header.
+    const headers = new Headers(originalResponse.headers)
+    headers.set("X-Chat-Id", chatId)
+
+    return new Response(originalResponse.body, {
+      status: originalResponse.status,
+      headers,
+    })
+  } catch (err: any) {
+    console.error("Error in /chat/api/chat:", err)
+    // Return a structured error response if the error is a UsageLimitError.
+    if (err.code === "DAILY_LIMIT_REACHED") {
+      return new Response(
+        JSON.stringify({ error: err.message, code: err.code }),
+        { status: 403 }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({ error: err.message || "Internal server error" }),
+      { status: 500 }
+    )
   }
 }

@@ -1,44 +1,43 @@
-// app/layout.tsx
-import type React from "react"
-import "./globals.css" // Make sure this imports the updated globals.css
-import type { Metadata, Viewport } from "next" // Import Viewport
-import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider" // Ensure this path is correct
-import { SettingsProvider } from "@/lib/contexts/settings-context"
+import type { Metadata } from "next"
+import { Geist, Geist_Mono } from "next/font/google"
+import "./globals.css"
+import { APP_DESCRIPTION, APP_NAME } from "@/app/lib/config"
+import { Toaster } from "@/components/ui/sonner"
+import { ThemeProvider } from "next-themes"
 
-const inter = Inter({ subsets: ["latin"] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+})
 
-// Define viewport settings separately
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  viewportFit: 'cover',
-}
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+})
 
 export const metadata: Metadata = {
-  title: "OpenChat", // Updated title
-  description: "A secure client-side AI chat application using OpenRouter", // Keep description relevant
-  // Viewport settings removed from here
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Remove overflow-hidden to rely on Sheet/Dialog scroll locking */}
-      <body className={inter.className}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
-          disableTransitionOnChange // Good for theme switching without flashes
+          disableTransitionOnChange
         >
-          <SettingsProvider>
-            {children}
-          </SettingsProvider>
+          <Toaster position="top-center" />
+          {children}
         </ThemeProvider>
       </body>
     </html>
