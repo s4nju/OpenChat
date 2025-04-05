@@ -69,9 +69,7 @@ export function ModelSelector({
             const hasFileUpload = model.features?.find(
               (feature) => feature.id === "file-upload"
             )?.enabled
-            const hasThinking = model.features?.find(
-              (feature) => feature.id === "think"
-            )?.enabled
+            const hasThinking = model.think
 
             return (
               <DropdownMenuItem
