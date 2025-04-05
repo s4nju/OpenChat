@@ -10,7 +10,7 @@ import {
   ReasoningTrigger,
 } from "@/components/prompt-kit/reasoning"
 import { cn } from "@/lib/utils"
-import { ArrowClockwise, Brain, Check, Copy } from "@phosphor-icons/react"
+import { ArrowClockwise, Brain, Check, Copy, Trash } from "@phosphor-icons/react"
 import { useEffect, useState } from "react"
 
 type MessageAssistantProps = {
@@ -20,6 +20,8 @@ type MessageAssistantProps = {
   copied?: boolean
   copyToClipboard?: () => void
   onReload?: () => void
+  onDelete?: (id: string) => void
+  id?: string
   isStreaming?: boolean
   storedReasoning?: string
   parts?: Array<{
@@ -39,6 +41,8 @@ export function MessageAssistant({
   copied,
   copyToClipboard,
   onReload,
+  onDelete,
+  id,
   isStreaming = false,
   storedReasoning,
   parts,
@@ -84,6 +88,12 @@ export function MessageAssistant({
       return () => clearTimeout(timer)
     }
   }, [hasReasoning, hasStreamingCompleted])
+
+  const handleDelete = () => {
+    if (onDelete && id) {
+      onDelete(id)
+    }
+  }
 
   return (
     <Message
@@ -147,6 +157,18 @@ export function MessageAssistant({
               <ArrowClockwise className="size-4" />
             </button>
           </MessageAction>
+          {onDelete && (
+            <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
+              <button
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+                aria-label="Delete"
+                onClick={handleDelete}
+                type="button"
+              >
+                <Trash className="size-4" />
+              </button>
+            </MessageAction>
+          )}
         </MessageActions>
       </div>
     </Message>

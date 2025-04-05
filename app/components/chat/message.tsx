@@ -63,6 +63,8 @@ export function Message({
         copied={copied}
         copyToClipboard={copyToClipboard}
         onReload={onReload}
+        onDelete={onDelete}
+        id={id}
         isLast={isLast}
         isStreaming={isStreaming}
         hasScrollAnchor={hasScrollAnchor}

@@ -242,7 +242,23 @@ export default function Chat({
   }
 
   const handleDelete = (id: string) => {
-    setMessages(messages.filter((message) => message.id !== id))
+    // Find the index of the message being deleted
+    const messageIndex = messages.findIndex((message) => message.id === id);
+    
+    if (messageIndex !== -1) {
+      const deletedMessage = messages[messageIndex];
+      
+      if (deletedMessage.role === 'user') {
+        // If it's a user message and there's an assistant message after it, delete both
+        if (messageIndex + 1 < messages.length && messages[messageIndex + 1].role === 'assistant') {
+          setMessages(messages.filter((_, index) => index !== messageIndex && index !== messageIndex + 1));
+          return;
+        }
+      }
+    }
+    
+    // Default: just delete the selected message
+    setMessages(messages.filter((message) => message.id !== id));
   }
 
   const handleEdit = (id: string, newText: string) => {
