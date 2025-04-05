@@ -44,11 +44,29 @@ function CodeBlockCode({
 
   useEffect(() => {
     async function highlight() {
-      const html = await codeToHtml(code, {
-        lang: language,
-        theme: appTheme === "dark" ? "github-dark" : "github-light",
-      })
-      setHighlightedHtml(html)
+      try {
+        // Handle pseudocode as plaintext
+        const langToUse = language === "pseudocode" ? "plaintext" : language
+        
+        const html = await codeToHtml(code, {
+          lang: langToUse,
+          theme: appTheme === "dark" ? "github-dark" : "github-light",
+        })
+        setHighlightedHtml(html)
+      } catch (error) {
+        console.error("Syntax highlighting error:", error)
+        // Fallback to plaintext if any error occurs
+        try {
+          const html = await codeToHtml(code, {
+            lang: "plaintext",
+            theme: appTheme === "dark" ? "github-dark" : "github-light",
+          })
+          setHighlightedHtml(html)
+        } catch {
+          // If even plaintext fails, just set to null to use the SSR fallback
+          setHighlightedHtml(null)
+        }
+      }
     }
     highlight()
   }, [code, language, theme, appTheme])
