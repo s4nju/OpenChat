@@ -212,7 +212,7 @@ export const MODELS = [
   },
   {
     id: "deepseek-ai/DeepSeek-V3-0324",
-    name: "DeepSeek V3",
+    name: "DeepSeek V3 0324",
     provider: "deepseek",
     api_sdk: chutes("deepseek-ai/DeepSeek-V3-0324"),
     features: [
@@ -312,7 +312,7 @@ export const PROVIDERS_OPTIONS = [
   ...PROVIDERS_NOT_AVAILABLE,
 ] as Provider[]
 
-export const MODEL_DEFAULT = "pixtral-large-latest"
+export const MODEL_DEFAULT = "Llama-4-Maverick-17B-128E-Instruct-FP8"
 
 export const APP_NAME = "OpenChat"
 export const APP_DOMAIN = "https://chat.ajanraj.com"
