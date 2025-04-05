@@ -8,13 +8,30 @@
 
 ## ✨ Features
 
-- **Multi-model support** - Seamlessly switch between Gemini, Deepseek, and Mistral
+- **Multi-model support** - Seamlessly switch between Gemini, Deepseek, Llama and Mistral
 - **Responsive design** - Enjoy a beautiful interface that works on both desktop and mobile
 - **Prompt suggestions** - Get inspiration with contextual prompt ideas
 - **Image uploads** - Share images with AI for analysis and discussion
 - **Light and dark mode** - Work comfortably in any lighting condition
 - **Chat history** - Revisit and continue your previous conversations
 - **AI model reasoning display** - Show the reasoning process for thinking models
+
+## 🤖 Available Models
+
+### Currently Available
+- **Gemini 2.5 Pro** - Google's advanced model with image understanding and reasoning capabilities
+- **Llama 4 Maverick 17B** - Meta's powerful model with image understanding support
+- **Llama 4 Scout 17B** - Another variant of Meta's Llama 4 with image capabilities
+- **Pixtral Large** - Mistral's image-capable model
+- **Mistral Large** - Mistral's powerful text model
+- **DeepSeek V3** - Advanced DeepSeek model
+- **DeepSeek R1** - DeepSeek model with reasoning capabilities
+
+### Coming Soon
+- **Claude 3.5/3.7 Sonnet** - Anthropic's advanced models
+- **GPT-4o/GPT-4o Mini** - OpenAI's powerful multimodal models
+- **Gemini 2.0 Flash** - Google's faster Gemini variant
+- **Grok 2** - xAI's advanced model
 
 ## 🛠️ Built with
 
