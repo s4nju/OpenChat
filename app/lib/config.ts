@@ -5,10 +5,12 @@ import Grok from "@/components/icons/grok"
 import Mistral from "@/components/icons/mistral"
 import OpenAI from "@/components/icons/openai"
 import OpenRouter from "@/components/icons/openrouter"
+import Meta from "@/components/icons/meta"
 import { mistral } from "@ai-sdk/mistral"
 import { openai } from "@ai-sdk/openai"
 import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAI } from '@ai-sdk/openai';
+import { togetherai } from '@ai-sdk/togetherai';
 import {
   BookOpenText,
   Brain,
@@ -153,6 +155,34 @@ export const MODELS = [
     icon: Gemini,
   },
   {
+    id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
+    name: "Llama 4 Maverick 17B",
+    provider: "meta",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+    ],
+    think: false,
+    api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
+    icon: Meta,
+  },
+  {
+    id: "Llama-4-Scout-17B-16E-Instruct",
+    name: "Llama 4 Scout 17B",
+    provider: "meta",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+    ],
+    think: false,
+    api_sdk: togetherai("meta-llama/Llama-4-Scout-17B-16E-Instruct"),
+    icon: Meta,
+  },
+  {
     id: "pixtral-large-latest",
     name: "Pixtral Large",
     provider: "mistral",
@@ -266,6 +296,11 @@ export const PROVIDERS = [
     id: "mistral",
     name: "Mistral",
     icon: Mistral,
+  },
+  {
+    id: "meta",
+    name: "Meta",
+    icon: Meta,
   },
 ] as Provider[]
 
