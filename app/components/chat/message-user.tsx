@@ -156,7 +156,7 @@ export function MessageUser({
           {children}
         </MessageContent>
       )}
-      <MessageActions className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+      <MessageActions className="flex gap-0 md:opacity-0 transition-opacity md:group-hover:opacity-100">
         <MessageAction
           tooltip={copied ? "Copied!" : "Copy text"}
           side="bottom"
