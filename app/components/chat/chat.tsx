@@ -194,7 +194,7 @@ export default function Chat({
 
       if (rateData.remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
         toast({
-          title: `Only ${rateData.remaining} query${rateData.remaining === 1 ? "" : "ies"} remaining today.`,
+          title: `Only ${rateData.remaining} ${rateData.remaining === 1 ? 'query' : 'queries'} remaining today.`,
           status: "info",
         })
       }

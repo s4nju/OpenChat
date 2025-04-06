@@ -33,7 +33,7 @@ export function PopoverContentAuth() {
   }
   return (
     <PopoverContent
-      className="w-[300px] overflow-hidden rounded-xl p-0"
+      className="w-[350px] overflow-hidden rounded-xl p-0"
       side="top"
       align="start"
     >
@@ -54,7 +54,7 @@ export function PopoverContentAuth() {
         <p className="text-muted-foreground mb-5 text-base">
           Upload files and images! 🖼️<br />
           Unleash premium models! 🚀<br />
-          Supercharge your limit to 100 messages! ✨<br />
+          Supercharge your limit to 50 msg/day! ✨<br />
         </p>
         <Button
           variant="secondary"
