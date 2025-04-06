@@ -135,7 +135,7 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
   }
 
   // Check if the daily limit is reached.
-  if (dailyCount >= dailyLimit) {
+  if (dailyCount > dailyLimit) {
     throw new UsageLimitError("Daily message limit reached.")
   }
 
