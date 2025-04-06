@@ -19,6 +19,7 @@
 ## 🤖 Available Models
 
 ### Currently Available
+- **Gemini 2.0 Flash** - Google's faster Gemini variant
 - **Gemini 2.5 Pro** - Google's advanced model with image understanding and reasoning capabilities
 - **Llama 4 Maverick 17B** - Meta's powerful model with image understanding support
 - **Llama 4 Scout 17B** - Another variant of Meta's Llama 4 with image capabilities
@@ -28,9 +29,10 @@
 - **DeepSeek R1** - DeepSeek model with reasoning capabilities
 
 ### Coming Soon
-- **Claude 3.5/3.7 Sonnet** - Anthropic's advanced models
-- **GPT-4o/GPT-4o Mini** - OpenAI's powerful multimodal models
-- **Gemini 2.0 Flash** - Google's faster Gemini variant
+- **Claude 3.5 Sonnet** - Anthropic's efficient and powerful model
+- **Claude 3.7 Sonnet** - Anthropic's latest advanced model
+- **GPT-4o** - OpenAI's powerful multimodal model
+- **GPT-4o Mini** - OpenAI's efficient multimodal model
 - **Grok 2** - xAI's advanced model
 
 ## 🛠️ Built with
@@ -44,14 +46,10 @@
 
 ## 🗺️ Roadmap
 
-- Additional model integrations
+- Web search integration
 - Sidebar integration
 - PDF support
 - MCP integration
-- Agent mode for task automation
-- Long-term memory capabilities
-- Collaborative chat sessions
-- Document upload support
 
 ## 🤝 Contributing
 
