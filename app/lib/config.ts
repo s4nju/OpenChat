@@ -11,6 +11,7 @@ import { openai } from "@ai-sdk/openai"
 import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAI } from '@ai-sdk/openai';
 import { togetherai } from '@ai-sdk/togetherai';
+import { google } from '@ai-sdk/google';
 import {
   BookOpenText,
   Brain,
@@ -40,7 +41,7 @@ const chutes = createOpenAI({
 });
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
-export const AUTH_DAILY_MESSAGE_LIMIT = 100
+export const AUTH_DAILY_MESSAGE_LIMIT = 50
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 5
 
@@ -124,12 +125,14 @@ export const MODELS_NOT_AVAILABLE = [
     api_sdk: openai("gpt-4o-mini"),
     icon: OpenAI,
   },
+] as Model[]
+
+export const MODELS = [
   {
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
     provider: "gemini",
-    available: false,
-    api_sdk: false,
+    api_sdk: google("gemini-2.0-flash"),
     features: [
       {
         id: "file-upload",
@@ -137,9 +140,6 @@ export const MODELS_NOT_AVAILABLE = [
       },
     ],
   },
-] as Model[]
-
-export const MODELS = [
   {
     id: "gemini-2.5-pro-exp-03-25",
     name: "Gemini 2.5 Pro",
@@ -151,7 +151,7 @@ export const MODELS = [
       },
     ],
     think: true,
-    api_sdk: openrouter("google/gemini-2.5-pro-exp-03-25:free"),
+    api_sdk: google("gemini-2.5-pro-exp-03-25"),
     icon: Gemini,
   },
   {
@@ -312,7 +312,7 @@ export const PROVIDERS_OPTIONS = [
   ...PROVIDERS_NOT_AVAILABLE,
 ] as Provider[]
 
-export const MODEL_DEFAULT = "Llama-4-Maverick-17B-128E-Instruct-FP8"
+export const MODEL_DEFAULT = "gemini-2.0-flash"
 
 export const APP_NAME = "OpenChat"
 export const APP_DOMAIN = "https://chat.ajanraj.com"
