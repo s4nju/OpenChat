@@ -10,8 +10,9 @@ import {
   ReasoningTrigger,
 } from "@/components/prompt-kit/reasoning"
 import { cn } from "@/lib/utils"
+import { Message as MessageType } from "@ai-sdk/react" // Import MessageType only
 import { ArrowClockwise, Brain, Check, Copy, Trash } from "@phosphor-icons/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react" // Import useMemo
 
 type MessageAssistantProps = {
   children: string
@@ -32,6 +33,7 @@ type MessageAssistantProps = {
       text?: string
     }>
   }>
+  annotations?: MessageType["annotations"] // Add annotations prop
 }
 
 export function MessageAssistant({
@@ -46,11 +48,49 @@ export function MessageAssistant({
   isStreaming = false,
   storedReasoning,
   parts,
+  annotations, // Destructure annotations
 }: MessageAssistantProps) {
-  // State to control reasoning open/closed state
-  const [isReasoningOpen, setIsReasoningOpen] = useState(true)
+  // State to control reasoning open/closed state - default to closed
+  const [isReasoningOpen, setIsReasoningOpen] = useState(false)
   const [hasStreamingCompleted, setHasStreamingCompleted] = useState(false)
-  
+  // State to store reasoning accumulated from annotations
+  const [accumulatedAnnotationReasoning, setAccumulatedAnnotationReasoning] = useState("");
+
+  // Effect to reset accumulated reasoning when the message ID changes
+  useEffect(() => {
+    setAccumulatedAnnotationReasoning("");
+    // Also reset open state when ID changes (for navigating between chats)
+    setIsReasoningOpen(false);
+    setHasStreamingCompleted(false);
+  }, [id]);
+
+  // Effect to open reasoning when streaming starts
+  useEffect(() => {
+    if (isStreaming) {
+      setIsReasoningOpen(true);
+      setHasStreamingCompleted(false); // Reset completion flag when streaming starts
+    }
+  }, [isStreaming]);
+
+  // Effect to accumulate reasoning from annotations
+  useEffect(() => {
+    if (annotations) {
+      const reasoningContent = annotations
+        .filter(
+          (anno): anno is { type: 'reasoning_chunk'; content: string } =>
+            typeof anno === 'object' &&
+            anno !== null &&
+            'type' in anno &&
+            anno.type === 'reasoning_chunk' &&
+            'content' in anno &&
+            typeof anno.content === 'string'
+        )
+        .map(anno => anno.content)
+        .join("");
+      setAccumulatedAnnotationReasoning(reasoningContent);
+    }
+  }, [annotations]); // Rerun when annotations update
+
   // Extract reasoning content from parts
   const reasoningParts = parts?.filter(part => part.type === 'reasoning') || []
   const hasReasoningParts = reasoningParts.length > 0
@@ -66,28 +106,39 @@ export function MessageAssistant({
         )
         .join("\n\n")
     : ""
-  
-  // Use stored reasoning if available, otherwise use reasoning from parts
-  const reasoningText = storedReasoning || reasoningFromParts
-  const hasReasoning = !!reasoningText
-  
-  // Track streaming completion
+
+  // Remove the useMemo calculation for liveReasoningFromAnnotations
+
+  // Determine the final reasoning text (from stored or parts)
+  const finalReasoningText = storedReasoning || reasoningFromParts
+
+  // Determine the text to display:
+  // Prioritize final text if available.
+  // Otherwise, show the reasoning accumulated from annotations.
+  const displayReasoningText = finalReasoningText || accumulatedAnnotationReasoning || ""
+
+  // Determine if the reasoning section should be shown at all
+  const hasAnyReasoning = !!displayReasoningText
+
+  // Track streaming completion (remains the same, based on props)
   useEffect(() => {
-    if (hasReasoning && !isStreaming && isLast && !hasStreamingCompleted) {
+    // Use hasAnyReasoning here
+    if (hasAnyReasoning && !isStreaming && isLast && !hasStreamingCompleted) {
       setHasStreamingCompleted(true)
     }
-  }, [hasReasoning, isStreaming, isLast, hasStreamingCompleted])
-        
+  }, [hasAnyReasoning, isStreaming, isLast, hasStreamingCompleted])
+
   // Auto-collapse reasoning only after streaming completes
   useEffect(() => {
-    if (hasReasoning && hasStreamingCompleted) {
+    // Use hasAnyReasoning here
+    if (hasAnyReasoning && hasStreamingCompleted) {
       const timer = setTimeout(() => {
         setIsReasoningOpen(false)
       }, 100) // Collapse 1 second after streaming completes
-      
+
       return () => clearTimeout(timer)
     }
-  }, [hasReasoning, hasStreamingCompleted])
+  }, [hasAnyReasoning, hasStreamingCompleted])
 
   const handleDelete = () => {
     if (onDelete && id) {
@@ -103,7 +154,8 @@ export function MessageAssistant({
       )}
     >
       <div className={cn("flex min-w-full flex-col gap-2", isLast && "pb-8")}>
-        {hasReasoning && (
+        {/* Render Reasoning if live or final reasoning exists */}
+        {hasAnyReasoning && (
           <Reasoning className="mt-2 mb-3" open={isReasoningOpen} onOpenChange={setIsReasoningOpen}>
             <ReasoningTrigger className="text-xs text-muted-foreground hover:text-foreground">
               <div className="flex items-center gap-2">
@@ -112,7 +164,8 @@ export function MessageAssistant({
               </div>
             </ReasoningTrigger>
             <ReasoningContent className="mt-2 text-xm">
-              {reasoningText}
+              {/* Display live or final reasoning */}
+              {displayReasoningText}
             </ReasoningContent>
           </Reasoning>
         )}

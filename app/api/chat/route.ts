@@ -97,6 +97,19 @@ export async function POST(req: Request) {
           model: MODELS.find((m) => m.id === model)?.api_sdk!,
           system: systemPrompt || "You are a helpful assistant.",
           messages, // Use the potentially updated messages array
+          // Add onChunk callback to handle reasoning steps during the stream
+          onChunk({ chunk }) {
+            // Check if the chunk represents a reasoning step
+            // The exact structure depends on the model/provider.
+            // Check for the observed reasoning chunk format
+            if (chunk.type === 'reasoning' && typeof chunk.textDelta === 'string') {
+              // Send the reasoning chunk as a message annotation
+              dataStream.writeMessageAnnotation({ type: 'reasoning_chunk', content: chunk.textDelta });
+            }
+            // Note: 'text-delta' chunks are handled automatically by mergeIntoDataStream
+            // and don't need explicit handling here unless we wanted to intercept them.
+            // Add more checks if reasoning comes in a different format
+          },
           // When the response finishes, insert the assistant messages.
           async onFinish({ response }) {
             try {

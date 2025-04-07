@@ -29,6 +29,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation" // Import useRouter
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { DialogAuth } from "./dialog-auth"
+import { JSONValue } from "ai" // Import JSONValue
 
 type ChatProps = {
   initialMessages?: Message[]
@@ -67,11 +68,11 @@ export default function Chat({
     setMessages,
     setInput,
     append,
-    data, // Destructure data array
+    // data, // No longer need to destructure 'data' for reasoning
   } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
-    // Add onFinish callback to handle ID updates from annotations
+    // Add onFinish callback to handle ID updates
     onFinish: (message) => {
       // Check if the finished message is from the assistant and has annotations
       if (message.role === 'assistant' && message.annotations) {
@@ -163,6 +164,41 @@ export default function Chat({
       })
     }
   }, [error])
+
+  // Removed the useEffect hook that processed the 'data' stream for reasoning
+  // Also removing the debug logging useEffect hook we added earlier
+  /*
+  useEffect(() => {
+    if (!data || data.length === 0) {
+      // setLiveReasoning("") // Clear if data stream is empty/reset
+      return
+    }
+
+    // --- DEBUG LOGGING START ---
+    // console.log("[Chat useEffect] Received data stream:", JSON.stringify(data, null, 2));
+    // --- DEBUG LOGGING END ---
+
+    // Filter for reasoning chunks and accumulate content
+    const reasoningContent = data
+      .filter(
+        (item): item is { type: 'reasoning_chunk'; content: string } =>
+          typeof item === 'object' &&
+          item !== null &&
+          'type' in item &&
+          item.type === 'reasoning_chunk' &&
+          'content' in item &&
+          typeof item.content === 'string'
+      )
+      .map(item => item.content)
+      .join("\n\n") // Join chunks with newlines for readability
+
+    // --- DEBUG LOGGING START ---
+    // console.log("[Chat useEffect] Setting liveReasoning:", reasoningContent);
+    // --- DEBUG LOGGING END ---
+    // setLiveReasoning(reasoningContent)
+
+  }, [data]) // Rerun whenever the data stream updates
+  */
 
   useEffect(() => {
     const checkMessageLimits = async () => {
@@ -319,6 +355,7 @@ export default function Chat({
       experimental_attachments: newAttachments || undefined,
     }
 
+    // No longer need to clear liveReasoning state here
     handleSubmit(undefined, options)
     setInput("")
     setIsSubmitting(false)
@@ -635,6 +672,7 @@ export default function Chat({
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            // Remove liveReasoning prop
           />
         )}
       </AnimatePresence>

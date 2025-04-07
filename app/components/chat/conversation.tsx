@@ -11,6 +11,7 @@ type ConversationProps = {
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void // Expect ID
+  // Remove liveReasoning prop
 }
 
 export function Conversation({
@@ -19,6 +20,7 @@ export function Conversation({
   onDelete,
   onEdit,
   onReload,
+  // Remove liveReasoning
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -55,6 +57,7 @@ export function Conversation({
               onEdit={onEdit}
               onReload={onReload}
               hasScrollAnchor={hasScrollAnchor}
+              annotations={message.annotations} // Pass annotations instead
             >
               {message.content}
             </Message>

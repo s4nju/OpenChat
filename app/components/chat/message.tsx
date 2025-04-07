@@ -16,6 +16,7 @@ type MessageProps = {
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void // Expect ID
   hasScrollAnchor?: boolean
+  annotations?: MessageType["annotations"] // Add annotations prop
 }
 
 export function Message({
@@ -31,6 +32,7 @@ export function Message({
   onEdit,
   onReload,
   hasScrollAnchor,
+  annotations, // Destructure annotations
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
 
@@ -70,6 +72,7 @@ export function Message({
         hasScrollAnchor={hasScrollAnchor}
         parts={parts}
         storedReasoning={storedReasoning}
+        annotations={annotations} // Pass annotations down
       />
     )
   }
