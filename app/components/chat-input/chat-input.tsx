@@ -1,6 +1,6 @@
 "use client"
 
-import { APP_NAME } from "@/app/lib/config"
+import { APP_NAME } from "@/lib/config"
 import {
   PromptInput,
   PromptInputAction,

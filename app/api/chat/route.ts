@@ -1,7 +1,8 @@
 // /chat/api/chat.ts
-import { checkUsage, incrementUsage } from "@/app/lib/api"
-import { MODELS } from "@/app/lib/config"
-import { validateUserIdentity } from "@/app/lib/server/api"
+import { checkUsage, incrementUsage } from "@/lib/api"
+import { MODELS } from "@/lib/config"
+import { sanitizeUserInput } from "@/lib/sanitize" // Import the sanitizer
+import { validateUserIdentity } from "@/lib/server/api"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message, streamText, createDataStreamResponse } from "ai" // Import createDataStreamResponse
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
             .insert({
               chat_id: chatId,
               role: "user",
-              content: userMessage.content,
+              content: sanitizeUserInput(userMessage.content), // Sanitize user input
               attachments:
                 userMessage.experimental_attachments as unknown as Attachment[],
             })

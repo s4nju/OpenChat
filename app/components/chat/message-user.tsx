@@ -35,6 +35,7 @@ export type MessageUserProps = {
   onReload: (id: string) => void // Expect ID (though user messages don't typically reload)
   onDelete: (id: string) => void
   id: string
+  isUserAuthenticated: boolean // Add this line
 }
 
 export function MessageUser({
@@ -47,6 +48,7 @@ export function MessageUser({
   onReload,
   onDelete,
   id,
+  isUserAuthenticated, // Add this line
 }: MessageUserProps) {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
@@ -175,30 +177,34 @@ export function MessageUser({
             )}
           </button>
         </MessageAction>
-        <MessageAction
-          tooltip={isEditing ? "Save" : "Edit"}
-          side="bottom"
-          delayDuration={0}
-        >
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
-            aria-label="Edit"
-            onClick={() => setIsEditing(!isEditing)}
-            type="button"
-          >
-            <PencilSimple className="size-4" />
-          </button>
-        </MessageAction>
-        <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
-            aria-label="Delete"
-            onClick={handleDelete}
-            type="button"
-          >
-            <Trash className="size-4" />
-          </button>
-        </MessageAction>
+        {isUserAuthenticated && ( // Start conditional rendering
+          <>
+            <MessageAction
+              tooltip={isEditing ? "Save" : "Edit"}
+              side="bottom"
+              delayDuration={0}
+            >
+              <button
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+                aria-label="Edit"
+                onClick={() => setIsEditing(!isEditing)}
+                type="button"
+              >
+                <PencilSimple className="size-4" />
+              </button>
+            </MessageAction>
+            <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
+              <button
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+                aria-label="Delete"
+                onClick={handleDelete}
+                type="button"
+              >
+                <Trash className="size-4" />
+              </button>
+            </MessageAction>
+          </>
+        )} {/* End conditional rendering */}
       </MessageActions>
     </MessageContainer>
   )

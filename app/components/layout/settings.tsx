@@ -1,8 +1,8 @@
 "use client"
 
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/app/lib/config"
-import { createClient } from "@/app/lib/supabase/client"
+import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/lib/config"
+import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/app/types/database.types"
 import { ModelSelector } from "@/components/common/model-selector"
 import { Button } from "@/components/ui/button"

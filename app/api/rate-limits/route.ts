@@ -1,9 +1,9 @@
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
-} from "@/app/lib/config"
-import { validateUserIdentity } from "../../lib/server/api"
-import { createGuestServerClient } from "@/app/lib/supabase/server-guest"
+} from "@/lib/config"
+import { validateUserIdentity } from "@/lib/server/api" // Use alias path
+import { createGuestServerClient } from "@/lib/supabase/server-guest"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)

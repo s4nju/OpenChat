@@ -1,7 +1,7 @@
 "use client"
 
-import { signInWithGoogle } from "@/app/lib/api"
-import { createClient } from "@/app/lib/supabase/client"
+import { signInWithGoogle } from "@/lib/api"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

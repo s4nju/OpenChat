@@ -1,7 +1,7 @@
 "use client"
 
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { APP_DESCRIPTION, APP_NAME } from "@/app/lib/config"
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

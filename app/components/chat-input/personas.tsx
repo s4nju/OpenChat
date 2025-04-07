@@ -1,7 +1,7 @@
 "use client"
 
-import { PERSONAS } from "@/app/lib/config"
-import { TRANSITION_SUGGESTIONS } from "@/app/lib/motion"
+import { PERSONAS } from "@/lib/config"
+import { TRANSITION_SUGGESTIONS } from "@/lib/motion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion } from "motion/react"

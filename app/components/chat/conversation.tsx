@@ -11,6 +11,7 @@ type ConversationProps = {
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void // Expect ID
+  isUserAuthenticated: boolean // Add this line
   // Remove liveReasoning prop
 }
 
@@ -20,6 +21,7 @@ export function Conversation({
   onDelete,
   onEdit,
   onReload,
+  isUserAuthenticated, // Add this line
   // Remove liveReasoning
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
@@ -58,6 +60,7 @@ export function Conversation({
               onReload={onReload}
               hasScrollAnchor={hasScrollAnchor}
               annotations={message.annotations} // Pass annotations instead
+              isUserAuthenticated={isUserAuthenticated} // Add this line
             >
               {message.content}
             </Message>

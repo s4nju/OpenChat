@@ -1,4 +1,4 @@
-import { MODELS_OPTIONS } from "@/app/lib/config"
+import { MODELS_OPTIONS } from "@/lib/config"
 import {
   FileUpload,
   FileUploadContent,

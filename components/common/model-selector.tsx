@@ -1,6 +1,6 @@
 "use client"
 
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/app/lib/config"
+import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

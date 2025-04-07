@@ -1,4 +1,4 @@
-import { validateUserIdentity } from "@/app/lib/server/api";
+import { createClient } from "@/lib/supabase/server"; // Use server client
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 30; // Optional: Set max duration
@@ -17,20 +17,84 @@ export async function DELETE(
     return NextResponse.json({ error: "Message ID is required" }, { status: 400 });
   }
 
-  // Extract userId from request context or headers (adjust as needed)
-  // This assumes you have middleware setting userId or similar
-  // For now, let's assume it comes from a header or requires re-validation
-  const userId = req.headers.get("X-User-Id"); // Example: Get userId from header
-  const isAuthenticated = !!req.headers.get("X-Is-Authenticated"); // Example
-
-  if (!userId) {
-     return NextResponse.json({ error: "User ID not provided or authentication failed" }, { status: 401 });
+  let requestBody: any = null; // Initialize requestBody
+  try {
+    // Attempt to parse the body early, regardless of auth status
+    // This might fail if DELETE requests don't have bodies or are empty
+    requestBody = await req.json();
+  } catch (e) {
+    // Ignore parsing errors for now, could be expected for DELETE
+    // console.log("Note: Could not parse request body for DELETE, might be empty.");
   }
 
   try {
-    const supabase = await validateUserIdentity(userId, isAuthenticated);
+    const supabase = await createClient(); // Create server client
 
-    // Verify the message belongs to the user making the request
+    // --- Get Authenticated User ---
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    let userId: string | null = null;
+    let isGuest = false;
+
+    if (user && !authError) {
+      userId = user.id; // Authenticated user
+    } else {
+      // --- Attempt Guest Check using pre-parsed body ---
+      // Check if we successfully parsed a body earlier
+      if (requestBody && requestBody.userId && requestBody.isAuthenticated === false) {
+        // --- DEBUG LOGGING ---
+        console.log(`[DELETE /api/messages] Attempting guest check for userId: ${requestBody.userId}`);
+
+        // --- DETAILED DEBUG LOGGING ---
+        // First, check if user exists at all and log anonymous status
+        const { data: rawUserData, error: rawUserError } = await supabase
+          .from("users")
+          .select("id, anonymous") // Select anonymous flag too
+          .eq("id", requestBody.userId)
+          .maybeSingle(); // Use maybeSingle in case user doesn't exist
+
+        if (rawUserError) {
+           console.error(`[DELETE /api/messages] Error fetching raw user data for ${requestBody.userId}:`, rawUserError.message);
+           // Don't fail here yet, let the specific check handle it
+        } else if (!rawUserData) {
+           console.log(`[DELETE /api/messages] Raw user check: User ${requestBody.userId} NOT FOUND.`);
+        } else {
+           console.log(`[DELETE /api/messages] Raw user check: User ${requestBody.userId} FOUND. Anonymous status: ${rawUserData.anonymous}`);
+        }
+        // --- END DETAILED DEBUG LOGGING ---
+
+        // Now, perform the specific check for anonymous guest
+        const { data: guestData, error: guestError } = await supabase
+          .from("users")
+          .select("id") // Original check only needed id
+          .eq("id", requestBody.userId) // Use pre-parsed body
+          .eq("anonymous", true)
+          .single();
+
+        if (guestError || !guestData) {
+          // console.error("Guest verification failed:", guestError);
+          // Return the specific error message encountered by the user
+          return NextResponse.json({ error: "Guest user not found or invalid" }, { status: 403 });
+        }
+        userId = guestData.id; // Use the verified guest ID
+        isGuest = true;
+      } else {
+        // No authenticated user and no valid guest info found in the (potentially empty) body
+        // console.log("DELETE failed: No authenticated user and no valid guest info in body.", requestBody);
+        return NextResponse.json({ error: "Not authenticated or invalid guest request" }, { status: 401 });
+      }
+      // --- End Guest Check ---
+    }
+
+    if (!userId) {
+      // Should not happen if logic above is correct, but as a safeguard
+      return NextResponse.json({ error: "Authorization failed" }, { status: 401 });
+    }
+
+    // Verify the message belongs to the user (authenticated or guest) making the request
     // Convert messageId to number for Supabase query
     const messageIdNum = parseInt(messageId, 10);
     if (isNaN(messageIdNum)) {
@@ -78,6 +142,8 @@ export async function DELETE(
      if (error.message.includes("Invalid user identity")) { // Example check
        return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
      }
+    // console.error("Error in DELETE /api/messages/[messageId]:", error);
+    // No need to check for "Invalid user identity" specifically anymore
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -95,31 +161,69 @@ export async function PUT(
     return NextResponse.json({ error: "Message ID is required" }, { status: 400 });
   }
 
-  const userId = req.headers.get("X-User-Id"); // Example
-  const isAuthenticated = !!req.headers.get("X-Is-Authenticated"); // Example
-
-  if (!userId) {
-     return NextResponse.json({ error: "User ID not provided or authentication failed" }, { status: 401 });
-  }
-
+  let requestBody: any;
   let newContent: string;
+  let clientUserId: string | undefined;
+  let clientIsAuthenticated: boolean | undefined;
+
   try {
-    const body = await req.json();
-    newContent = body.content;
+    requestBody = await req.json();
+    newContent = requestBody.content;
+    clientUserId = requestBody.userId; // Extract potential guest ID
+    clientIsAuthenticated = requestBody.isAuthenticated; // Extract auth status
+
     if (typeof newContent !== 'string') {
       return NextResponse.json({ error: "Invalid request body: 'content' must be a string" }, { status: 400 });
     }
   } catch (e) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body format" }, { status: 400 });
   }
 
   // Log only non-sensitive information
-  // console.log(`PUT /api/messages/${messageId} - Received request from user ${userId}`);
+  // console.log(`PUT /api/messages/${messageId} - Received request`); // Removed user ID from log
 
   try {
-    const supabase = await validateUserIdentity(userId, isAuthenticated);
+    const supabase = await createClient(); // Create server client
 
-    // Verify the message belongs to the user and is editable (e.g., role === 'user')
+    // --- Get Authenticated User ---
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    let userId: string | null = null;
+    let isGuest = false;
+
+    if (user && !authError) {
+      userId = user.id; // Authenticated user
+    } else if (clientIsAuthenticated === false && clientUserId) {
+      // --- Attempt Guest Check ---
+      // Verify this guest user exists and is anonymous
+      const { data: guestData, error: guestError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", clientUserId)
+        .eq("anonymous", true)
+        .single();
+
+      if (guestError || !guestData) {
+        // console.error("Guest verification failed:", guestError);
+        return NextResponse.json({ error: "Guest user not found or invalid" }, { status: 403 });
+      }
+      userId = guestData.id; // Use the verified guest ID
+      isGuest = true;
+      // --- End Guest Check ---
+    } else {
+      // No authenticated user and no valid guest info in body
+      return NextResponse.json({ error: "Not authenticated or invalid guest request" }, { status: 401 });
+    }
+
+    if (!userId) {
+      // Should not happen if logic above is correct, but as a safeguard
+      return NextResponse.json({ error: "Authorization failed" }, { status: 401 });
+    }
+
+    // Verify the message belongs to the user (authenticated or guest) and is editable
     // Convert messageId to number for Supabase query
     const messageIdNum = parseInt(messageId, 10);
     if (isNaN(messageIdNum)) {
@@ -173,9 +277,7 @@ export async function PUT(
 
   } catch (error: any) {
     // console.error("Error in PUT /api/messages/[messageId]:", error);
-     if (error.message.includes("Invalid user identity")) {
-       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
-     }
+    // No need to check for "Invalid user identity" specifically anymore
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

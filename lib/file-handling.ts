@@ -1,20 +1,22 @@
 import { toast } from "@/components/ui/toast"
 import { SupabaseClient } from "@supabase/supabase-js"
+import { fileTypeFromBuffer } from "file-type" // Import file-type
 import { DAILY_FILE_UPLOAD_LIMIT } from "./config"
 import { createClient } from "./supabase/client"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+// Update allowed file types based on docs/security-features.md
 const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/png",
-  // "image/gif",
-  // "application/pdf",
-  // "text/plain",
-  // "text/markdown",
-  // "application/json",
-  // "text/csv",
-  // "application/vnd.ms-excel",
-  // "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/gif",
+  "application/pdf",
+  "text/plain",
+  "text/markdown",
+  "application/json",
+  "text/csv",
+  "application/vnd.ms-excel", // .xls
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
 ]
 
 export type Attachment = {
@@ -23,7 +25,10 @@ export type Attachment = {
   url: string
 }
 
-export function validateFile(file: File): { isValid: boolean; error?: string } {
+// Modify validateFile to use file-type library
+export async function validateFile(
+  file: File
+): Promise<{ isValid: boolean; error?: string }> {
   if (file.size > MAX_FILE_SIZE) {
     return {
       isValid: false,
@@ -31,12 +36,27 @@ export function validateFile(file: File): { isValid: boolean; error?: string } {
     }
   }
 
-  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+  // Read the beginning of the file to determine its type
+  const buffer = await file.arrayBuffer()
+  // fileTypeFromBuffer needs a Uint8Array or Buffer.
+  // We only need the first few bytes (magic numbers) to determine the type.
+  // 4100 bytes is the recommended length according to file-type docs.
+  const type = await fileTypeFromBuffer(Buffer.from(buffer.slice(0, 4100)))
+
+  if (!type || !ALLOWED_FILE_TYPES.includes(type.mime)) {
+    // Provide a more informative error message
+    const detectedType = type ? type.mime : "unknown"
     return {
       isValid: false,
-      error: "File type not supported",
+      error: `File type not supported (${detectedType}) or doesn't match content. Allowed types: ${ALLOWED_FILE_TYPES.join(", ")}`,
     }
   }
+
+  // Optional: Compare detected type with file.type if desired, but checking content is more reliable.
+  // if (type.mime !== file.type) {
+  //   console.warn(`File extension type (${file.type}) does not match detected content type (${type.mime}) for file ${file.name}`);
+  //   // Decide if this mismatch should be an error or just a warning
+  // }
 
   return { isValid: true }
 }
@@ -81,7 +101,8 @@ export async function processFiles(
   const attachments: Attachment[] = []
 
   for (const file of files) {
-    const validation = validateFile(file)
+    // Await the async validation
+    const validation = await validateFile(file)
     if (!validation.isValid) {
       console.warn(`File ${file.name} validation failed:`, validation.error)
       toast({

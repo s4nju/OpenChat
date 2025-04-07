@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react" // Import MessageType only
 import { ArrowClockwise, Brain, Check, Copy, Trash } from "@phosphor-icons/react"
-import { useEffect, useState, useMemo } from "react" // Import useMemo
+import { useEffect, useState } from "react" // Removed unused useMemo
 
 type MessageAssistantProps = {
   children: string
@@ -34,6 +34,7 @@ type MessageAssistantProps = {
     }>
   }>
   annotations?: MessageType["annotations"] // Add annotations prop
+  isUserAuthenticated: boolean // Add this line
 }
 
 export function MessageAssistant({
@@ -49,6 +50,7 @@ export function MessageAssistant({
   storedReasoning,
   parts,
   annotations, // Destructure annotations
+  isUserAuthenticated, // Add this line
 }: MessageAssistantProps) {
   // State to control reasoning open/closed state - default to closed
   const [isReasoningOpen, setIsReasoningOpen] = useState(false)
@@ -94,11 +96,11 @@ export function MessageAssistant({
   // Extract reasoning content from parts
   const reasoningParts = parts?.filter(part => part.type === 'reasoning') || []
   const hasReasoningParts = reasoningParts.length > 0
-  
+
   // Combine reasoning text from details or use stored reasoning
-  const reasoningFromParts = hasReasoningParts 
+  const reasoningFromParts = hasReasoningParts
     ? reasoningParts
-        .map(part => 
+        .map(part =>
           part.details
             ?.filter(detail => detail.type === 'text')
             .map(detail => detail.text)
@@ -106,8 +108,6 @@ export function MessageAssistant({
         )
         .join("\n\n")
     : ""
-
-  // Remove the useMemo calculation for liveReasoningFromAnnotations
 
   // Determine the final reasoning text (from stored or parts)
   const finalReasoningText = storedReasoning || reasoningFromParts
@@ -200,6 +200,7 @@ export function MessageAssistant({
               )}
             </button>
           </MessageAction>
+          {/* Regenerate button is always visible */}
           <MessageAction tooltip="Regenerate" side="bottom" delayDuration={0}>
             <button
               className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
@@ -211,7 +212,8 @@ export function MessageAssistant({
               <ArrowClockwise className="size-4" />
             </button>
           </MessageAction>
-          {onDelete && (
+          {/* Delete button is only visible for authenticated users */}
+          {isUserAuthenticated && onDelete && ( // Combine checks
             <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
               <button
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"

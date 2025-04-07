@@ -1,4 +1,4 @@
-import { validateUserIdentity } from "@/app/lib/server/api";
+import { createClient } from "@/lib/supabase/server"; // Use server client
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 30; // Optional: Set max duration
@@ -16,16 +16,21 @@ export async function DELETE(
     return NextResponse.json({ error: "Chat ID is required" }, { status: 400 });
   }
 
-  // Extract userId and authentication status (adjust as needed)
-  const userId = req.headers.get("X-User-Id");
-  const isAuthenticated = !!req.headers.get("X-Is-Authenticated");
-
-  if (!userId) {
-     return NextResponse.json({ error: "User ID not provided or authentication failed" }, { status: 401 });
-  }
-
   try {
-    const supabase = await validateUserIdentity(userId, isAuthenticated);
+    const supabase = await createClient(); // Create server client
+
+    // --- Get Authenticated User ---
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      // console.error("Authentication error in DELETE chat:", authError);
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const userId = user.id; // Use server-validated user ID
+    // --- End Get Authenticated User ---
 
     // Verify the chat belongs to the user making the request
     const { data: chatData, error: fetchError } = await supabase
@@ -64,9 +69,7 @@ export async function DELETE(
 
   } catch (error: any) {
     // console.error("Error in DELETE /api/chats/[chatId]:", error);
-     if (error.message.includes("Invalid user identity")) {
-       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
-     }
+    // No need to check for "Invalid user identity" specifically anymore
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

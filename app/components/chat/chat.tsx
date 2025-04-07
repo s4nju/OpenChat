@@ -10,20 +10,21 @@ import {
   deleteMessage,
   updateChatModel,
   updateMessage,
-} from "@/app/lib/api"
+} from "@/lib/api"
 import {
   MESSAGE_MAX_LENGTH,
   REMAINING_QUERY_ALERT_THRESHOLD,
   SYSTEM_PROMPT_DEFAULT,
-} from "@/app/lib/config"
+} from "@/lib/config"
 import {
   Attachment,
   checkFileUploadLimit,
   processFiles,
-} from "@/app/lib/file-handling"
-import { API_ROUTE_CHAT } from "@/app/lib/routes"
+} from "@/lib/file-handling"
+import { API_ROUTE_CHAT } from "@/lib/routes"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
+import { fetchWithCsrf } from "@/lib/fetch" // Import the CSRF fetch wrapper
 import { Message, useChat } from "@ai-sdk/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation" // Import useRouter
@@ -72,6 +73,7 @@ export default function Chat({
   } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
+    fetch: fetchWithCsrf, // Pass the custom fetch wrapper
     // Add onFinish callback to handle ID updates
     onFinish: (message) => {
       // Check if the finished message is from the assistant and has annotations
@@ -536,7 +538,7 @@ export default function Chat({
           userId,
           model: selectedModel,
           isAuthenticated: !!propUserId,
-          systemPrompt: "You are a helpful assistant.",
+          systemPrompt: SYSTEM_PROMPT_DEFAULT,
         },
       }
 
@@ -621,7 +623,7 @@ export default function Chat({
         userId,
         model: selectedModel,
         isAuthenticated: !!propUserId,
-        systemPrompt: systemPrompt || "You are a helpful assistant.",
+        systemPrompt: SYSTEM_PROMPT_DEFAULT,
       },
     }
 
@@ -672,6 +674,7 @@ export default function Chat({
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            isUserAuthenticated={!!propUserId} // Add this line
             // Remove liveReasoning prop
           />
         )}

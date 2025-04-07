@@ -17,6 +17,7 @@ type MessageProps = {
   onReload: (id: string) => void // Expect ID
   hasScrollAnchor?: boolean
   annotations?: MessageType["annotations"] // Add annotations prop
+  isUserAuthenticated: boolean // Add this line
 }
 
 export function Message({
@@ -33,6 +34,7 @@ export function Message({
   onReload,
   hasScrollAnchor,
   annotations, // Destructure annotations
+  isUserAuthenticated, // Add this line
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
 
@@ -54,6 +56,7 @@ export function Message({
         id={id}
         hasScrollAnchor={hasScrollAnchor}
         attachments={attachments}
+        isUserAuthenticated={isUserAuthenticated} // Add this line
       />
     )
   }
@@ -73,6 +76,7 @@ export function Message({
         parts={parts}
         storedReasoning={storedReasoning}
         annotations={annotations} // Pass annotations down
+        isUserAuthenticated={isUserAuthenticated} // Add this line
       />
     )
   }

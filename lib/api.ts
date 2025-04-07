@@ -1,4 +1,4 @@
-import { APP_DOMAIN, MODEL_DEFAULT } from "@/app/lib/config"
+import { APP_DOMAIN, MODEL_DEFAULT } from "@/lib/config"
 import { SupabaseClient } from "@supabase/supabase-js"
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
@@ -9,6 +9,7 @@ import {
   API_ROUTE_CREATE_GUEST,
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "./routes"
+import { fetchWithCsrf } from "./fetch" // Import the CSRF wrapper
 
 /**
  * Creates a new chat for the specified user
@@ -21,9 +22,10 @@ export async function createNewChat(
   systemPrompt?: string
 ) {
   try {
-    const res = await fetch(API_ROUTE_CREATE_CHAT, {
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(API_ROUTE_CREATE_CHAT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
       body: JSON.stringify({
         userId,
         title,
@@ -53,9 +55,10 @@ export async function createNewChat(
  */
 export async function createGuestUser(guestId: string) {
   try {
-    const res = await fetch(API_ROUTE_CREATE_GUEST, {
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(API_ROUTE_CREATE_GUEST, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
       body: JSON.stringify({ userId: guestId }),
     })
     const responseData = await res.json()
@@ -262,9 +265,10 @@ export async function checkRateLimits(
  */
 export async function updateChatModel(chatId: string, model: string) {
   try {
-    const res = await fetch(API_ROUTE_UPDATE_CHAT_MODEL, {
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(API_ROUTE_UPDATE_CHAT_MODEL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
       body: JSON.stringify({ chatId, model }),
     })
     const responseData = await res.json()
@@ -292,13 +296,13 @@ export async function deleteMessage(
   isAuthenticated: boolean
 ) {
   try {
-    const res = await fetch(`/api/messages/${messageId}`, {
+    // Use fetchWithCsrf wrapper
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(`/api/messages/${messageId}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-Id": userId, // Pass userId
-        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
-      },
+      // headers: { }, // Wrapper handles Content-Type and CSRF token
+      // Send userId and isAuthenticated in the body for the backend check
+      body: JSON.stringify({ userId, isAuthenticated }),
     });
     const responseData = await res.json();
 
@@ -326,14 +330,13 @@ export async function updateMessage(
   isAuthenticated: boolean
 ) {
   try {
-    const res = await fetch(`/api/messages/${messageId}`, {
+    // Use fetchWithCsrf wrapper
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(`/api/messages/${messageId}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-Id": userId, // Pass userId
-        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
-      },
-      body: JSON.stringify({ content: newContent }),
+      // headers: { }, // Wrapper handles Content-Type and CSRF token
+      // Send userId and isAuthenticated in the body along with content
+      body: JSON.stringify({ content: newContent, userId, isAuthenticated }),
     });
     const responseData = await res.json();
 
@@ -360,10 +363,11 @@ export async function deleteChat(
   isAuthenticated: boolean
 ) {
   try {
-    const res = await fetch(`/api/chats/${chatId}`, {
+    // Use fetchWithCsrf wrapper
+    const res = await fetchWithCsrf(`/api/chats/${chatId}`, {
       method: "DELETE",
       headers: {
-        "Content-Type": "application/json",
+        // "Content-Type": "application/json", // Not needed for DELETE usually, wrapper handles CSRF
         "X-User-Id": userId, // Pass userId
         "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
       },
@@ -399,12 +403,17 @@ export async function signInWithGoogle(supabase: SupabaseClient) {
         ? window.location.origin
         : process.env.NEXT_PUBLIC_VERCEL_URL
           ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-          : APP_DOMAIN
+          : APP_DOMAIN; // Assuming APP_DOMAIN is defined elsewhere
+
+    const redirectUrl = `${baseUrl}/auth/callback`;
+    // --- Log the calculated redirect URL ---
+    console.log(`[signInWithGoogle] Calculated redirectTo: ${redirectUrl}`);
+    // --- End log ---
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${baseUrl}/auth/callback`,
+        redirectTo: redirectUrl, // Use the calculated URL
         queryParams: {
           access_type: "offline",
           prompt: "consent",
