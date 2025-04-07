@@ -12,6 +12,7 @@ import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAI } from '@ai-sdk/openai';
 import { togetherai } from '@ai-sdk/togetherai';
 import { google } from '@ai-sdk/google';
+import { groq } from '@ai-sdk/groq';
 import {
   BookOpenText,
   Brain,
@@ -179,7 +180,7 @@ export const MODELS = [
       },
     ],
     think: false,
-    api_sdk: togetherai("meta-llama/Llama-4-Scout-17B-16E-Instruct"),
+    api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
     icon: Meta,
   },
   {

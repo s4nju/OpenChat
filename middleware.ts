@@ -39,7 +39,6 @@ export async function middleware(request: NextRequest) {
       "'self'",
       "'unsafe-inline'", // Often needed for Next.js inline scripts, review if possible to remove
       "https://cdnjs.cloudflare.com", // Example CDN
-      "https://analytics.umami.is", // Umami analytics
       "https://vercel.live", // Vercel toolbar
       // Add 'unsafe-eval' only in development if absolutely necessary
       ...(isDev ? ["'unsafe-eval'"] : []),
@@ -56,13 +55,15 @@ export async function middleware(request: NextRequest) {
     ],
     "connect-src": [
       "'self'",
-      "wss:", // Allow websockets
-      "https://api.openai.com",
-      "https://api.mistral.ai",
+      "wss:", // Allow WebSocket connections
       "https://api.supabase.com",
-      supabaseDomain, // Allow connections to Supabase project URL
-      "https://api-gateway.umami.dev", // Umami analytics API
-      // Add other necessary API endpoints here
+      supabaseDomain, // Supabase domain
+      "https://api.mistral.ai",
+      "https://openrouter.ai/api/v1", 
+      "https://api.together.xyz", 
+      "https://generativelanguage.googleapis.com",
+      "https://api.groq.com",
+      "https://api.openai.com", 
     ],
     "frame-src": [
       "'self'",
