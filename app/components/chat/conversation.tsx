@@ -10,7 +10,7 @@ type ConversationProps = {
   status?: "streaming" | "ready" | "submitted" | "error"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
-  onReload: () => void
+  onReload: (id: string) => void // Expect ID
 }
 
 export function Conversation({

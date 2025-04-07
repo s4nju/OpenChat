@@ -19,7 +19,7 @@ type MessageAssistantProps = {
   hasScrollAnchor?: boolean
   copied?: boolean
   copyToClipboard?: () => void
-  onReload?: () => void
+  onReload?: (id: string) => void // Expect ID
   onDelete?: (id: string) => void
   id?: string
   isStreaming?: boolean
@@ -151,8 +151,9 @@ export function MessageAssistant({
             <button
               className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
               aria-label="Regenerate"
-              onClick={onReload}
+              onClick={() => onReload && id && onReload(id)} // Pass ID if available
               type="button"
+              disabled={!onReload || !id} // Disable if no handler or ID
             >
               <ArrowClockwise className="size-4" />
             </button>

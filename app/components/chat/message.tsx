@@ -14,7 +14,7 @@ type MessageProps = {
   isStreaming?: boolean
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
-  onReload: () => void
+  onReload: (id: string) => void // Expect ID
   hasScrollAnchor?: boolean
 }
 

@@ -284,6 +284,108 @@ export async function updateChatModel(chatId: string, model: string) {
 }
 
 /**
+ * Deletes a specific message
+ */
+export async function deleteMessage(
+  messageId: string,
+  userId: string,
+  isAuthenticated: boolean
+) {
+  try {
+    const res = await fetch(`/api/messages/${messageId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Id": userId, // Pass userId
+        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
+      },
+    });
+    const responseData = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        responseData.error ||
+          `Failed to delete message: ${res.status} ${res.statusText}`
+      );
+    }
+    // console.log(`Client: Message ${messageId} delete request successful.`);
+    return responseData; // { success: true }
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    throw error; // Re-throw to be caught by the caller
+  }
+}
+
+/**
+ * Updates the content of a specific message
+ */
+export async function updateMessage(
+  messageId: string,
+  newContent: string,
+  userId: string,
+  isAuthenticated: boolean
+) {
+  try {
+    const res = await fetch(`/api/messages/${messageId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Id": userId, // Pass userId
+        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
+      },
+      body: JSON.stringify({ content: newContent }),
+    });
+    const responseData = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        responseData.error ||
+          `Failed to update message: ${res.status} ${res.statusText}`
+      );
+    }
+    // console.log(`Client: Message ${messageId} update request successful.`);
+    return responseData; // { success: true, updatedContent: ... }
+  } catch (error) {
+    console.error("Error updating message:", error);
+    throw error; // Re-throw to be caught by the caller
+  }
+}
+
+/**
+ * Deletes an entire chat
+ */
+export async function deleteChat(
+  chatId: string,
+  userId: string,
+  isAuthenticated: boolean
+) {
+  try {
+    const res = await fetch(`/api/chats/${chatId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Id": userId, // Pass userId
+        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
+      },
+    });
+    const responseData = await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        responseData.error ||
+          `Failed to delete chat: ${res.status} ${res.statusText}`
+      );
+    }
+    // console.log(`Client: Chat ${chatId} delete request successful.`);
+    return responseData; // { success: true }
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    throw error; // Re-throw to be caught by the caller
+  }
+}
+
+
+/**
  * Signs in user with Google OAuth via Supabase
  */
 export async function signInWithGoogle(supabase: SupabaseClient) {

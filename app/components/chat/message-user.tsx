@@ -32,7 +32,7 @@ export type MessageUserProps = {
   copied: boolean
   copyToClipboard: () => void
   onEdit: (id: string, newText: string) => void
-  onReload: () => void
+  onReload: (id: string) => void // Expect ID (though user messages don't typically reload)
   onDelete: (id: string) => void
   id: string
 }
@@ -59,9 +59,9 @@ export function MessageUser({
 
   const handleSave = () => {
     if (onEdit) {
-      onEdit(id, editInput)
+      onEdit(id, editInput) // Call the edit handler passed from parent
     }
-    onReload()
+    // onReload() // Removed: Reloading here caused unexpected behavior/duplicates
     setIsEditing(false)
   }
 
