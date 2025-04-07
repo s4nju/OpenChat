@@ -70,10 +70,33 @@ export async function POST(req: Request) {
           }
         }
 
-        const result = streamText({
+        // --- START: Fix for regeneration using edited content ---
+        // When regenerating, the frontend sends the updated content within the 'parts'
+        // array of the last message, but the 'content' field might still hold the old text.
+        // We need to update the 'content' field from 'parts' before sending to the AI model.
+        if (isRegeneration && messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+
+          // Check if the last message is from the user and has a 'parts' array
+          if (lastMessage.role === 'user' && Array.isArray((lastMessage as any).parts)) {
+             // Find the text part within the 'parts' array
+             const textPart = (lastMessage as any).parts.find((part: any) => part.type === 'text');
+             // Ensure the 'content' field (which has the *new* text during regeneration)
+             // is copied into the 'parts[0].text' field, as the SDK/model might prioritize 'parts'.
+             if (textPart && typeof lastMessage.content === 'string') {
+               textPart.text = lastMessage.content;
+               // console.log("Regeneration: Updated parts[0].text with content:", lastMessage.content);
+             }
+          }
+          // Add a fallback or check for experimental_attachments if needed,
+          // but prioritize 'parts' based on the observed payload.
+        }
+        // --- END: Fix for regeneration ---
+
+        const result = streamText({ // Pass the potentially modified messages array
           model: MODELS.find((m) => m.id === model)?.api_sdk!,
           system: systemPrompt || "You are a helpful assistant.",
-          messages,
+          messages, // Use the potentially updated messages array
           // When the response finishes, insert the assistant messages.
           async onFinish({ response }) {
             try {

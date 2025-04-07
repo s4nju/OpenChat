@@ -431,7 +431,7 @@ export default function Chat({
           return deleteMessage(deleteId, userId, !!propUserId);
         })).then(() => {
           // console.log("Successfully deleted subsequent messages from DB.");
-          toast({ title: "Chat history truncated.", status: "info" });
+          // toast({ title: "Chat history truncated.", status: "info" });
         }).catch(error => {
           console.error("Failed to delete subsequent messages:", error);
           toast({ title: `Error truncating history: ${error.message}`, status: "error" });
