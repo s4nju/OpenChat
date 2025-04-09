@@ -1,45 +1,44 @@
-import { History } from "@/app/components/history/history"
-import { createClient } from "@/lib/supabase/server"
-import { Database } from "@/app/types/database.types"
-import { ModeToggle } from "@/components/common/mode-toggle"
+"use client"
+
+import { HistoryTrigger } from "@/app/components/history/history-trigger"
+import { AppInfoTrigger } from "@/app/components/layout/app-info/app-info-trigger"
+import { UserMenu } from "@/app/components/layout/user-menu"
+import { useChats } from "@/lib/chat-store/chats/provider"
+import { useUser } from "@/app/providers/user-provider"
 import Link from "next/link"
-import { APP_NAME } from "@/lib/config"
-import { AppInfo } from "./app-info"
+import { useParams, useRouter } from "next/navigation"
+import { APP_NAME } from "../../../lib/config"
 import { ButtonNewChat } from "./button-new-chat"
-import UserMenu from "./user-menu"
 
-export async function Header() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  const isLoggedIn = data.user !== null
+export function Header() {
+  const { user } = useUser()
+  const params = useParams<{ chatId?: string }>()
+  const router = useRouter()
+  const { chats, updateTitle, deleteChat } = useChats()
+  const isLoggedIn = !!user
 
-  let userProfile = null
-  if (data.user) {
-    const { data: userProfileData } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", data.user?.id)
-      .single()
-    userProfile = userProfileData
+  const handleSaveEdit = async (id: string, newTitle: string) => {
+    await updateTitle(id, newTitle)
   }
 
-  const userData = {
-    ...userProfile,
-    profile_image: data.user?.user_metadata.avatar_url,
-    display_name: data.user?.user_metadata.name,
-  } as Database["public"]["Tables"]["users"]["Row"]
+  const handleConfirmDelete = async (id: string) => {
+    await deleteChat(id, params.chatId, () => router.push("/"))
+  }
 
   return (
     <header className="h-app-header fixed top-0 right-0 left-0 z-50">
       <div className="h-app-header top-app-header bg-background pointer-events-none absolute left-0 z-50 mx-auto w-full to-transparent backdrop-blur-xl [-webkit-mask-image:linear-gradient(to_bottom,black,transparent)] lg:hidden"></div>
       <div className="bg-background relative mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:bg-transparent lg:px-8">
-        <Link href="/" className="text-xl font-medium tracking-tight lowercase">
+        <Link
+          href="/"
+          prefetch
+          className="text-xl font-medium tracking-tight lowercase"
+        >
           {APP_NAME}
         </Link>
         {!isLoggedIn ? (
           <div className="flex items-center gap-4">
-            <AppInfo />
-            <ModeToggle />
+            <AppInfoTrigger />
             <Link
               href="/auth"
               className="font-base text-muted-foreground hover:text-foreground text-base transition-colors"
@@ -49,13 +48,13 @@ export async function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <ButtonNewChat
-              userId={data.user.id}
-              preferredModel={userData.preferred_model!}
+            <ButtonNewChat />
+            <HistoryTrigger
+              chatHistory={chats}
+              onSaveEdit={handleSaveEdit}
+              onConfirmDelete={handleConfirmDelete}
             />
-            <History />
-            <ModeToggle />
-            <UserMenu user={userData} />
+            <UserMenu user={user} />
           </div>
         )}
       </div>

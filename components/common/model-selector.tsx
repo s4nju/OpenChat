@@ -1,6 +1,5 @@
 "use client"
 
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,8 +13,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
-import { Brain, CaretDown, Image } from "@phosphor-icons/react"
+import { CaretDown, Image } from "@phosphor-icons/react"
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -69,7 +69,6 @@ export function ModelSelector({
             const hasFileUpload = model.features?.find(
               (feature) => feature.id === "file-upload"
             )?.enabled
-            const hasThinking = model.think
 
             return (
               <DropdownMenuItem
@@ -87,18 +86,6 @@ export function ModelSelector({
                   <span className="text-base">{model.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {hasThinking && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="cursor-help rounded-full bg-purple-100 p-1 text-purple-600 dark:bg-purple-900">
-                          <Brain className="h-4 w-4" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        <p>This model has advanced reasoning capabilities.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                   {hasFileUpload && (
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { CaretDown } from "@phosphor-icons/react"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "../../../lib/config"
 import { PopoverContentAuth } from "./popover-content-auth"
 
 export type SelectModelProps = {
@@ -35,7 +35,7 @@ export function SelectModel({
               <Button
                 size="sm"
                 variant="secondary"
-                className="border-border dark:bg-secondary text-accent-foreground h-9 w-auto cursor-pointer rounded-full border bg-transparent"
+                className="border-border dark:bg-secondary text-accent-foreground h-9 w-auto rounded-full border bg-transparent"
                 type="button"
               >
                 {provider?.icon && <provider.icon className="size-5" />}

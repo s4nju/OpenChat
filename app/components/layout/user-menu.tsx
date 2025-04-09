@@ -14,14 +14,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info, User } from "@phosphor-icons/react"
-import { APP_NAME } from "@/lib/config"
-import { AppInfo } from "./app-info"
-import { Settings } from "./settings"
+import { Info, Question, User } from "@phosphor-icons/react"
+import dynamic from "next/dynamic"
+import { APP_NAME } from "../../../lib/config"
+import { AppInfoTrigger } from "./app-info/app-info-trigger"
+import { FeedbackTrigger } from "./feedback/feedback-trigger"
+import { SettingsTrigger } from "./settings/settings-trigger"
 
 type User = Database["public"]["Tables"]["users"]["Row"]
 
-export default function UserMenu({ user }: { user: User }) {
+export function UserMenu({ user }: { user: User }) {
   return (
     <DropdownMenu>
       <Tooltip>
@@ -41,28 +43,20 @@ export default function UserMenu({ user }: { user: User }) {
         forceMount
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <DropdownMenuItem className="flex flex-col items-start gap-0 hover:bg-transparent focus:bg-transparent">
+        <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
           <span>{user?.display_name}</span>
           <span className="text-muted-foreground">{user?.email}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <Settings
-          user={user}
-          trigger={
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <User className="size-4" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-          }
-        />
-        <AppInfo
-          trigger={
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <Info className="size-4" />
-              About {APP_NAME}
-            </DropdownMenuItem>
-          }
-        />
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
+          <SettingsTrigger isMenuItem={true} />
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
+          <FeedbackTrigger authUserId={user.id} />
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
+          <AppInfoTrigger />
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

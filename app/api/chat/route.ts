@@ -1,210 +1,142 @@
 // /chat/api/chat.ts
 import { checkUsage, incrementUsage } from "@/lib/api"
 import { MODELS } from "@/lib/config"
-import { sanitizeUserInput } from "@/lib/sanitize" // Import the sanitizer
+import { sanitizeUserInput } from "@/lib/sanitize"
 import { validateUserIdentity } from "@/lib/server/api"
 import { Attachment } from "@ai-sdk/ui-utils"
-import { Message, streamText, createDataStreamResponse } from "ai" // Import createDataStreamResponse
+import { Message as MessageAISDK, streamText } from "ai"
 
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 30
 
 type ChatRequest = {
-  messages: Message[]
+  messages: MessageAISDK[]
   chatId: string
   userId: string
   model: string
   isAuthenticated: boolean
   systemPrompt: string
-  isRegeneration?: boolean // Add optional flag
 }
 
 export async function POST(req: Request) {
-  // Destructure the full request body first
-  const body = (await req.json()) as ChatRequest
-  const { messages, chatId, userId, model, isAuthenticated, systemPrompt, isRegeneration } = body
+  try {
+    let userMsgId: number | null = null
+    const { messages, chatId, userId, model, isAuthenticated, systemPrompt } =
+      (await req.json()) as ChatRequest
 
-  // Use createDataStreamResponse to handle streaming data
-  return createDataStreamResponse({
-    // Main execution logic
-    execute: async (dataStream) => {
-      try {
-        if (!messages || !chatId || !userId) {
-          throw new Error("Missing required information")
-        }
+    if (!messages || !chatId || !userId) {
+      return new Response(
+        JSON.stringify({ error: "Error, missing information" }),
+        { status: 400 }
+      )
+    }
 
-        const supabase = await validateUserIdentity(userId, isAuthenticated)
+    const supabase = await validateUserIdentity(userId, isAuthenticated)
 
-        // First check if the user is within their usage limits
-        await checkUsage(supabase, userId)
+    // First check if the user is within their usage limits
+    await checkUsage(supabase, userId)
 
-        const userMessage = messages[messages.length - 1]
-        let userMessageId: string | null = null
-        // Only insert user message if it's the last one AND not a regeneration call
-        if (userMessage && userMessage.role === "user" && !isRegeneration) {
-          // console.log("POST /api/chat - Inserting user message (not regeneration)");
-          const { data: userData, error: msgError } = await supabase
-            .from("messages")
-            .insert({
-              chat_id: chatId,
-              role: "user",
-              content: sanitizeUserInput(userMessage.content), // Sanitize user input
-              attachments:
-                userMessage.experimental_attachments as unknown as Attachment[],
-            })
-            .select('id') // Select the ID
-            .single() // Expect a single row back
-
-          if (msgError) {
-            // console.error("Error saving user message:", msgError)
-            // Decide how to handle: maybe throw error or just log?
-            // For now, log and continue, but don't send ID
-          } else if (userData) {
-            userMessageId = String(userData.id) // Convert ID to string
-            // console.log("User message saved successfully with ID:", userMessageId)
-            // Send user message ID as general data
-            // We'll send this ID later in the annotation
-            // dataStream.writeData({ type: 'user_message_saved', id: userMessageId }) // No longer needed here
-
-            // Increment usage only after confirming the message was saved
-            await incrementUsage(supabase, userId)
-          }
-        }
-
-        // --- START: Fix for regeneration using edited content ---
-        // When regenerating, the frontend sends the updated content within the 'parts'
-        // array of the last message, but the 'content' field might still hold the old text.
-        // We need to update the 'content' field from 'parts' before sending to the AI model.
-        if (isRegeneration && messages.length > 0) {
-          const lastMessage = messages[messages.length - 1];
-
-          // Check if the last message is from the user and has a 'parts' array
-          if (lastMessage.role === 'user' && Array.isArray((lastMessage as any).parts)) {
-             // Find the text part within the 'parts' array
-             const textPart = (lastMessage as any).parts.find((part: any) => part.type === 'text');
-             // Ensure the 'content' field (which has the *new* text during regeneration)
-             // is copied into the 'parts[0].text' field, as the SDK/model might prioritize 'parts'.
-             if (textPart && typeof lastMessage.content === 'string') {
-               textPart.text = lastMessage.content;
-               // console.log("Regeneration: Updated parts[0].text with content:", lastMessage.content);
-             }
-          }
-          // Add a fallback or check for experimental_attachments if needed,
-          // but prioritize 'parts' based on the observed payload.
-        }
-        // --- END: Fix for regeneration ---
-
-        const result = streamText({ // Pass the potentially modified messages array
-          model: MODELS.find((m) => m.id === model)?.api_sdk!,
-          system: systemPrompt || "You are a helpful assistant.",
-          messages, // Use the potentially updated messages array
-          // Add onChunk callback to handle reasoning steps during the stream
-          onChunk({ chunk }) {
-            // Check if the chunk represents a reasoning step
-            // The exact structure depends on the model/provider.
-            // Check for the observed reasoning chunk format
-            if (chunk.type === 'reasoning' && typeof chunk.textDelta === 'string') {
-              // Send the reasoning chunk as a message annotation
-              dataStream.writeMessageAnnotation({ type: 'reasoning_chunk', content: chunk.textDelta });
-            }
-            // Note: 'text-delta' chunks are handled automatically by mergeIntoDataStream
-            // and don't need explicit handling here unless we wanted to intercept them.
-            // Add more checks if reasoning comes in a different format
-          },
-          // When the response finishes, insert the assistant messages.
-          async onFinish({ response }) {
-            try {
-              for (const msg of response.messages) {
-                if (msg.content && msg.role === 'assistant') { // Ensure it's an assistant message
-                  let plainText = msg.content
-                  let reasoningContent = null
-
-                  // Logic for extracting plainText and reasoningContent (simplified for clarity)
-                  if (Array.isArray(msg.content)) {
-                    const reasoningItems = msg.content.filter((item: any) => item.type === 'reasoning')
-                    if (reasoningItems.length > 0) {
-                      reasoningContent = reasoningItems.map((item: any) => item.text || '').join("\n\n")
-                    }
-                    plainText = msg.content.filter((item: any) => item.type === 'text').map((item: any) => item.text || '').join(" ")
-                  } else if ('parts' in msg && Array.isArray(msg.parts)) {
-                     const reasoningParts = msg.parts.filter((part: any) => part.type === 'reasoning') || []
-                     if (reasoningParts.length > 0) {
-                       reasoningContent = reasoningParts.map((part: any) => part.details?.filter((detail: any) => detail.type === 'text').map((detail: any) => detail.text).join("")).join("\n\n")
-                     }
-                     // Assuming parts also contain text for plainText extraction if needed
-                     plainText = msg.parts.filter((part: any) => part.type === 'text').map((part: any) => part.text || '').join(" ") || String(msg.content); // Fallback
-                  } else if ('reasoning' in msg && msg.reasoning) {
-                     reasoningContent = msg.reasoning as string
-                     plainText = String(msg.content); // Ensure plainText is string
-                  } else {
-                     plainText = String(msg.content); // Ensure plainText is string
-                  }
-
-                  const { data: assistantData, error: assistantError } = await supabase
-                    .from("messages")
-                    .insert({
-                      chat_id: chatId,
-                      role: "assistant",
-                      content: plainText.toString(),
-                      reasoning_content: reasoningContent,
-                    })
-                    .select('id') // Select the ID
-                    .single() // Expect a single row back
-
-                  if (assistantError) {
-                    // console.error("Error saving assistant message:", assistantError)
-                  } else if (assistantData) {
-                    const assistantMessageId = String(assistantData.id) // Ensure ID is string
-                    // console.log("Assistant message saved successfully with ID:", assistantMessageId)
-                    // Send both assistant and user message IDs as an annotation
-                    // attached to the assistant message stream
-                    const annotationPayload: { assistantId: string; userId?: string } = {
-                      assistantId: assistantMessageId,
-                    };
-                    if (userMessageId) {
-                      annotationPayload.userId = userMessageId;
-                    }
-                    dataStream.writeMessageAnnotation(annotationPayload);
-                  }
-                }
-              }
-            } catch (err) {
-              // console.error("Error in onFinish while saving assistant messages:", err)
-              dataStream.writeData({ type: 'error', message: 'Failed to save assistant response' });
-            }
-          },
+    const userMessage = messages[messages.length - 1]
+    if (userMessage && userMessage.role === "user") {
+      const { data: userMsgData, error: msgError } = await supabase
+        .from("messages")
+        .insert({
+          chat_id: chatId,
+          role: "user",
+          content: sanitizeUserInput(userMessage.content),
+          experimental_attachments:
+            userMessage.experimental_attachments as unknown as Attachment[],
+          user_id: userId,
         })
+        .select("id")
+        .single()
+      if (msgError) {
+        console.error("Error saving user message:", msgError)
+      } else {
+        console.log("User message saved successfully.")
 
-        // Check if the model has think: true to include reasoning
-        const modelConfig = MODELS.find((m) => m.id === model)
-        const shouldSendReasoning = modelConfig?.think || false
+        userMsgId = userMsgData?.id ?? null
 
-        // Merge the text stream into the data stream
-        result.mergeIntoDataStream(dataStream)
-
-      } catch (err: any) {
-        // console.error("Error during stream execution:", err)
-        dataStream.writeData({ type: 'error', message: err.message || 'Internal server error' });
-        throw err; // Re-throw for the onError handler
-      } finally {
-         // Ensure the stream is closed if mergeIntoDataStream doesn't handle it on error
-         // dataStream.close(); // Usually handled by mergeIntoDataStream
+        // Increment usage only after confirming the message was saved
+        await incrementUsage(supabase, userId)
       }
-    },
-    // Error handler for createDataStreamResponse
-    onError: (error) => {
-      // console.error("Error in createDataStreamResponse:", error)
-      // Handle specific errors like daily limit
-      if ((error as any).code === "DAILY_LIMIT_REACHED") {
-         // Return the error details as a JSON string in the stream
-         return JSON.stringify({ error: (error as Error).message, code: (error as any).code });
-      }
-      // Return a generic error message as a JSON string
-      return JSON.stringify({ error: 'An internal error occurred during the chat process.' });
-    },
-    // Optional: onCompletion callback
-    // onCompletion: () => {
-    //   console.log("Data stream completed.");
-    // }
-  })
+    }
+
+    const result = streamText({
+      model: MODELS.find((m) => m.id === model)?.api_sdk!,
+      system: systemPrompt || "You are a helpful assistant.",
+      messages,
+      // When the response finishes, insert the assistant messages to supabase
+      async onFinish({ response }) {
+        try {
+          for (const msg of response.messages) {
+            console.log("Response message role:", msg.role)
+            if (msg.content) {
+              let plainText = msg.content
+              try {
+                const parsed = msg.content
+                if (Array.isArray(parsed)) {
+                  // Join all parts of type "text"
+                  plainText = parsed
+                    .filter((part) => part.type === "text")
+                    .map((part) => part.text)
+                    .join(" ")
+                }
+              } catch (err) {
+                console.warn(
+                  "Could not parse message content as JSON, using raw content"
+                )
+              }
+
+              const { error: assistantError } = await supabase
+                .from("messages")
+                .insert({
+                  chat_id: chatId,
+                  role: "assistant",
+                  content: plainText.toString(),
+                  parent_message_id: userMsgId,
+                  user_id: userId,
+                })
+              if (assistantError) {
+                console.error("Error saving assistant message:", assistantError)
+              } else {
+                console.log("Assistant message saved successfully.")
+              }
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Error in onFinish while saving assistant messages:",
+            err
+          )
+        }
+      },
+    })
+
+    // Ensure the stream is consumed so onFinish is triggered.
+    result.consumeStream()
+    const originalResponse = result.toDataStreamResponse()
+    // Optionally attach chatId in a custom header.
+    const headers = new Headers(originalResponse.headers)
+    headers.set("X-Chat-Id", chatId)
+
+    return new Response(originalResponse.body, {
+      status: originalResponse.status,
+      headers,
+    })
+  } catch (err: any) {
+    console.error("Error in /chat/api/chat:", err)
+    // Return a structured error response if the error is a UsageLimitError.
+    if (err.code === "DAILY_LIMIT_REACHED") {
+      return new Response(
+        JSON.stringify({ error: err.message, code: err.code }),
+        { status: 403 }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({ error: err.message || "Internal server error" }),
+      { status: 500 }
+    )
+  }
 }

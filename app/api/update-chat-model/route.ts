@@ -14,40 +14,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // --- Authorization Check ---
-    // Get the authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error("Authentication error:", authError);
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-      });
-    }
-
-    // Verify the chat belongs to the authenticated user
-    const { data: chatData, error: fetchError } = await supabase
-      .from("chats")
-      .select("user_id")
-      .eq("id", chatId)
-      .single();
-
-    if (fetchError) {
-      console.error(`Error fetching chat ${chatId} for ownership check:`, fetchError);
-      // Don't reveal if chat exists or not, just deny access
-      return new Response(JSON.stringify({ error: "Failed to verify chat ownership" }), { status: 500 });
-    }
-
-    if (!chatData || chatData.user_id !== user.id) {
-      console.warn(`User ${user.id} attempted to update model for chat ${chatId} not owned by them.`);
-      return new Response(JSON.stringify({ error: "Unauthorized to update this chat" }), { status: 403 });
-    }
-    // --- End Authorization Check ---
-
-
     // Update the chat record with the new model
     const { error } = await supabase
       .from("chats")

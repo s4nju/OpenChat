@@ -8,16 +8,11 @@ type MessageProps = {
   children: string
   id: string
   attachments?: MessageType["experimental_attachments"]
-  parts?: MessageType["parts"]
-  storedReasoning?: string
   isLast?: boolean
-  isStreaming?: boolean
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
-  onReload: (id: string) => void // Expect ID
+  onReload: () => void
   hasScrollAnchor?: boolean
-  annotations?: MessageType["annotations"] // Add annotations prop
-  isUserAuthenticated: boolean // Add this line
 }
 
 export function Message({
@@ -25,16 +20,11 @@ export function Message({
   children,
   id,
   attachments,
-  parts,
-  storedReasoning,
   isLast,
-  isStreaming,
   onDelete,
   onEdit,
   onReload,
   hasScrollAnchor,
-  annotations, // Destructure annotations
-  isUserAuthenticated, // Add this line
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
 
@@ -56,7 +46,6 @@ export function Message({
         id={id}
         hasScrollAnchor={hasScrollAnchor}
         attachments={attachments}
-        isUserAuthenticated={isUserAuthenticated} // Add this line
       />
     )
   }
@@ -68,15 +57,8 @@ export function Message({
         copied={copied}
         copyToClipboard={copyToClipboard}
         onReload={onReload}
-        onDelete={onDelete}
-        id={id}
         isLast={isLast}
-        isStreaming={isStreaming}
         hasScrollAnchor={hasScrollAnchor}
-        parts={parts}
-        storedReasoning={storedReasoning}
-        annotations={annotations} // Pass annotations down
-        isUserAuthenticated={isUserAuthenticated} // Add this line
       />
     )
   }

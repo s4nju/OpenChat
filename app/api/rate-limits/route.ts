@@ -2,20 +2,19 @@ import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
 } from "@/lib/config"
-import { validateUserIdentity } from "@/lib/server/api" // Use alias path
-import { createGuestServerClient } from "@/lib/supabase/server-guest"
+import { validateUserIdentity } from "../../../lib/server/api"
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const userId = searchParams.get("userId")
-  const isAuthenticated = searchParams.get("isAuthenticated") === "true"
-  if (!userId) {
-    return new Response(JSON.stringify({ error: "Missing userId" }), {
-      status: 400,
-    })
-  }
-  
   try {
+    const { searchParams } = new URL(req.url)
+    const userId = searchParams.get("userId")
+    const isAuthenticated = searchParams.get("isAuthenticated") === "true"
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Missing userId" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
     const supabase = await validateUserIdentity(userId, isAuthenticated)
 
     const { data, error } = await supabase
@@ -25,9 +24,15 @@ export async function GET(req: Request) {
       .maybeSingle()
 
     if (error || !data) {
-      return new Response(JSON.stringify({ error: error?.message }), {
-        status: 500,
-      })
+      return new Response(
+        JSON.stringify({
+          error: error?.message || "Failed to retrieve user data for rate limit check.",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
     }
 
     const dailyLimit = isAuthenticated
@@ -38,53 +43,22 @@ export async function GET(req: Request) {
 
     return new Response(JSON.stringify({ dailyCount, dailyLimit, remaining }), {
       status: 200,
+      headers: { "Content-Type": "application/json" },
     })
-  } catch (error: any) {
-    // Handle the case of a missing guest user by creating one
-    if (!isAuthenticated && error.message === "Invalid or missing guest user") {
-      try {
-        // Create the guest user record
-        const supabase = await createGuestServerClient()
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert({
-            id: userId,
-            email: `${userId}@anonymous.example`,
-            anonymous: true,
-            message_count: 0,
-            daily_message_count: 0,
-            premium: false,
-            created_at: new Date().toISOString(),
-          })
-          .single()
-
-        if (insertError) {
-          return new Response(JSON.stringify({ error: insertError.message }), {
-            status: 500,
-          })
-        }
-
-        // Return default values for a new user
-        return new Response(
-          JSON.stringify({
-            dailyCount: 0,
-            dailyLimit: NON_AUTH_DAILY_MESSAGE_LIMIT,
-            remaining: NON_AUTH_DAILY_MESSAGE_LIMIT,
-          }),
-          { status: 200 }
-        )
-      } catch (createError: any) {
-        return new Response(
-          JSON.stringify({ error: createError.message || "Failed to create guest user" }),
-          { status: 500 }
-        )
-      }
-    }
-
-    // Return the original error for other cases
+  } catch (err: any) {
+    console.error("Error in /api/rate-limits:", err)
+    const statusCode =
+      err.message === "Invalid or missing guest user" ||
+      err.message === "User ID does not match authenticated user" ||
+      err.message === "Unable to get authenticated user"
+        ? 403
+        : 500
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500 }
+      JSON.stringify({ error: err.message || "Internal server error" }),
+      {
+        status: statusCode,
+        headers: { "Content-Type": "application/json" },
+      }
     )
   }
 }

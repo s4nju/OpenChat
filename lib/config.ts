@@ -4,8 +4,6 @@ import Gemini from "@/components/icons/gemini"
 import Grok from "@/components/icons/grok"
 import Mistral from "@/components/icons/mistral"
 import OpenAI from "@/components/icons/openai"
-import OpenRouter from "@/components/icons/openrouter"
-import Meta from "@/components/icons/meta"
 import { mistral } from "@ai-sdk/mistral"
 import { openai } from "@ai-sdk/openai"
 import { openrouter } from "@openrouter/ai-sdk-provider"
@@ -52,7 +50,6 @@ export type Model = {
   provider: string
   available?: boolean
   api_sdk?: any
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
   think?: boolean
   features?: {
     id: string
@@ -111,7 +108,6 @@ export const MODELS_NOT_AVAILABLE = [
       },
     ],
     api_sdk: openai("gpt-4o"),
-    icon: OpenAI,
   },
   {
     id: "gpt-4o-mini",
@@ -124,7 +120,6 @@ export const MODELS_NOT_AVAILABLE = [
       },
     ],
     api_sdk: openai("gpt-4o-mini"),
-    icon: OpenAI,
   },
 ] as Model[]
 
@@ -153,7 +148,6 @@ export const MODELS = [
     ],
     think: true,
     api_sdk: google("gemini-2.5-pro-exp-03-25"),
-    icon: Gemini,
   },
   {
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
@@ -167,7 +161,6 @@ export const MODELS = [
     ],
     think: false,
     api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
-    icon: Meta,
   },
   {
     id: "Llama-4-Scout-17B-16E-Instruct",
@@ -181,7 +174,6 @@ export const MODELS = [
     ],
     think: false,
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
-    icon: Meta,
   },
   {
     id: "pixtral-large-latest",
@@ -209,7 +201,6 @@ export const MODELS = [
     ],
     think: false,
     api_sdk: mistral("mistral-large-latest"),
-    icon: Mistral,
   },
   {
     id: "deepseek-ai/DeepSeek-V3-0324",
@@ -236,7 +227,6 @@ export const MODELS = [
       },
     ],
     api_sdk: openrouter("deepseek/deepseek-r1:free"),
-    icon: OpenRouter,
   },
 ] as Model[]
 
@@ -286,7 +276,6 @@ export const PROVIDERS = [
   {
     id: "openrouter",
     name: "OpenRouter",
-    icon: OpenRouter,
   },
   {
     id: "openai",
@@ -301,7 +290,6 @@ export const PROVIDERS = [
   {
     id: "meta",
     name: "Meta",
-    icon: Meta,
   },
 ] as Provider[]
 

@@ -1,4 +1,3 @@
-import { MODELS_OPTIONS } from "@/lib/config"
 import {
   FileUpload,
   FileUploadContent,
@@ -15,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { MODELS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
 import { FileArrowUp, Paperclip } from "@phosphor-icons/react"
 import React from "react"
@@ -44,7 +44,7 @@ export function ButtonFileUpload({
               <Button
                 size="sm"
                 variant="secondary"
-                className="border-border dark:bg-secondary h-9 w-9 cursor-pointer rounded-full border bg-transparent"
+                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
                 type="button"
                 aria-label="Add files"
               >
@@ -74,7 +74,7 @@ export function ButtonFileUpload({
               <Button
                 size="sm"
                 variant="secondary"
-                className="border-border dark:bg-secondary h-9 w-9 cursor-pointer rounded-full border bg-transparent"
+                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
                 type="button"
                 aria-label="Add files"
               >
@@ -103,7 +103,7 @@ export function ButtonFileUpload({
               size="sm"
               variant="secondary"
               className={cn(
-                "border-border dark:bg-secondary h-9 w-9 cursor-pointer rounded-full border bg-transparent",
+                "border-border dark:bg-secondary size-9 rounded-full border bg-transparent",
                 !isUserAuthenticated && "opacity-50"
               )}
               type="button"

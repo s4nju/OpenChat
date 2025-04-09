@@ -10,9 +10,7 @@ type ConversationProps = {
   status?: "streaming" | "ready" | "submitted" | "error"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
-  onReload: (id: string) => void // Expect ID
-  isUserAuthenticated: boolean // Add this line
-  // Remove liveReasoning prop
+  onReload: () => void
 }
 
 export function Conversation({
@@ -21,13 +19,13 @@ export function Conversation({
   onDelete,
   onEdit,
   onReload,
-  isUserAuthenticated, // Add this line
-  // Remove liveReasoning
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const isStreaming = status === "streaming"
+
+  if (!messages || messages.length === 0)
+    return <div className="h-full w-full"></div>
 
   return (
     <div className="relative flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto">
@@ -51,16 +49,11 @@ export function Conversation({
               id={message.id}
               variant={message.role}
               attachments={message.experimental_attachments}
-              parts={message.parts}
-              storedReasoning={(message as any).storedReasoning}
               isLast={isLast}
-              isStreaming={isLast && isStreaming}
               onDelete={onDelete}
               onEdit={onEdit}
               onReload={onReload}
               hasScrollAnchor={hasScrollAnchor}
-              annotations={message.annotations} // Pass annotations instead
-              isUserAuthenticated={isUserAuthenticated} // Add this line
             >
               {message.content}
             </Message>

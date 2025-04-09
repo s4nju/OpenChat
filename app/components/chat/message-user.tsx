@@ -32,10 +32,9 @@ export type MessageUserProps = {
   copied: boolean
   copyToClipboard: () => void
   onEdit: (id: string, newText: string) => void
-  onReload: (id: string) => void // Expect ID (though user messages don't typically reload)
+  onReload: () => void
   onDelete: (id: string) => void
   id: string
-  isUserAuthenticated: boolean // Add this line
 }
 
 export function MessageUser({
@@ -48,7 +47,6 @@ export function MessageUser({
   onReload,
   onDelete,
   id,
-  isUserAuthenticated, // Add this line
 }: MessageUserProps) {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
@@ -61,9 +59,9 @@ export function MessageUser({
 
   const handleSave = () => {
     if (onEdit) {
-      onEdit(id, editInput) // Call the edit handler passed from parent
+      onEdit(id, editInput)
     }
-    // onReload() // Removed: Reloading here caused unexpected behavior/duplicates
+    onReload()
     setIsEditing(false)
   }
 
@@ -158,7 +156,7 @@ export function MessageUser({
           {children}
         </MessageContent>
       )}
-      <MessageActions className="flex gap-0 md:opacity-0 transition-opacity md:group-hover:opacity-100">
+      <MessageActions className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
         <MessageAction
           tooltip={copied ? "Copied!" : "Copy text"}
           side="bottom"
@@ -177,34 +175,31 @@ export function MessageUser({
             )}
           </button>
         </MessageAction>
-        {isUserAuthenticated && ( // Start conditional rendering
-          <>
-            <MessageAction
-              tooltip={isEditing ? "Save" : "Edit"}
-              side="bottom"
-              delayDuration={0}
-            >
-              <button
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
-                aria-label="Edit"
-                onClick={() => setIsEditing(!isEditing)}
-                type="button"
-              >
-                <PencilSimple className="size-4" />
-              </button>
-            </MessageAction>
-            <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
-              <button
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
-                aria-label="Delete"
-                onClick={handleDelete}
-                type="button"
-              >
-                <Trash className="size-4" />
-              </button>
-            </MessageAction>
-          </>
-        )} {/* End conditional rendering */}
+        {/* @todo: add when ready */}
+        {/* <MessageAction
+          tooltip={isEditing ? "Save" : "Edit"}
+          side="bottom"
+          delayDuration={0}
+        >
+          <button
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+            aria-label="Edit"
+            onClick={() => setIsEditing(!isEditing)}
+            type="button"
+          >
+            <PencilSimple className="size-4" />
+          </button>
+        </MessageAction> */}
+        <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
+          <button
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+            aria-label="Delete"
+            onClick={handleDelete}
+            type="button"
+          >
+            <Trash className="size-4" />
+          </button>
+        </MessageAction>
       </MessageActions>
     </MessageContainer>
   )

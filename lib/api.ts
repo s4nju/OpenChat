@@ -1,64 +1,20 @@
-import { APP_DOMAIN, MODEL_DEFAULT } from "@/lib/config"
+import { APP_DOMAIN } from "@/lib/config"
 import { SupabaseClient } from "@supabase/supabase-js"
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
 } from "./config"
-import {
-  API_ROUTE_CREATE_CHAT,
-  API_ROUTE_CREATE_GUEST,
-  API_ROUTE_UPDATE_CHAT_MODEL,
-} from "./routes"
-import { fetchWithCsrf } from "./fetch" // Import the CSRF wrapper
-
-/**
- * Creates a new chat for the specified user
- */
-export async function createNewChat(
-  userId: string,
-  title?: string,
-  model?: string,
-  isAuthenticated?: boolean,
-  systemPrompt?: string
-) {
-  try {
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(API_ROUTE_CREATE_CHAT, {
-      method: "POST",
-      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
-      body: JSON.stringify({
-        userId,
-        title,
-        model: model || MODEL_DEFAULT,
-        isAuthenticated,
-        systemPrompt,
-      }),
-    })
-    const responseData = await res.json()
-
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to create chat: ${res.status} ${res.statusText}`
-      )
-    }
-
-    return responseData.chatId
-  } catch (error) {
-    console.error("Error creating new chat:", error)
-    throw error
-  }
-}
+import { fetchClient } from "./fetch"
+import { API_ROUTE_CREATE_GUEST, API_ROUTE_UPDATE_CHAT_MODEL } from "./routes"
 
 /**
  * Creates a guest user record on the server
  */
 export async function createGuestUser(guestId: string) {
   try {
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(API_ROUTE_CREATE_GUEST, {
+    const res = await fetchClient(API_ROUTE_CREATE_GUEST, {
       method: "POST",
-      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: guestId }),
     })
     const responseData = await res.json()
@@ -103,7 +59,7 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
     .maybeSingle()
 
   if (userDataError) {
-    throw new Error("Error fetching user data: " + userDataError.message)
+    throw new Error("Error fetchClienting user data: " + userDataError.message)
   }
   if (!userData) {
     throw new Error("User record not found for id: " + userId)
@@ -138,7 +94,7 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
   }
 
   // Check if the daily limit is reached.
-  if (dailyCount > dailyLimit) {
+  if (dailyCount >= dailyLimit) {
     throw new UsageLimitError("Daily message limit reached.")
   }
 
@@ -154,7 +110,7 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
  *
  * @param supabase - Your Supabase client.
  * @param userId - The ID of the user.
- * @param currentCounts - Current message counts (optional, will be fetched if not provided)
+ * @param currentCounts - Current message counts (optional, will be fetchCliented if not provided)
  * @throws Error if updating fails.
  */
 export async function incrementUsage(
@@ -169,7 +125,7 @@ export async function incrementUsage(
     messageCount = currentCounts.messageCount
     dailyCount = currentCounts.dailyCount
   } else {
-    // If counts weren't provided, fetch them
+    // If counts weren't provided, fetchClient them
     const { data: userData, error: userDataError } = await supabase
       .from("users")
       .select("message_count, daily_message_count")
@@ -178,7 +134,7 @@ export async function incrementUsage(
 
     if (userDataError || !userData) {
       throw new Error(
-        "Error fetching user data: " +
+        "Error fetchClienting user data: " +
           (userDataError?.message || "User not found")
       )
     }
@@ -239,7 +195,7 @@ export async function checkRateLimits(
   isAuthenticated: boolean
 ) {
   try {
-    const res = await fetch(
+    const res = await fetchClient(
       `/api/rate-limits?userId=${userId}&isAuthenticated=${isAuthenticated}`,
       {
         method: "GET",
@@ -265,10 +221,9 @@ export async function checkRateLimits(
  */
 export async function updateChatModel(chatId: string, model: string) {
   try {
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(API_ROUTE_UPDATE_CHAT_MODEL, {
+    const res = await fetchClient(API_ROUTE_UPDATE_CHAT_MODEL, {
       method: "POST",
-      // headers: { "Content-Type": "application/json" }, // Wrapper handles Content-Type and CSRF token
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId, model }),
     })
     const responseData = await res.json()
@@ -288,108 +243,6 @@ export async function updateChatModel(chatId: string, model: string) {
 }
 
 /**
- * Deletes a specific message
- */
-export async function deleteMessage(
-  messageId: string,
-  userId: string,
-  isAuthenticated: boolean
-) {
-  try {
-    // Use fetchWithCsrf wrapper
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(`/api/messages/${messageId}`, {
-      method: "DELETE",
-      // headers: { }, // Wrapper handles Content-Type and CSRF token
-      // Send userId and isAuthenticated in the body for the backend check
-      body: JSON.stringify({ userId, isAuthenticated }),
-    });
-    const responseData = await res.json();
-
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to delete message: ${res.status} ${res.statusText}`
-      );
-    }
-    // console.log(`Client: Message ${messageId} delete request successful.`);
-    return responseData; // { success: true }
-  } catch (error) {
-    console.error("Error deleting message:", error);
-    throw error; // Re-throw to be caught by the caller
-  }
-}
-
-/**
- * Updates the content of a specific message
- */
-export async function updateMessage(
-  messageId: string,
-  newContent: string,
-  userId: string,
-  isAuthenticated: boolean
-) {
-  try {
-    // Use fetchWithCsrf wrapper
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(`/api/messages/${messageId}`, {
-      method: "PUT",
-      // headers: { }, // Wrapper handles Content-Type and CSRF token
-      // Send userId and isAuthenticated in the body along with content
-      body: JSON.stringify({ content: newContent, userId, isAuthenticated }),
-    });
-    const responseData = await res.json();
-
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to update message: ${res.status} ${res.statusText}`
-      );
-    }
-    // console.log(`Client: Message ${messageId} update request successful.`);
-    return responseData; // { success: true, updatedContent: ... }
-  } catch (error) {
-    console.error("Error updating message:", error);
-    throw error; // Re-throw to be caught by the caller
-  }
-}
-
-/**
- * Deletes an entire chat
- */
-export async function deleteChat(
-  chatId: string,
-  userId: string,
-  isAuthenticated: boolean
-) {
-  try {
-    // Use fetchWithCsrf wrapper
-    const res = await fetchWithCsrf(`/api/chats/${chatId}`, {
-      method: "DELETE",
-      headers: {
-        // "Content-Type": "application/json", // Not needed for DELETE usually, wrapper handles CSRF
-        "X-User-Id": userId, // Pass userId
-        "X-Is-Authenticated": isAuthenticated ? "true" : "", // Pass auth status
-      },
-    });
-    const responseData = await res.json();
-
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to delete chat: ${res.status} ${res.statusText}`
-      );
-    }
-    // console.log(`Client: Chat ${chatId} delete request successful.`);
-    return responseData; // { success: true }
-  } catch (error) {
-    console.error("Error deleting chat:", error);
-    throw error; // Re-throw to be caught by the caller
-  }
-}
-
-
-/**
  * Signs in user with Google OAuth via Supabase
  */
 export async function signInWithGoogle(supabase: SupabaseClient) {
@@ -403,17 +256,12 @@ export async function signInWithGoogle(supabase: SupabaseClient) {
         ? window.location.origin
         : process.env.NEXT_PUBLIC_VERCEL_URL
           ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-          : APP_DOMAIN; // Assuming APP_DOMAIN is defined elsewhere
-
-    const redirectUrl = `${baseUrl}/auth/callback`;
-    // --- Log the calculated redirect URL ---
-    console.log(`[signInWithGoogle] Calculated redirectTo: ${redirectUrl}`);
-    // --- End log ---
+          : APP_DOMAIN
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectUrl, // Use the calculated URL
+        redirectTo: `${baseUrl}/auth/callback`,
         queryParams: {
           access_type: "offline",
           prompt: "consent",

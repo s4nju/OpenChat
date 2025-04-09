@@ -1,7 +1,6 @@
 "use client"
 
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,6 +18,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
 import { Info } from "@phosphor-icons/react"
 
 const InfoContent = () => (
@@ -30,21 +30,21 @@ const InfoContent = () => (
     <p className="text-foreground leading-relaxed">
       The code is available on{" "}
       <a
-        href="https://github.com/ajanraj/openchat"
+        href="https://github.com/ajanraj/OpenChat"
         target="_blank"
         rel="noopener noreferrer"
         className="underline"
       >
         GitHub
       </a>
-      , you can also follow the creator on{" "}
+      . Edited by{" "}
       <a
         href="https://twitter.com/ajanraj25"
         target="_blank"
         rel="noopener noreferrer"
         className="underline"
       >
-        X
+        @ibelick
       </a>
       .
     </p>
@@ -55,10 +55,10 @@ const defaultTrigger = (
   <Button
     variant="ghost"
     size="icon"
-    className="bg-background/80 hover:bg-muted text-muted-foreground h-9 w-9 rounded-full"
+    className="bg-background/80 hover:bg-muted text-muted-foreground h-8 w-8 rounded-full"
     aria-label={`About ${APP_NAME}`}
   >
-    <Info className="size-6" />
+    <Info className="size-4" />
   </Button>
 )
 
