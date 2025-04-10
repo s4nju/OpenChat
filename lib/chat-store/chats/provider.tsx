@@ -19,6 +19,7 @@ import {
 interface ChatsContextType {
   chats: Chats[]
   refresh: () => Promise<void>
+  isLoading: boolean
   updateTitle: (id: string, title: string) => Promise<void>
   deleteChat: (
     id: string,
@@ -52,6 +53,7 @@ export function ChatsProvider({
   userId?: string
   children: React.ReactNode
 }) {
+  const [isLoading, setIsLoading] = useState(false)
   const [chats, setChats] = useState<Chats[]>([])
 
   useEffect(() => {
@@ -60,8 +62,14 @@ export function ChatsProvider({
     const load = async () => {
       const cached = await getCachedChats()
       setChats(cached)
-      const fresh = await fetchAndCacheChats(userId)
-      setChats(fresh)
+
+      setIsLoading(true)
+      try {
+        const fresh = await fetchAndCacheChats(userId)
+        setChats(fresh)
+      } finally {
+        setIsLoading(false)
+      }
     }
     load()
   }, [userId])
@@ -163,6 +171,7 @@ export function ChatsProvider({
       value={{
         chats,
         refresh,
+        isLoading,
         updateTitle,
         deleteChat,
         setChats,

@@ -4,6 +4,7 @@ import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
+import { HistoryTrigger } from "@/app/components/history/history-trigger"
 
 const CommandHistory = dynamic(
   () => import("./command-history").then((mod) => mod.CommandHistory),
@@ -22,25 +23,25 @@ export function History() {
   const { chats, updateTitle, deleteChat } = useChats()
 
   const handleSaveEdit = async (id: string, newTitle: string) => {
-    await updateTitle(id, newTitle)
+    try {
+      await updateTitle(id, newTitle)
+    } catch (error) {
+      console.error("Failed to update chat title:", error)
+      // Optionally, show user feedback here
+    }
   }
 
   const handleConfirmDelete = async (id: string) => {
-    await deleteChat(id, params.chatId, () => router.push("/"))
-  }
-
-  if (isMobile) {
-    return (
-      <DrawerHistory
-        chatHistory={chats}
-        onSaveEdit={handleSaveEdit}
-        onConfirmDelete={handleConfirmDelete}
-      />
-    )
+    try {
+      await deleteChat(id, params.chatId, () => router.push("/"))
+    } catch (error) {
+      console.error("Failed to delete chat:", error)
+      // Optionally, show user feedback here
+    }
   }
 
   return (
-    <CommandHistory
+    <HistoryTrigger
       chatHistory={chats}
       onSaveEdit={handleSaveEdit}
       onConfirmDelete={handleConfirmDelete}

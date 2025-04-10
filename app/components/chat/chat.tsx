@@ -36,18 +36,21 @@ const DialogAuth = dynamic(
   { ssr: false }
 )
 
-type ChatProps = {
-  chatId?: string
-}
+import { useChatSession } from "@/app/providers/chat-session-provider"
 
-export default function Chat({ chatId: propChatId }: ChatProps) {
-  const { createNewChat, getChatById, updateChatModel } = useChats()
-  const currentChat = propChatId ? getChatById(propChatId) : null
+export default function Chat() {
+  const { chatId } = useChatSession()
+  const {
+    createNewChat,
+    getChatById,
+    updateChatModel,
+    isLoading: isChatsLoading,
+  } = useChats()
+  const currentChat = chatId ? getChatById(chatId) : null
   const { messages: initialMessages, cacheAndAddMessage, deleteMessage } = useMessages()
   const { user } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasDialogAuth, setHasDialogAuth] = useState(false)
-  const [chatId, setChatId] = useState<string | null>(propChatId || null)
   const [files, setFiles] = useState<File[]>([])
   const [selectedModel, setSelectedModel] = useState(
     currentChat?.model || user?.preferred_model || MODEL_DEFAULT
@@ -55,6 +58,11 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
   const [systemPrompt, setSystemPrompt] = useState(
     currentChat?.system_prompt || SYSTEM_PROMPT_DEFAULT
   )
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
 
   const isAuthenticated = !!user?.id
   const {
@@ -71,15 +79,21 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
   } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
-    // save assistant to messages data layer
     onFinish: async (message) => {
       console.log("Message finished:", message)
-      if (!chatId) 
+      if (!chatId) {
         console.error("No chatId available for message:", message)
         return
+      }
       await cacheAndAddMessage(message)
     },
   })
+
+  useEffect(() => {
+    if (chatId === null) {
+      setMessages([])
+    }
+  }, [chatId])
 
   const isFirstMessage = useMemo(() => {
     return messages.length === 0
@@ -169,7 +183,6 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
           systemPrompt
         )
         if (!newChat) return null
-        setChatId(newChat.id)
         if (isAuthenticated) {
           window.history.pushState(null, "", `/c/${newChat.id}`)
         }
@@ -298,7 +311,6 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
 
     const currentChatId = await ensureChatExists(uid)
 
-    setChatId(currentChatId)
     if (!currentChatId) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
@@ -474,8 +486,13 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
     reload(options)
   }
 
-  // not user chatId and no messages
-  if (propChatId && !currentChat && messages.length === 0) {
+  if (
+    hydrated &&
+    chatId &&
+    !isChatsLoading &&
+    !currentChat &&
+    messages.length === 0
+  ) {
     return redirect("/")
   }
 
@@ -487,7 +504,7 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
     >
       <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} />
       <AnimatePresence initial={false} mode="popLayout">
-        {!propChatId && messages.length === 0 ? (
+        {!chatId && messages.length === 0 ? (
           <motion.div
             key="onboarding"
             className="absolute bottom-[60%] mx-auto max-w-[50rem] md:relative md:bottom-auto"
@@ -538,7 +555,7 @@ export default function Chat({ chatId: propChatId }: ChatProps) {
           files={files}
           onFileUpload={handleFileUpload}
           onFileRemove={handleFileRemove}
-          hasSuggestions={isFirstMessage}
+          hasSuggestions={!chatId && messages.length === 0}
           onSelectModel={handleModelChange}
           onSelectSystemPrompt={handleSelectSystemPrompt}
           selectedModel={selectedModel}

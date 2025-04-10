@@ -37,16 +37,19 @@ export function useMessages() {
 
 import { useChats } from '../chats/provider';
 
-export function MessagesProvider({
-  chatId,
-  children,
-}: {
-  chatId?: string
-  children: React.ReactNode
-}) {
+import { useChatSession } from "@/app/providers/chat-session-provider"
+
+export function MessagesProvider({ children }: { children: React.ReactNode }) {
+  const { chatId } = useChatSession()
   const [messages, setMessages] = useState<MessageAISDK[]>([])
   const chatsContext = useChats()
+  const router = useRouter()
 
+  useEffect(() => {
+    if (chatId === null) {
+      setMessages([])
+    }
+  }, [chatId])
 
   useEffect(() => {
     if (!chatId) return
@@ -78,7 +81,7 @@ export function MessagesProvider({
     }
   }
 
-  const reset = async () => {
+  const deleteMessages = async () => {
     if (!chatId) return
 
     setMessages([])
@@ -122,6 +125,7 @@ export function MessagesProvider({
       toast({ title: "Failed to save messages", status: "error" })
     }
   }
+
   const deleteSingleMessage = async (messageId: string | number) => {
     try {
       const mod = await import("./api")
@@ -133,27 +137,26 @@ export function MessagesProvider({
             String(m.parent_message_id) !== String(messageId)
         )
       )(await (async () => {
-        // get latest state snapshot
         return new Promise<ExtendedMessage[]>((resolve) => {
           setMessages(prev => {
             resolve(prev as ExtendedMessage[]);
             return prev;
           });
         });
-      })());
+      })())
 
-      setMessages(updatedMessages);
+      setMessages(updatedMessages)
 
       if (chatId) {
-        await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages });
+        await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages })
       }
 
       if (result.chatDeleted && chatId) {
         try {
-          chatsContext.deleteChat(chatId, chatId, () => router.push("/"));
+          chatsContext.deleteChat(chatId, chatId, () => router.push("/"))
         } catch (e) {
-          console.error("Failed to update chat context after chat deletion:", e);
-          router.push("/");
+          console.error("Failed to update chat context after chat deletion:", e)
+          router.push("/")
         }
       }
     } catch (e) {
@@ -161,12 +164,9 @@ export function MessagesProvider({
     }
   }
 
-
   const resetMessages = async () => {
     setMessages([])
   }
-
-  const router = useRouter();
 
   return (
     <MessagesContext.Provider
@@ -174,7 +174,7 @@ export function MessagesProvider({
         messages,
         setMessages,
         refresh,
-        reset,
+        reset: deleteMessages,
         addMessage: addSingleMessage,
         saveAllMessages,
         cacheAndAddMessage,
