@@ -31,7 +31,10 @@ export function UserMenu({ user }: { user: User }) {
           <DropdownMenuTrigger>
             <Avatar>
               <AvatarImage src={user?.profile_image ?? undefined} />
-              <AvatarFallback>{user?.display_name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback>
+                {user?.display_name?.charAt(0) ||
+                  (user?.email ? user.email.charAt(0) : "")}
+              </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
         </TooltipTrigger>

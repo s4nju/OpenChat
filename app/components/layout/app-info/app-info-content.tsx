@@ -5,6 +5,7 @@ import Image from "next/image"
 export function AppInfoContent() {
   return (
     <div className="flex w-full flex-col items-center p-4">
+      {/*
       <Image
         src="/openchat-logo.svg"
         alt="OpenChat logo"
@@ -12,6 +13,7 @@ export function AppInfoContent() {
         height={40}
         className="rounded-lg"
       />
+      */}
       <p className="text-foreground mt-4 text-center text-sm font-medium">
         OpenChat
       </p>

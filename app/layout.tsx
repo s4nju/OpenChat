@@ -4,7 +4,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { ChatsProvider } from "@/lib/chat-store/chats/provider"
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
-import { ThemeProvider } from "next-themes"
+import { ThemeProvider } from "./providers/theme-provider"
 import Script from "next/script"
 import { createClient } from "../lib/supabase/server"
 import { ChatSessionProvider } from "./providers/chat-session-provider"
@@ -67,12 +67,7 @@ export default async function RootLayout({
         <UserProvider initialUser={userProfile}>
           <ChatsProvider userId={userProfile?.id}>
             <ChatSessionProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="light"
-                enableSystem
-                disableTransitionOnChange
-              >
+              <ThemeProvider>
                 <Toaster position="top-center" />
                 {children}
               </ThemeProvider>

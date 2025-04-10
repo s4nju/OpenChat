@@ -1,5 +1,4 @@
 "use client"
-
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
 import { AppInfoTrigger } from "@/app/components/layout/app-info/app-info-trigger"
 import { UserMenu } from "@/app/components/layout/user-menu"
@@ -9,6 +8,8 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { APP_NAME } from "../../../lib/config"
 import { ButtonNewChat } from "./button-new-chat"
+import ThemeSwitchIcon from "./ThemeSwitchIcon"
+import { Info } from "@phosphor-icons/react"
 
 export function Header() {
   const { user } = useUser()
@@ -38,7 +39,19 @@ export function Header() {
         </Link>
         {!isLoggedIn ? (
           <div className="flex items-center gap-4">
-            <AppInfoTrigger />
+            <AppInfoTrigger
+              trigger={
+                <button
+                  type="button"
+                  className="group flex items-center justify-center rounded-full p-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:rounded-full outline-none"
+                  aria-label={`About ${APP_NAME}`}
+                  tabIndex={0}
+                >
+                  <Info className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" weight="bold" />
+                </button>
+              }
+            />
+            <ThemeSwitchIcon />
             <Link
               href="/auth"
               className="font-base text-muted-foreground hover:text-foreground text-base transition-colors"
@@ -54,6 +67,7 @@ export function Header() {
               onSaveEdit={handleSaveEdit}
               onConfirmDelete={handleConfirmDelete}
             />
+            <ThemeSwitchIcon />
             <UserMenu user={user} />
           </div>
         )}

@@ -80,9 +80,9 @@ export default function Chat() {
     api: API_ROUTE_CHAT,
     initialMessages,
     onFinish: async (message) => {
-      console.log("Message finished:", message)
+      // console.log("Message finished:", message)
       if (!chatId) {
-        console.error("No chatId available for message:", message)
+        // console.error("No chatId available for message:", message)
         return
       }
       await cacheAndAddMessage(message)
@@ -126,10 +126,10 @@ export default function Chat() {
         await createGuestUser(storedGuestId)
         return storedGuestId
       } catch (validationError) {
-        console.warn(
-          `[Chat] Stored guestId ${storedGuestId} failed validation or API call failed. Removing it. Error:`,
-          validationError
-        )
+        // console.warn(
+        //   `[Chat] Stored guestId ${storedGuestId} failed validation or API call failed. Removing it. Error:`,
+        //   validationError
+        // )
         localStorage.removeItem("guestId")
       }
     }
@@ -140,10 +140,10 @@ export default function Chat() {
       localStorage.setItem("guestId", newGuestId)
       return newGuestId
     } catch (creationError) {
-      console.error(
-        "[Chat] Error during new guest ID generation or creation API call:",
-        creationError
-      )
+      // console.error(
+      //   "[Chat] Error during new guest ID generation or creation API call:",
+      //   creationError
+      // )
       localStorage.removeItem("guestId")
       return null
     }
@@ -167,7 +167,7 @@ export default function Chat() {
 
       return true
     } catch (err) {
-      console.error("Rate limit check failed:", err)
+      // console.error("Rate limit check failed:", err)
       return false
     }
   }
@@ -223,7 +223,7 @@ export default function Chat() {
       try {
         await updateChatModel(chatId!, model)
       } catch (err) {
-        console.error("Failed to update chat model:", err)
+        // console.error("Failed to update chat model:", err)
         setSelectedModel(oldModel)
         toast({
           title: "Failed to update chat model",
@@ -355,7 +355,7 @@ export default function Chat() {
       handleSubmit(undefined, options)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
-      console.log("Optimistic message sent:", optimisticMessage)
+      // console.log("Optimistic message sent:", optimisticMessage)
       cacheAndAddMessage(optimisticMessage)
     } catch (error) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
