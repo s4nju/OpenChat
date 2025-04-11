@@ -155,7 +155,7 @@ export async function deleteMessageAndAssistantReplies(messageId: string | numbe
     .eq('parent_message_id', idNum);
 
   if (assistantDeleteError) {
-    console.error('Failed to delete assistant replies:', assistantDeleteError);
+    // console.error('Failed to delete assistant replies:', assistantDeleteError);
     throw assistantDeleteError;
   }
 
@@ -166,7 +166,7 @@ export async function deleteMessageAndAssistantReplies(messageId: string | numbe
     .eq('id', idNum);
 
   if (userDeleteError) {
-    console.error('Failed to delete user message:', userDeleteError);
+    // console.error('Failed to delete user message:', userDeleteError);
     throw userDeleteError;
   }
 
@@ -186,7 +186,7 @@ export async function deleteMessageAndAssistantReplies(messageId: string | numbe
       await deleteChat(chatId);
       return { chatDeleted: true };
     } catch (deleteChatError) {
-      console.error('Failed to delete empty chat:', deleteChatError);
+      // console.error('Failed to delete empty chat:', deleteChatError);
       throw deleteChatError;
     }
   } else {

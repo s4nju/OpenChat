@@ -50,7 +50,7 @@ export async function updateChatTitle(
 }
 
 export async function deleteChat(id: string): Promise<void> {
-  console.log("[deleteChat] Deleting chat from Supabase:", id);
+  // console.log("[deleteChat] Deleting chat from Supabase:", id);
   const supabase = createClient()
   const { error } = await supabase.from("chats").delete().eq("id", id)
   if (error) {
@@ -61,11 +61,11 @@ export async function deleteChat(id: string): Promise<void> {
   try {
     // Remove chat key from "chats" store
     await deleteFromIndexedDB("chats", id);
-    console.log("[deleteChat] Deleted chat key from IndexedDB:", id);
+    // console.log("[deleteChat] Deleted chat key from IndexedDB:", id);
 
     // Remove chat's messages key from "messages" store
     await deleteFromIndexedDB("messages", id);
-    console.log("[deleteChat] Deleted chat messages key from IndexedDB:", id);
+    // console.log("[deleteChat] Deleted chat messages key from IndexedDB:", id);
   } catch (e) {
     console.error("[deleteChat] Error deleting keys from IndexedDB after chat delete:", e);
     throw e;
