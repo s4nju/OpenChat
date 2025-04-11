@@ -524,14 +524,20 @@ export default function Chat() {
             </h1>
           </motion.div>
         ) : (
-          <Conversation
-            key="conversation"
-            messages={messages}
-            status={status}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onReload={handleReload}
-          />
+          (() => {
+            const conversationStatus =
+              status === "ready" ? "idle" : status;
+            return (
+              <Conversation
+                key="conversation"
+                messages={messages}
+                status={conversationStatus}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onReload={handleReload}
+              />
+            );
+          })()
         )}
       </AnimatePresence>
       <motion.div
