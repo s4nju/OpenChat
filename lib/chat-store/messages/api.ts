@@ -27,7 +27,7 @@ export async function fetchAndCacheMessages(
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, content, role, experimental_attachments, created_at, parent_message_id")
+    .select("id, content, role, experimental_attachments, created_at, parent_message_id, reasoning_text")
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true })
 
@@ -36,11 +36,14 @@ export async function fetchAndCacheMessages(
     return []
   }
 
-  const formattedMessages = data.map((message) => ({
-    ...message,
-    id: String(message.id),
-    createdAt: new Date(message.created_at || ""),
-  }))
+  const formattedMessages = data
+    .filter((message) => typeof message === "object" && message !== null && "id" in message)
+    .map((message: any) => ({
+      ...message,
+      id: String(message.id),
+      createdAt: new Date(message.created_at || ""),
+      reasoning_text: message.reasoning_text ?? null,
+    }))
 
   return formattedMessages
 }
@@ -69,7 +72,12 @@ export async function addMessage(
   })
 
   const current = await getCachedMessages(chatId)
-  const updated = [...current, message]
+  // Ensure reasoning_text is included in the cached message
+  const messageWithReasoning = {
+    ...message,
+    reasoning_text: (message as any).reasoning_text ?? null,
+  }
+  const updated = [...current, messageWithReasoning]
   await writeToIndexedDB("messages", { id: chatId, messages: updated })
 }
 
@@ -88,7 +96,12 @@ export async function setMessages(
   }))
 
   await supabase.from("messages").insert(payload)
-  await writeToIndexedDB("messages", { id: chatId, messages })
+  // Ensure reasoning_text is included in all cached messages
+  const messagesWithReasoning = messages.map(msg => ({
+    ...msg,
+    reasoning_text: (msg as any).reasoning_text ?? null,
+  }))
+  await writeToIndexedDB("messages", { id: chatId, messages: messagesWithReasoning })
 }
 
 export async function clearMessagesCache(chatId: string): Promise<void> {

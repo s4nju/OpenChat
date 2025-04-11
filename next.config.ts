@@ -6,7 +6,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 const nextConfig: NextConfig = withBundleAnalyzer({
   experimental: {
-    optimizePackageImports: ["@phosphor-icons/react"],
+    optimizePackageImports: ["@phosphor-icons/react","@lobehub/icons"],
     nodeMiddleware: true,
   },
   eslint: {

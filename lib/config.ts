@@ -25,7 +25,9 @@ import {
   PaintBrush,
   PenNib,
   Sparkle,
+  Detective,
 } from "@phosphor-icons/react/dist/ssr"
+import { Qwen, Meta } from '@lobehub/icons';
 
 const chutes = createOpenAI({
   // custom settings, e.g.
@@ -50,7 +52,6 @@ export type Model = {
   provider: string
   available?: boolean
   api_sdk?: any
-  think?: boolean
   features?: {
     id: string
     enabled: boolean
@@ -146,7 +147,6 @@ export const MODELS = [
         enabled: true,
       },
     ],
-    think: true,
     api_sdk: google("gemini-2.5-pro-exp-03-25"),
   },
   {
@@ -159,7 +159,6 @@ export const MODELS = [
         enabled: true,
       },
     ],
-    think: false,
     api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
   },
   {
@@ -172,7 +171,6 @@ export const MODELS = [
         enabled: true,
       },
     ],
-    think: false,
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
   },
   {
@@ -185,7 +183,6 @@ export const MODELS = [
         enabled: true,
       },
     ],
-    think: false,
     api_sdk: mistral("pixtral-large-latest"),
     icon: Mistral,
   },
@@ -199,7 +196,6 @@ export const MODELS = [
         enabled: false,
       },
     ],
-    think: false,
     api_sdk: mistral("mistral-large-latest"),
   },
   {
@@ -213,13 +209,11 @@ export const MODELS = [
         enabled: false,
       },
     ],
-    think: false,
   },
   {
     id: "deepseek-r1",
     name: "DeepSeek R1",
     provider: "deepseek",
-    think: true,
     features: [
       {
         id: "file-upload",
@@ -227,6 +221,18 @@ export const MODELS = [
       },
     ],
     api_sdk: openrouter("deepseek/deepseek-r1:free"),
+  },
+  {
+    id: "qwen/qwq-32b:free",
+    name: "QWEN 32B",
+    provider: "Qwen",
+    features: [
+      {
+        id: "file-upload",
+        enabled: false,
+      },
+    ],
+    api_sdk: openrouter("qwen/qwq-32b:free"),
   },
 ] as Model[]
 
@@ -276,6 +282,7 @@ export const PROVIDERS = [
   {
     id: "openrouter",
     name: "OpenRouter",
+    icon: Detective,
   },
   {
     id: "openai",
@@ -290,7 +297,13 @@ export const PROVIDERS = [
   {
     id: "meta",
     name: "Meta",
+    icon: Meta.Color,
   },
+  {
+    id: "Qwen",
+    name: "Qwen",
+    icon: Qwen.Color,
+  }
 ] as Provider[]
 
 export const PROVIDERS_OPTIONS = [

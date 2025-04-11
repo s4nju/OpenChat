@@ -100,12 +100,12 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   }
 
   const cacheAndAddMessage = async (message: MessageAISDK) => {
-    console.log("Caching message:", message)
+    // console.log("Caching message:", message)
     
     if (!chatId) return
 
     try {
-      console.log("Caching message:", message)
+      // console.log("Caching message:", message)
       const updated = [...messages, message]
       console.log("Updated messages:", updated)
       await writeToIndexedDB("messages", { id: chatId, messages: updated })

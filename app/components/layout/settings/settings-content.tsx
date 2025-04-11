@@ -14,7 +14,7 @@ import { clearAllIndexedDBStores } from "@/lib/chat-store/persist"
 import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/lib/config"
 import { cn } from "@/lib/utils"
 import { SignOut, User, X } from "@phosphor-icons/react"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/app/providers/theme-provider"
 import { useRouter } from "next/navigation"
 import type React from "react" // Keep type import if needed
 import { useEffect, useState } from "react"
@@ -150,8 +150,8 @@ export function SettingsContent({
                 key={theme.id}
                 type="button"
                 onClick={() => {
-                  setSelectedTheme(theme.id)
-                  setTheme(theme.id)
+                  setSelectedTheme(theme.id as "light" | "dark" | "system")
+                  setTheme(theme.id as "light" | "dark" | "system")
                 }}
                 className={`rounded-lg border p-3 ${
                   selectedTheme === theme.id

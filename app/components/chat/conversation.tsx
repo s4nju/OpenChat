@@ -5,9 +5,11 @@ import { Message as MessageType } from "@ai-sdk/react"
 import { useRef } from "react"
 import { Message } from "./message"
 
+type MessageWithReasoning = MessageType & { reasoning_text?: string }
+
 type ConversationProps = {
-  messages: MessageType[]
-  status?: "streaming" | "ready" | "submitted" | "error"
+  messages: MessageWithReasoning[]
+  status?: "streaming" | "idle" | "submitted" | "error" // Changed "ready" to "idle"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: () => void
@@ -15,7 +17,7 @@ type ConversationProps = {
 
 export function Conversation({
   messages,
-  status = "ready",
+  status = "idle", // Changed default from "ready" to "idle"
   onDelete,
   onEdit,
   onReload,
@@ -54,6 +56,9 @@ export function Conversation({
               onEdit={onEdit}
               onReload={onReload}
               hasScrollAnchor={hasScrollAnchor}
+              parts={message.parts}
+              status={status} // Pass the status down
+              reasoning_text={message.reasoning_text}
             >
               {message.content}
             </Message>

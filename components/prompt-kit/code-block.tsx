@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/app/providers/theme-provider"
 import React, { useEffect, useState } from "react"
 import { codeToHtml } from "shiki"
 
@@ -43,6 +43,7 @@ function CodeBlockCode({
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!appTheme) return
     async function highlight() {
       const html = await codeToHtml(code, {
         lang: language,
