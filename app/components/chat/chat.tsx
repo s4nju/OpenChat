@@ -565,7 +565,7 @@ export default function Chat() {
           status={status}
         />
       </motion.div>
-      <FeedbackWidget authUserId={user?.id} />
+      {/* <FeedbackWidget authUserId={user?.id} /> */}
     </div>
   )
 }

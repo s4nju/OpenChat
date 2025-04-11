@@ -55,9 +55,6 @@ export function UserMenu({ user }: { user: User }) {
           <SettingsTrigger isMenuItem={true} />
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
-          <FeedbackTrigger authUserId={user.id} />
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
           <AppInfoTrigger />
         </DropdownMenuItem>
       </DropdownMenuContent>
