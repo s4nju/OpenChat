@@ -3,13 +3,12 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const token = generateCsrfToken()
-  const cookieStore = await cookies()
-  cookieStore.set("csrf_token", token, {
-    httpOnly: false,
+  const token = await generateCsrfToken(process.env.CSRF_SECRET!);
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set("csrf_token", token, {
+    httpOnly: false, // CSRF tokens are usually readable by JS
     secure: true,
     path: "/",
-  })
-
-  return NextResponse.json({ ok: true })
+  });
+  return response;
 }
