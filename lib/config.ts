@@ -222,18 +222,18 @@ export const MODELS = [
     ],
     api_sdk: openrouter("deepseek/deepseek-r1:free"),
   },
-  {
-    id: "qwen/qwq-32b:free",
-    name: "QWEN 32B",
-    provider: "Qwen",
-    features: [
-      {
-        id: "file-upload",
-        enabled: false,
-      },
-    ],
-    api_sdk: openrouter("qwen/qwq-32b:free"),
-  },
+  // {
+  //   id: "qwen/qwq-32b:free",
+  //   name: "QWEN 32B",
+  //   provider: "Qwen",
+  //   features: [
+  //     {
+  //       id: "file-upload",
+  //       enabled: false,
+  //     },
+  //   ],
+  //   api_sdk: openrouter("qwen/qwq-32b:free"),
+  // },
 ] as Model[]
 
 export const MODELS_OPTIONS = [
