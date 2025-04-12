@@ -80,9 +80,9 @@ export default function Chat() {
     api: API_ROUTE_CHAT,
     initialMessages,
     onFinish: async (message) => {
-      // console.log("Message finished:", message)
+      console.log("Message finished on finish:", message)
       if (!chatId) {
-        // console.error("No chatId available for message:", message)
+        console.error("No chatId available for message:", message)
         return
       }
       await cacheAndAddMessage(message)
@@ -355,7 +355,7 @@ export default function Chat() {
       handleSubmit(undefined, options)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
-      // console.log("Optimistic message sent:", optimisticMessage)
+      console.log("Optimistic message sent:", optimisticMessage)
       cacheAndAddMessage(optimisticMessage)
     } catch (error) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))

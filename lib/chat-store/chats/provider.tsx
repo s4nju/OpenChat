@@ -147,9 +147,24 @@ export function ChatsProvider({
           )
       )
       return newChat
-    } catch (e) {
+    } catch (e: any) { // Add type 'any' to access potential 'code' property
       setChats(prev)
-      toast({ title: "Failed to create chat", status: "error" })
+      console.error("Create chat error:", e) // Use console.error for errors
+
+      // Check for the specific rate limit error code
+      if (e?.code === "DAILY_LIMIT_REACHED") {
+        toast({
+          title: "Daily message limit reached",
+          status: "error",
+        })
+      } else {
+        // Show generic error for other issues
+        toast({
+          title: "Failed to create chat",
+          description: e.message || "An unexpected error occurred.",
+          status: "error",
+        })
+      }
     }
   }
 

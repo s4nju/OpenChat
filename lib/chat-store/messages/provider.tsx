@@ -100,18 +100,21 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   }
 
   const cacheAndAddMessage = async (message: MessageAISDK) => {
-    // console.log("Caching message:", message)
-    
-    if (!chatId) return
-
+    if (!chatId) return;
     try {
-      // console.log("Caching message:", message)
-      const updated = [...messages, message]
-      // console.log("Updated messages:", updated)
-      await writeToIndexedDB("messages", { id: chatId, messages: updated })
-      setMessages(updated)
+      // Replace if exists, else append
+      const idx = messages.findIndex((m) => m.id === message.id);
+      let updated;
+      if (idx !== -1) {
+        updated = [...messages];
+        updated[idx] = message;
+      } else {
+        updated = [...messages, message];
+      }
+      await writeToIndexedDB("messages", { id: chatId, messages: updated });
+      setMessages(updated);
     } catch (e) {
-      toast({ title: "Failed to save message", status: "error" })
+      toast({ title: "Failed to save message", status: "error" });
     }
   }
 

@@ -21,6 +21,7 @@ type ChatRequest = {
 export async function POST(req: Request) {
   try {
     let userMsgId: number | null = null
+    let assistantMsgId: number | null = null
     const { messages, chatId, userId, model, isAuthenticated, systemPrompt } =
       (await req.json()) as ChatRequest
 
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
         console.log("User message saved successfully.")
 
         userMsgId = userMsgData?.id ?? null
+        console.log("User message ID:", userMsgId)
 
         // Increment usage only after confirming the message was saved
         await incrementUsage(supabase, userId)
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
       // When the response finishes, insert the assistant messages to supabase
       async onFinish({ response }) {
         try {
+          console.log("Response finished:", response)
           for (const msg of response.messages) {
             console.log("Response message role:", msg.role)
             if (msg.content) {
@@ -107,13 +110,18 @@ export async function POST(req: Request) {
                 reasoning_text: reasoningText,
               };
 
-              const { error: assistantError } = await supabase
+              const {data: assistantMsgData, error: assistantError } = await supabase
                 .from("messages")
-                .insert(insertPayload);
+                .insert(insertPayload)
+                .select("id")
+                .single();
               if (assistantError) {
                 console.error("Error saving assistant message:", assistantError);
               } else {
                 console.log("Assistant message saved successfully.");
+                console.log("Assistant message ID:", assistantMsgData?.id);
+                assistantMsgId = assistantMsgData?.id ?? null;
+                console.log("Assistant message ID:", assistantMsgId);
               }
             }
           }
@@ -131,17 +139,20 @@ export async function POST(req: Request) {
     // Conditionally send reasoning tokens to the client if model supports it
     // Always send reasoning if available
     const originalResponse = result.toDataStreamResponse({ sendReasoning: true });
+    console.log("Original response:", originalResponse);
 
     // Optionally attach chatId in a custom header.
     const headers = new Headers(originalResponse.headers)
     headers.set("X-Chat-Id", chatId)
+    headers.set("X-User-Message-Id", String(userMsgId))
+    headers.set("X-Assistant-Message-Id", String(assistantMsgId))
 
     return new Response(originalResponse.body, {
       status: originalResponse.status,
       headers,
     })
   } catch (err: any) {
-    console.error("Error in /chat/api/chat:", err)
+    // console.error("Error in /chat/api/chat:", err)
     // Return a structured error response if the error is a UsageLimitError.
     if (err.code === "DAILY_LIMIT_REACHED") {
       return new Response(

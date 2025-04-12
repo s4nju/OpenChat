@@ -169,8 +169,19 @@ export async function createNewChat(
 
     const responseData = await res.json()
 
-    if (!res.ok || !responseData.chat) {
-      throw new Error(responseData.error || "Failed to create chat")
+    if (!res.ok) {
+      // Throw an error object that includes the code if available
+      const error: any = new Error(
+        responseData.error || `Failed to create chat: ${res.statusText}`
+      )
+      if (responseData.code) {
+        error.code = responseData.code
+      }
+      throw error
+    }
+    if (!responseData.chat) {
+       // Handle case where response is ok but chat data is missing
+       throw new Error("Failed to create chat: Invalid response data")
     }
 
     const chat: Chats = {
@@ -184,7 +195,7 @@ export async function createNewChat(
 
     return chat
   } catch (error) {
-    console.error("Error creating new chat:", error)
+    // console.error("Error creating new chat:", error)
     throw error
   }
 }
