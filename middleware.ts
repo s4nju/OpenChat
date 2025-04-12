@@ -10,7 +10,14 @@ export async function middleware(request: NextRequest) {
     const csrfCookie = request.cookies.get("csrf_token")?.value
     const headerToken = request.headers.get("x-csrf-token")
 
-    if (!csrfCookie || !headerToken || !validateCsrfToken(headerToken)) {
+    // Use Edge-compatible env variable for secret (must be injected at build time)
+    const csrfSecret = process.env.CSRF_SECRET
+    if (
+      !csrfCookie ||
+      !headerToken ||
+      !csrfSecret ||
+      !(await validateCsrfToken(headerToken, csrfSecret))
+    ) {
       return new NextResponse("Invalid CSRF token", { status: 403 })
     }
   }

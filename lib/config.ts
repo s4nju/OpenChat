@@ -320,6 +320,7 @@ export const APP_NAME = "OpenChat"
 export const APP_DOMAIN = "https://chat.ajanraj.com"
 export const APP_DESCRIPTION =
   "OpenChat is a free, open-source AI chat app with multi-model support."
+export const APP_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 export const PERSONAS = [
   {

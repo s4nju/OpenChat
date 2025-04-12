@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "chat-ai",
+  "name": "openchat",
   "compatibility_date": "2025-04-10",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {

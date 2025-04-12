@@ -42,17 +42,26 @@ function CodeBlockCode({
   const { theme: appTheme } = useTheme()
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
 
+  // Ensure code and language are always valid strings
+  const safeCode = typeof code === "string" ? code : "";
+  const safeLanguage = typeof language === "string" && language ? language : "tsx";
+
   useEffect(() => {
     if (!appTheme) return
+    // Only highlight if code and language are valid
+    if (typeof safeCode !== "string" || !safeLanguage) {
+      setHighlightedHtml(null)
+      return
+    }
     async function highlight() {
-      const html = await codeToHtml(code, {
-        lang: language,
+      const html = await codeToHtml(safeCode, {
+        lang: safeLanguage,
         theme: appTheme === "dark" ? "github-dark" : "github-light",
       })
       setHighlightedHtml(html)
     }
     highlight()
-  }, [code, language, theme, appTheme])
+  }, [safeCode, safeLanguage, theme, appTheme])
 
   const classNames = cn(
     "w-full overflow-x-auto text-[13px] [&>pre]:px-4 [&>pre]:py-4",

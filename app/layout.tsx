@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { ChatsProvider } from "@/lib/chat-store/chats/provider"
-import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
+import { APP_DESCRIPTION, APP_NAME, APP_BASE_URL } from "@/lib/config"
 import { ThemeProvider } from "./providers/theme-provider"
 import Script from "next/script"
 import { createClient } from "../lib/supabase/server"
@@ -25,6 +25,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: APP_NAME,
   description: APP_DESCRIPTION,
+  metadataBase: new URL(APP_BASE_URL),
 }
 
 export default async function RootLayout({

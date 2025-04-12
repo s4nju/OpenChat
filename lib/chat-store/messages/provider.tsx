@@ -107,7 +107,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     try {
       // console.log("Caching message:", message)
       const updated = [...messages, message]
-      console.log("Updated messages:", updated)
+      // console.log("Updated messages:", updated)
       await writeToIndexedDB("messages", { id: chatId, messages: updated })
       setMessages(updated)
     } catch (e) {
