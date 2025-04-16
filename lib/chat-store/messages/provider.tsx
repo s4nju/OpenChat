@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from 'next/navigation';
 import { writeToIndexedDB } from "../persist"
 import {
-  addMessage,
   cacheMessages,
   clearMessagesForChat,
   fetchAndCacheMessages,
@@ -19,7 +18,6 @@ interface MessagesContextType {
   setMessages: React.Dispatch<React.SetStateAction<MessageAISDK[]>>
   refresh: () => Promise<void>
   reset: () => Promise<void>
-  addMessage: (message: MessageAISDK, parentMessageId?: number | null) => Promise<void>
   saveAllMessages: (messages: MessageAISDK[]) => Promise<void>
   cacheAndAddMessage: (message: MessageAISDK) => Promise<void>
   resetMessages: () => Promise<void>
@@ -88,16 +86,6 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     await clearMessagesForChat(chatId)
   }
 
-  const addSingleMessage = async (message: MessageAISDK, parentMessageId?: number | null) => {
-    if (!chatId) return
-
-    try {
-      await addMessage(chatId, message, parentMessageId)
-      setMessages((prev) => [...prev, message])
-    } catch (e) {
-      toast({ title: "Failed to add message", status: "error" })
-    }
-  }
 
   const cacheAndAddMessage = async (message: MessageAISDK) => {
     if (!chatId) return;
@@ -178,7 +166,6 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         setMessages,
         refresh,
         reset: deleteMessages,
-        addMessage: addSingleMessage,
         saveAllMessages,
         cacheAndAddMessage,
         deleteMessage: deleteSingleMessage,

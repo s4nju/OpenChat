@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,10 +29,59 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
-  const model = MODELS_OPTIONS.find((model) => model.id === selectedModelId)
-  const provider = PROVIDERS_OPTIONS.find(
-    (provider) => provider.id === model?.provider
+  // Memoize model and provider lookups
+  const model = React.useMemo(
+    () => MODELS_OPTIONS.find((model) => model.id === selectedModelId),
+    [selectedModelId]
   )
+  const provider = React.useMemo(
+    () => PROVIDERS_OPTIONS.find((provider) => provider.id === model?.provider),
+    [model]
+  )
+
+  // Memoize the rendered model options list
+  const renderedModelOptions = React.useMemo(() =>
+    MODELS_OPTIONS.map((model) => {
+      const provider = PROVIDERS_OPTIONS.find(
+        (provider) => provider.id === model.provider
+      )
+      const hasFileUpload = model.features?.find(
+        (feature) => feature.id === "file-upload"
+      )?.enabled
+
+      return (
+        <DropdownMenuItem
+          key={model.id}
+          className={cn(
+            "flex items-center justify-between px-3 py-2",
+            !model.available && "cursor-not-allowed opacity-50",
+            selectedModelId === model.id && "bg-accent"
+          )}
+          disabled={!model.available}
+          onClick={() => model.available && setSelectedModelId(model.id)}
+        >
+          <div className="flex items-center gap-3">
+            {provider?.icon && <provider.icon className="size-5" />}
+            <span className="text-base">{model.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasFileUpload && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="cursor-help rounded-full bg-blue-100 p-1 text-blue-600 dark:bg-blue-900">
+                    <Image className="h-4 w-4" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>This model can process and understand images.</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </DropdownMenuItem>
+      )
+    })
+  , [selectedModelId, setSelectedModelId])
 
   return (
     <TooltipProvider>

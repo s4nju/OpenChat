@@ -7,7 +7,7 @@ import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText } from "ai"
 
 // Maximum allowed duration for streaming (in seconds)
-export const maxDuration = 30
+export const maxDuration = 60
 
 type ChatRequest = {
   messages: MessageAISDK[]
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
                 console.log("Assistant message saved successfully.");
                 console.log("Assistant message ID:", assistantMsgData?.id);
                 assistantMsgId = assistantMsgData?.id ?? null;
-                console.log("Assistant message ID:", assistantMsgId);
+                // console.log("Assistant message ID:", assistantMsgId);
               }
             }
           }
@@ -144,8 +144,6 @@ export async function POST(req: Request) {
     // Optionally attach chatId in a custom header.
     const headers = new Headers(originalResponse.headers)
     headers.set("X-Chat-Id", chatId)
-    headers.set("X-User-Message-Id", String(userMsgId))
-    headers.set("X-Assistant-Message-Id", String(assistantMsgId))
 
     return new Response(originalResponse.body, {
       status: originalResponse.status,

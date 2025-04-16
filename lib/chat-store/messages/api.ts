@@ -55,32 +55,6 @@ export async function cacheMessages(
   await writeToIndexedDB("messages", { id: chatId, messages })
 }
 
-export async function addMessage(
-  chatId: string,
-  message: MessageAISDK,
-  parentMessageId?: number | null
-): Promise<void> {
-  const supabase = createClient()
-
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    role: message.role,
-    content: message.content,
-    experimental_attachments: message.experimental_attachments,
-    created_at: message.createdAt?.toISOString() || new Date().toISOString(),
-    parent_message_id: parentMessageId ?? null,
-  })
-
-  const current = await getCachedMessages(chatId)
-  // Ensure reasoning_text is included in the cached message
-  const messageWithReasoning = {
-    ...message,
-    reasoning_text: (message as any).reasoning_text ?? null,
-  }
-  const updated = [...current, messageWithReasoning]
-  await writeToIndexedDB("messages", { id: chatId, messages: updated })
-}
-
 export async function setMessages(
   chatId: string,
   messages: MessageAISDK[]
