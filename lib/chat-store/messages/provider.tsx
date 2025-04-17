@@ -1,7 +1,7 @@
 "use client"
 import { toast } from "@/components/ui/toast"
 import type { Message as MessageAISDK } from "ai"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { useRouter } from 'next/navigation';
 import { writeToIndexedDB } from "../persist"
 import {
@@ -9,7 +9,6 @@ import {
   clearMessagesForChat,
   fetchAndCacheMessages,
   getCachedMessages,
-  setMessages as saveMessages,
 } from "./api"
 type ExtendedMessage = MessageAISDK & { parent_message_id?: number | null }
 
@@ -18,7 +17,6 @@ interface MessagesContextType {
   setMessages: React.Dispatch<React.SetStateAction<MessageAISDK[]>>
   refresh: () => Promise<void>
   reset: () => Promise<void>
-  saveAllMessages: (messages: MessageAISDK[]) => Promise<void>
   cacheAndAddMessage: (message: MessageAISDK) => Promise<void>
   resetMessages: () => Promise<void>
   deleteMessage: (messageId: string | number) => Promise<void>
@@ -38,6 +36,20 @@ import { useChats } from '../chats/provider';
 import { useChatSession } from "@/app/providers/chat-session-provider"
 
 export function MessagesProvider({ children }: { children: React.ReactNode }) {
+  // Efficient O(1) lookup/update for messages
+  const messagesMapRef = useRef<Map<string | number, MessageAISDK>>(new Map());
+  // Helper: convert Map to array, sorted by timestamp or id
+  function syncMessages(map: Map<string | number, MessageAISDK>): MessageAISDK[] {
+    // You can sort by createdAt or id as needed
+    return Array.from(map.values()).sort((a, b) => {
+      // If messages have a timestamp, sort by it, else fallback to id
+      if (a.createdAt && b.createdAt) {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      // fallback: string compare on id
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }
   const { chatId } = useChatSession()
   const [messages, setMessages] = useState<MessageAISDK[]>([])
   const chatsContext = useChats()
@@ -46,6 +58,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (chatId === null) {
       setMessages([])
+      messagesMapRef.current = new Map();
     }
   }, [chatId])
 
@@ -55,10 +68,11 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     const load = async () => {
       const cached = await getCachedMessages(chatId)
       setMessages(cached)
-
+      messagesMapRef.current = new Map(cached.map(m => [m.id, m]))
       try {
         const fresh = await fetchAndCacheMessages(chatId)
         setMessages(fresh)
+        messagesMapRef.current = new Map(fresh.map(m => [m.id, m]))
         cacheMessages(chatId, fresh)
       } catch (error) {
         console.error("Failed to fetch messages:", error)
@@ -90,30 +104,17 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const cacheAndAddMessage = async (message: MessageAISDK) => {
     if (!chatId) return;
     try {
-      // Replace if exists, else append
-      const idx = messages.findIndex((m) => m.id === message.id);
-      let updated;
-      if (idx !== -1) {
-        updated = [...messages];
-        updated[idx] = message;
-      } else {
-        updated = [...messages, message];
-      }
-      await writeToIndexedDB("messages", { id: chatId, messages: updated });
-      setMessages(updated);
+      // Efficient O(1) update using Map
+      messagesMapRef.current.set(message.id, message)
+      const arr = syncMessages(messagesMapRef.current)
+      await writeToIndexedDB("messages", { id: chatId, messages: arr })
+      // console.log("[Provider] cacheAndAddMessage called with:", message);
+      setMessages(() => {
+        // console.log("[Provider] setMessages called with:", arr);
+        return arr;
+      })
     } catch (e) {
-      toast({ title: "Failed to save message", status: "error" });
-    }
-  }
-
-  const saveAllMessages = async (newMessages: MessageAISDK[]) => {
-    if (!chatId) return
-
-    try {
-      await saveMessages(chatId, newMessages)
-      setMessages(newMessages)
-    } catch (e) {
-      toast({ title: "Failed to save messages", status: "error" })
+      toast({ title: "Failed to save message", status: "error" })
     }
   }
 
@@ -121,27 +122,17 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     try {
       const mod = await import("./api")
       const result = await mod.deleteMessageAndAssistantReplies(messageId)
-      const updatedMessages = (messages =>
-        (messages as ExtendedMessage[]).filter(
-          m =>
-            String(m.id) !== String(messageId) &&
-            String(m.parent_message_id) !== String(messageId)
-        )
-      )(await (async () => {
-        return new Promise<ExtendedMessage[]>((resolve) => {
-          setMessages(prev => {
-            resolve(prev as ExtendedMessage[]);
-            return prev;
-          });
-        });
-      })())
-
+      // Remove from Map efficiently
+      messagesMapRef.current.forEach((m: MessageAISDK, id: string | number) => {
+        if (String(id) === String(messageId) || String((m as ExtendedMessage).parent_message_id) === String(messageId)) {
+          messagesMapRef.current.delete(id)
+        }
+      })
+      const updatedMessages = syncMessages(messagesMapRef.current)
       setMessages(updatedMessages)
-
       if (chatId) {
         await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages })
       }
-
       if (result.chatDeleted && chatId) {
         try {
           chatsContext.deleteChat(chatId, chatId, () => router.push("/"))
@@ -166,7 +157,6 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         setMessages,
         refresh,
         reset: deleteMessages,
-        saveAllMessages,
         cacheAndAddMessage,
         deleteMessage: deleteSingleMessage,
         resetMessages,

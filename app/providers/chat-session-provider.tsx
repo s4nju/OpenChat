@@ -19,6 +19,7 @@ export function ChatSessionProvider({
     if (pathname?.startsWith("/c/")) return pathname.split("/c/")[1]
     return null
   }, [pathname])
+  
 
   return (
     <ChatSessionContext.Provider value={{ chatId }}>

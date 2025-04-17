@@ -43,6 +43,7 @@ export async function fetchAndCacheMessages(
       id: String(message.id),
       createdAt: new Date(message.created_at || ""),
       reasoning_text: message.reasoning_text ?? null,
+      parent_message_id: message.parent_message_id ?? null, // Ensure always present
     }))
 
   return formattedMessages
@@ -55,28 +56,6 @@ export async function cacheMessages(
   await writeToIndexedDB("messages", { id: chatId, messages })
 }
 
-export async function setMessages(
-  chatId: string,
-  messages: MessageAISDK[]
-): Promise<void> {
-  const supabase = createClient()
-
-  const payload = messages.map((message) => ({
-    chat_id: chatId,
-    role: message.role,
-    content: message.content,
-    experimental_attachments: message.experimental_attachments,
-    created_at: message.createdAt?.toISOString() || new Date().toISOString(),
-  }))
-
-  await supabase.from("messages").insert(payload)
-  // Ensure reasoning_text is included in all cached messages
-  const messagesWithReasoning = messages.map(msg => ({
-    ...msg,
-    reasoning_text: (msg as any).reasoning_text ?? null,
-  }))
-  await writeToIndexedDB("messages", { id: chatId, messages: messagesWithReasoning })
-}
 
 export async function clearMessagesCache(chatId: string): Promise<void> {
   await writeToIndexedDB("messages", { id: chatId, messages: [] })

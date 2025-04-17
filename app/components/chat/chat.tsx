@@ -24,7 +24,9 @@ import { useChat } from "@ai-sdk/react"
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createIdGenerator } from 'ai';
+import { useChatSession } from "@/app/providers/chat-session-provider"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -36,7 +38,10 @@ const DialogAuth = dynamic(
   { ssr: false }
 )
 
-import { useChatSession } from "@/app/providers/chat-session-provider"
+const generateCustomId = createIdGenerator({
+  prefix: 'user',
+  separator: '-',
+});
 
 export default function Chat() {
   const { chatId } = useChatSession()
@@ -63,8 +68,8 @@ export default function Chat() {
   useEffect(() => {
     setHydrated(true)
   }, [])
-
   const isAuthenticated = !!user?.id
+
   const {
     messages,
     input,
@@ -76,24 +81,130 @@ export default function Chat() {
     setMessages,
     setInput,
     append,
+    data
   } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
-    onFinish: async (message) => {
-      console.log("Message finished on finish:", message)
-      if (!chatId) {
-        console.error("No chatId available for message:", message)
-        return
-      }
-      await cacheAndAddMessage(message)
-    },
+    generateId: () => generateCustomId()
   })
 
+  // when chatId is null, set messages to an empty array
   useEffect(() => {
     if (chatId === null) {
       setMessages([])
     }
   }, [chatId])
+
+  useEffect(() => {
+    if (currentChat?.system_prompt) {
+      setSystemPrompt(currentChat?.system_prompt)
+    }
+  }, [currentChat])
+
+
+  // Use a ref to track processed data items to avoid infinite loops
+  const processedDataRef = useRef<Set<string>>(new Set());
+  
+  // Process streamed message IDs from backend
+  useEffect(() => {
+    if (!chatId || !data || data.length === 0) return
+    
+    // Get the latest data item
+    const streamData = data[data.length - 1]
+    
+    // Generate a signature for this data item to track if we've processed it
+    const dataSignature = JSON.stringify(streamData);
+    
+    // Skip if we've already processed this exact data
+    if (processedDataRef.current.has(dataSignature)) {
+      return;
+    }
+    
+    //console.log("Processing new streamed data:", streamData)
+    
+    // Extract the message IDs if they exist - handle JSON values correctly
+    let userMsgId: string | undefined;
+    let assistantMsgId: string | undefined;
+    
+    // Type guard to check if streamData is an object with potential ID properties
+    if (streamData && typeof streamData === 'object' && streamData !== null) {
+      // Safe type assertion for message IDs
+      userMsgId = 'userMsgId' in streamData ? String(streamData.userMsgId) : undefined;
+      assistantMsgId = 'assistantMsgId' in streamData ? String(streamData.assistantMsgId) : undefined;
+    }
+    
+    // Skip if no IDs are present
+    if (!userMsgId && !assistantMsgId) {
+      return;
+    }
+    
+    // Mark this data as processed to prevent infinite loops
+    processedDataRef.current.add(dataSignature);
+    
+    const updateMessage = async () => {
+      // Take a snapshot of current messages to work with
+      const currentMessages = [...messages];
+      //console.log("Current messages:", currentMessages)
+      
+      // If we received a user message ID from the backend
+      if (userMsgId) {
+        // Find the optimistic user message and update its ID
+        const optimisticIdx = currentMessages.findIndex(
+          (m) => m.role === 'user' && m.id.toString().startsWith('user-')
+        )
+        
+        if (optimisticIdx !== -1) {
+          const optimisticMsg = currentMessages[optimisticIdx]
+          //console.log(`Updating optimistic user message ${optimisticMsg.id} to real ID ${userMsgId}`)
+          // Create updated message with real backend ID
+          const updatedMsg = {
+            ...optimisticMsg,
+            id: userMsgId,
+          }
+          // Persist to IndexedDB and state
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === optimisticMsg.id ? updatedMsg : m
+            )
+          )
+          await cacheAndAddMessage(updatedMsg)
+        }
+      }
+
+      // If we received an assistant message ID
+      if (assistantMsgId) {
+        // Find the most recent assistant message
+        const assistantIdx = [...currentMessages].reverse().findIndex(
+          (m) => m.role === 'assistant'
+        )
+        
+        if (assistantIdx !== -1) {
+          // This is messages.length - 1 - assistantIdx due to the reversed search
+          const actualIdx = currentMessages.length - 1 - assistantIdx
+          const assistantMsg = currentMessages[actualIdx]
+          
+          // Only update if needed (if ID doesn't match)
+          if (assistantMsg.id !== assistantMsgId) {
+            //console.log(`Updating assistant message ${assistantMsg.id} to real ID ${assistantMsgId}`)
+            const updatedMsg = {
+              ...assistantMsg,
+              id: assistantMsgId,
+              parent_message_id: userMsgId, // Ensure parent_message_id is always set
+            }
+            // Persist to IndexedDB and state
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsg.id ? updatedMsg : m
+              )
+            )
+            await cacheAndAddMessage(updatedMsg)
+          }
+        }
+      }
+    }
+    
+    updateMessage().catch(err => console.error("Error updating message IDs:", err))
+  }, [data, chatId, cacheAndAddMessage]) // Removed messages from deps to avoid infinite loop
 
   const isFirstMessage = useMemo(() => {
     return messages.length === 0
@@ -294,8 +405,9 @@ export default function Chat() {
       experimental_attachments:
         optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
     }
-
+    //console.log("Adding optimistic message:", optimisticMessage)
     setMessages((prev) => [...prev, optimisticMessage])
+    //console.log("Current messages:", messages)
     setInput("")
 
     const submittedFiles = [...files]
@@ -312,6 +424,7 @@ export default function Chat() {
     const currentChatId = await ensureChatExists(uid)
 
     if (!currentChatId) {
+      //console.log("No chat ID found for user:", uid)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       setIsSubmitting(false)
@@ -355,8 +468,8 @@ export default function Chat() {
       handleSubmit(undefined, options)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
-      console.log("Optimistic message sent:", optimisticMessage)
-      cacheAndAddMessage(optimisticMessage)
+      //console.log("Optimistic message sent:", optimisticMessage)
+      // cacheAndAddMessage(optimisticMessage)
     } catch (error) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
@@ -368,16 +481,16 @@ export default function Chat() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteMessage(id)
-      setMessages((prev) =>
-        prev.filter(
-          (message) =>
-            String(message.id) !== String(id) &&
-            String((message as any).parent_message_id) !== String(id)
-        )
-      )
+      await deleteMessage(id);
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => m.id !== id && (m as any).parent_message_id !== id
+        );
+        // If all messages are deleted, reset to empty array
+        return filtered.length === 0 ? [] : filtered;
+      });
     } catch {
-      toast({ title: "Failed to delete message", status: "error" })
+      toast({ title: "Failed to delete message", status: "error" });
     }
   }
 
