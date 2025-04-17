@@ -14,16 +14,28 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info, Question, User } from "@phosphor-icons/react"
+import { Info, Question, User, SignOut } from "@phosphor-icons/react"
 import dynamic from "next/dynamic"
 import { APP_NAME } from "../../../lib/config"
 import { AppInfoTrigger } from "./app-info/app-info-trigger"
 import { FeedbackTrigger } from "./feedback/feedback-trigger"
 import { SettingsTrigger } from "./settings/settings-trigger"
+import { useUser } from "@/app/providers/user-provider"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/toast"
 
 type User = Database["public"]["Tables"]["users"]["Row"]
 
 export function UserMenu({ user }: { user: User }) {
+  const { signOut } = useUser()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await signOut()
+    toast({ title: "Logged out", status: "success" })
+    router.push("/")
+  }
+
   return (
     <DropdownMenu>
       <Tooltip>
@@ -56,6 +68,11 @@ export function UserMenu({ user }: { user: User }) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
           <AppInfoTrigger />
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSignOut(); }}>
+          <SignOut className="mr-2 size-4" />
+          Logout
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
