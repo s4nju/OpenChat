@@ -135,7 +135,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       if (chatId) {
         await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages })
       }
-      if (result.chatDeleted && chatId) {
+      if (updatedMessages.length === 0 && chatId) {
         try {
           chatsContext.deleteChat(chatId, chatId, () => router.push("/"))
         } catch (e) {

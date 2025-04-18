@@ -273,7 +273,7 @@ export default function Chat() {
 
       if (rateData.remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
         toast({
-          title: `Only ${rateData.remaining} query${rateData.remaining === 1 ? "" : "ies"} remaining today.`,
+          title: `Only ${rateData.remaining} ${rateData.remaining === 1 ? "query" : "queries"} remaining today.`,
           status: "info",
         })
       }
@@ -296,9 +296,9 @@ export default function Chat() {
           systemPrompt
         )
         if (!newChat) return null
-        if (isAuthenticated) {
-          window.history.pushState(null, "", `/c/${newChat.id}`)
-        }
+        // if (isAuthenticated) {
+        window.history.pushState(null, "", `/c/${newChat.id}`)
+        // }
         return newChat.id
       } catch (err: any) {
         let errorMessage = "Something went wrong."
