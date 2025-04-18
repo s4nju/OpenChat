@@ -5,6 +5,7 @@ import { useUser } from "@/app/providers/user-provider"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -68,6 +69,7 @@ export function SettingsTrigger({ trigger, isMenuItem = false }: SettingsTrigger
         <DialogHeader className="border-border border-b px-6 py-4">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">Settings dialog for user preferences and configuration.</DialogDescription>
         <SettingsContent onClose={() => setOpen(false)} />
       </DialogContent>
     </Dialog>

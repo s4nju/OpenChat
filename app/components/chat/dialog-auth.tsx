@@ -46,6 +46,7 @@ export function DialogAuth({ open, setOpen }: DialogAuthProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
+        <DialogDescription className="sr-only">Authenticate with your account to access the chat application.</DialogDescription>
         <DialogHeader>
           <DialogTitle className="text-xl">
             You've reached the limit for today

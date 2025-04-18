@@ -2,7 +2,7 @@
 
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { FeedbackForm } from "@/components/common/feedback-form"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer"
 import { useState } from "react"
 
@@ -37,6 +37,7 @@ export function Feedback({ trigger, authUserId }: FeedbackProps) {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent className="[&>button:last-child]:bg-background overflow-hidden p-0 shadow-xs sm:max-w-md [&>button:last-child]:top-3.5 [&>button:last-child]:right-3 [&>button:last-child]:rounded-full [&>button:last-child]:p-1">
+          <DialogDescription className="sr-only">Feedback dialog for submitting comments or issues.</DialogDescription>
           <FeedbackForm authUserId={authUserId} onClose={handleClose} />
         </DialogContent>
       </Dialog>
