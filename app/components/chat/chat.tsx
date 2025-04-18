@@ -181,11 +181,13 @@ export default function Chat() {
         if (assistantIdx !== -1) {
           // This is messages.length - 1 - assistantIdx due to the reversed search
           const actualIdx = currentMessages.length - 1 - assistantIdx
-          const assistantMsg = currentMessages[actualIdx]
-          
-          // Only update if needed (if ID doesn't match)
-          if (assistantMsg.id !== assistantMsgId) {
-            //console.log(`Updating assistant message ${assistantMsg.id} to real ID ${assistantMsgId}`)
+          const assistantMsg = currentMessages[actualIdx] as any;
+          // Always update assistant message if it immediately follows a deleted user message
+          // or if its parent_message_id matches the user message ID
+          if (assistantMsg.id !== assistantMsgId || 
+              (assistantMsg.parent_message_id && assistantMsg.parent_message_id === userMsgId) || 
+              (assistantIdx === 0 && currentMessages.length > 1 && (currentMessages[1] as any).role === 'user')) {
+            // Always set parent_message_id for assistant messages
             const updatedMsg = {
               ...assistantMsg,
               id: assistantMsgId,
@@ -193,7 +195,7 @@ export default function Chat() {
             }
             // Persist to IndexedDB and state
             setMessages((prev) =>
-              prev.map((m) =>
+              prev.map((m: any) =>
                 m.id === assistantMsg.id ? updatedMsg : m
               )
             )
@@ -479,18 +481,81 @@ export default function Chat() {
     }
   }
 
+  // Use all hooks at the top level for context/state
+  const { setChats, chats } = useChats();
+
+  /**
+   * Optimistically delete a message and, if it's the last, the chat as well.
+   * Rolls back all state if backend fails. Redirects to '/' if chat deleted.
+   */
   const handleDelete = async (id: string) => {
+    // Save previous state for rollback
+    const prevMessages = messages;
+    const prevChats = chats;
+    const prevChatId = chatId;
+
+    const isLastMessage = messages.length === 1 && messages[0].id === id;
+    // Optimistically update state
+    setMessages((curr) => {
+      // Remove the user message and any assistant reply with parent_message_id === id.
+      // As a fallback, if an assistant message immediately follows the deleted user message, remove it as well.
+      // Use 'any' to access parent_message_id for quick type error workaround
+      let filtered = curr.filter(
+        (m: any, idx: number, arr: any[]) => {
+          // Remove the user message
+          if (m.id === id) return false;
+          // Remove assistant reply if parent_message_id matches
+          if (m.parent_message_id === id) return false;
+          // Fallback: Remove assistant message immediately after the deleted user message
+          if (
+            idx > 0 &&
+            arr[idx - 1].id === id &&
+            m.role === 'assistant'
+          ) {
+            return false;
+          }
+          return true;
+        }
+      );
+      return filtered.length === 0 ? [] : filtered;
+    });
+
+    if (isLastMessage && chatId) {
+      setChats((curr) => curr.filter((c) => c.id !== chatId));
+      // No setChatId; just redirect to '/' to clear session context
+      redirect('/'); // Immediately redirect user
+      return;
+    }
+
     try {
-      await deleteMessage(id);
-      setMessages((prev) => {
-        const filtered = prev.filter(
-          (m) => m.id !== id && (m as any).parent_message_id !== id
+      // Call deleteMessage, which may return void or { chatDeleted: boolean }
+      const result = await deleteMessage(id);
+      // Type guard for chatDeleted result
+      function isChatDeletedResult(val: unknown): val is { chatDeleted: boolean } {
+        return (
+          typeof val === 'object' &&
+          val !== null &&
+          'chatDeleted' in val &&
+          typeof (val as any).chatDeleted === 'boolean'
         );
-        // If all messages are deleted, reset to empty array
-        return filtered.length === 0 ? [] : filtered;
-      });
+      }
+      if (
+        isChatDeletedResult(result) &&
+        result.chatDeleted &&
+        chatId
+      ) {
+        // No setChatId; just redirect to '/' to clear session context
+        redirect('/');
+        return;
+      }
+      // Optionally show undo toast (UX placeholder)
+      // toast({ title: "Message deleted", status: "info", action: { label: "Undo", onClick: () => { setMessages(prevMessages); setChats(prevChats); setChatId(prevChatId); } } });
     } catch {
-      toast({ title: "Failed to delete message", status: "error" });
+      // Rollback all state
+      setMessages(prevMessages);
+      setChats(prevChats);
+      // No setChatId on rollback; just restore messages and chats
+      toast({ title: isLastMessage ? "Failed to delete chat" : "Failed to delete message", status: "error" });
     }
   }
 

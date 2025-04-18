@@ -91,49 +91,36 @@ export async function deleteMessage(messageId: string | number): Promise<void> {
 }
 import { deleteChat } from '../chats/api';
 
-export async function deleteMessageAndAssistantReplies(messageId: string | number): Promise<{ chatDeleted: boolean }> {
+export async function deleteMessageAndAssistantReplies(messageId: string | number, chatIdFromCaller?: string): Promise<{ chatDeleted: boolean }> {
   const supabase = createClient();
-  const idNum = typeof messageId === 'string' ? parseInt(messageId, 10) : messageId;
+  let chatId = chatIdFromCaller;
+  let idNum = typeof messageId === 'string' ? parseInt(messageId, 10) : messageId;
   if (isNaN(idNum)) throw new Error('Invalid message ID');
 
-  // Fetch the chat_id of the message before deleting
-  const { data: messageData, error: fetchError } = await supabase
-    .from('messages')
-    .select('chat_id')
-    .eq('id', idNum)
-    .single();
-
-  if (fetchError) {
-    console.error('Failed to fetch message chat_id:', fetchError);
-    throw fetchError;
-  }
-
-  const chatId = messageData?.chat_id;
+  // Only fetch chat_id if not provided
   if (!chatId) {
-    console.error('Message does not have a chat_id');
-    throw new Error('Message does not have a chat_id');
+    console.log("Fetching chat_id for message:", idNum);
+    const { data: messageData, error: fetchError } = await supabase
+      .from('messages')
+      .select('chat_id')
+      .eq('id', idNum)
+      .single();
+    if (fetchError) {
+      console.error('Failed to fetch message chat_id:', fetchError);
+      throw fetchError;
+    }
+    chatId = messageData?.chat_id;
+    if (!chatId) {
+      console.error('Message does not have a chat_id');
+      throw new Error('Message does not have a chat_id');
+    }
   }
 
-  // Delete assistant replies first
-  const { error: assistantDeleteError } = await supabase
-    .from('messages')
-    .delete()
-    .eq('parent_message_id', idNum);
-
-  if (assistantDeleteError) {
-    // console.error('Failed to delete assistant replies:', assistantDeleteError);
-    throw assistantDeleteError;
-  }
-
-  // Then delete the user message
-  const { error: userDeleteError } = await supabase
-    .from('messages')
-    .delete()
-    .eq('id', idNum);
-
-  if (userDeleteError) {
-    // console.error('Failed to delete user message:', userDeleteError);
-    throw userDeleteError;
+  // Use the new RPC to delete the message and its children in one call
+  const { error: rpcError } = await (supabase.rpc as any)('delete_message_and_children', { msg_id: messageId });
+  if (rpcError) {
+    console.error('Failed to delete message and children via RPC:', rpcError);
+    throw rpcError;
   }
 
   // Check if any messages remain in the chat

@@ -1,7 +1,7 @@
 "use client"
 import { toast } from "@/components/ui/toast"
 import type { Message as MessageAISDK } from "ai"
-import { createContext, useContext, useEffect, useState, useRef } from "react"
+import { createContext, useContext, useEffect, useState, useRef, useMemo } from "react"
 import { useRouter } from 'next/navigation';
 import { writeToIndexedDB } from "../persist"
 import {
@@ -121,7 +121,9 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const deleteSingleMessage = async (messageId: string | number) => {
     try {
       const mod = await import("./api")
-      const result = await mod.deleteMessageAndAssistantReplies(messageId)
+      // console.log("Deleting message:", messageId, "chatId:", chatId)
+      // Pass chatId directly to avoid redundant fetch
+      const result = await mod.deleteMessageAndAssistantReplies(messageId, chatId ?? undefined)
       // Remove from Map efficiently
       messagesMapRef.current.forEach((m: MessageAISDK, id: string | number) => {
         if (String(id) === String(messageId) || String((m as ExtendedMessage).parent_message_id) === String(messageId)) {
@@ -150,18 +152,18 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     setMessages([])
   }
 
+  const contextValue = useMemo(() => ({
+    messages,
+    setMessages,
+    refresh,
+    reset: deleteMessages,
+    cacheAndAddMessage,
+    deleteMessage: deleteSingleMessage,
+    resetMessages,
+  }), [messages, setMessages, refresh, deleteMessages, cacheAndAddMessage, deleteSingleMessage, resetMessages]);
+
   return (
-    <MessagesContext.Provider
-      value={{
-        messages,
-        setMessages,
-        refresh,
-        reset: deleteMessages,
-        cacheAndAddMessage,
-        deleteMessage: deleteSingleMessage,
-        resetMessages,
-      }}
-    >
+    <MessagesContext.Provider value={contextValue}>
       {children}
     </MessagesContext.Provider>
   )
