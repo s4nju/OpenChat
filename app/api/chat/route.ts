@@ -16,12 +16,20 @@ type ChatRequest = {
   model: string
   isAuthenticated: boolean
   systemPrompt: string
+  reloadAssistantMessageId?: number
 }
 
 export async function POST(req: Request) {
   try {
-    const { messages, chatId, userId, model, isAuthenticated, systemPrompt } =
-      (await req.json()) as ChatRequest;
+    const {
+      messages,
+      chatId,
+      userId,
+      model,
+      isAuthenticated,
+      systemPrompt,
+      reloadAssistantMessageId,
+    } = (await req.json()) as ChatRequest;
 
     if (!messages || !chatId || !userId) {
       return new Response(
@@ -43,32 +51,44 @@ export async function POST(req: Request) {
         let userMsgId: number | null = null;
         let assistantMsgId: number | null = null;
 
-        // Insert user message if present
-        const userMessage = messages[messages.length - 1];
-        if (userMessage && userMessage.role === "user") {
-          const { data: userMsgData, error: msgError } = await supabase
+        // For reload, fetch existing parent_message_id
+        if (reloadAssistantMessageId) {
+          const { data: existingMsg, error: parentErr } = await supabase
             .from("messages")
-            .insert({
-              chat_id: chatId,
-              role: "user",
-              content: sanitizeUserInput(userMessage.content),
-              experimental_attachments: userMessage.experimental_attachments
-                ? JSON.parse(JSON.stringify(userMessage.experimental_attachments))
-                : undefined,
-              user_id: userId,
-            })
-            .select("id")
+            .select("parent_message_id")
+            .eq("id", reloadAssistantMessageId)
             .single();
-          if (msgError) {
-            console.error("Error saving user message:", msgError);
+          if (parentErr) {
+            console.error("Error fetching parent_message_id:", parentErr);
           } else {
-            userMsgId = userMsgData?.id ?? null;
-            await incrementUsage(supabase, userId);
+            userMsgId = existingMsg?.parent_message_id ?? null;
           }
         }
-
-        // Send the userMsgId immediately if you want
-        // dataStream.writeData({ userMsgId });
+        // Insert user message unless this is a reload
+        if (!reloadAssistantMessageId) {
+          const userMessage = messages[messages.length - 1];
+          if (userMessage && userMessage.role === "user") {
+            const { data: userMsgData, error: msgError } = await supabase
+              .from("messages")
+              .insert({
+                chat_id: chatId,
+                role: "user",
+                content: sanitizeUserInput(userMessage.content),
+                experimental_attachments: userMessage.experimental_attachments
+                  ? JSON.parse(JSON.stringify(userMessage.experimental_attachments))
+                  : undefined,
+                user_id: userId,
+              })
+              .select("id")
+              .single();
+            if (msgError) {
+              console.error("Error saving user message:", msgError);
+            } else {
+              userMsgId = userMsgData?.id ?? null;
+              await incrementUsage(supabase, userId);
+            }
+          }
+        }
 
         // Stream AI response and insert assistant message on finish
         const result = streamText({
@@ -107,15 +127,30 @@ export async function POST(req: Request) {
                     reasoning_text: reasoningText,
                   };
 
-                  const { data: assistantMsgData, error: assistantError } = await supabase
-                    .from("messages")
-                    .insert(insertPayload)
-                    .select("id")
-                    .single();
-                  if (assistantError) {
-                    console.error("Error saving assistant message:", assistantError);
+                  if (reloadAssistantMessageId) {
+                    // Update existing assistant message on reload
+                    const { error: updErr } = await supabase
+                      .from("messages")
+                      .update({
+                        content: textContent,
+                        reasoning_text: reasoningText,
+                      })
+                      .eq("id", reloadAssistantMessageId);
+                    if (updErr) console.error("Error updating assistant message:", updErr);
+                    assistantMsgId = reloadAssistantMessageId;
+                    // Increment usage count for reload
+                    await incrementUsage(supabase, userId);
                   } else {
-                    assistantMsgId = assistantMsgData?.id ?? null;
+                    const { data: assistantMsgData, error: assistantError } = await supabase
+                      .from("messages")
+                      .insert(insertPayload)
+                      .select("id")
+                      .single();
+                    if (assistantError) {
+                      console.error("Error saving assistant message:", assistantError);
+                    } else {
+                      assistantMsgId = assistantMsgData?.id ?? null;
+                    }
                   }
                 }
               }
@@ -145,4 +180,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

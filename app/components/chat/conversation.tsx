@@ -1,23 +1,23 @@
+import React, { useRef } from "react";
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
 import { ChatContainer } from "@/components/prompt-kit/chat-container"
 import { Loader } from "@/components/prompt-kit/loader"
 import { Message as MessageType } from "@ai-sdk/react"
-import { useRef } from "react"
 import { Message } from "./message"
 
 type MessageWithReasoning = MessageType & { reasoning_text?: string }
 
 type ConversationProps = {
   messages: MessageWithReasoning[]
-  status?: "streaming" | "idle" | "submitted" | "error" // Changed "ready" to "idle"
+  status?: "streaming" | "idle" | "submitted" | "error" 
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
-  onReload: () => void
+  onReload: (id: string) => void
 }
 
-export function Conversation({
+const Conversation = React.memo(function Conversation({
   messages,
-  status = "idle", // Changed default from "ready" to "idle"
+  status = "idle", 
   onDelete,
   onEdit,
   onReload,
@@ -54,10 +54,10 @@ export function Conversation({
               isLast={isLast}
               onDelete={onDelete}
               onEdit={onEdit}
-              onReload={onReload}
+              onReload={() => onReload(message.id)}
               hasScrollAnchor={hasScrollAnchor}
               parts={message.parts}
-              status={status} // Pass the status down
+              status={status} 
               reasoning_text={message.reasoning_text}
             >
               {message.content}
@@ -81,4 +81,6 @@ export function Conversation({
       </div>
     </div>
   )
-}
+});
+
+export { Conversation };

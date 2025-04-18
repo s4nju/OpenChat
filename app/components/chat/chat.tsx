@@ -488,7 +488,7 @@ export default function Chat() {
    * Optimistically delete a message and, if it's the last, the chat as well.
    * Rolls back all state if backend fails. Redirects to '/' if chat deleted.
    */
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     // Save previous state for rollback
     const prevMessages = messages;
     const prevChats = chats;
@@ -557,15 +557,16 @@ export default function Chat() {
       // No setChatId on rollback; just restore messages and chats
       toast({ title: isLastMessage ? "Failed to delete chat" : "Failed to delete message", status: "error" });
     }
-  }
+  }, [messages, chats, chatId, setMessages, setChats, deleteMessage, redirect, toast]);
 
-  const handleEdit = (id: string, newText: string) => {
+  const handleEdit = useCallback((id: string, newText: string) => {
     setMessages(
       messages.map((message) =>
         message.id === id ? { ...message, content: newText } : message
       )
     )
   }
+, [messages, setMessages]);
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -645,7 +646,7 @@ export default function Chat() {
     setSystemPrompt(newSystemPrompt)
   }, [])
 
-  const handleReload = async () => {
+  const handleReload = useCallback(async (messageId: string) => {
     const uid = await getOrCreateGuestUserId()
     if (!uid) {
       return
@@ -658,11 +659,12 @@ export default function Chat() {
         model: selectedModel,
         isAuthenticated,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        reloadAssistantMessageId: messageId,
       },
     }
 
     reload(options)
-  }
+  }, [getOrCreateGuestUserId, chatId, selectedModel, isAuthenticated, systemPrompt, reload]);
 
   if (
     hydrated &&
