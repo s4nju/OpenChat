@@ -679,7 +679,8 @@ export default function Chat() {
     chatId &&
     !isChatsLoading &&
     !currentChat &&
-    messages.length === 0
+    messages.length === 0 &&
+    !user?.id
   ) {
     return redirect("/")
   }
