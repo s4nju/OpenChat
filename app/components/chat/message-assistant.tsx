@@ -51,6 +51,13 @@ export function MessageAssistant({
 }: MessageAssistantProps) {
   const [showReasoning, setShowReasoning] = useState(status === "streaming") // Collapsed by default, open if streaming
   const prevStatusRef = useRef(status); // Ref to track previous status
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    }
+  }, []);
 
   // Effect to auto-collapse reasoning when streaming finishes
   useEffect(() => {
@@ -143,7 +150,10 @@ export function MessageAssistant({
 
         <MessageActions
           className={cn(
-            "flex gap-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+            "flex gap-0 transition-opacity",
+            isTouch
+              ? "opacity-100"
+              : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
           )}
         >
           <MessageAction

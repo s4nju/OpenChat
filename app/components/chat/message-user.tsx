@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react"
 import { Check, Copy, PencilSimple, Trash } from "@phosphor-icons/react"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 
 const getTextFromDataUrl = (dataUrl: string) => {
   const base64 = dataUrl.split(",")[1]
@@ -52,8 +52,15 @@ export function MessageUser({
 }: MessageUserProps) {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
+  const [isTouch, setIsTouch] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null)
   const displayContent = children.replace(/\n{2,}/g, '\n\n')
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    }
+  }, []);
 
   const handleEditCancel = () => {
     setIsEditing(false)
@@ -159,7 +166,14 @@ export function MessageUser({
           {displayContent}
         </MessageContent>
       )}
-      <MessageActions className="flex gap-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+      <MessageActions
+        className={cn(
+          "flex gap-0 transition-opacity",
+          isTouch
+            ? "opacity-100"
+            : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+        )}
+      >
         <MessageAction
           tooltip={copied ? "Copied!" : "Copy text"}
           side="bottom"
