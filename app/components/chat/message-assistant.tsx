@@ -139,7 +139,6 @@ export function MessageAssistant({
           {children}
         </MessageContent>
 
-
         <MessageActions
           className={cn(
             "flex gap-0 opacity-0 transition-opacity group-hover:opacity-100"
@@ -151,10 +150,11 @@ export function MessageAssistant({
             delayDuration={0}
           >
             <button
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Copy text"
               onClick={copyToClipboard}
               type="button"
+              disabled={status === "streaming"}
             >
               {copied ? (
                 <Check className="size-4" />
@@ -165,10 +165,11 @@ export function MessageAssistant({
           </MessageAction>
           <MessageAction tooltip="Regenerate" side="bottom" delayDuration={0}>
             <button
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Regenerate"
               onClick={onReload}
               type="button"
+              disabled={status === "streaming"}
             >
               <ArrowClockwise className="size-4" />
             </button>

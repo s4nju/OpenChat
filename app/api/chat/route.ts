@@ -64,6 +64,15 @@ export async function POST(req: Request) {
             userMsgId = existingMsg?.parent_message_id ?? null;
           }
         }
+        // *** NEW: delete all downstream messages after the one being reloaded ***
+        if (reloadAssistantMessageId) {
+          const { error: delErr } = await supabase
+            .from("messages")
+            .delete()
+            .eq("chat_id", chatId)
+            .gt("id", reloadAssistantMessageId);
+          if (delErr) console.error("Error deleting downstream messages:", delErr);
+        }
         // Insert user message unless this is a reload
         if (!reloadAssistantMessageId) {
           const userMessage = messages[messages.length - 1];

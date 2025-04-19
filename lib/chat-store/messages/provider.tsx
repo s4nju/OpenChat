@@ -20,6 +20,7 @@ interface MessagesContextType {
   cacheAndAddMessage: (message: MessageAISDK) => Promise<void>
   resetMessages: () => Promise<void>
   deleteMessage: (messageId: string | number) => Promise<void>
+  truncateMessages: (messageId: string | number) => Promise<void>
 }
 
 const MessagesContext = createContext<MessagesContextType | null>(null)
@@ -148,6 +149,20 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const truncateMessages = async (messageId: string | number) => {
+    if (!chatId) return;
+    // Build sorted array
+    const arr = syncMessages(messagesMapRef.current);
+    const idx = arr.findIndex((m) => String(m.id) === String(messageId));
+    if (idx < 0) return;
+    const newArr = arr.slice(0, idx + 1);
+    // Reset map and state
+    messagesMapRef.current = new Map(newArr.map((m) => [m.id, m]));
+    setMessages(newArr);
+    // Persist to IndexedDB
+    await writeToIndexedDB("messages", { id: chatId, messages: newArr });
+  }
+
   const resetMessages = async () => {
     setMessages([])
   }
@@ -160,6 +175,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     cacheAndAddMessage,
     deleteMessage: deleteSingleMessage,
     resetMessages,
+    truncateMessages,
   }), [messages, setMessages, refresh, deleteMessages, cacheAndAddMessage, deleteSingleMessage, resetMessages]);
 
   return (

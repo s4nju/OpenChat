@@ -42,28 +42,28 @@ const Conversation = React.memo(function Conversation({
       >
         {messages?.map((message, index) => {
           const isLast = index === messages.length - 1 && status !== "submitted"
-          const hasScrollAnchor =
-            isLast && messages.length > initialMessageCount.current
+           const hasScrollAnchor =
+             isLast && messages.length > initialMessageCount.current
 
-          return (
-            <Message
-              key={message.id}
-              id={message.id}
-              variant={message.role}
-              attachments={message.experimental_attachments}
-              isLast={isLast}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              onReload={() => onReload(message.id)}
-              hasScrollAnchor={hasScrollAnchor}
-              parts={message.parts}
-              status={status} 
-              reasoning_text={message.reasoning_text}
-            >
-              {message.content}
-            </Message>
-          )
-        })}
+           return (
+             <Message
+               key={message.id}
+               id={message.id}
+               variant={message.role}
+               attachments={message.experimental_attachments}
+               isLast={isLast}
+               onDelete={onDelete}
+               onEdit={onEdit}
+               onReload={() => onReload(message.id)}
+               hasScrollAnchor={hasScrollAnchor}
+               parts={message.parts}
+               status={status}
+               reasoning_text={message.reasoning_text}
+             >
+               {message.content}
+             </Message>
+           )
+         })}
         {status === "submitted" &&
           messages.length > 0 &&
           messages[messages.length - 1].role === "user" && (

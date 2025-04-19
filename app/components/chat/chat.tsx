@@ -52,7 +52,7 @@ export default function Chat() {
     isLoading: isChatsLoading,
   } = useChats()
   const currentChat = chatId ? getChatById(chatId) : null
-  const { messages: initialMessages, cacheAndAddMessage, deleteMessage } = useMessages()
+  const { messages: initialMessages, cacheAndAddMessage, deleteMessage, truncateMessages } = useMessages()
   const { user } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasDialogAuth, setHasDialogAuth] = useState(false)
@@ -652,6 +652,14 @@ export default function Chat() {
       return
     }
 
+    // Truncate IndexedDB cache for messages beyond this point
+    await truncateMessages(messageId)
+    // Truncate UI messages in the hook to this point
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => String(m.id) === String(messageId))
+      return idx >= 0 ? prev.slice(0, idx + 1) : prev
+    })
+
     const options = {
       body: {
         chatId,
@@ -664,7 +672,7 @@ export default function Chat() {
     }
 
     reload(options)
-  }, [getOrCreateGuestUserId, chatId, selectedModel, isAuthenticated, systemPrompt, reload]);
+  }, [getOrCreateGuestUserId, chatId, selectedModel, isAuthenticated, systemPrompt, reload, truncateMessages]);
 
   if (
     hydrated &&

@@ -52,6 +52,7 @@ export function Message({
         id={id}
         hasScrollAnchor={hasScrollAnchor}
         attachments={attachments}
+        status={status}
       />
     )
   }
@@ -66,7 +67,7 @@ export function Message({
           isLast={isLast}
           hasScrollAnchor={hasScrollAnchor}
           parts={parts}
-          status={isLast ? status : undefined} // Pass status only if it's the last message
+          status={status}
           reasoning_text={reasoning_text}
         />
       )

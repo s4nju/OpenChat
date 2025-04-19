@@ -35,6 +35,7 @@ export type MessageUserProps = {
   onReload: () => void
   onDelete: (id: string) => void
   id: string
+  status?: "streaming" | "idle" | "submitted" | "error"
 }
 
 export function MessageUser({
@@ -47,6 +48,7 @@ export function MessageUser({
   onReload,
   onDelete,
   id,
+  status,
 }: MessageUserProps) {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
@@ -163,10 +165,11 @@ export function MessageUser({
           delayDuration={0}
         >
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Copy text"
             onClick={copyToClipboard}
             type="button"
+            disabled={!!status && status !== "idle"}
           >
             {copied ? (
               <Check className="size-4" />
@@ -192,10 +195,11 @@ export function MessageUser({
         </MessageAction> */}
         <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Delete"
             onClick={handleDelete}
             type="button"
+            disabled={!!status && status !== "idle"}
           >
             <Trash className="size-4" />
           </button>
