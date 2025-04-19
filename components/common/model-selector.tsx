@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/tooltip"
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
-import { CaretDown, Image } from "@phosphor-icons/react"
+import { CaretDown, Eye, FilePdf, Brain } from "@phosphor-icons/react" // Assuming these are the icons you want
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -29,7 +29,6 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
-  // Memoize model and provider lookups
   const model = React.useMemo(
     () => MODELS_OPTIONS.find((model) => model.id === selectedModelId),
     [selectedModelId]
@@ -39,49 +38,96 @@ export function ModelSelector({
     [model]
   )
 
-  // Memoize the rendered model options list
-  const renderedModelOptions = React.useMemo(() =>
-    MODELS_OPTIONS.map((model) => {
-      const provider = PROVIDERS_OPTIONS.find(
-        (provider) => provider.id === model.provider
-      )
-      const hasFileUpload = model.features?.find(
-        (feature) => feature.id === "file-upload"
-      )?.enabled
+  // Function to render a single model option
+  const renderModelOption = (modelOption: typeof MODELS_OPTIONS[number]) => {
+    const providerOption = PROVIDERS_OPTIONS.find(
+      (p) => p.id === modelOption.provider
+    )
+    // Feature Flags
+    const hasFileUpload = modelOption.features?.find(
+      (feature) => feature.id === "file-upload"
+    )?.enabled
+    const hasPdfProcessing = modelOption.features?.find(
+      (feature) => feature.id === "pdf-processing"
+    )?.enabled
+    const hasReasoning = modelOption.features?.find(
+      (feature) => feature.id === "reasoning"
+    )?.enabled
 
-      return (
-        <DropdownMenuItem
-          key={model.id}
-          className={cn(
-            "flex items-center justify-between px-3 py-2",
-            !model.available && "cursor-not-allowed opacity-50",
-            selectedModelId === model.id && "bg-accent"
+    // --- Style Definitions based on the provided HTML ---
+    const iconWrapperBaseClasses =
+      "relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md cursor-help"
+    const iconOverlayClasses =
+      "absolute inset-0 bg-current opacity-20 dark:opacity-25" // Uses parent's text color
+    const iconSizeClasses = "h-4 w-4" // Icon size is smaller than wrapper
+
+    // Define the TEXT color classes for the wrapper (which icon and overlay inherit)
+    const visionColorClasses = "text-teal-600 dark:text-teal-600"
+    const pdfColorClasses = "text-indigo-600 dark:text-indigo-600" // Matched to file-text example
+    const reasoningColorClasses = "text-pink-600 dark:text-pink-600" // Choosing pink for reasoning
+
+    return (
+      <DropdownMenuItem
+        key={modelOption.id}
+        className={cn(
+          "flex items-center justify-between px-3 py-2",
+          !modelOption.available && "cursor-not-allowed opacity-50",
+          selectedModelId === modelOption.id && "bg-accent"
+        )}
+        disabled={!modelOption.available}
+        onClick={() => modelOption.available && setSelectedModelId(modelOption.id)}
+      >
+        <div className="flex items-center gap-3">
+          {providerOption?.icon && <providerOption.icon className="size-5" />}
+          <span className="text-base">{modelOption.name}</span>
+        </div>
+        <div className="flex items-center gap-2"> {/* Gap between icons */}
+          {hasFileUpload && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* Apply wrapper classes + specific text color */}
+                <div className={cn(iconWrapperBaseClasses, visionColorClasses)}>
+                  {/* Overlay takes color via bg-current */}
+                  <div className={iconOverlayClasses}></div>
+                  {/* Icon is placed on top, inherits text color */}
+                  <Eye className={cn(iconSizeClasses, "relative")} /> {/* Added relative to ensure it's above overlay */}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Supports Image Upload and Analysis</p>
+              </TooltipContent>
+            </Tooltip>
           )}
-          disabled={!model.available}
-          onClick={() => model.available && setSelectedModelId(model.id)}
-        >
-          <div className="flex items-center gap-3">
-            {provider?.icon && <provider.icon className="size-5" />}
-            <span className="text-base">{model.name}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasFileUpload && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="cursor-help rounded-full bg-blue-100 p-1 text-blue-600 dark:bg-blue-900">
-                    <Image className="h-4 w-4" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>This model can process and understand images.</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </DropdownMenuItem>
-      )
-    })
-  , [selectedModelId, setSelectedModelId])
+          {hasPdfProcessing && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                 <div className={cn(iconWrapperBaseClasses, pdfColorClasses)}>
+                   <div className={iconOverlayClasses}></div>
+                  <FilePdf className={cn(iconSizeClasses, "relative")} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Supports PDF Upload and Analysis</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {hasReasoning && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(iconWrapperBaseClasses, reasoningColorClasses)}>
+                   <div className={iconOverlayClasses}></div>
+                  <Brain className={cn(iconSizeClasses, "relative")} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Supports reasoning capabilities</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </DropdownMenuItem>
+    )
+  }
 
   return (
     <TooltipProvider>
@@ -94,10 +140,11 @@ export function ModelSelector({
               !model?.available && "cursor-not-allowed opacity-50",
               className
             )}
+            disabled={!model?.available}
           >
             <div className="flex items-center gap-2">
               {provider?.icon && <provider.icon className="size-5" />}
-              <span>{model?.name}</span>
+              <span>{model?.name ?? "Select Model"}</span>
             </div>
             <CaretDown className="size-4 opacity-50" />
           </Button>
@@ -107,51 +154,10 @@ export function ModelSelector({
           align="start"
           sideOffset={4}
         >
-          {/* Models Section */}
-          <div className="text-muted-foreground px-2 py-1.5 text-sm font-medium">
+          <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
             Available Models
           </div>
-
-          {MODELS_OPTIONS.map((model) => {
-            const provider = PROVIDERS_OPTIONS.find(
-              (provider) => provider.id === model.provider
-            )
-            const hasFileUpload = model.features?.find(
-              (feature) => feature.id === "file-upload"
-            )?.enabled
-
-            return (
-              <DropdownMenuItem
-                key={model.id}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2",
-                  !model.available && "cursor-not-allowed opacity-50",
-                  selectedModelId === model.id && "bg-accent"
-                )}
-                disabled={!model.available}
-                onClick={() => model.available && setSelectedModelId(model.id)}
-              >
-                <div className="flex items-center gap-3">
-                  {provider?.icon && <provider.icon className="size-5" />}
-                  <span className="text-base">{model.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {hasFileUpload && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="cursor-help rounded-full bg-blue-100 p-1 text-blue-600 dark:bg-blue-900">
-                          <Image className="h-4 w-4" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        <p>This model can process and understand images.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </DropdownMenuItem>
-            )
-          })}
+          {MODELS_OPTIONS.map(renderModelOption)}
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>
