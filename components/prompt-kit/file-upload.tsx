@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { toast } from "@/components/ui/toast"
 import {
   Children,
   cloneElement,
@@ -17,6 +18,7 @@ type FileUploadContextValue = {
   inputRef: React.RefObject<HTMLInputElement | null>
   multiple?: boolean
   disabled?: boolean
+  accept?: string
 }
 
 const FileUploadContext = createContext<FileUploadContextValue | null>(null)
@@ -72,7 +74,19 @@ function FileUpload({
       setIsDragging(false)
       dragCounter.current = 0
       if (e.dataTransfer?.files.length) {
-        handleFiles(e.dataTransfer.files)
+        let filesArray = Array.from(e.dataTransfer.files)
+        if (accept) {
+          const allowed = accept.split(",").map(s => s.trim())
+          filesArray = filesArray.filter(f => allowed.includes(f.type))
+        }
+        const invalid = Array.from(e.dataTransfer.files).filter(f => !filesArray.includes(f))
+        if (invalid.length) {
+          toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
+        }
+        if (filesArray.length) {
+          const toAdd = multiple ? filesArray : filesArray.slice(0, 1)
+          onFilesAdded(toAdd)
+        }
       }
     }
 
@@ -87,18 +101,28 @@ function FileUpload({
       window.removeEventListener("dragover", handleDrag)
       window.removeEventListener("drop", handleDrop)
     }
-  }, [handleFiles, onFilesAdded, multiple])
+  }, [handleFiles, onFilesAdded, multiple, accept])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      handleFiles(e.target.files)
+      const allFiles = Array.from(e.target.files)
+      let selected = allFiles
+      if (accept) {
+        const allowed = accept.split(",").map(s=>s.trim())
+        selected = allFiles.filter(f=> allowed.includes(f.type))
+      }
+      const invalid = allFiles.filter(f=> !selected.includes(f))
+      if (invalid.length) {
+        toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
+      }
+      if (selected.length) handleFiles({ ...e.target, files: selected } as any as FileList)
       e.target.value = ""
     }
   }
 
   return (
     <FileUploadContext.Provider
-      value={{ isDragging, inputRef, multiple, disabled }}
+      value={{ isDragging, inputRef, multiple, disabled, accept }}
     >
       <input
         type="file"

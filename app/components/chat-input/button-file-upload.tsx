@@ -94,7 +94,7 @@ export function ButtonFileUpload({
       onFilesAdded={onFileUpload}
       multiple
       disabled={!isUserAuthenticated}
-      accept=".txt,.md,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif"
+      accept="image/jpeg,image/png,image/webp,image/svg,image/heic,image/heif,application/pdf"
     >
       <Tooltip>
         <TooltipTrigger asChild>

@@ -55,6 +55,7 @@ export type Model = {
   features?: {
     id: string
     enabled: boolean
+    label?: string
   }[]
 }
 
@@ -70,6 +71,16 @@ export const MODELS_NOT_AVAILABLE = [
         id: "file-upload",
         enabled: true,
       },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
+      },
     ],
   },
   {
@@ -82,6 +93,16 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "file-upload",
         enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
       },
     ],
   },
@@ -96,6 +117,16 @@ export const MODELS_NOT_AVAILABLE = [
         id: "file-upload",
         enabled: true,
       },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
+      },
     ],
   },
   {
@@ -106,6 +137,16 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "file-upload",
         enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
       },
     ],
     api_sdk: openai("gpt-4o"),
@@ -118,6 +159,16 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "file-upload",
         enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
       },
     ],
     api_sdk: openai("gpt-4o-mini"),
@@ -135,6 +186,16 @@ export const MODELS = [
         id: "file-upload",
         enabled: true,
       },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
+      },
     ],
   },
   {
@@ -145,6 +206,16 @@ export const MODELS = [
       {
         id: "file-upload",
         enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities"
       },
     ],
     api_sdk: google("gemini-2.5-pro-exp-03-25"),
@@ -158,6 +229,16 @@ export const MODELS = [
         id: "file-upload",
         enabled: true,
       },
+      {
+        id: "pdf-processing",
+        enabled: false,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
+      },
     ],
     api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
   },
@@ -170,6 +251,16 @@ export const MODELS = [
         id: "file-upload",
         enabled: true,
       },
+      {
+        id: "pdf-processing",
+        enabled: false,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
+      },
     ],
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
   },
@@ -181,6 +272,16 @@ export const MODELS = [
       {
         id: "file-upload",
         enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities"
       },
     ],
     api_sdk: mistral("pixtral-large-latest"),
@@ -218,6 +319,16 @@ export const MODELS = [
       {
         id: "file-upload",
         enabled: false,
+      },
+      {
+        id: "pdf-processing",
+        enabled: false,
+        label: "Supports PDF uploads and analysis"
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities"
       },
     ],
     api_sdk: openrouter("deepseek/deepseek-r1:free"),

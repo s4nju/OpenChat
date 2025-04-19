@@ -53,6 +53,7 @@ export function MessageUser({
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const displayContent = children.replace(/\n{2,}/g, '\n\n')
 
   const handleEditCancel = () => {
     setIsEditing(false)
@@ -151,11 +152,11 @@ export function MessageUser({
         </div>
       ) : (
         <MessageContent
-          className="bg-accent relative max-w-[70%] rounded-3xl px-5 py-2.5"
+          className="bg-accent relative max-w-[70%] rounded-3xl px-5 py-2.5 whitespace-pre-line"
           markdown={false}
           ref={contentRef}
         >
-          {children}
+          {displayContent}
         </MessageContent>
       )}
       <MessageActions className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
