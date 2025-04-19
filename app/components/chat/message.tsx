@@ -5,6 +5,7 @@ import { MessageUser } from "./message-user"
 
 export type MessageProps = {
   variant: MessageType["role"]
+  model?: string
   children: string
   id: string
   attachments?: MessageType["experimental_attachments"]
@@ -20,6 +21,7 @@ export type MessageProps = {
 
 export function Message({
   variant,
+  model,
   children,
   id,
   attachments,
@@ -60,6 +62,7 @@ export function Message({
   if (variant === "assistant") {
       return (
         <MessageAssistant
+          model={model}
           children={children}
           copied={copied}
           copyToClipboard={copyToClipboard}

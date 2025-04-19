@@ -5,7 +5,7 @@ import { Loader } from "@/components/prompt-kit/loader"
 import { Message as MessageType } from "@ai-sdk/react"
 import { Message } from "./message"
 
-type MessageWithReasoning = MessageType & { reasoning_text?: string }
+type MessageWithReasoning = MessageType & { reasoning_text?: string; model?: string }
 
 type ConversationProps = {
   messages: MessageWithReasoning[]
@@ -59,6 +59,7 @@ const Conversation = React.memo(function Conversation({
                parts={message.parts}
                status={status}
                reasoning_text={message.reasoning_text}
+               model={message.model}
              >
                {message.content}
              </Message>

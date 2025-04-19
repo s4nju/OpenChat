@@ -16,6 +16,7 @@ type MessageAssistantProps = {
   copied?: boolean
   copyToClipboard?: () => void
   onReload?: () => void
+  model?: string
   parts?: MessageType["parts"]
   status?: "streaming" | "idle" | "submitted" | "error"
   reasoning_text?: string // NEW: reasoning_text from Supabase/IndexedDB
@@ -43,6 +44,7 @@ export function MessageAssistant({
   copied,
   copyToClipboard,
   onReload,
+  model,
   parts,
   status,
   reasoning_text,
@@ -174,6 +176,11 @@ export function MessageAssistant({
               <ArrowClockwise className="size-4" />
             </button>
           </MessageAction>
+          {model && (
+            <span className="hidden md:inline-block ml-2 text-xs text-muted-foreground">
+              {`Generated with ${model}`}
+            </span>
+          )}
         </MessageActions>
       </div>
     </Message>
