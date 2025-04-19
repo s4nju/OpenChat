@@ -87,6 +87,7 @@ export async function POST(req: Request) {
                   ? JSON.parse(JSON.stringify(userMessage.experimental_attachments))
                   : undefined,
                 user_id: userId,
+                model: selectedModel?.id,
               })
               .select("id")
               .single();
@@ -134,6 +135,7 @@ export async function POST(req: Request) {
                     parent_message_id: userMsgId,
                     user_id: userId,
                     reasoning_text: reasoningText,
+                    model: selectedModel?.id,
                   };
 
                   if (reloadAssistantMessageId) {
@@ -143,6 +145,7 @@ export async function POST(req: Request) {
                       .update({
                         content: textContent,
                         reasoning_text: reasoningText,
+                        model: selectedModel?.id,
                       })
                       .eq("id", reloadAssistantMessageId);
                     if (updErr) console.error("Error updating assistant message:", updErr);

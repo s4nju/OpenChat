@@ -160,6 +160,7 @@ export default function Chat() {
           const updatedMsg = {
             ...optimisticMsg,
             id: userMsgId,
+            model: selectedModel,
           }
           // Persist to IndexedDB and state
           setMessages((prev) =>
@@ -192,6 +193,7 @@ export default function Chat() {
               ...assistantMsg,
               id: assistantMsgId,
               parent_message_id: userMsgId, // Ensure parent_message_id is always set
+              model: selectedModel,
             }
             // Persist to IndexedDB and state
             setMessages((prev) =>
@@ -206,7 +208,7 @@ export default function Chat() {
     }
     
     updateMessage().catch(err => console.error("Error updating message IDs:", err))
-  }, [data, chatId, cacheAndAddMessage]) // Removed messages from deps to avoid infinite loop
+  }, [data, chatId, cacheAndAddMessage, selectedModel]) // Removed messages from deps to avoid infinite loop
 
   const isFirstMessage = useMemo(() => {
     return messages.length === 0

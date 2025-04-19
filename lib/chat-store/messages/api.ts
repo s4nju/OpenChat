@@ -27,7 +27,7 @@ export async function fetchAndCacheMessages(
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, content, role, experimental_attachments, created_at, parent_message_id, reasoning_text")
+    .select("id, content, role, experimental_attachments, created_at, parent_message_id, reasoning_text,model")
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true })
 
