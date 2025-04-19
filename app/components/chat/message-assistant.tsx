@@ -141,7 +141,7 @@ export function MessageAssistant({
 
         <MessageActions
           className={cn(
-            "flex gap-0 opacity-0 transition-opacity group-hover:opacity-100"
+            "flex gap-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
           )}
         >
           <MessageAction
