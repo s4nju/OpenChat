@@ -11,6 +11,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { togetherai } from '@ai-sdk/togetherai';
 import { google } from '@ai-sdk/google';
 import { groq } from '@ai-sdk/groq';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   BookOpenText,
   Brain,
@@ -39,6 +40,14 @@ const chutes = createOpenAI({
     'Content-Type': 'application/json',
   },
   // other options...
+});
+
+const nim = createOpenAICompatible({
+  name: 'nim',
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+  headers: {
+    Authorization: `Bearer ${process.env.NIM_API_KEY}`,
+  },
 });
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
@@ -331,7 +340,7 @@ export const MODELS = [
         label: "Supports reasoning capabilities"
       },
     ],
-    api_sdk: openrouter("deepseek/deepseek-r1:free"),
+    api_sdk: nim("deepseek-ai/deepseek-r1"),
   },
   // {
   //   id: "qwen/qwq-32b:free",

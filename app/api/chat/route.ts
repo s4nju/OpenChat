@@ -108,12 +108,21 @@ export async function POST(req: Request) {
           async onFinish({ response }) {
             try {
               for (const msg of response.messages) {
+                console.log("Message content:", msg.content);
                 if (msg.content) {
                   let textContent = "";
                   let reasoningText = null;
 
                   if (typeof msg.content === 'string') {
-                    textContent = msg.content;
+                    // Extract <think>...</think> reasoning if present
+                    const thinkMatch = msg.content.match(/<think>([\s\S]*?)<\/think>/i);
+                    if (thinkMatch) {
+                      reasoningText = thinkMatch[1].trim();
+                      // Remove the <think>...</think> block from the main message
+                      textContent = msg.content.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+                    } else {
+                      textContent = msg.content;
+                    }
                   } else if (Array.isArray(msg.content)) {
                     textContent = msg.content
                       .filter(part => part.type === 'text')
@@ -125,6 +134,18 @@ export async function POST(req: Request) {
                       .filter(Boolean);
                     if (reasoningParts.length > 0) {
                       reasoningText = reasoningParts.join('\n\n');
+                    }
+                    // Check for <think>...</think> in text parts if no explicit reasoning part
+                    if (!reasoningText) {
+                      const textPart = msg.content.find(part => part.type === 'text' && typeof (part as any).text === 'string');
+                      if (textPart && textPart.type === 'text' && typeof textPart.text === 'string') {
+                        const thinkMatch = textPart.text.match(/<think>([\s\S]*?)<\/think>/i);
+                        if (thinkMatch) {
+                          reasoningText = thinkMatch[1].trim();
+                          // Remove the <think>...</think> block from the textContent
+                          textContent = textContent.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+                        }
+                      }
                     }
                   }
 

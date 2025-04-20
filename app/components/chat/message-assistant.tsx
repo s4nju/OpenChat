@@ -73,6 +73,28 @@ export function MessageAssistant({
     ? parts.filter((part): part is ReasoningUIPart => part.type === "reasoning")
     : []
 
+  // If no explicit reasoning, try to extract from <think> tag in children
+  let parsedReasoning: string | null = null;
+  let parsedChildren = children;
+  if (!reasoning_text && reasoningParts.length === 0 && typeof children === 'string') {
+    const thinkOpenIdx = children.indexOf('<think>');
+    const thinkCloseIdx = children.indexOf('</think>');
+    if (thinkOpenIdx !== -1) {
+      if (thinkCloseIdx !== -1) {
+        // Both open and close tag present: normal extraction
+        const thinkMatch = children.match(/<think>([\s\S]*?)<\/think>/i);
+        if (thinkMatch) {
+          parsedReasoning = thinkMatch[1].trim();
+          parsedChildren = children.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+        }
+      } else {
+        // Only open tag present (streaming): show everything after <think> in reasoning, nothing in main
+        parsedReasoning = children.slice(thinkOpenIdx + 7).trim();
+        parsedChildren = '';
+      }
+    }
+  }
+
   return (
     <Message
       className={cn(
@@ -81,7 +103,7 @@ export function MessageAssistant({
       )}
     >
       <div className={cn("flex min-w-full flex-col gap-2", isLast && "pb-8")}>
-        {(reasoningParts.length > 0 || reasoning_text) && (
+        {(reasoningParts.length > 0 || reasoning_text || parsedReasoning) && (
           <div className="mb-2">
             {/* Reasoning Header - Updated UI */}
             {status === "streaming" ? (
@@ -128,14 +150,16 @@ export function MessageAssistant({
                     ? reasoningParts.map((part: ReasoningUIPart, idx: number) => (
                         <Markdown
                           key={idx}
-                          className="!text-sm !p-0 !bg-transparent" // Removed mono font, adjusted size
+                          className="!text-xs !p-0 !bg-transparent font-mono"
                         >
                           {part.reasoning}
                         </Markdown>
                       ))
                     : reasoning_text
-                      ? <Markdown className="!text-sm !p-0 !bg-transparent">{reasoning_text}</Markdown>
-                      : null}
+                      ? <Markdown className="!text-xs !p-0 !bg-transparent font-mono">{reasoning_text}</Markdown>
+                      : parsedReasoning
+                        ? <Markdown className="!text-xs !p-0 !bg-transparent font-mono">{parsedReasoning}</Markdown>
+                        : null}
                 </MotionDiv>
               )}
             </AnimatePresence>
@@ -145,7 +169,7 @@ export function MessageAssistant({
           className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
           markdown={true}
         >
-          {children}
+          {parsedChildren}
         </MessageContent>
 
         <MessageActions
