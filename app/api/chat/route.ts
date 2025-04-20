@@ -108,7 +108,7 @@ export async function POST(req: Request) {
           async onFinish({ response }) {
             try {
               for (const msg of response.messages) {
-                console.log("Message content:", msg.content);
+                // console.log("Message content:", msg.content);
                 if (msg.content) {
                   let textContent = "";
                   let reasoningText = null;

@@ -156,9 +156,9 @@ export function MessageAssistant({
                         </Markdown>
                       ))
                     : reasoning_text
-                      ? <Markdown className="!text-xs !p-0 !bg-transparent font-mono">{reasoning_text}</Markdown>
+                      ? <Markdown className="!text-sm !p-0 !bg-transparent font-mono">{reasoning_text}</Markdown>
                       : parsedReasoning
-                        ? <Markdown className="!text-xs !p-0 !bg-transparent font-mono">{parsedReasoning}</Markdown>
+                        ? <Markdown className="!text-sm !p-0 !bg-transparent font-mono">{parsedReasoning}</Markdown>
                         : null}
                 </MotionDiv>
               )}
