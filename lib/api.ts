@@ -3,6 +3,8 @@ import { SupabaseClient } from "@supabase/supabase-js"
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
+  PREMIUM_MONTHLY_MESSAGE_LIMIT,
+  NON_PREMIUM_MONTHLY_MESSAGE_LIMIT,
 } from "./config"
 import { fetchClient } from "./fetch"
 import { API_ROUTE_CREATE_GUEST, API_ROUTE_UPDATE_CHAT_MODEL } from "./routes"
@@ -53,35 +55,72 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
   const { data: userData, error: userDataError } = await supabase
     .from("users")
     .select(
-      "message_count, daily_message_count, daily_reset, anonymous, premium"
+      "message_count, daily_message_count, daily_reset, monthly_message_count, monthly_reset, anonymous, premium"
     )
     .eq("id", userId)
     .maybeSingle()
 
   if (userDataError) {
-    throw new Error("Error fetchClienting user data: " + userDataError.message)
+    throw new Error("Error fetching user data: " + userDataError.message)
   }
   if (!userData) {
     throw new Error("User record not found for id: " + userId)
   }
 
-  // Decide which daily limit to use.
   const isAnonymous = userData.anonymous
-  // (Assuming these are imported from your config)
+  const isPremium = userData.premium
+  const now = new Date()
+  
+  // Handle monthly reset logic
+  let monthlyCount = userData.monthly_message_count || 0
+  const lastMonthlyReset = userData.monthly_reset ? new Date(userData.monthly_reset) : null
+  
+  // Check if it's been a month since the last reset
+  if (
+    !lastMonthlyReset ||
+    (now.getTime() - lastMonthlyReset.getTime() >= 30 * 24 * 60 * 60 * 1000) // 30 days in milliseconds
+  ) {
+    monthlyCount = 0
+    const { error: monthlyResetError } = await supabase
+      .from("users")
+      .update({ monthly_message_count: 0, monthly_reset: now.toISOString() })
+      .eq("id", userId)
+    if (monthlyResetError) {
+      throw new Error("Failed to reset monthly count: " + monthlyResetError.message)
+    }
+  }
+  
+  // Check monthly limit for all users
+  const monthlyLimit = isPremium ? PREMIUM_MONTHLY_MESSAGE_LIMIT : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT
+  if (monthlyCount >= monthlyLimit) {
+    throw new UsageLimitError("Monthly message limit reached.")
+  }
+  
+  // For premium users, skip daily limit check
+  if (isPremium) {
+    return {
+      userData,
+      dailyCount: 0,
+      dailyLimit: Infinity,
+      monthlyCount,
+      monthlyLimit,
+    }
+  }
+  
+  // For non-premium users, check daily limits
   const dailyLimit = isAnonymous
     ? NON_AUTH_DAILY_MESSAGE_LIMIT
     : AUTH_DAILY_MESSAGE_LIMIT
 
   // Reset the daily counter if the day has changed (using UTC).
-  const now = new Date()
   let dailyCount = userData.daily_message_count || 0
-  const lastReset = userData.daily_reset ? new Date(userData.daily_reset) : null
+  const lastDailyReset = userData.daily_reset ? new Date(userData.daily_reset) : null
 
   if (
-    !lastReset ||
-    now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
-    now.getUTCMonth() !== lastReset.getUTCMonth() ||
-    now.getUTCDate() !== lastReset.getUTCDate()
+    !lastDailyReset ||
+    now.getUTCFullYear() !== lastDailyReset.getUTCFullYear() ||
+    now.getUTCMonth() !== lastDailyReset.getUTCMonth() ||
+    now.getUTCDate() !== lastDailyReset.getUTCDate()
   ) {
     dailyCount = 0
     const { error: resetError } = await supabase
@@ -102,57 +141,83 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
     userData,
     dailyCount,
     dailyLimit,
+    monthlyCount,
+    monthlyLimit,
   }
 }
 
 /**
- * Increments both overall and daily message counters for a user.
+ * Increments overall, daily, and monthly message counters for a user.
  *
  * @param supabase - Your Supabase client.
  * @param userId - The ID of the user.
- * @param currentCounts - Current message counts (optional, will be fetchCliented if not provided)
+ * @param currentCounts - Current message counts (optional, will be fetched if not provided)
  * @throws Error if updating fails.
  */
 export async function incrementUsage(
   supabase: SupabaseClient,
   userId: string,
-  currentCounts?: { messageCount: number; dailyCount: number }
+  currentCounts?: { messageCount: number; dailyCount: number; monthlyCount?: number }
 ): Promise<void> {
   let messageCount: number
   let dailyCount: number
+  let monthlyCount: number
 
-  if (currentCounts) {
+  if (currentCounts && currentCounts.monthlyCount !== undefined) {
     messageCount = currentCounts.messageCount
     dailyCount = currentCounts.dailyCount
+    monthlyCount = currentCounts.monthlyCount
   } else {
-    // If counts weren't provided, fetchClient them
+    // If counts weren't provided, fetch them
     const { data: userData, error: userDataError } = await supabase
       .from("users")
-      .select("message_count, daily_message_count")
+      .select("message_count, daily_message_count, monthly_message_count, premium")
       .eq("id", userId)
       .maybeSingle()
 
     if (userDataError || !userData) {
       throw new Error(
-        "Error fetchClienting user data: " +
+        "Error fetching user data: " +
           (userDataError?.message || "User not found")
       )
     }
 
     messageCount = userData.message_count || 0
     dailyCount = userData.daily_message_count || 0
+    monthlyCount = userData.monthly_message_count || 0
   }
 
-  // Increment both overall and daily message counts.
+  // Increment overall, daily, and monthly message counts
   const newOverallCount = messageCount + 1
   const newDailyCount = dailyCount + 1
+  const newMonthlyCount = monthlyCount + 1
 
+  // For premium users, we don't increment the daily count as there's no daily limit
+  const { data: userData, error: userDataError } = await supabase
+    .from("users")
+    .select("premium")
+    .eq("id", userId)
+    .maybeSingle()
+    
+  if (userDataError) {
+    throw new Error("Error fetching user premium status: " + userDataError.message)
+  }
+  
+  const isPremium = userData?.premium || false
+  
+  const updateObj: Record<string, number> = {
+    message_count: newOverallCount,
+    monthly_message_count: newMonthlyCount,
+  }
+  
+  // Only increment daily count for non-premium users
+  if (!isPremium) {
+    updateObj.daily_message_count = newDailyCount
+  }
+  
   const { error: updateError } = await supabase
     .from("users")
-    .update({
-      message_count: newOverallCount,
-      daily_message_count: newDailyCount,
-    })
+    .update(updateObj)
     .eq("id", userId)
 
   if (updateError) {

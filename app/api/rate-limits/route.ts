@@ -1,6 +1,8 @@
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
+  PREMIUM_MONTHLY_MESSAGE_LIMIT,
+  NON_PREMIUM_MONTHLY_MESSAGE_LIMIT,
 } from "@/lib/config"
 import { validateUserIdentity } from "../../../lib/server/api"
 
@@ -19,7 +21,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from("users")
-      .select("daily_message_count")
+      .select("daily_message_count, monthly_message_count, premium, anonymous")
       .eq("id", userId)
       .maybeSingle()
 
@@ -35,13 +37,42 @@ export async function GET(req: Request) {
       )
     }
 
-    const dailyLimit = isAuthenticated
-      ? AUTH_DAILY_MESSAGE_LIMIT
-      : NON_AUTH_DAILY_MESSAGE_LIMIT
-    const dailyCount = data.daily_message_count || 0
-    const remaining = dailyLimit - dailyCount
+    const isPremium = data.premium || false
+    const isAnonymous = data.anonymous || false
+    
+    // Get monthly limits
+    const monthlyLimit = isPremium ? PREMIUM_MONTHLY_MESSAGE_LIMIT : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT
+    const monthlyCount = data.monthly_message_count || 0
+    const monthlyRemaining = monthlyLimit - monthlyCount
+    
+    // Get daily limits (not applicable for premium users)
+    let dailyLimit = Infinity
+    let dailyCount = 0
+    let dailyRemaining = Infinity
+    
+    if (!isPremium) {
+      dailyLimit = isAnonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT
+      dailyCount = data.daily_message_count || 0
+      dailyRemaining = dailyLimit - dailyCount
+    }
+    
+    // For premium users, only the monthly limit matters
+    // For non-premium users, both daily and monthly limits apply
+    const effectiveRemaining = isPremium 
+      ? monthlyRemaining 
+      : Math.min(dailyRemaining, monthlyRemaining)
 
-    return new Response(JSON.stringify({ dailyCount, dailyLimit, remaining }), {
+    return new Response(
+      JSON.stringify({ 
+        isPremium,
+        dailyCount, 
+        dailyLimit, 
+        dailyRemaining,
+        monthlyCount,
+        monthlyLimit,
+        monthlyRemaining,
+        effectiveRemaining 
+      }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     })

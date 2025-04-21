@@ -11,7 +11,13 @@ import { toast } from "@/components/ui/toast"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { useMessages } from "@/lib/chat-store/messages/provider"
 import { clearAllIndexedDBStores } from "@/lib/chat-store/persist"
-import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/lib/config"
+import { 
+  AUTH_DAILY_MESSAGE_LIMIT,
+  NON_AUTH_DAILY_MESSAGE_LIMIT, 
+  PREMIUM_MONTHLY_MESSAGE_LIMIT,
+  NON_PREMIUM_MONTHLY_MESSAGE_LIMIT,
+  MODEL_DEFAULT 
+} from "@/lib/config"
 import { cn } from "@/lib/utils"
 import { SignOut, User, X } from "@phosphor-icons/react"
 import { useTheme } from "@/app/providers/theme-provider"
@@ -110,31 +116,68 @@ export function SettingsContent({
       {/* Message Usage */}
       <div className="border-border border-t">
         <div className="px-6 py-4">
-          <h3 className="mb-3 text-sm font-medium">Message Usage</h3>
-          <div className="bg-secondary rounded-lg p-3">
-            <div className="mb-2 flex justify-between">
-              <span className="text-secondary-foreground text-sm">Today</span>
-              <span className="text-sm font-medium">
-                {user?.daily_message_count} / {AUTH_DAILY_MESSAGE_LIMIT}{" "}
-                messages
+          <div className="mb-3 flex justify-between items-center">
+            <h3 className="text-sm font-medium">Message Usage</h3>
+            {user?.premium && (
+              <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
+                Premium
               </span>
-            </div>
-            <div className="bg-muted h-1.5 w-full rounded-full">
-              <div
-                className="bg-primary h-1.5 rounded-full"
-                style={{
-                  width: `${
-                    ((user?.daily_message_count || 0) /
-                      AUTH_DAILY_MESSAGE_LIMIT) *
-                    100
-                  }%`,
-                }}
-              ></div>
-            </div>
-            <p className="text-muted-foreground mt-2 text-xs">
-              Limit of {AUTH_DAILY_MESSAGE_LIMIT} messages per day
-            </p>
+            )}
           </div>
+          
+          {/* Premium Users - Show Monthly Usage */}
+          {user?.premium && (
+            <div className="bg-secondary rounded-lg p-3 mb-3">
+              <div className="mb-2 flex justify-between">
+                <span className="text-secondary-foreground text-sm">Monthly</span>
+                <span className="text-sm font-medium">
+                  {user?.monthly_message_count || 0} / {PREMIUM_MONTHLY_MESSAGE_LIMIT}{" "}
+                  messages
+                </span>
+              </div>
+              <div className="bg-muted h-1.5 w-full rounded-full">
+                <div
+                  className="bg-primary h-1.5 rounded-full"
+                  style={{
+                    width: `${
+                      ((user?.monthly_message_count || 0) / PREMIUM_MONTHLY_MESSAGE_LIMIT) * 100
+                    }%`,
+                  }}
+                ></div>
+              </div>
+              <p className="text-muted-foreground mt-2 text-xs">
+                Limit of {PREMIUM_MONTHLY_MESSAGE_LIMIT} messages per month
+              </p>
+            </div>
+          )}
+          
+          {/* Regular Users - Show Daily Usage */}
+          {!user?.premium && (
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="mb-2 flex justify-between">
+                <span className="text-secondary-foreground text-sm">Today</span>
+                <span className="text-sm font-medium">
+                  {user?.daily_message_count || 0} / {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT}{" "}
+                  messages
+                </span>
+              </div>
+              <div className="bg-muted h-1.5 w-full rounded-full">
+                <div
+                  className="bg-primary h-1.5 rounded-full"
+                  style={{
+                    width: `${
+                      ((user?.daily_message_count || 0) /
+                        (user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT)) *
+                      100
+                    }%`,
+                  }}
+                ></div>
+              </div>
+              <p className="text-muted-foreground mt-2 text-xs">
+                Limit of {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT} messages per day
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
