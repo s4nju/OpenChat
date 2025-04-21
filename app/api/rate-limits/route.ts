@@ -21,7 +21,9 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from("users")
-      .select("daily_message_count, monthly_message_count, premium, anonymous")
+      .select(
+        "daily_message_count, daily_reset, monthly_message_count, monthly_reset, premium, anonymous"
+      )
       .eq("id", userId)
       .maybeSingle()
 
@@ -63,15 +65,17 @@ export async function GET(req: Request) {
       : Math.min(dailyRemaining, monthlyRemaining)
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         isPremium,
-        dailyCount, 
-        dailyLimit, 
+        dailyCount,
+        dailyLimit,
         dailyRemaining,
         monthlyCount,
         monthlyLimit,
         monthlyRemaining,
-        effectiveRemaining 
+        effectiveRemaining,
+        dailyReset: data.daily_reset,
+        monthlyReset: data.monthly_reset,
       }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

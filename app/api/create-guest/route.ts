@@ -16,6 +16,10 @@ export async function POST(request: Request) {
       .eq("id", userId)
       .maybeSingle()
     if (!userData) {
+      const now = new Date()
+      const isoNow = now.toISOString()
+      const dailyResetDate = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      const monthlyResetDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
       const { data, error } = await supabase
         .from("users")
         .insert({
@@ -23,8 +27,12 @@ export async function POST(request: Request) {
           email: `${userId}@anonymous.example`,
           anonymous: true,
           message_count: 0,
+          daily_message_count: 0,
+          monthly_message_count: 0,
+          daily_reset: dailyResetDate,
+          monthly_reset: monthlyResetDate,
           premium: false,
-          created_at: new Date().toISOString(),
+          created_at: isoNow,
         })
         .select("*")
         .single()

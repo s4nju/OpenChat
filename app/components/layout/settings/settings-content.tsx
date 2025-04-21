@@ -23,8 +23,8 @@ import { SignOut, User, X } from "@phosphor-icons/react"
 import { useTheme } from "@/app/providers/theme-provider"
 import { useRouter } from "next/navigation"
 import type React from "react" // Keep type import if needed
-import { useEffect, useState } from "react"
-
+import { useEffect, useState, useRef } from "react"
+import { checkRateLimits } from "@/lib/api"
 
 // The content previously inside settings.tsx
 export function SettingsContent({
@@ -73,6 +73,36 @@ export function SettingsContent({
     { id: "light", name: "Light", colors: ["#ffffff"] },
     { id: "dark", name: "Dark", colors: ["#1a1a1a"] },
   ]
+
+  const [rateLimits, setRateLimits] = useState<{
+    dailyReset: string
+    monthlyReset: string
+  } | null>(null)
+  const [dailyResetHours, setDailyResetHours] = useState(0)
+  const [monthlyResetDays, setMonthlyResetDays] = useState(0)
+
+  const hasFetchedRateLimits = useRef(false)
+  useEffect(() => {
+    if (!user || hasFetchedRateLimits.current) return
+    hasFetchedRateLimits.current = true
+    ;(async () => {
+      try {
+        const data = await checkRateLimits(user.id, !user.anonymous)
+        setRateLimits(data)
+        const now = new Date()
+        if (data.dailyReset) {
+          const next = new Date(data.dailyReset)
+          setDailyResetHours(Math.max(0, Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60))))
+        }
+        if (data.monthlyReset) {
+          const next = new Date(data.monthlyReset)
+          setMonthlyResetDays(Math.max(0, Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))))
+        }
+      } catch (e) {
+        console.error("Failed fetching rate limits:", e)
+      }
+    })()
+  }, [user])
 
   if (!user) return null
 
@@ -148,6 +178,11 @@ export function SettingsContent({
               <p className="text-muted-foreground mt-2 text-xs">
                 Limit of {PREMIUM_MONTHLY_MESSAGE_LIMIT} messages per month
               </p>
+              {rateLimits && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Resets in {monthlyResetDays} days
+                </p>
+              )}
             </div>
           )}
           
@@ -176,6 +211,11 @@ export function SettingsContent({
               <p className="text-muted-foreground mt-2 text-xs">
                 Limit of {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT} messages per day
               </p>
+              {rateLimits && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Resets in {dailyResetHours} hours
+                </p>
+              )}
             </div>
           )}
         </div>

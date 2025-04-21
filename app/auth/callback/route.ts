@@ -32,18 +32,32 @@ export async function GET(request: Request) {
     )
   }
 
-
   try {
+    // Initialize resets for new OAuth users
+    const now = new Date()
+    const isoNow = now.toISOString()
+    const dailyResetDate = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+    const monthlyResetDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      now.getDate(),
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+    ).toISOString()
     // Try to insert user only if not exists
     const { error: insertError } = await supabaseAdmin.from("users").insert({
       id: user.id,
       email: user.email,
-      created_at: new Date().toISOString(),
+      created_at: isoNow,
       message_count: 0,
+      daily_message_count: 0,
+      monthly_message_count: 0,
+      daily_reset: dailyResetDate,
+      monthly_reset: monthlyResetDate,
       premium: false,
       preferred_model: MODEL_DEFAULT,
     })
-
 
     if (insertError && insertError.code !== "23505") {
       console.error("Error inserting user:", insertError)
