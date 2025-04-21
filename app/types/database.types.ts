@@ -353,6 +353,8 @@ export type Database = {
           created_at: string
           daily_message_count: number
           daily_reset: string | null
+          monthly_message_count: number
+          monthly_reset: string | null
           display_name: string | null
           email: string
           id: string
@@ -366,6 +368,8 @@ export type Database = {
           created_at?: string
           daily_message_count?: number
           daily_reset?: string | null
+          monthly_message_count?: number
+          monthly_reset?: string | null
           display_name?: string | null
           email: string
           id: string
@@ -379,6 +383,8 @@ export type Database = {
           created_at?: string
           daily_message_count?: number
           daily_reset?: string | null
+          monthly_message_count?: number
+          monthly_reset?: string | null
           display_name?: string | null
           email?: string
           id?: string
