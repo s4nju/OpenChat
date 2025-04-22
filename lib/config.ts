@@ -29,6 +29,9 @@ import {
   Detective,
 } from "@phosphor-icons/react/dist/ssr"
 import { Qwen, Meta } from '@lobehub/icons';
+import { wrapLanguageModel, extractReasoningMiddleware } from 'ai'
+
+const reasoningMiddleware = extractReasoningMiddleware({ tagName: 'think' })
 
 const chutes = createOpenAI({
   // custom settings, e.g.
@@ -186,7 +189,7 @@ export const MODELS_NOT_AVAILABLE = [
   },
 ] as Model[]
 
-export const MODELS = [
+export const MODELS_RAW = [
   {
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
@@ -357,6 +360,13 @@ export const MODELS = [
   //   api_sdk: openrouter("qwen/qwq-32b:free"),
   // },
 ] as Model[]
+
+export const MODELS = MODELS_RAW.map(m => ({
+  ...m,
+  api_sdk: m.features?.some(f => f.id === 'reasoning' && f.enabled)
+    ? wrapLanguageModel({ model: m.api_sdk, middleware: reasoningMiddleware })
+    : m.api_sdk,
+}))
 
 export const MODELS_OPTIONS = [
   ...MODELS.map((model) => ({

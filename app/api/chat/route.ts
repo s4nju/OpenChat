@@ -4,7 +4,7 @@ import { MODELS } from "@/lib/config"
 import { sanitizeUserInput } from "@/lib/sanitize"
 import { validateUserIdentity } from "@/lib/server/api"
 import { Attachment } from "@ai-sdk/ui-utils"
-import { Message as MessageAISDK, streamText, createDataStreamResponse} from "ai"
+import { Message as MessageAISDK, streamText, createDataStreamResponse } from "ai"
 
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 60
@@ -18,6 +18,8 @@ type ChatRequest = {
   systemPrompt: string
   reloadAssistantMessageId?: number
 }
+
+// reasoningMiddleware is applied in config via MODELS
 
 export async function POST(req: Request) {
   try {
@@ -48,6 +50,7 @@ export async function POST(req: Request) {
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
+        // Use api_sdk from config, which includes reasoning middleware if enabled
         let userMsgId: number | null = null;
         let assistantMsgId: number | null = null;
 
@@ -108,46 +111,11 @@ export async function POST(req: Request) {
           async onFinish({ response }) {
             try {
               for (const msg of response.messages) {
-                // console.log("Message content:", msg.content);
                 if (msg.content) {
-                  let textContent = "";
-                  let reasoningText = null;
-
-                  if (typeof msg.content === 'string') {
-                    // Extract <think>...</think> reasoning if present
-                    const thinkMatch = msg.content.match(/<think>([\s\S]*?)<\/think>/i);
-                    if (thinkMatch) {
-                      reasoningText = thinkMatch[1].trim();
-                      // Remove the <think>...</think> block from the main message
-                      textContent = msg.content.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
-                    } else {
-                      textContent = msg.content;
-                    }
-                  } else if (Array.isArray(msg.content)) {
-                    textContent = msg.content
-                      .filter(part => part.type === 'text')
-                      .map(part => part.text)
-                      .join('');
-                    const reasoningParts = msg.content
-                      .filter(part => part.type === 'reasoning' && typeof part.text === 'string')
-                      .map(part => (part as any).text)
-                      .filter(Boolean);
-                    if (reasoningParts.length > 0) {
-                      reasoningText = reasoningParts.join('\n\n');
-                    }
-                    // Check for <think>...</think> in text parts if no explicit reasoning part
-                    if (!reasoningText) {
-                      const textPart = msg.content.find(part => part.type === 'text' && typeof (part as any).text === 'string');
-                      if (textPart && textPart.type === 'text' && typeof textPart.text === 'string') {
-                        const thinkMatch = textPart.text.match(/<think>([\s\S]*?)<\/think>/i);
-                        if (thinkMatch) {
-                          reasoningText = thinkMatch[1].trim();
-                          // Remove the <think>...</think> block from the textContent
-                          textContent = textContent.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
-                        }
-                      }
-                    }
-                  }
+                  // Use the middleware-extracted reasoning
+                  const textContent = typeof msg.content === 'string' ? msg.content : (Array.isArray(msg.content) ? msg.content.filter(part => part.type === 'text').map(part => part.text).join('') : '');
+                  // The middleware will attach `reasoning` to the message if found
+                  const reasoningText = (msg as any).reasoning || null;
 
                   const insertPayload = {
                     chat_id: chatId,
