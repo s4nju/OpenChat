@@ -4,9 +4,6 @@ import { useBreakpoint } from "@/app/hooks/use-breakpoint" // Likely needed, kee
 import { useUser } from "@/app/providers/user-provider"
 import { ModelSelector } from "@/components/common/model-selector"
 import { Button } from "@/components/ui/button"
-// Removed Dialog imports as they are handled by the trigger/parent
-// Removed Drawer imports as they are handled by the trigger/parent
-// Removed DropdownMenuItem as it's not used here
 import { toast } from "@/components/ui/toast"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { useMessages } from "@/lib/chat-store/messages/provider"
@@ -23,8 +20,7 @@ import { SignOut, User, X } from "@phosphor-icons/react"
 import { useTheme } from "@/app/providers/theme-provider"
 import { useRouter } from "next/navigation"
 import type React from "react" // Keep type import if needed
-import { useEffect, useState, useRef } from "react"
-import { checkRateLimits } from "@/lib/api"
+import { useEffect, useState } from "react"
 
 // The content previously inside settings.tsx
 export function SettingsContent({
@@ -74,35 +70,17 @@ export function SettingsContent({
     { id: "dark", name: "Dark", colors: ["#1a1a1a"] },
   ]
 
-  const [rateLimits, setRateLimits] = useState<{
-    dailyReset: string
-    monthlyReset: string
-  } | null>(null)
-  const [dailyResetHours, setDailyResetHours] = useState(0)
-  const [monthlyResetDays, setMonthlyResetDays] = useState(0)
-
-  const hasFetchedRateLimits = useRef(false)
-  useEffect(() => {
-    if (!user || hasFetchedRateLimits.current) return
-    hasFetchedRateLimits.current = true
-    ;(async () => {
-      try {
-        const data = await checkRateLimits(user.id, !user.anonymous)
-        setRateLimits(data)
-        const now = new Date()
-        if (data.dailyReset) {
-          const next = new Date(data.dailyReset)
-          setDailyResetHours(Math.max(0, Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60))))
-        }
-        if (data.monthlyReset) {
-          const next = new Date(data.monthlyReset)
-          setMonthlyResetDays(Math.max(0, Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))))
-        }
-      } catch (e) {
-        console.error("Failed fetching rate limits:", e)
-      }
-    })()
-  }, [user])
+  // Compute next reset timestamps based on last reset + interval
+  const DAILY_RESET_INTERVAL = 24 * 60 * 60 * 1000
+  const MONTHLY_RESET_INTERVAL = 30 * 24 * 60 * 60 * 1000
+  const lastDaily = user?.daily_reset ? new Date(user.daily_reset) : null
+  const nextDailyResetDateStr = lastDaily
+    ? new Date(lastDaily.getTime() + DAILY_RESET_INTERVAL).toLocaleString()
+    : ""
+  const lastMonthly = user?.monthly_reset ? new Date(user.monthly_reset) : null
+  const nextMonthlyResetDateStr = lastMonthly
+    ? new Date(lastMonthly.getTime() + MONTHLY_RESET_INTERVAL).toLocaleString()
+    : ""
 
   if (!user) return null
 
@@ -178,11 +156,9 @@ export function SettingsContent({
               <p className="text-muted-foreground mt-2 text-xs">
                 Limit of {PREMIUM_MONTHLY_MESSAGE_LIMIT} messages per month
               </p>
-              {rateLimits && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Resets in {monthlyResetDays} days
-                </p>
-              )}
+              <p className="text-muted-foreground mt-1 text-xs">
+                Resets at {nextMonthlyResetDateStr}
+              </p>
             </div>
           )}
           
@@ -211,11 +187,9 @@ export function SettingsContent({
               <p className="text-muted-foreground mt-2 text-xs">
                 Limit of {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT} messages per day
               </p>
-              {rateLimits && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Resets in {dailyResetHours} hours
-                </p>
-              )}
+              <p className="text-muted-foreground mt-1 text-xs">
+                Resets at {nextDailyResetDateStr}
+              </p>
             </div>
           )}
         </div>
@@ -326,4 +300,4 @@ export function SettingsContent({
       </div> */}
     </div>
   )
-} 
+}

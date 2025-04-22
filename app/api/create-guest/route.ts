@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     if (!userData) {
       const now = new Date()
       const isoNow = now.toISOString()
-      const dailyResetDate = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
-      const monthlyResetDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const dailyResetDate = new Date(now.getTime()).toISOString()
+      const monthlyResetDate = new Date(now.getTime()).toISOString()
       const { data, error } = await supabase
         .from("users")
         .insert({

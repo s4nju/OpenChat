@@ -26,6 +26,7 @@ export async function GET(request: Request) {
   }
 
   const user = data?.user
+  // console.log("User data:", user)
   if (!user || !user.id || !user.email) {
     return NextResponse.redirect(
       `${origin}/auth/error?message=${encodeURIComponent("Missing user info")}`
@@ -36,17 +37,12 @@ export async function GET(request: Request) {
     // Initialize resets for new OAuth users
     const now = new Date()
     const isoNow = now.toISOString()
-    const dailyResetDate = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
-    const monthlyResetDate = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      now.getDate(),
-      now.getHours(),
-      now.getMinutes(),
-      now.getSeconds(),
-    ).toISOString()
+    const dailyResetDate = new Date(now.getTime()).toISOString()
+    const monthlyResetDate = new Date(now.getTime()).toISOString()
     // Try to insert user only if not exists
     const { error: insertError } = await supabaseAdmin.from("users").insert({
+      display_name: user.user_metadata.name,
+      profile_image: user.user_metadata.avatar_url,
       id: user.id,
       email: user.email,
       created_at: isoNow,

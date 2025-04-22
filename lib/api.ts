@@ -70,32 +70,30 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
   const isAnonymous = userData.anonymous
   const isPremium = userData.premium
   const now = new Date()
-  
-  // Handle monthly reset logic
+
+  // Sliding window monthly reset
   let monthlyCount = userData.monthly_message_count || 0
   const lastMonthlyReset = userData.monthly_reset ? new Date(userData.monthly_reset) : null
-  
-  // Check if it's been a month since the last reset
-  if (
-    !lastMonthlyReset ||
-    (now.getTime() - lastMonthlyReset.getTime() >= 30 * 24 * 60 * 60 * 1000) // 30 days in milliseconds
-  ) {
+  const monthlyResetInterval = 30 * 24 * 60 * 60 * 1000
+  if (!lastMonthlyReset || now.getTime() - lastMonthlyReset.getTime() >= monthlyResetInterval) {
     monthlyCount = 0
+    // next reset at last reset + interval
+    const nextMonthlyReset = new Date((lastMonthlyReset || now).getTime() + monthlyResetInterval)
     const { error: monthlyResetError } = await supabase
       .from("users")
-      .update({ monthly_message_count: 0, monthly_reset: now.toISOString() })
+      .update({ monthly_message_count: 0, monthly_reset: nextMonthlyReset.toISOString() })
       .eq("id", userId)
     if (monthlyResetError) {
       throw new Error("Failed to reset monthly count: " + monthlyResetError.message)
     }
   }
-  
+
   // Check monthly limit for all users
   const monthlyLimit = isPremium ? PREMIUM_MONTHLY_MESSAGE_LIMIT : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT
   if (monthlyCount >= monthlyLimit) {
     throw new UsageLimitError("Monthly message limit reached.")
   }
-  
+
   // For premium users, skip daily limit check
   if (isPremium) {
     return {
@@ -106,26 +104,24 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
       monthlyLimit,
     }
   }
-  
+
   // For non-premium users, check daily limits
   const dailyLimit = isAnonymous
     ? NON_AUTH_DAILY_MESSAGE_LIMIT
     : AUTH_DAILY_MESSAGE_LIMIT
 
-  // Reset the daily counter if the day has changed (using UTC).
+  // Sliding window daily reset
   let dailyCount = userData.daily_message_count || 0
   const lastDailyReset = userData.daily_reset ? new Date(userData.daily_reset) : null
-
-  if (
-    !lastDailyReset ||
-    now.getUTCFullYear() !== lastDailyReset.getUTCFullYear() ||
-    now.getUTCMonth() !== lastDailyReset.getUTCMonth() ||
-    now.getUTCDate() !== lastDailyReset.getUTCDate()
-  ) {
+  const dailyResetInterval = 24 * 60 * 60 * 1000
+  
+  if (!lastDailyReset || now.getTime() - lastDailyReset.getTime() >= dailyResetInterval) {
     dailyCount = 0
+    // next reset at last reset + interval
+    const nextDailyReset = new Date((lastDailyReset || now).getTime() + dailyResetInterval)
     const { error: resetError } = await supabase
       .from("users")
-      .update({ daily_message_count: 0, daily_reset: now.toISOString() })
+      .update({ daily_message_count: 0, daily_reset: nextDailyReset.toISOString() })
       .eq("id", userId)
     if (resetError) {
       throw new Error("Failed to reset daily count: " + resetError.message)
