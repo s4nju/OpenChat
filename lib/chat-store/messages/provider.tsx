@@ -68,15 +68,21 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
     const load = async () => {
       const cached = await getCachedMessages(chatId)
-      setMessages(cached)
-      messagesMapRef.current = new Map(cached.map(m => [m.id, m]))
-      try {
-        const fresh = await fetchAndCacheMessages(chatId)
-        setMessages(fresh)
-        messagesMapRef.current = new Map(fresh.map(m => [m.id, m]))
-        cacheMessages(chatId, fresh)
-      } catch (error) {
-        console.error("Failed to fetch messages:", error)
+
+      if (cached && cached.length > 0) {
+        // We have cached data, use it
+        setMessages(cached)
+        messagesMapRef.current = new Map(cached.map(m => [m.id, m]))
+      } else {
+        // No cache or empty cache, fetch from server
+        try {
+          const fresh = await fetchAndCacheMessages(chatId)
+          setMessages(fresh)
+          messagesMapRef.current = new Map(fresh.map(m => [m.id, m]))
+          cacheMessages(chatId, fresh)
+        } catch (error) {
+          console.error("Failed to fetch messages:", error)
+        }
       }
     }
 
@@ -135,6 +141,11 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       setMessages(updatedMessages)
       if (chatId) {
         await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages })
+      }
+      if (chatId) {
+        // Update the chat's updated_at in IndexedDB only
+        const { updateChatTimestamp } = await import("../chats/api");
+        await updateChatTimestamp(chatId, true);
       }
       if (updatedMessages.length === 0 && chatId) {
         try {

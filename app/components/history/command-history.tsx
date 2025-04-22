@@ -81,13 +81,13 @@ export function CommandHistory({
   const filteredChat = chatHistory.filter((chat) =>
     (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
-// will add pagination later
-useEffect(() => {
-  if (!isOpen) return;
-  chatHistory.forEach((chat) => {
-    router.prefetch(`/c/${chat.id}`);
-  });
-}, [isOpen, chatHistory]);
+  // will add pagination later
+  useEffect(() => {
+    if (!isOpen) return;
+    chatHistory.forEach((chat) => {
+      router.prefetch(`/c/${chat.id}`);
+    });
+  }, [isOpen, chatHistory]);
 
   return (
     <>
@@ -225,7 +225,7 @@ useEffect(() => {
                       className={cn(
                         "group hover:bg-accent! flex w-full items-center justify-between rounded-md data-[selected=true]:bg-transparent",
                         Boolean(editingId || deletingId) &&
-                          "hover:bg-transparent! data-[selected=true]:bg-transparent"
+                        "hover:bg-transparent! data-[selected=true]:bg-transparent"
                       )}
                       value={chat.title || "Untitled Chat"}
                     >
@@ -242,11 +242,11 @@ useEffect(() => {
                           className={cn(
                             "text-muted-foreground text-base font-normal transition-opacity duration-0 group-hover:opacity-0",
                             Boolean(editingId || deletingId) &&
-                              "group-hover:opacity-100"
+                            "group-hover:opacity-100"
                           )}
                         >
-                          {chat?.created_at
-                            ? new Date(chat.created_at).toLocaleDateString()
+                          {(chat?.updated_at || chat?.created_at)
+                            ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
                             : "No date"}
                         </span>
 
@@ -255,7 +255,7 @@ useEffect(() => {
                           className={cn(
                             "absolute inset-0 flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
                             Boolean(editingId || deletingId) &&
-                              "group-hover:opacity-0"
+                            "group-hover:opacity-0"
                           )}
                         >
                           <Button

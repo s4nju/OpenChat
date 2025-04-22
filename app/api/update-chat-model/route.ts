@@ -14,10 +14,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Update the chat record with the new model
+    // Update the chat record with the new model and updated_at timestamp
     const { error } = await supabase
       .from("chats")
-      .update({ model })
+      .update({
+        model,
+        updated_at: new Date().toISOString()
+      })
       .eq("id", chatId)
 
     if (error) {

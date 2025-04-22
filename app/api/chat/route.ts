@@ -99,6 +99,16 @@ export async function POST(req: Request) {
             } else {
               userMsgId = userMsgData?.id ?? null;
               await incrementUsage(supabase, userId);
+
+              // Update the chat's updated_at timestamp
+              const { error: updateChatError } = await supabase
+                .from("chats")
+                .update({ updated_at: new Date().toISOString() })
+                .eq("id", chatId);
+
+              if (updateChatError) {
+                console.error("Error updating chat timestamp:", updateChatError);
+              }
             }
           }
         }
@@ -141,6 +151,16 @@ export async function POST(req: Request) {
                     assistantMsgId = reloadAssistantMessageId;
                     // Increment usage count for reload
                     await incrementUsage(supabase, userId);
+
+                    // Update the chat's updated_at timestamp
+                    const { error: updateChatError } = await supabase
+                      .from("chats")
+                      .update({ updated_at: new Date().toISOString() })
+                      .eq("id", chatId);
+
+                    if (updateChatError) {
+                      console.error("Error updating chat timestamp during reload:", updateChatError);
+                    }
                   } else {
                     const { data: assistantMsgData, error: assistantError } = await supabase
                       .from("messages")

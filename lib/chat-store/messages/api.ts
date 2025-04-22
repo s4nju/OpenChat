@@ -123,6 +123,16 @@ export async function deleteMessageAndAssistantReplies(messageId: string | numbe
     throw rpcError;
   }
 
+  // Update the chat's updated_at timestamp
+  const { error: updateChatError } = await supabase
+    .from("chats")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", chatId);
+
+  if (updateChatError) {
+    console.error("Error updating chat timestamp during message deletion:", updateChatError);
+  }
+
   // Check if any messages remain in the chat
   const { count, error: countError } = await supabase
     .from('messages')

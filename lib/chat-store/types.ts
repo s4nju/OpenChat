@@ -7,5 +7,5 @@ export type Message = Tables<"messages"> & {
 }
 export type Chats = Pick<
   Chat,
-  "id" | "title" | "created_at" | "model" | "system_prompt"
+  "id" | "title" | "created_at" | "updated_at" | "model" | "system_prompt"
 >

@@ -74,6 +74,7 @@ export type Database = {
       chats: {
         Row: {
           created_at: string | null
+          updated_at: string | null
           id: string
           model: string | null
           system_prompt: string | null
@@ -82,6 +83,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          updated_at?: string | null
           id?: string
           model?: string | null
           system_prompt?: string | null
@@ -90,6 +92,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          updated_at?: string | null
           id?: string
           model?: string | null
           system_prompt?: string | null

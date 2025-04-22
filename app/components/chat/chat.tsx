@@ -6,6 +6,7 @@ import { useUser } from "@/app/providers/user-provider"
 import { toast } from "@/components/ui/toast"
 import { checkRateLimits, createGuestUser } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
+import { updateChatTimestamp } from "@/lib/chat-store/chats/api"
 import { useMessages } from "@/lib/chat-store/messages/provider"
 import {
   MESSAGE_MAX_LENGTH,
@@ -104,55 +105,55 @@ export default function Chat() {
 
   // Use a ref to track processed data items to avoid infinite loops
   const processedDataRef = useRef<Set<string>>(new Set());
-  
+
   // Process streamed message IDs from backend
   useEffect(() => {
     if (!chatId || !data || data.length === 0) return
-    
+
     // Get the latest data item
     const streamData = data[data.length - 1]
-    
+
     // Generate a signature for this data item to track if we've processed it
     const dataSignature = JSON.stringify(streamData);
-    
+
     // Skip if we've already processed this exact data
     if (processedDataRef.current.has(dataSignature)) {
       return;
     }
-    
+
     //console.log("Processing new streamed data:", streamData)
-    
+
     // Extract the message IDs if they exist - handle JSON values correctly
     let userMsgId: string | undefined;
     let assistantMsgId: string | undefined;
-    
+
     // Type guard to check if streamData is an object with potential ID properties
     if (streamData && typeof streamData === 'object' && streamData !== null) {
       // Safe type assertion for message IDs
       userMsgId = 'userMsgId' in streamData ? String(streamData.userMsgId) : undefined;
       assistantMsgId = 'assistantMsgId' in streamData ? String(streamData.assistantMsgId) : undefined;
     }
-    
+
     // Skip if no IDs are present
     if (!userMsgId && !assistantMsgId) {
       return;
     }
-    
+
     // Mark this data as processed to prevent infinite loops
     processedDataRef.current.add(dataSignature);
-    
+
     const updateMessage = async () => {
       // Take a snapshot of current messages to work with
       const currentMessages = [...messages];
       //console.log("Current messages:", currentMessages)
-      
+
       // If we received a user message ID from the backend
       if (userMsgId) {
         // Find the optimistic user message and update its ID
         const optimisticIdx = currentMessages.findIndex(
           (m) => m.role === 'user' && m.id.toString().startsWith('user-')
         )
-        
+
         if (optimisticIdx !== -1) {
           const optimisticMsg = currentMessages[optimisticIdx]
           //console.log(`Updating optimistic user message ${optimisticMsg.id} to real ID ${userMsgId}`)
@@ -178,16 +179,16 @@ export default function Chat() {
         const assistantIdx = [...currentMessages].reverse().findIndex(
           (m) => m.role === 'assistant'
         )
-        
+
         if (assistantIdx !== -1) {
           // This is messages.length - 1 - assistantIdx due to the reversed search
           const actualIdx = currentMessages.length - 1 - assistantIdx
           const assistantMsg = currentMessages[actualIdx] as any;
           // Always update assistant message if it immediately follows a deleted user message
           // or if its parent_message_id matches the user message ID
-          if (assistantMsg.id !== assistantMsgId || 
-              (assistantMsg.parent_message_id && assistantMsg.parent_message_id === userMsgId) || 
-              (assistantIdx === 0 && currentMessages.length > 1 && (currentMessages[1] as any).role === 'user')) {
+          if (assistantMsg.id !== assistantMsgId ||
+            (assistantMsg.parent_message_id && assistantMsg.parent_message_id === userMsgId) ||
+            (assistantIdx === 0 && currentMessages.length > 1 && (currentMessages[1] as any).role === 'user')) {
             // Always set parent_message_id for assistant messages
             const updatedMsg = {
               ...assistantMsg,
@@ -206,7 +207,7 @@ export default function Chat() {
         }
       }
     }
-    
+
     updateMessage().catch(err => console.error("Error updating message IDs:", err))
   }, [data, chatId, cacheAndAddMessage, selectedModel]) // Removed messages from deps to avoid infinite loop
 
@@ -474,6 +475,13 @@ export default function Chat() {
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       //console.log("Optimistic message sent:", optimisticMessage)
       // cacheAndAddMessage(optimisticMessage)
+
+      // Update the chat timestamp in IndexedDB only (skip database update)
+      if (currentChatId) {
+        updateChatTimestamp(currentChatId, true).catch(err =>
+          console.error("Error updating chat timestamp in IndexedDB:", err)
+        );
+      }
     } catch (error) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
@@ -541,6 +549,14 @@ export default function Chat() {
           typeof (val as any).chatDeleted === 'boolean'
         );
       }
+
+      // Update the chat timestamp in IndexedDB only (skip database update)
+      if (chatId && (!isChatDeletedResult(result) || (isChatDeletedResult(result) && !result.chatDeleted))) {
+        updateChatTimestamp(chatId, true).catch(err =>
+          console.error("Error updating chat timestamp in IndexedDB during message deletion:", err)
+        );
+      }
+
       if (
         isChatDeletedResult(result) &&
         result.chatDeleted &&
@@ -568,7 +584,7 @@ export default function Chat() {
       )
     )
   }
-, [messages, setMessages]);
+    , [messages, setMessages]);
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -639,9 +655,17 @@ export default function Chat() {
         options
       )
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+
+      // Update the chat timestamp in IndexedDB only (skip database update)
+      if (currentChatId) {
+        updateChatTimestamp(currentChatId, true).catch(err =>
+          console.error("Error updating chat timestamp in IndexedDB:", err)
+        );
+      }
+
       setIsSubmitting(false)
     },
-    [ensureChatExists, selectedModel, user?.id, append]
+    [ensureChatExists, selectedModel, user?.id, append, checkLimitsAndNotify, getOrCreateGuestUserId, isAuthenticated, setMessages]
   )
 
   const handleSelectSystemPrompt = useCallback((newSystemPrompt: string) => {
@@ -674,6 +698,13 @@ export default function Chat() {
     }
 
     reload(options)
+
+    // Update the chat timestamp in IndexedDB only (skip database update)
+    if (chatId) {
+      updateChatTimestamp(chatId, true).catch(err =>
+        console.error("Error updating chat timestamp in IndexedDB during reload:", err)
+      );
+    }
   }, [getOrCreateGuestUserId, chatId, selectedModel, isAuthenticated, systemPrompt, reload, truncateMessages]);
 
   if (

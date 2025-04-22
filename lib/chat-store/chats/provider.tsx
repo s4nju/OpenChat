@@ -121,10 +121,12 @@ export function ChatsProvider({
     const prev = [...chats]
 
     const optimisticId = `optimistic-${Date.now().toString()}`
+    const now = new Date().toISOString();
     const optimisticChat = {
       id: optimisticId,
       title: title || "New Chat",
-      created_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
       model: model || MODEL_DEFAULT,
       system_prompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
     }
@@ -143,7 +145,7 @@ export function ChatsProvider({
           .map((c) => (c.id === optimisticId ? newChat : c))
           .sort(
             (a, b) =>
-              +new Date(b.created_at || "") - +new Date(a.created_at || "")
+              +new Date(b.updated_at || b.created_at || "") - +new Date(a.updated_at || a.created_at || "")
           )
       )
       return newChat

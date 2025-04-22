@@ -206,8 +206,8 @@ export function DrawerHistory({
                             {chat.title}
                           </span>
                           <span className="mr-2 text-xs font-normal text-gray-500">
-                            {chat.created_at
-                              ? new Date(chat.created_at).toLocaleDateString()
+                            {(chat.updated_at || chat.created_at)
+                              ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
                               : "Unknown Date"}
                           </span>
                         </Link>

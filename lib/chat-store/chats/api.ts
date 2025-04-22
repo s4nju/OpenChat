@@ -12,7 +12,7 @@ import {
 export async function getCachedChats(): Promise<Chats[]> {
   const all = await readFromIndexedDB<Chats>("chats")
   return (all as Chats[]).sort(
-    (a, b) => +new Date(b.created_at || "") - +new Date(a.created_at || "")
+    (a, b) => +new Date(b.updated_at || b.created_at || "") - +new Date(a.updated_at || a.created_at || "")
   )
 }
 
@@ -21,9 +21,9 @@ export async function fetchAndCacheChats(userId: string): Promise<Chats[]> {
 
   const { data, error } = await supabase
     .from("chats")
-    .select("id, title, created_at, model, system_prompt")
+    .select("id, title, created_at, updated_at, model, system_prompt")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
 
   if (!data || error) {
     console.error("Failed to fetch chats:", error)
@@ -38,15 +38,48 @@ export async function updateChatTitle(
   id: string,
   title: string
 ): Promise<void> {
+  const now = new Date().toISOString();
   const supabase = createClient()
-  const { error } = await supabase.from("chats").update({ title }).eq("id", id)
+  const { error } = await supabase
+    .from("chats")
+    .update({ title, updated_at: now })
+    .eq("id", id)
   if (error) throw error
 
   const all = await getCachedChats()
   const updated = (all as Chats[]).map((c) =>
-    c.id === id ? { ...c, title } : c
+    c.id === id ? { ...c, title, updated_at: now } : c
   )
   await writeToIndexedDB("chats", updated)
+}
+
+export async function updateChatTimestamp(id: string, skipDatabaseUpdate: boolean = false): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Update in database only if not skipped
+  if (!skipDatabaseUpdate) {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("chats")
+      .update({ updated_at: now })
+      .eq("id", id)
+
+    if (error) {
+      console.error("Error updating chat timestamp in database:", error);
+      return;
+    }
+  }
+
+  // Always update in IndexedDB
+  try {
+    const all = await getCachedChats()
+    const updated = (all as Chats[]).map((c) =>
+      c.id === id ? { ...c, updated_at: now } : c
+    )
+    await writeToIndexedDB("chats", updated)
+  } catch (error) {
+    console.error("Error updating chat timestamp in IndexedDB:", error);
+  }
 }
 
 export async function deleteChat(id: string): Promise<void> {
@@ -83,7 +116,7 @@ export async function getUserChats(userId: string): Promise<Chat[]> {
     .from("chats")
     .select("*")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
 
   if (!data || error) return []
   await writeToIndexedDB("chats", data)
@@ -106,13 +139,15 @@ export async function createChat(
 
   if (error || !data?.id) throw error
 
+  const now = new Date().toISOString();
   await writeToIndexedDB("chats", {
     id: data.id,
     title,
     model,
     user_id: userId,
     system_prompt: systemPrompt,
-    created_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
   })
 
   return data.id
@@ -130,13 +165,14 @@ export async function updateChatModel(chatId: string, model: string) {
     if (!res.ok) {
       throw new Error(
         responseData.error ||
-          `Failed to update chat model: ${res.status} ${res.statusText}`
+        `Failed to update chat model: ${res.status} ${res.statusText}`
       )
     }
 
+    const now = new Date().toISOString();
     const all = await getCachedChats()
     const updated = (all as Chats[]).map((c) =>
-      c.id === chatId ? { ...c, model } : c
+      c.id === chatId ? { ...c, model, updated_at: now } : c
     )
     await writeToIndexedDB("chats", updated)
 
@@ -180,14 +216,15 @@ export async function createNewChat(
       throw error
     }
     if (!responseData.chat) {
-       // Handle case where response is ok but chat data is missing
-       throw new Error("Failed to create chat: Invalid response data")
+      // Handle case where response is ok but chat data is missing
+      throw new Error("Failed to create chat: Invalid response data")
     }
 
     const chat: Chats = {
       id: responseData.chat.id,
       title: responseData.chat.title,
       created_at: responseData.chat.created_at,
+      updated_at: responseData.chat.updated_at || responseData.chat.created_at,
       model: responseData.chat.model,
       system_prompt: responseData.chat.system_prompt,
     }
