@@ -392,7 +392,7 @@ export default function Chat() {
     })
   }
 
-  const submit = async () => {
+  const submit = async (_?: unknown, opts?: { body?: { enableSearch?: boolean } }) => {
     setIsSubmitting(true)
 
     const uid = await getOrCreateGuestUserId()
@@ -465,6 +465,7 @@ export default function Chat() {
         model: selectedModel,
         isAuthenticated,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        ...(opts?.body && typeof opts.body.enableSearch !== 'undefined' ? { enableSearch: opts.body.enableSearch } : {})
       },
       experimental_attachments: attachments || undefined,
     }
@@ -672,7 +673,7 @@ export default function Chat() {
     setSystemPrompt(newSystemPrompt)
   }, [])
 
-  const handleReload = useCallback(async (messageId: string) => {
+  const handleReload = useCallback(async (messageId: string, opts?: { enableSearch?: boolean }) => {
     const uid = await getOrCreateGuestUserId()
     if (!uid) {
       return
@@ -694,6 +695,7 @@ export default function Chat() {
         isAuthenticated,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
         reloadAssistantMessageId: messageId,
+        ...(opts && typeof opts.enableSearch !== 'undefined' ? { enableSearch: opts.enableSearch } : {})
       },
     }
 
@@ -778,7 +780,7 @@ export default function Chat() {
           value={input}
           onSuggestion={handleSuggestion}
           onValueChange={handleInputChange}
-          onSend={submit}
+          onSend={({ enableSearch }) => submit(undefined, { body: { enableSearch } })}
           isSubmitting={isSubmitting}
           files={files}
           onFileUpload={handleFileUpload}

@@ -11,6 +11,7 @@ import { APP_NAME } from "@/lib/config"
 import { ArrowUp, Stop } from "@phosphor-icons/react"
 import React, { useCallback, useEffect, useRef } from "react"
 import { ButtonFileUpload } from "./button-file-upload"
+import { ButtonSearch } from "./button-search"
 import { FileList } from "./file-list"
 import { PromptSystem } from "./prompt-system"
 import { SelectModel } from "./select-model"
@@ -18,7 +19,7 @@ import { SelectModel } from "./select-model"
 type ChatInputProps = {
   value: string
   onValueChange: (value: string) => void
-  onSend: () => void
+  onSend: (options: { enableSearch: boolean }) => void
   isSubmitting?: boolean
   hasMessages?: boolean
   files: File[]
@@ -53,6 +54,7 @@ export function ChatInput({
   stop,
   status,
 }: ChatInputProps) {
+  const [searchEnabled, setSearchEnabled] = React.useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -60,10 +62,10 @@ export function ChatInput({
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault()
-        onSend()
+        onSend({ enableSearch: searchEnabled });
       }
     },
-    [onSend, isSubmitting]
+    [onSend, isSubmitting, searchEnabled]
   )
 
   const handleMainClick = () => {
@@ -76,7 +78,7 @@ export function ChatInput({
       return
     }
 
-    onSend()
+    onSend({ enableSearch: searchEnabled });
   }
   
   const handlePaste = useCallback(
@@ -151,6 +153,11 @@ export function ChatInput({
                 onFileUpload={onFileUpload}
                 isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
+              />
+              <ButtonSearch
+                isUserAuthenticated={isUserAuthenticated}
+                onSearch={() => setSearchEnabled((prev) => !prev)}
+                searchEnabled={searchEnabled}
               />
               <SelectModel
                 selectedModel={selectedModel}
