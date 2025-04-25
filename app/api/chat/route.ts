@@ -4,7 +4,8 @@ import { MODELS } from "@/lib/config"
 import { sanitizeUserInput } from "@/lib/sanitize"
 import { validateUserIdentity } from "@/lib/server/api"
 import { Attachment } from "@ai-sdk/ui-utils"
-import { Message as MessageAISDK, streamText, createDataStreamResponse } from "ai"
+import { Message as MessageAISDK, streamText, createDataStreamResponse, smoothStream, appendResponseMessages } from "ai"
+import { exaSearchTool, duckDuckGoTool } from "@/app/api/tools"
 
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 60
@@ -17,6 +18,7 @@ type ChatRequest = {
   isAuthenticated: boolean
   systemPrompt: string
   reloadAssistantMessageId?: number
+  enableSearch?: boolean
 }
 
 // reasoningMiddleware is applied in config via MODELS
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
       isAuthenticated,
       systemPrompt,
       reloadAssistantMessageId,
+      enableSearch,
     } = (await req.json()) as ChatRequest;
 
     if (!messages || !chatId || !userId) {
@@ -86,6 +89,7 @@ export async function POST(req: Request) {
                 chat_id: chatId,
                 role: "user",
                 content: sanitizeUserInput(userMessage.content),
+                parts: userMessage.parts,
                 experimental_attachments: userMessage.experimental_attachments
                   ? JSON.parse(JSON.stringify(userMessage.experimental_attachments))
                   : undefined,
@@ -114,18 +118,40 @@ export async function POST(req: Request) {
         }
 
         // Stream AI response and insert assistant message on finish
+        const tools = enableSearch ? {duckDuckGo: duckDuckGoTool } : undefined;
+        console.log("Streaming response with tools:", tools);
         const result = streamText({
           model: selectedModel?.api_sdk!,
           system: systemPrompt || "You are a helpful assistant.",
           messages,
+          tools,
+          maxSteps: 5,
+          experimental_transform: smoothStream({ chunking: 'word' }),
+          
+          
           async onFinish({ response }) {
+            // Ensure userMessage is available in this scope
+            const userMessage = messages[messages.length - 1];
             try {
+              console.log("Assistant response:", response);
               for (const msg of response.messages) {
-                if (msg.content) {
+                // console.log("Processing message:", msg);
+                // console.log("Message Role:", msg.role);
+                // console.log("Message Content:", msg.content?.length);
+                if (
+                  msg.role === 'assistant' &&
+                  Array.isArray(msg.content) &&
+                  msg.content.every(item => item.type === 'reasoning' || item.type === 'text')
+                ) {
                   // Use the middleware-extracted reasoning
                   const textContent = typeof msg.content === 'string' ? msg.content : (Array.isArray(msg.content) ? msg.content.filter(part => part.type === 'text').map(part => part.text).join('') : '');
                   // The middleware will attach `reasoning` to the message if found
                   const reasoningText = (msg as any).reasoning || null;
+
+                  const [, assistantMessage] = appendResponseMessages({
+                    messages: [userMessage],
+                    responseMessages: response.messages,
+                  });
 
                   const insertPayload = {
                     chat_id: chatId,
@@ -135,6 +161,7 @@ export async function POST(req: Request) {
                     user_id: userId,
                     reasoning_text: reasoningText,
                     model: selectedModel?.id,
+                    parts: assistantMessage.parts,
                   };
 
                   if (reloadAssistantMessageId) {
@@ -163,10 +190,10 @@ export async function POST(req: Request) {
                     }
                   } else {
                     const { data: assistantMsgData, error: assistantError } = await supabase
-                      .from("messages")
-                      .insert(insertPayload)
-                      .select("id")
-                      .single();
+                    .from("messages")
+                    .insert(insertPayload)
+                    .select("id")
+                    .single();
                     if (assistantError) {
                       console.error("Error saving assistant message:", assistantError);
                     } else {
