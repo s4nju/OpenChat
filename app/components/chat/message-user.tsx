@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react"
-import { Check, Copy, PencilSimple, Trash } from "@phosphor-icons/react"
+import { Check, Copy, PencilSimple, Trash, FilePdf } from "@phosphor-icons/react"
 import { useRef, useState, useEffect } from "react"
 
 const getTextFromDataUrl = (dataUrl: string) => {
@@ -123,6 +123,37 @@ export function MessageUser({
             <div className="text-primary mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-xs">
               {getTextFromDataUrl(attachment.url)}
             </div>
+          ) : attachment.contentType === "application/pdf" ? (
+            <a
+              href={attachment.url}
+              download={attachment.name}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col justify-between px-4 py-2 bg-muted dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg mb-2 w-35 shadow-sm cursor-pointer hover:bg-muted/80 dark:hover:bg-zinc-700 focus:bg-muted/70 dark:focus:bg-zinc-800 focus:outline-none transition-colors"
+              style={{ minWidth: 0, minHeight: 64 }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Download PDF: ${attachment.name}`}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  (e.currentTarget as HTMLAnchorElement).click();
+                }
+              }}
+            >
+              {/* Placeholder preview lines */}
+              <div className="flex flex-col gap-0.5 flex-1 mt-1 mb-2" aria-hidden="true">
+                <div className="h-2 w-4/5 rounded bg-gray-200 dark:bg-zinc-600" />
+                <div className="h-2 w-3/5 rounded bg-gray-200 dark:bg-zinc-600" />
+                <div className="h-2 w-2/5 rounded bg-gray-200 dark:bg-zinc-600" />
+              </div>
+              {/* Footer with icon and filename */}
+              <div className="flex items-center gap-2">
+                <FilePdf size={20} weight="duotone" className="shrink-0 text-gray-500 dark:text-gray-300" aria-hidden="true" />
+                <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate overflow-hidden whitespace-nowrap" style={{ maxWidth: 'calc(100% - 28px)' }} title={attachment.name}>
+                  {attachment.name}
+                </span>
+              </div>
+            </a>
           ) : null}
         </div>
       ))}

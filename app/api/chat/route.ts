@@ -163,6 +163,7 @@ export async function POST(req: Request) {
                     reasoning_text: reasoningText,
                     model: selectedModel?.id,
                     parts: assistantMessage.parts,
+                    
                   };
 
                   if (reloadAssistantMessageId) {
