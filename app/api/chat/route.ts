@@ -21,6 +21,7 @@ type ChatRequest = {
   enableSearch?: boolean
 }
 
+
 // reasoningMiddleware is applied in config via MODELS
 
 export async function POST(req: Request) {
@@ -126,7 +127,7 @@ export async function POST(req: Request) {
           messages,
           tools,
           maxSteps: 5,
-          experimental_transform: smoothStream({ chunking: 'word' }),
+          experimental_transform: smoothStream({delayInMs: 20, chunking: 'word' }),
           
           
           async onFinish({ response }) {

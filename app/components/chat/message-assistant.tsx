@@ -6,6 +6,7 @@ import {
 } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
 import { ArrowClockwise, Check, Copy, CaretDown, CaretUp, SpinnerGap } from "@phosphor-icons/react"
+import { Loader } from "@/components/prompt-kit/loader"
 
 import { Message as MessageType } from "@ai-sdk/react"
 import { SourcesList } from "./SourcesList"
@@ -196,8 +197,7 @@ export function MessageAssistant({
         {/* Show 'thinking...' spinner if tool call in progress */}
         {isSearching && (
           <div className="flex items-center gap-2 text-muted-foreground text-sm my-2">
-            <SpinnerGap className="animate-spin" size={16} />
-            <span>Searching the web...</span>
+            <Loader text="Searching the web"/>
           </div>
         )}
 
