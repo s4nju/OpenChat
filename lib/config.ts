@@ -210,6 +210,11 @@ export const MODELS_RAW = [
         enabled: false,
         label: "Supports reasoning capabilities"
       },
+      {
+        id: "web-search",
+        enabled: true,
+        label: "Supports web search"
+      },
     ],
   },
   {
@@ -230,6 +235,11 @@ export const MODELS_RAW = [
         id: "reasoning",
         enabled: true,
         label: "Supports reasoning capabilities"
+      },
+      {
+        id: "web-search",
+        enabled: true,
+        label: "Supports web search"
       },
     ],
     api_sdk: google("gemini-2.5-pro-exp-03-25"),
@@ -593,6 +603,6 @@ export const SUGGESTIONS = [
   },
 ]
 
-export const SYSTEM_PROMPT_DEFAULT = `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today is ${new Date().toLocaleDateString()}.`
+export const SYSTEM_PROMPT_DEFAULT = `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`
 
 export const MESSAGE_MAX_LENGTH = 4000

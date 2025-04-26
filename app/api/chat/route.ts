@@ -118,8 +118,8 @@ export async function POST(req: Request) {
         }
 
         // Stream AI response and insert assistant message on finish
-        const tools = enableSearch ? {duckDuckGo: duckDuckGoTool } : undefined;
-        console.log("Streaming response with tools:", tools);
+        const tools = enableSearch ? {exaSearch: exaSearchTool } : undefined;
+        // console.log("Streaming response with tools:", tools);
         const result = streamText({
           model: selectedModel?.api_sdk!,
           system: systemPrompt || "You are a helpful assistant.",
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
             // Ensure userMessage is available in this scope
             const userMessage = messages[messages.length - 1];
             try {
-              console.log("Assistant response:", response);
+              // console.log("Assistant response:", response);
               for (const msg of response.messages) {
                 // console.log("Processing message:", msg);
                 // console.log("Message Role:", msg.role);

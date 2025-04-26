@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils"
 import { ArrowClockwise, Check, Copy, CaretDown, CaretUp, SpinnerGap } from "@phosphor-icons/react"
 
 import { Message as MessageType } from "@ai-sdk/react"
+import { SourcesList } from "./SourcesList"
+import type { SourceUIPart } from "@ai-sdk/ui-utils"
 
 type MessageAssistantProps = {
   children: string
@@ -23,7 +25,7 @@ type MessageAssistantProps = {
 }
 
 import { useState, useEffect, useRef } from "react" // Import useEffect and useRef
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import dynamic from "next/dynamic"
 
 const Markdown = dynamic(
@@ -31,11 +33,13 @@ const Markdown = dynamic(
   { ssr: false }
 )
 
-import type { ReasoningUIPart } from "@ai-sdk/ui-utils"
+import type { ReasoningUIPart, ToolInvocationUIPart } from "@ai-sdk/ui-utils"
 
 const MotionDiv = (typeof window !== "undefined" && (require("framer-motion").motion.create
   ? require("framer-motion").motion.create("div")
   : require("framer-motion").motion.div)) as typeof import("framer-motion").motion.div
+
+
 
 export function MessageAssistant({
   children,
@@ -72,6 +76,54 @@ export function MessageAssistant({
   const reasoningParts: ReasoningUIPart[] = parts
     ? parts.filter((part): part is ReasoningUIPart => part.type === "reasoning")
     : []
+
+  // Extract sources from source parts
+  const sourcesFromParts: SourceUIPart["source"][] = parts
+    ? parts.filter((part): part is SourceUIPart => part.type === "source").map((part) => part.source)
+    : [];
+
+  // Extract sources from tool-invocation results (handles duckDuckGo and exaSearch)
+  const sourcesFromToolInvocations: SourceUIPart["source"][] = parts
+    ? parts
+        .filter((part): part is ToolInvocationUIPart => part.type === "tool-invocation")
+        .flatMap((part) => {
+          const inv = part.toolInvocation as any;
+          // duckDuckGo: result is array
+          if (inv.toolName === "duckDuckGo" && Array.isArray(inv.result)) {
+            return inv.result
+              .filter((item: any) => item && item.url && item.title)
+              .map((item: any, idx: number) => ({
+                id: item.id ?? `${inv.toolCallId}-${idx}`,
+                url: item.url,
+                title: item.title,
+              }));
+          }
+          // exaSearch: result is object with results array
+          if (inv.toolName === "exaSearch" && inv.result && Array.isArray(inv.result.results)) {
+            return inv.result.results
+              .filter((item: any) => item && item.url && item.title)
+              .map((item: any, idx: number) => ({
+                id: item.id ?? `${inv.toolCallId}-exa-${idx}`,
+                url: item.url,
+                title: item.title,
+              }));
+          }
+          return [];
+        })
+    : [];
+
+  const sources = [...sourcesFromParts, ...sourcesFromToolInvocations];
+
+  // Show 'thinking...' spinner if any tool-invocation is in progress
+  const toolInvocationsInProgress = parts
+    ? parts.filter(
+        (part): part is ToolInvocationUIPart =>
+          part.type === "tool-invocation" && part.toolInvocation.state !== "result"
+      )
+    : [];
+  const isSearching = toolInvocationsInProgress.length > 0;
+
+  // console.log("Sources:", sources);
 
   return (
     <Message
@@ -141,12 +193,23 @@ export function MessageAssistant({
             </AnimatePresence>
           </div>
         )}
+        {/* Show 'thinking...' spinner if tool call in progress */}
+        {isSearching && (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm my-2">
+            <SpinnerGap className="animate-spin" size={16} />
+            <span>Searching the web...</span>
+          </div>
+        )}
+
         <MessageContent
           className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
           markdown={true}
         >
           {children}
         </MessageContent>
+
+        {/* Perplexity-style sources list */}
+        {sources.length > 0 && <SourcesList sources={sources} />}
 
         <MessageActions
           className={cn(

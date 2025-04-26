@@ -156,6 +156,7 @@ export function ChatInput({
               />
               <ButtonSearch
                 isUserAuthenticated={isUserAuthenticated}
+                model={selectedModel}
                 onSearch={() => setSearchEnabled((prev) => !prev)}
                 searchEnabled={searchEnabled}
               />

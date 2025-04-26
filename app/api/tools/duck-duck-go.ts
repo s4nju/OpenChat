@@ -16,7 +16,7 @@ export const duckDuckGoTool = tool({
       query,
       maxResults,
     });
-    console.log("DuckDuckGoTool result:", JSON.stringify(result, null, 2));
+    // console.log("DuckDuckGoTool result:", JSON.stringify(result, null, 2));
     return result;
   },
 });

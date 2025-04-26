@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/tooltip"
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
-import { CaretDown, Eye, FilePdf, Brain } from "@phosphor-icons/react" // Assuming these are the icons you want
+import { CaretDown, Eye, FilePdf, Brain, Globe } from "@phosphor-icons/react" // Swapped MagnifyingGlass for Globe for web search feature
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -53,6 +53,9 @@ export function ModelSelector({
     const hasReasoning = modelOption.features?.find(
       (feature) => feature.id === "reasoning"
     )?.enabled
+    const hasWebSearch = modelOption.features?.find(
+      (feature) => feature.id === "web-search"
+    )?.enabled
 
     // --- Style Definitions based on the provided HTML ---
     const iconWrapperBaseClasses =
@@ -65,6 +68,7 @@ export function ModelSelector({
     const visionColorClasses = "text-teal-600 dark:text-teal-600"
     const pdfColorClasses = "text-indigo-600 dark:text-indigo-600" // Matched to file-text example
     const reasoningColorClasses = "text-pink-600 dark:text-pink-600" // Choosing pink for reasoning
+    const webSearchColorClasses = "text-blue-600 dark:text-blue-600" // Blue for web search
 
     return (
       <DropdownMenuItem
@@ -121,6 +125,19 @@ export function ModelSelector({
               </TooltipTrigger>
               <TooltipContent side="top">
                 <p>Supports reasoning capabilities</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {hasWebSearch && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(iconWrapperBaseClasses, webSearchColorClasses)}>
+                  <div className={iconOverlayClasses}></div>
+                  <Globe className={cn(iconSizeClasses, "relative")} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Supports web search</p>
               </TooltipContent>
             </Tooltip>
           )}
