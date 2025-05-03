@@ -219,7 +219,7 @@ export function CommandHistory({
                       key={chat.id}
                       onSelect={() => {
                         if (!editingId && !deletingId) {
-                          router.push(`/c/${chat.id}`)
+                          router.replace(`/c/${chat.id}`, {scroll: false})
                         }
                       }}
                       className={cn(

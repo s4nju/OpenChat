@@ -25,6 +25,11 @@ type ChatRequest = {
 // reasoningMiddleware is applied in config via MODELS
 
 export async function POST(req: Request) {
+  // Listen for client aborts
+  req.signal.addEventListener('abort', () => {
+    console.log('[API /chat] Request aborted by client');
+    // Any additional cleanup logic can go here if needed
+  });
   try {
     const {
       messages,

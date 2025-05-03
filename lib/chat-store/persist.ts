@@ -1,265 +1,154 @@
-import {
-  createStore,
-  del,
-  delMany,
-  get,
-  getMany,
-  keys,
-  set,
-  setMany,
-} from "idb-keyval"
+import Dexie, { type Table } from "dexie"
 
-let dbInitPromise: Promise<void> | null = null
-let stores: Record<string, any> = {}
+// Define interfaces for the data structures. Assuming basic structure with 'id'.
+// Ideally, these would be imported from a central types definition file.
+interface BaseRecord {
+  id: string | number
+  // other properties...
+}
+
+// Define the database structure using Dexie
+class OpenChatDB extends Dexie {
+  // Define tables (object stores)
+  chats!: Table<BaseRecord, string> // Primary key type is string
+  messages!: Table<BaseRecord, string>
+  sync!: Table<BaseRecord, string>
+
+  constructor() {
+    super("openchat-db") // Database name
+    // Define schema version 2 (incremented from 1)
+    // 'id' is the primary key for each table
+    this.version(1).stores({
+      chats: "id",
+      messages: "id",
+      sync: "id",
+    })
+    // Future schema upgrades would go here, incrementing the version number.
+    // Example:
+    // this.version(2).stores({
+    //   chats: "id, someOtherIndex", // Add an index
+    //   messages: "id",
+    //   sync: "id",
+    // });
+  }
+}
 
 const isClient = typeof window !== "undefined"
 
-const DB_NAME = "openchat-db"
-const DB_VERSION = 2
+// Instantiate the database if on the client side
+const db = isClient ? new OpenChatDB() : (null as any as OpenChatDB) // Type assertion for SSR safety
 
-let storesReady = false
-let storesReadyResolve: () => void = () => {}
-const storesReadyPromise = new Promise<void>((resolve) => {
-  storesReadyResolve = resolve
-})
-
-function initDatabase() {
-  if (!isClient) return Promise.resolve()
-
-  return new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains("chats")) db.createObjectStore("chats")
-      if (!db.objectStoreNames.contains("messages")) db.createObjectStore("messages")
-      if (!db.objectStoreNames.contains("sync")) db.createObjectStore("sync")
-    }
-
-    request.onsuccess = () => {
-      request.result.close()
-      resolve()
-    }
-
-    request.onerror = () => {
-      reject(request.error)
-    }
-  })
-}
-
-if (isClient) {
-  const checkRequest = indexedDB.open(DB_NAME)
-
-  checkRequest.onsuccess = () => {
-    const db = checkRequest.result
-
-    if (db.version > DB_VERSION) {
-      db.close()
-      const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
-      deleteRequest.onsuccess = () => {
-        initDatabaseAndStores()
-      }
-      deleteRequest.onerror = (event) => {
-        console.error("Database deletion failed:", event)
-        initDatabaseAndStores()
-      }
-    } else {
-      db.close()
-      initDatabaseAndStores()
-    }
+// Helper function to ensure operation only runs on the client with a valid DB instance
+async function ensureClientDb(): Promise<boolean> {
+  if (!isClient || !db) {
+    console.warn("IndexedDB operation skipped: Not running in client environment or DB not initialized.")
+    return false
   }
-
-  checkRequest.onerror = () => {
-    initDatabaseAndStores()
-  }
-
-  function initDatabaseAndStores(): void {
-    dbInitPromise = initDatabase()
-
-    dbInitPromise
-      .then(() => {
-        const openRequest = indexedDB.open(DB_NAME)
-
-        openRequest.onsuccess = () => {
-          const objectStores = Array.from(openRequest.result.objectStoreNames)
-
-          if (objectStores.length === 0) {
-            openRequest.result.close()
-
-            // Delete and recreate the database to force onupgradeneeded
-            const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
-            deleteRequest.onsuccess = () => {
-              dbInitPromise = initDatabase() // Reinitialize with proper stores
-              dbInitPromise.then(() => {
-                // Try opening again to create stores
-                const reopenRequest = indexedDB.open(DB_NAME)
-                reopenRequest.onsuccess = () => {
-                  const newObjectStores = Array.from(
-                    reopenRequest.result.objectStoreNames
-                  )
-
-                  if (newObjectStores.includes("chats"))
-                    stores.chats = createStore(DB_NAME, "chats")
-                  if (newObjectStores.includes("messages"))
-                    stores.messages = createStore(DB_NAME, "messages")
-                  if (newObjectStores.includes("sync"))
-                    stores.sync = createStore(DB_NAME, "sync")
-
-                  storesReady = true
-                  storesReadyResolve()
-                  reopenRequest.result.close()
-                }
-
-                reopenRequest.onerror = (event) => {
-                  console.error(
-                    "Failed to reopen database after recreation:",
-                    event
-                  )
-                  storesReady = true
-                  storesReadyResolve()
-                }
-              })
-            }
-
-            return // Skip the rest of this function
-          }
-
-          if (objectStores.includes("chats"))
-            stores.chats = createStore(DB_NAME, "chats")
-          if (objectStores.includes("messages"))
-            stores.messages = createStore(DB_NAME, "messages")
-          if (objectStores.includes("sync"))
-            stores.sync = createStore(DB_NAME, "sync")
-
-          storesReady = true
-          storesReadyResolve()
-          openRequest.result.close()
-        }
-
-        openRequest.onerror = (event) => {
-          console.error("Failed to open database for store creation:", event)
-          storesReady = true
-          storesReadyResolve()
-        }
-      })
-      .catch((error) => {
-        console.error("Database initialization failed:", error)
-        storesReady = true
-        storesReadyResolve()
-      })
+  // Dexie handles DB opening automatically, but we can wait for it explicitly if needed,
+  // though most operations implicitly wait.
+  try {
+    await db.open() // Ensures the DB is open before proceeding
+    return true
+  } catch (error) {
+    console.error("Failed to open Dexie database:", error)
+    return false
   }
 }
 
-export async function ensureDbReady() {
-  if (!isClient) {
-    console.warn("ensureDbReady: not client")
-    return
-  }
-  if (dbInitPromise) await dbInitPromise
-  if (!storesReady) await storesReadyPromise
-}
+// Type definition for table names
+type TableName = "chats" | "messages" | "sync"
 
-export async function readFromIndexedDB<T>(
-  table: "chats" | "messages" | "sync",
+export async function readFromIndexedDB<T extends BaseRecord>(
+  table: TableName,
   key?: string
-): Promise<T | T[]> {
-  await ensureDbReady()
-
-  if (!isClient) {
-    console.warn("readFromIndexedDB: not client")
-    return key ? (null as any) : []
-  }
-
-  if (!stores[table]) {
-    console.warn("readFromIndexedDB: store not initialized")
-    return key ? (null as any) : []
+): Promise<T | T[] | null> {
+  if (!(await ensureClientDb())) {
+    return key ? null : []
   }
 
   try {
-    const store = stores[table]
+    const dexieTable = db.table(table) as Table<T, string>
     if (key) {
-      const result = await get<T>(key, store)
-      return result as T
+      const result = await dexieTable.get(key)
+      return result ?? null // Return null if not found, consistent with previous potential behavior
+    } else {
+      const results = await dexieTable.toArray()
+      return results
     }
-
-    const allKeys = await keys(store)
-    if (allKeys.length > 0) {
-      const results = await getMany<T>(allKeys as string[], store)
-      return results.filter(Boolean)
-    }
-
-    return []
   } catch (error) {
     console.warn(`readFromIndexedDB failed (${table}):`, error)
-    return key ? (null as any) : []
+    return key ? null : []
   }
 }
 
-export async function writeToIndexedDB<T extends { id: string | number }>(
-  table: "chats" | "messages" | "sync",
+export async function writeToIndexedDB<T extends BaseRecord>(
+  table: TableName,
   data: T | T[]
 ): Promise<void> {
-  await ensureDbReady()
-
-  if (!isClient) {
-    console.warn("writeToIndexedDB: not client")
-    return
-  }
-
-  if (!stores[table]) {
-    console.warn("writeToIndexedDB: store not initialized")
+  if (!(await ensureClientDb())) {
     return
   }
 
   try {
-    const store = stores[table]
-    const entries: [IDBValidKey, T][] = Array.isArray(data)
-      ? data.map((item) => [item.id, item])
-      : [[data.id, data]]
-
-    await setMany(entries, store)
+    const dexieTable = db.table(table) as Table<T, string>
+    if (Array.isArray(data)) {
+      // Use bulkPut for arrays
+      await dexieTable.bulkPut(data)
+    } else {
+      // Use put for single items (adds or updates)
+      await dexieTable.put(data)
+    }
   } catch (error) {
     console.warn(`writeToIndexedDB failed (${table}):`, error)
   }
 }
 
 export async function deleteFromIndexedDB(
-  table: "chats" | "messages" | "sync",
+  table: TableName,
   key?: string
 ): Promise<void> {
-  await ensureDbReady()
-
-  if (!isClient) {
-    console.warn("deleteFromIndexedDB: not client")
-    return
-  }
-
-  const store = stores[table]
-  if (!store) {
-    console.warn(`Store '${table}' not initialized.`)
+  if (!(await ensureClientDb())) {
     return
   }
 
   try {
+    const dexieTable = db.table(table) as Table<any, string> // Use 'any' if type T isn't needed
     if (key) {
-      await del(key, store)
+      // Delete a single item by key
+      await dexieTable.delete(key)
     } else {
-      const allKeys = await keys(store)
-      await delMany(allKeys as string[], store)
+      // Clear the entire table if no key is provided
+      await dexieTable.clear()
     }
   } catch (error) {
     console.warn(`deleteFromIndexedDB failed (${table}):`, error)
   }
 }
 
-export async function clearAllIndexedDBStores() {
-  if (!isClient) {
-    console.warn("clearAllIndexedDBStores: not client")
+export async function clearAllIndexedDBStores(): Promise<void> {
+  if (!(await ensureClientDb())) {
     return
   }
 
-  await ensureDbReady()
-  await deleteFromIndexedDB("chats")
-  await deleteFromIndexedDB("messages")
-  await deleteFromIndexedDB("sync")
+  try {
+    // Clear all defined tables transactionally
+    await db.transaction("rw", db.chats, db.messages, db.sync, async () => {
+      await db.chats.clear()
+      await db.messages.clear()
+      await db.sync.clear()
+    })
+    console.log("All IndexedDB stores cleared.")
+  } catch (error) {
+    console.error("clearAllIndexedDBStores failed:", error)
+  }
 }
+
+// Export the db instance if needed elsewhere (optional)
+// export { db };// Removed old idb-keyval related code:
+// - createStore, del, delMany, get, getMany, keys, set, setMany imports
+// - DB_VERSION constant (Dexie manages its own versions)
+// - dbInitPromise, stores, storesReady, storesReadyResolve, storesReadyPromise
+// - initDatabase, initDatabaseAndStores functions
+// - ensureDbReady function (replaced with ensureClientDb and Dexie's internal handling)
+// The complex initialization logic is replaced by Dexie's constructor and .open()
+

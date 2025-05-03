@@ -69,13 +69,18 @@ export function ChatInput({
   )
 
   const handleMainClick = () => {
-    if (isSubmitting && status !== "streaming") {
-      return
+    // console.log("[ChatInput] Clicked main button");
+    // console.log("[ChatInput] status:", status);
+
+    if (status === "streaming") {
+      // console.log("[ChatInput] Stopping streaming...");
+      stop();
+      return;
     }
 
-    if (isSubmitting && status === "streaming") {
-      stop()
-      return
+    if (isSubmitting) {
+      // Prevent double submission
+      return;
     }
 
     onSend({ enableSearch: searchEnabled });
@@ -170,7 +175,7 @@ export function ChatInput({
               <Button
                 size="sm"
                 className="size-9 rounded-full transition-all duration-300 ease-out"
-                disabled={isSubmitting || (status !== "streaming" && !value)}
+                disabled={status !== "streaming" && !value}
                 type="button"
                 onClick={handleMainClick}
                 aria-label="Send message"

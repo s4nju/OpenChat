@@ -12,6 +12,10 @@ import {
 } from "./api"
 type ExtendedMessage = MessageAISDK & { parent_message_id?: number | null }
 
+// Create a truly persistent module-level cache that exists outside the React component lifecycle
+// This will survive component unmounts/remounts, unlike useRef
+const GLOBAL_CHAT_MESSAGES_CACHE: Record<string, MessageAISDK[]> = {};
+
 interface MessagesContextType {
   messages: MessageAISDK[]
   setMessages: React.Dispatch<React.SetStateAction<MessageAISDK[]>>
@@ -39,6 +43,8 @@ import { useChatSession } from "@/app/providers/chat-session-provider"
 export function MessagesProvider({ children }: { children: React.ReactNode }) {
   // Efficient O(1) lookup/update for messages
   const messagesMapRef = useRef<Map<string | number, MessageAISDK>>(new Map());
+  // In-memory cache per chat for literal instant loads - now kept in sync with global cache
+  const chatMessagesCacheRef = useRef<Record<string, MessageAISDK[]>>(GLOBAL_CHAT_MESSAGES_CACHE);
   // Helper: convert Map to array, sorted by timestamp or id
   function syncMessages(map: Map<string | number, MessageAISDK>): MessageAISDK[] {
     // You can sort by createdAt or id as needed
@@ -55,6 +61,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<MessageAISDK[]>([])
   const chatsContext = useChats()
   const router = useRouter()
+  const loadingChatIdRef = useRef<string | null>(null); // Ref to track loading state
 
   useEffect(() => {
     if (chatId === null) {
@@ -64,36 +71,85 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   }, [chatId])
 
   useEffect(() => {
-    if (!chatId) return
-
-    const load = async () => {
-      const cached = await getCachedMessages(chatId)
-
-      if (cached && cached.length > 0) {
-        // We have cached data, use it
-        setMessages(cached)
-        messagesMapRef.current = new Map(cached.map(m => [m.id, m]))
-      } else {
-        // No cache or empty cache, fetch from server
-        try {
-          const fresh = await fetchAndCacheMessages(chatId)
-          setMessages(fresh)
-          messagesMapRef.current = new Map(fresh.map(m => [m.id, m]))
-          cacheMessages(chatId, fresh)
-        } catch (error) {
-          console.error("Failed to fetch messages:", error)
-        }
-      }
+    if (!chatId) {
+      //console.log("[MessagesProvider] No chatId, returning.");
+      return;
     }
 
-    load()
-  }, [chatId])
+    // Prevent starting a new load if one is already in progress for the same chatId
+    if (loadingChatIdRef.current === chatId) {
+      //console.log(`[MessagesProvider] Load already in progress for chatId: ${chatId}. Skipping duplicate.`);
+      return;
+    }
+
+    //console.log(`[MessagesProvider] useEffect triggered for chatId: ${chatId}`);
+
+    // Serve instantly from in-memory cache - now using GLOBAL cache
+    const inMem = GLOBAL_CHAT_MESSAGES_CACHE[chatId];
+    if (inMem && inMem.length > 0) {
+      //console.log(`[MessagesProvider] Found messages in IN-MEMORY cache for chatId: ${chatId}. Count: ${inMem.length}`);
+      setMessages(inMem);
+      messagesMapRef.current = new Map(inMem.map(m => [m.id, m]));
+      return; // Important: Return early if found in memory
+    }
+
+    //console.log(`[MessagesProvider] Messages NOT in IN-MEMORY cache for chatId: ${chatId}. Loading...`);
+    // Fallback: load from IndexedDB or network
+    const load = async () => {
+      // Mark this chatId as loading
+      loadingChatIdRef.current = chatId;
+      //console.log(`[MessagesProvider] Checking IndexedDB (Dexie) for chatId: ${chatId}`);
+      try { // Wrap async logic in try...finally
+        const cached = await getCachedMessages(chatId);
+        // Check if the chatId changed *while* we were loading
+        if (loadingChatIdRef.current !== chatId) {
+          //console.log(`[MessagesProvider] ChatId changed during load (${loadingChatIdRef.current} -> current: ${chatId}). Aborting state update.`);
+          return; // Don't update state if the relevant chat changed
+        }
+
+        if (cached && cached.length > 0) {
+          //console.log(`[MessagesProvider] Found messages in IndexedDB for chatId: ${chatId}. Count: ${cached.length}`);
+          // Update both the global cache and the ref
+          GLOBAL_CHAT_MESSAGES_CACHE[chatId] = cached;
+          setMessages(cached);
+          messagesMapRef.current = new Map(cached.map(m => [m.id, m]));
+        } else {
+          //console.log(`[MessagesProvider] Messages NOT in IndexedDB for chatId: ${chatId}. Fetching from network...`);
+          try {
+            const fresh = await fetchAndCacheMessages(chatId);
+             // Check again if chatId changed during network fetch
+            if (loadingChatIdRef.current !== chatId) {
+               //console.log(`[MessagesProvider] ChatId changed during network fetch (${loadingChatIdRef.current} -> current: ${chatId}). Aborting state update.`);
+               return;
+            }
+            //console.log(`[MessagesProvider] Fetched ${fresh.length} messages from network for chatId: ${chatId}`);
+            // Update both the global cache and the ref
+            GLOBAL_CHAT_MESSAGES_CACHE[chatId] = fresh;
+            setMessages(fresh);
+            messagesMapRef.current = new Map(fresh.map(m => [m.id, m]));
+            // Assuming fetchAndCacheMessages handles caching internally on success
+          } catch (error) {
+            console.error(`[MessagesProvider] Failed to fetch messages for chatId: ${chatId}:`, error);
+            // Handle error state?
+          }
+        }
+      } finally {
+         // Ensure we reset loading state only if this load operation was for the *currently* marked loading chatId
+         if (loadingChatIdRef.current === chatId) {
+            loadingChatIdRef.current = null;
+            //console.log(`[MessagesProvider] Load finished for chatId: ${chatId}. Resetting loading state.`);
+         }
+      }
+    };
+    load();
+  }, [chatId]); // Dependency array is just chatId, which seems correct.
 
   const refresh = async () => {
     if (!chatId) return
 
     try {
       const fresh = await fetchAndCacheMessages(chatId)
+      chatMessagesCacheRef.current[chatId] = fresh
       setMessages(fresh)
     } catch (e) {
       toast({ title: "Failed to refresh messages", status: "error" })
@@ -104,6 +160,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     if (!chatId) return
 
     setMessages([])
+    // Clear both caches
+    GLOBAL_CHAT_MESSAGES_CACHE[chatId] = []
     await clearMessagesForChat(chatId)
   }
 
@@ -114,12 +172,10 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       // Efficient O(1) update using Map
       messagesMapRef.current.set(message.id, message)
       const arr = syncMessages(messagesMapRef.current)
+      // Update both global cache and ref
+      GLOBAL_CHAT_MESSAGES_CACHE[chatId] = arr;
       await writeToIndexedDB("messages", { id: chatId, messages: arr })
-      // console.log("[Provider] cacheAndAddMessage called with:", message);
-      setMessages(() => {
-        // console.log("[Provider] setMessages called with:", arr);
-        return arr;
-      })
+      setMessages(() => arr)
     } catch (e) {
       toast({ title: "Failed to save message", status: "error" })
     }
@@ -128,7 +184,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const deleteSingleMessage = async (messageId: string | number) => {
     try {
       const mod = await import("./api")
-      // console.log("Deleting message:", messageId, "chatId:", chatId)
+      // //console.log("Deleting message:", messageId, "chatId:", chatId)
       // Pass chatId directly to avoid redundant fetch
       const result = await mod.deleteMessageAndAssistantReplies(messageId, chatId ?? undefined)
       // Remove from Map efficiently
@@ -138,6 +194,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         }
       })
       const updatedMessages = syncMessages(messagesMapRef.current)
+      // Update both caches
+      if (chatId) GLOBAL_CHAT_MESSAGES_CACHE[chatId] = updatedMessages;
       setMessages(updatedMessages)
       if (chatId) {
         await writeToIndexedDB("messages", { id: chatId, messages: updatedMessages })
@@ -169,7 +227,9 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     const newArr = arr.slice(0, idx + 1);
     // Reset map and state
     messagesMapRef.current = new Map(newArr.map((m) => [m.id, m]));
-    setMessages(newArr);
+    setMessages(newArr)
+    // Update both caches
+    GLOBAL_CHAT_MESSAGES_CACHE[chatId] = newArr;
     // Persist to IndexedDB
     await writeToIndexedDB("messages", { id: chatId, messages: newArr });
   }

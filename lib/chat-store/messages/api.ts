@@ -15,9 +15,8 @@ export async function getCachedMessages(
 
   if (!entry || Array.isArray(entry)) return []
 
-  return (entry.messages || []).sort(
-    (a, b) => +new Date(a.createdAt || 0) - +new Date(b.createdAt || 0)
-  )
+  // Messages are stored sorted; skip sorting on read to improve performance
+  return entry.messages || []
 }
 
 export async function fetchAndCacheMessages(
@@ -53,9 +52,12 @@ export async function cacheMessages(
   chatId: string,
   messages: MessageAISDK[]
 ): Promise<void> {
-  await writeToIndexedDB("messages", { id: chatId, messages })
+  // Sort messages once at write time to avoid expensive sort on read
+  const sorted = messages.slice().sort(
+    (a, b) => +new Date(a.createdAt || 0) - +new Date(b.createdAt || 0)
+  )
+  await writeToIndexedDB("messages", { id: chatId, messages: sorted })
 }
-
 
 export async function clearMessagesCache(chatId: string): Promise<void> {
   await writeToIndexedDB("messages", { id: chatId, messages: [] })
@@ -77,6 +79,7 @@ export async function clearMessagesForChat(chatId: string): Promise<void> {
   // Clear the cache
   await clearMessagesCache(chatId)
 }
+
 export async function deleteMessage(messageId: string | number): Promise<void> {
   const supabase = createClient()
   const idNum = typeof messageId === 'string' ? parseInt(messageId, 10) : messageId
@@ -89,6 +92,7 @@ export async function deleteMessage(messageId: string | number): Promise<void> {
 
   if (error) throw error
 }
+
 import { deleteChat } from '../chats/api';
 
 export async function deleteMessageAndAssistantReplies(messageId: string | number, chatIdFromCaller?: string): Promise<{ chatDeleted: boolean }> {
@@ -156,5 +160,3 @@ export async function deleteMessageAndAssistantReplies(messageId: string | numbe
     return { chatDeleted: false };
   }
 }
-
-
