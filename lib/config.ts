@@ -458,7 +458,7 @@ export const PROVIDERS_OPTIONS = [
 
 export const MODEL_DEFAULT = "gemini-2.0-flash"
 
-export const APP_NAME = "OpenChat"
+export const APP_NAME = "OpenChat "
 export const APP_DOMAIN = "https://chat.ajanraj.com"
 export const APP_DESCRIPTION =
   "OpenChat is a AI chat app with multi-model support."

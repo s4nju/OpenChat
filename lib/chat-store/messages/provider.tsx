@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState, useRef, useMemo } from 
 import { useRouter } from 'next/navigation';
 import { writeToIndexedDB } from "../persist"
 import {
-  cacheMessages,
   clearMessagesForChat,
   fetchAndCacheMessages,
   getCachedMessages,
