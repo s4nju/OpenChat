@@ -68,7 +68,7 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
   }
 
   const isAnonymous = userData.anonymous
-  const isPremium = userData.premium
+  const isPremium = userData.premium || false  // Ensure boolean value
   const now = new Date()
 
   // Sliding window monthly reset

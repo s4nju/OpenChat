@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       )
     }
 
-    const isPremium = data.premium || false
+    const isPremium = data.premium || false  // Ensure boolean value
     const isAnonymous = data.anonymous || false
     
     // Get monthly limits

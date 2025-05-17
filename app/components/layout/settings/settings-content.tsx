@@ -70,17 +70,55 @@ export function SettingsContent({
     { id: "dark", name: "Dark", colors: ["#1a1a1a"] },
   ]
 
+  // Format date to be more user-friendly, handling UTC times from Supabase
+  const formatResetDate = (utcDateStr: string | null, isMonthly: boolean = false) => {
+    if (!utcDateStr) return "Not available"
+    
+    try {
+      // Parse the UTC date string - this is when the last reset happened
+      const lastReset = new Date(utcDateStr)
+      const now = new Date()
+      
+      // For monthly resets, we need to handle month boundaries correctly
+      const resetDate = new Date(lastReset)
+      const intervalMs = isMonthly 
+        ? 30 * 24 * 60 * 60 * 1000 // 30 days in ms
+        : 24 * 60 * 60 * 1000 // 24 hours in ms
+      
+      // Calculate the next reset time (last reset + interval)
+      const nextReset = new Date(lastReset.getTime() + intervalMs)
+      
+      // If we're past the next reset time, the next reset is now + interval
+      const effectiveNextReset = now > nextReset 
+        ? new Date(now.getTime() + intervalMs) 
+        : nextReset
+      
+      const diffMs = effectiveNextReset.getTime() - now.getTime()
+      
+      // If the reset is within the next 24 hours, show time remaining
+      if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
+        const hours = Math.ceil(diffMs / (60 * 60 * 1000))
+        return `in ~${hours} hour${hours !== 1 ? 's' : ''}`
+      }
+      
+      // Convert UTC to local time for display
+      return effectiveNextReset.toLocaleString('en-US', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    } catch (error) {
+      console.error('Error formatting reset date:', error)
+      return 'Error calculating reset time'
+    }
+  }
+
   // Compute next reset timestamps based on last reset + interval
-  const DAILY_RESET_INTERVAL = 24 * 60 * 60 * 1000
-  const MONTHLY_RESET_INTERVAL = 30 * 24 * 60 * 60 * 1000
-  const lastDaily = user?.daily_reset ? new Date(user.daily_reset) : null
-  const nextDailyResetDateStr = lastDaily
-    ? new Date(lastDaily.getTime() + DAILY_RESET_INTERVAL).toLocaleString()
-    : ""
-  const lastMonthly = user?.monthly_reset ? new Date(user.monthly_reset) : null
-  const nextMonthlyResetDateStr = lastMonthly
-    ? new Date(lastMonthly.getTime() + MONTHLY_RESET_INTERVAL).toLocaleString()
-    : ""
+  const nextDailyResetDateStr = formatResetDate(user?.daily_reset ?? null, false)
+  const nextMonthlyResetDateStr = formatResetDate(user?.monthly_reset ?? null, true)
 
   if (!user) return null
 
