@@ -245,10 +245,19 @@ export default function ChatSidebar({ isOpen, toggleSidebar }: ChatSidebarProps)
                         autoFocus
                       />
                       <div className="ml-2 flex gap-1">
-                        <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive size-8" type="submit">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive size-8"
+                          type="submit"
+                        >
                           <Check className="size-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive size-8" onClick={() => setEditingId(null)} type="button">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive size-8"
+                          onClick={() => setEditingId(null)} type="button">
                           <X className="size-4" />
                         </Button>
                       </div>
@@ -264,48 +273,75 @@ export default function ChatSidebar({ isOpen, toggleSidebar }: ChatSidebarProps)
                       "hover:bg-accent"
                     )}
                   >
-                    <Link
-                      href={`/c/${chat.id}`}
-                      prefetch
-                      key={chat.id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        router.replace(`/c/${chat.id}`, {scroll: false});
-                      }}
-                      className="flex flex-1 flex-col items-start"
-                    >
-                      <span className="line-clamp-1 text-base font-normal">
-                        {chat.title}
-                      </span>
-                      <span className="mr-2 text-xs font-normal text-gray-500">
-                        {(chat.updated_at || chat.created_at)
-                          ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
-                          : "Unknown Date"}
-                      </span>
-                    </Link>
-                    <div className="flex items-center">
-                      {/* Apply group-hover visibility to the button container */}
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-foreground size-8"
-                          onClick={e => { e.preventDefault(); setEditingId(chat.id); setEditTitle(chat.title || ""); }}
-                          type="button"
-                        >
-                          <PencilSimple className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive size-8"
-                          onClick={e => { e.preventDefault(); setDeletingId(chat.id); handleConfirmDelete(chat.id); }}
-                          type="button"
-                        >
-                          <TrashSimple className="size-4" />
-                        </Button>
+                    {deletingId === chat.id ? (
+                      <div className="flex w-full items-center justify-between py-1">
+                        <span className="text-destructive text-sm font-medium ml-1 mt-0.5">Delete chat?</span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-destructive size-8"
+                            onClick={e => { e.preventDefault(); handleConfirmDelete(chat.id); }}
+                            type="button"
+                          >
+                            <Check className="size-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-foreground size-8"
+                            onClick={e => { e.preventDefault(); setDeletingId(null); }}
+                            type="button"
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/c/${chat.id}`}
+                          prefetch
+                          key={chat.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            router.replace(`/c/${chat.id}`, {scroll: false});
+                          }}
+                          className="flex flex-1 flex-col items-start"
+                        >
+                          <span className="line-clamp-1 text-base font-normal">
+                            {chat.title}
+                          </span>
+                          <span className="mr-2 text-xs font-normal text-gray-500">
+                            {(chat.updated_at || chat.created_at)
+                              ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
+                              : "Unknown Date"}
+                          </span>
+                        </Link>
+                        <div className="flex items-center">
+                          <div className="hidden group-hover:flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-foreground size-8"
+                              onClick={e => { e.preventDefault(); setEditingId(chat.id); setEditTitle(chat.title || ""); }}
+                              type="button"
+                            >
+                              <PencilSimple className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              onClick={e => { e.preventDefault(); setDeletingId(chat.id); }}
+                              type="button"
+                            >
+                              <TrashSimple className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
