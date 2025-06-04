@@ -195,21 +195,24 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 ## Phase 3: Full Database Migration (Chats, Messages, etc.)
 
 *   [ ] **3.1 Define Remaining Schema in `convex/schema.ts`**
-    *   Add definitions for all other tables: `chats`, `messages`, `feedback`, `chat_attachments`, `Logo`, `Order`, `purchases`, `usage_history`.
-    *   Map fields from `app/types/database.types.ts` to Convex types (`v.*`).
-        *   Pay close attention to mapping Supabase types (especially `Json`, `timestamp with time zone`) to appropriate Convex `v` validators.
-        *   Ensure correct `v.id("tableName")` usage for relationships (e.g., `parent_message_id` in `messages` to `v.optional(v.id("messages"))`).
-        *   Map Supabase JSON types (e.g., `experimental_attachments` in `messages`) to `v.any()` or specific `v.object()`/`v.array()` structures as appropriate.
-        *   Map Supabase enums (e.g., `orderstatus`) to `v.union(v.literal("VALUE1"), v.literal("VALUE2"), ...)` types.
-    *   Define necessary indexes for each table (e.g., `by_chat_and_creation` for messages).
+    *   Add Convex tables for all other data models: `chats`, `messages`, `feedback`, `chat_attachments`, `Logo`, `Order`, `purchases`, `usage_history`.
+    *   Use `app/types/database.types.ts` as the source of truth when mapping fields to `v.*` validators.
+        *   Map Supabase `Json` and timestamp fields to appropriate Convex validators (e.g., `v.any()`, `v.number()`).
+        *   Use `v.id("table")` for references such as `chat_id` or `user_id`.
+        *   Represent enums like `orderstatus` using `v.union(v.literal(...))`.
+    *   Add helpful indexes for queries (`by_chat_and_creation` for messages, etc.).
+    *   Run `bun x convex codegen` to regenerate types after updating the schema.
 *   [ ] **3.2 Deploy Full Schema**
-    *   Run `npx convex deploy` or ensure `npx convex dev` syncs schema changes.
-    *   Verify `convex/_generated/` is updated.
+    *   Run `npx convex dev` (or `npx convex deploy` for production) to push schema changes.
+    *   Confirm `convex/_generated/` is refreshed and committed.
 *   [ ] **3.3 Migrate Database Functions (Queries & Mutations)**
-    *   For each table, create corresponding files in `convex/` (e.g., `convex/chats.ts`, `convex/messages.ts`).
-    *   Implement Convex `query` and `mutation` functions to replace all Supabase CRUD operations.
-        *   Example: `listChatsForUser`, `createChat`, `sendMessageToChat`, `getMessagesForChat`, `createFeedback`.
-        *   For each Supabase query, analyze if it can be optimized with Convex indexes or if data modeling changes would simplify it.
+    *   Create a dedicated Convex file for each table (e.g., `convex/chats.ts`, `convex/messages.ts`).
+    *   Recreate all Supabase CRUD logic as Convex functions:
+        *   Chat helpers: `createChat`, `listChatsForUser`, `updateChatModel`, `deleteChat`.
+        *   Message helpers: `sendMessageToChat`, `getMessagesForChat`, `deleteMessage`.
+        *   Feedback helpers: `createFeedback`, etc.
+    *   Use `query`, `mutation`, and when necessary `action` for side effects (e.g., AI streaming).
+    *   Optimize each function with the indexes defined in the schema.
 *   [ ] **3.4 Refactor Next.js API Routes to Convex Functions**
     *   Identify existing Next.js API routes (under `app/api/`) that handle backend logic.
     *   **3.4.1:** Analyze `app/api/chat/route.ts` (handles streaming, tool usage, message saving) and migrate its core logic to Convex actions (for side effects like AI SDK calls, tool usage) and mutations (for saving messages, updating chat state).
@@ -227,18 +230,22 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *   Create `generateUploadUrl` mutation.
         *   Create a mutation (e.g., `saveFileAttachment`) that client calls after successful upload, passing the Convex storage ID (`StorageId`). This mutation creates/updates the `chat_attachments` record linking the file to a chat and user.
     *   Refactor or replace usage of `lib/file-handling.ts`.
+    *   Update any UI components that display or download files to use the new Convex storage URLs.
 *   [ ] **3.6 Implement Usage Limits**
     *   Investigate existing Supabase implementation (relevant code sections or database triggers/policies) to understand how usage limits (e.g., `daily_message_count` from `users` table) are tracked and enforced for anonymous and registered users. (This may require reading specific Supabase-related files later).
     *   Implement logic in relevant Convex mutations (e.g., `sendMessageToChat` or a dedicated message creation mutation) to check and update usage counts stored in the `users` table before proceeding with the core action.
     *   Ensure limit logic correctly differentiates based on the `users.isAnonymous` field and potentially `users.isPremium`.
+    *   Provide helpers for resetting daily and monthly counters (similar to Phase 2 usage helpers) and schedule them with Convex crons if needed.
 *   [ ] **3.7 Update Application Logic to Use Convex Functions**
     *   Identify all components and UI logic that previously interacted with Supabase client or Next.js API routes for data.
     *   Refactor this logic to use `useQuery` and `useMutation` hooks from `convex/react` with the newly created Convex functions (from tasks 3.3, 3.4, 3.5).
         *   Ensure loading states, error handling (e.g., displaying toasts for errors), and optimistic updates (if applicable) are implemented for a smooth UX.
+    *   Remove any remaining Supabase API calls or data fetching logic.
 
 *   [ ] **3.8 Revisit Anonymous Account Merging**
     *   Once the `chats`, `messages`, and `chat_attachments` tables are created in Convex,
         update `mergeAnonymousToGoogleAccount` to migrate those records from the former anonymous user.
+    *   Ensure the anonymous user record is deleted after migration and verify related data is reassigned correctly.
     *   Remove any leftover Supabase migration logic if still present.
 
 ## Phase 4: Cleanup
