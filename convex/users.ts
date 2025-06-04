@@ -39,10 +39,11 @@ export const storeCurrentUser = mutation({
     if (!userId) return { isNew: false };
     const existing = await ctx.db.get(userId);
     if (existing) {
+      const wasInitialized = existing.isAnonymous !== undefined;
       if (existing.isAnonymous !== isAnonymous) {
         await ctx.db.patch(userId, { isAnonymous });
       }
-      return { isNew: false };
+      return { isNew: !wasInitialized };
     }
     await ctx.db.insert("users", { isAnonymous });
     return { isNew: true };

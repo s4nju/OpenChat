@@ -38,7 +38,7 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
     if (!isAuthenticated || user === undefined) return;
 
     if (user && user._id !== lastUserId.current) {
-      storeCurrentUser({ isAnonymous: user.isAnonymous }).then((res) => {
+      storeCurrentUser({ isAnonymous: user.isAnonymous ?? false }).then((res) => {
         if (!user.isAnonymous && res?.isNew) {
           const anonId = localStorage.getItem("anonymousUserId");
           if (anonId) {
