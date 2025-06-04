@@ -18,5 +18,5 @@ export default defineSchema({
     preferredModel: v.optional(v.string()),
     isPremium: v.optional(v.boolean()),
   })
-    .index("by_email", ["email"]),
+    .index("email", ["email"]),
 });
