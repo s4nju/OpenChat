@@ -105,7 +105,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    Usage limit functions (`resetDailyCountIfNeeded`, `incrementMessageCount`, `checkUsageLimits`, `checkAndIncrementUsage`, `checkFileUploadLimit`) – ensure these differentiate based on `isAnonymous` (which will be false for Google users initially) and `isPremium`.
         *    All functions must use `getAuthUserId(ctx)` for secure access.
         *    Initialize default counters and reset timestamps when a new user is stored.
-        *    **Throttle writes** when updating counters so repeated calls don't spam mutations.
+        *    **Throttle writes** when updating counters so repeated calls do not spam mutations. Buffer increments and persist at most once per second.
     *    _Usage limit helpers and default counter initialization still pending._
 *   [x] **2.6 Configure Client-Side Auth Provider for Google**
     *    **`app/providers/ConvexProvider.tsx` (or `app/ConvexClientProvider.tsx`)**:
@@ -219,7 +219,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
     *   Identify existing Next.js API routes (under `app/api/`) that handle backend logic.
     *   **3.4.1:** Analyze `app/api/chat/route.ts` (handles streaming, tool usage, message saving) and migrate its core logic to Convex actions (for side effects like AI SDK calls, tool usage) and mutations (for saving messages, updating chat state).
         *   Stream AI responses to the client while **incrementally persisting** the assistant message to Convex.
-        *   **Throttle writes** during streaming so mutation calls occur at reasonable intervals (e.g., batch every few tokens).
+        *   **Throttle writes** during streaming so mutation calls occur at reasonable intervals (e.g., flush to Convex every ~0.5s instead of for each token).
     *   **3.4.2:** Migrate `app/api/create-chat/route.ts` logic to a Convex mutation.
     *   **3.4.3:** Migrate `app/api/rate-limits/route.ts` logic to Convex mutations/queries, integrating with the user limits defined in the `users` table.
     *   **3.4.4:** Migrate `app/api/update-chat-model/route.ts` logic to a Convex mutation.
