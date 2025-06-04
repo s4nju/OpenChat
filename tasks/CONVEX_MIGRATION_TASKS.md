@@ -206,7 +206,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 *   [x] **3.2 Deploy Full Schema**
     *   Run `npx convex dev` (or `npx convex deploy` for production) to push schema changes.
     *   Confirm `convex/_generated/` is refreshed and committed.
-*   [ ] **3.3 Migrate Database Functions (Queries & Mutations)**
+*   [x] **3.3 Migrate Database Functions (Queries & Mutations)**
     *   Create a dedicated Convex file for each table (e.g., `convex/chats.ts`, `convex/messages.ts`).
     *   Recreate all Supabase CRUD logic as Convex functions:
         *   Chat helpers: `createChat`, `listChatsForUser`, `updateChatModel`, `deleteChat`.
