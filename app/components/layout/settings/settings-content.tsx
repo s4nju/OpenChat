@@ -36,19 +36,19 @@ export function SettingsContent({
   const { theme, setTheme } = useTheme()
   const [selectedTheme, setSelectedTheme] = useState(theme || "system")
   const [selectedModelId, setSelectedModelId] = useState<string>(
-    user?.preferred_model || MODEL_DEFAULT
+    user?.preferredModel || MODEL_DEFAULT
   )
   const router = useRouter()
 
   useEffect(() => {
-    if (user?.preferred_model) {
-      setSelectedModelId(user.preferred_model)
+    if (user?.preferredModel) {
+      setSelectedModelId(user.preferredModel)
     }
-  }, [user?.preferred_model])
+  }, [user?.preferredModel])
 
   const handleModelSelection = async (value: string) => {
     setSelectedModelId(value)
-    await updateUser({ preferred_model: value })
+    await updateUser({ preferredModel: value })
   }
 
   const handleSignOut = async () => {
@@ -71,54 +71,32 @@ export function SettingsContent({
   ]
 
   // Format date to be more user-friendly, handling UTC times from Supabase
-  const formatResetDate = (utcDateStr: string | null, isMonthly: boolean = false) => {
-    if (!utcDateStr) return "Not available"
-    
+  const formatResetDate = (timestamp: number | null) => {
+    if (!timestamp) return "Not available"
     try {
-      // Parse the UTC date string - this is when the last reset happened
-      const lastReset = new Date(utcDateStr)
-      const now = new Date()
-      
-      // For monthly resets, we need to handle month boundaries correctly
-      const resetDate = new Date(lastReset)
-      const intervalMs = isMonthly 
-        ? 30 * 24 * 60 * 60 * 1000 // 30 days in ms
-        : 24 * 60 * 60 * 1000 // 24 hours in ms
-      
-      // Calculate the next reset time (last reset + interval)
-      const nextReset = new Date(lastReset.getTime() + intervalMs)
-      
-      // If we're past the next reset time, the next reset is now + interval
-      const effectiveNextReset = now > nextReset 
-        ? new Date(now.getTime() + intervalMs) 
-        : nextReset
-      
-      const diffMs = effectiveNextReset.getTime() - now.getTime()
-      
-      // If the reset is within the next 24 hours, show time remaining
+      const now = Date.now()
+      const diffMs = timestamp - now
       if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
         const hours = Math.ceil(diffMs / (60 * 60 * 1000))
-        return `in ~${hours} hour${hours !== 1 ? 's' : ''}`
+        return `in ~${hours} hour${hours !== 1 ? "s" : ""}`
       }
-      
-      // Convert UTC to local time for display
-      return effectiveNextReset.toLocaleString('en-US', {
+      return new Date(timestamp).toLocaleString("en-US", {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
       })
     } catch (error) {
-      console.error('Error formatting reset date:', error)
-      return 'Error calculating reset time'
+      console.error("Error formatting reset date:", error)
+      return "Error calculating reset time"
     }
   }
 
   // Compute next reset timestamps based on last reset + interval
-  const nextDailyResetDateStr = formatResetDate(user?.daily_reset ?? null, false)
-  const nextMonthlyResetDateStr = formatResetDate(user?.monthly_reset ?? null, true)
+  const nextDailyResetDateStr = formatResetDate(user?.dailyResetTimestamp ?? null)
+  const nextMonthlyResetDateStr = formatResetDate(user?.monthlyResetTimestamp ?? null)
 
   if (!user) return null
 
@@ -142,9 +120,9 @@ export function SettingsContent({
       <div className="px-6 py-4">
         <div className="flex items-center space-x-4">
           <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
-            {user?.profile_image ? (
+            {user?.image ? (
               <img
-                src={user.profile_image || "/placeholder.svg"}
+                src={user.image || "/placeholder.svg"}
                 alt="Profile"
                 className="h-full w-full object-cover"
               />
@@ -153,7 +131,7 @@ export function SettingsContent({
             )}
           </div>
           <div>
-            <h3 className="text-sm font-medium">{user?.display_name}</h3>
+            <h3 className="text-sm font-medium">{user?.name}</h3>
             <p className="text-muted-foreground text-sm">{user?.email}</p>
           </div>
         </div>
@@ -164,7 +142,7 @@ export function SettingsContent({
         <div className="px-6 py-4">
           <div className="mb-3 flex justify-between items-center">
             <h3 className="text-sm font-medium">Message Usage</h3>
-            {user?.premium && (
+            {user?.isPremium && (
               <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
                 Premium
               </span>
@@ -172,12 +150,12 @@ export function SettingsContent({
           </div>
           
           {/* Premium Users - Show Monthly Usage */}
-          {user?.premium && (
+          {user?.isPremium && (
             <div className="bg-secondary rounded-lg p-3 mb-3">
               <div className="mb-2 flex justify-between">
                 <span className="text-secondary-foreground text-sm">Monthly</span>
                 <span className="text-sm font-medium">
-                  {user?.monthly_message_count || 0} / {PREMIUM_MONTHLY_MESSAGE_LIMIT}{" "}
+                  {user?.monthlyMessageCount || 0} / {PREMIUM_MONTHLY_MESSAGE_LIMIT}{" "}
                   messages
                 </span>
               </div>
@@ -186,7 +164,7 @@ export function SettingsContent({
                   className="bg-primary h-1.5 rounded-full"
                   style={{
                     width: `${
-                      ((user?.monthly_message_count || 0) / PREMIUM_MONTHLY_MESSAGE_LIMIT) * 100
+                      ((user?.monthlyMessageCount || 0) / PREMIUM_MONTHLY_MESSAGE_LIMIT) * 100
                     }%`,
                   }}
                 ></div>
@@ -201,12 +179,12 @@ export function SettingsContent({
           )}
           
           {/* Regular Users - Show Daily Usage */}
-          {!user?.premium && (
+          {!user?.isPremium && (
             <div className="bg-secondary rounded-lg p-3">
               <div className="mb-2 flex justify-between">
                 <span className="text-secondary-foreground text-sm">Today</span>
                 <span className="text-sm font-medium">
-                  {user?.daily_message_count || 0} / {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT}{" "}
+                  {user?.dailyMessageCount || 0} / {user?.isAnonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT}{" "}
                   messages
                 </span>
               </div>
@@ -215,15 +193,15 @@ export function SettingsContent({
                   className="bg-primary h-1.5 rounded-full"
                   style={{
                     width: `${
-                      ((user?.daily_message_count || 0) /
-                        (user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT)) *
+                      ((user?.dailyMessageCount || 0) /
+                        (user?.isAnonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT)) *
                       100
                     }%`,
                   }}
                 ></div>
               </div>
               <p className="text-muted-foreground mt-2 text-xs">
-                Limit of {user?.anonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT} messages per day
+                Limit of {user?.isAnonymous ? NON_AUTH_DAILY_MESSAGE_LIMIT : AUTH_DAILY_MESSAGE_LIMIT} messages per day
               </p>
               <p className="text-muted-foreground mt-1 text-xs">
                 Resets at {nextDailyResetDateStr}

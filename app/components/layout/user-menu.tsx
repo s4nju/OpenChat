@@ -54,10 +54,9 @@ export function UserMenu({ user }: { user: User }) {
         <TooltipTrigger asChild>
           <DropdownMenuTrigger>
             <Avatar>
-              <AvatarImage src={user?.profile_image ?? undefined} />
+              <AvatarImage src={user?.image ?? undefined} />
               <AvatarFallback>
-                {user?.display_name?.charAt(0) ||
-                  (user?.email ? user.email.charAt(0) : "")}
+                {user?.name?.charAt(0) || (user?.email ? user.email.charAt(0) : "")}
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
@@ -71,7 +70,7 @@ export function UserMenu({ user }: { user: User }) {
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
-          <span>{user?.display_name}</span>
+          <span>{user?.name}</span>
           <span className="text-muted-foreground">{user?.email}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

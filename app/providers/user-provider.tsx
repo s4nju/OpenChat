@@ -12,6 +12,7 @@ type UserContextType = {
   isLoading: boolean;
   signInGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (updates: Partial<UserProfile>) => Promise<void>;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -22,6 +23,7 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
   const user = useQuery(api.users.getCurrentUser) ?? null;
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
+  const updateUserProfile = useMutation(api.users.updateUserProfile);
   const attemptedAnon = useRef(false);
   const lastUserId = useRef<Id<"users"> | null>(null);
 
@@ -54,9 +56,12 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
   }, [isAuthenticated, user, storeCurrentUser, mergeAnonymous]);
 
   const signInGoogle = () => signIn("google");
+  const updateUser = async (updates: Partial<UserProfile>) => {
+    await updateUserProfile({ updates });
+  };
 
   return (
-    <UserContext.Provider value={{ user, isLoading, signInGoogle, signOut }}>
+    <UserContext.Provider value={{ user, isLoading, signInGoogle, signOut, updateUser }}>
       {children}
     </UserContext.Provider>
   );
