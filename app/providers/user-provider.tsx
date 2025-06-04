@@ -38,7 +38,15 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
     if (!isAuthenticated || user === undefined) return;
 
     if (user && user._id !== lastUserId.current) {
-      storeCurrentUser({ isAnonymous: user.isAnonymous });
+      storeCurrentUser({ isAnonymous: user.isAnonymous }).then((res) => {
+        if (!user.isAnonymous && res?.isNew) {
+          const anonId = localStorage.getItem("anonymousUserId");
+          if (anonId) {
+            mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
+            localStorage.removeItem("anonymousUserId");
+          }
+        }
+      });
       lastUserId.current = user._id as Id<"users">;
     }
 
@@ -46,12 +54,6 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
 
     if (user.isAnonymous) {
       localStorage.setItem("anonymousUserId", user._id as unknown as string);
-    } else {
-      const anonId = localStorage.getItem("anonymousUserId");
-      if (anonId) {
-        mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
-        localStorage.removeItem("anonymousUserId");
-      }
     }
   }, [isAuthenticated, user, storeCurrentUser, mergeAnonymous]);
 

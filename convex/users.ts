@@ -33,18 +33,19 @@ export const getCurrentUser = query({
 
 export const storeCurrentUser = mutation({
   args: { isAnonymous: v.optional(v.boolean()) },
-  returns: v.null(),
+  returns: v.object({ isNew: v.boolean() }),
   handler: async (ctx, { isAnonymous }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    if (!userId) return { isNew: false };
     const existing = await ctx.db.get(userId);
     if (existing) {
-      if (existing.isAnonymous === isAnonymous) return null;
-      await ctx.db.patch(userId, { isAnonymous });
-      return null;
+      if (existing.isAnonymous !== isAnonymous) {
+        await ctx.db.patch(userId, { isAnonymous });
+      }
+      return { isNew: false };
     }
     await ctx.db.insert("users", { isAnonymous });
-    return null;
+    return { isNew: true };
   },
 });
 
