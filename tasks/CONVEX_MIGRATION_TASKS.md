@@ -194,7 +194,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 
 ## Phase 3: Full Database Migration (Chats, Messages, etc.)
 
-*   [ ] **3.1 Define Remaining Schema in `convex/schema.ts`**
+*   [x] **3.1 Define Remaining Schema in `convex/schema.ts`**
     *   Add Convex tables for all other data models: `chats`, `messages`, `feedback`, `chat_attachments`, `Logo`, `Order`, `purchases`, `usage_history`.
     *   Use `app/types/database.types.ts` as the source of truth when mapping fields to `v.*` validators.
         *   Map Supabase `Json` and timestamp fields to appropriate Convex validators (e.g., `v.any()`, `v.number()`).
