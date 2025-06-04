@@ -210,7 +210,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
     *   Create a dedicated Convex file for each table (e.g., `convex/chats.ts`, `convex/messages.ts`).
     *   Recreate all Supabase CRUD logic as Convex functions:
         *   Chat helpers: `createChat`, `listChatsForUser`, `updateChatModel`, `deleteChat`.
-        *   Message helpers: `sendMessageToChat`, `getMessagesForChat`, `deleteMessage`.
+        *   Message helpers: `sendMessageToChat`, `getMessagesForChat`, `deleteMessage`, `deleteMessageAndDescendants`.
         *   Feedback helpers: `createFeedback`, etc.
     *   Use `query`, `mutation`, and when necessary `action` for side effects (e.g., AI streaming).
     *   Optimize each function with the indexes defined in the schema.

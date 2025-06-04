@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
@@ -75,5 +76,45 @@ export const deleteMessage = mutation({
     if (!chat || chat.userId !== userId) return null;
     await ctx.db.delete(messageId);
     return null;
+  },
+});
+export const deleteMessageAndDescendants = mutation({
+  args: { messageId: v.id("messages") },
+  returns: v.object({ chatDeleted: v.boolean() }),
+  handler: async (ctx, { messageId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { chatDeleted: false };
+    const message = await ctx.db.get(messageId);
+    if (!message) return { chatDeleted: false };
+    const chat = await ctx.db.get(message.chatId);
+    if (!chat || chat.userId !== userId) return { chatDeleted: false };
+    const threshold = message.createdAt ?? message._creationTime;
+    const ids: Array<Id<"messages">> = [];
+    for await (const m of ctx.db
+      .query("messages")
+      .withIndex("by_chat_and_created", q => q.eq("chatId", message.chatId))
+      .order("asc")) {
+      const created = m.createdAt ?? m._creationTime;
+      if (created >= threshold) ids.push(m._id);
+    }
+    for (const id of ids) {
+      await ctx.db.delete(id);
+    }
+    // update chat timestamp
+    await ctx.db.patch(chat._id, { updatedAt: Date.now() });
+    const remaining = await ctx.db
+      .query("messages")
+      .withIndex("by_chat_and_created", q => q.eq("chatId", message.chatId))
+      .first();
+    if (!remaining) {
+      for await (const a of ctx.db
+        .query("chat_attachments")
+        .withIndex("by_chat", q => q.eq("chatId", chat._id))) {
+        await ctx.db.delete(a._id);
+      }
+      await ctx.db.delete(chat._id);
+      return { chatDeleted: true };
+    }
+    return { chatDeleted: false };
   },
 });
