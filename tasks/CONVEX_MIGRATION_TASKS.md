@@ -105,7 +105,6 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    Usage limit functions (`resetDailyCountIfNeeded`, `incrementMessageCount`, `checkUsageLimits`, `checkAndIncrementUsage`, `checkFileUploadLimit`) – ensure these differentiate based on `isAnonymous` (which will be false for Google users initially) and `isPremium`.
         *    All functions must use `getAuthUserId(ctx)` for secure access.
         *    Initialize default counters and reset timestamps when a new user is stored.
-        *    **Throttle writes** when updating counters so repeated calls do not spam mutations. Buffer increments and persist at most once per second.
     *    _Usage limit helpers and default counter initialization still pending._
 *   [x] **2.6 Configure Client-Side Auth Provider for Google**
     *    **`app/providers/ConvexProvider.tsx` (or `app/ConvexClientProvider.tsx`)**:
