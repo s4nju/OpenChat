@@ -27,7 +27,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_BASE_URL),
 }
 
-export default function RootLayout({
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
@@ -47,18 +49,20 @@ export default function RootLayout({
           />
         )}
         <LayoutClient />
-        <ConvexClientProvider>
-          <UserProvider initialUser={null}>
-            <ChatsProvider userId={undefined}>
-              <ChatSessionProvider>
-                <ThemeProvider>
-                  <Toaster position="top-center" />
-                  {children}
-                </ThemeProvider>
-              </ChatSessionProvider>
-            </ChatsProvider>
-          </UserProvider>
-        </ConvexClientProvider>
+        <ConvexAuthNextjsServerProvider>
+          <ConvexClientProvider>
+            <UserProvider initialUser={null}>
+              <ChatsProvider userId={undefined}>
+                <ChatSessionProvider>
+                  <ThemeProvider>
+                    <Toaster position="top-center" />
+                    {children}
+                  </ThemeProvider>
+                </ChatSessionProvider>
+              </ChatsProvider>
+            </UserProvider>
+          </ConvexClientProvider>
+        </ConvexAuthNextjsServerProvider>
       </body>
     </html>
   )
