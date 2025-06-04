@@ -96,7 +96,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
           providers: [Google], // Initially only Google
         });
         ```
-*   [x] **2.5 Implement Core User Functions (Google Focus) in `convex/users.ts`**
+*   [ ] **2.5 Implement Core User Functions (Google Focus) in `convex/users.ts`**
     *    Create `convex/users.ts`.
     *    Implement essential user management functions, initially focusing on Google-authenticated users:
         *    `getCurrentUser`: Query to get current authenticated user (using `getAuthUserId(ctx)`).
@@ -104,6 +104,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    `updateUserProfile`: Mutation for users to update their custom profile fields.
         *    Usage limit functions (`resetDailyCountIfNeeded`, `incrementMessageCount`, `checkUsageLimits`, `checkAndIncrementUsage`, `checkFileUploadLimit`) – ensure these differentiate based on `isAnonymous` (which will be false for Google users initially) and `isPremium`.
         *    All functions must use `getAuthUserId(ctx)` for secure access.
+    *    _Usage limit helpers and default counter initialization still pending._
 *   [x] **2.6 Configure Client-Side Auth Provider for Google**
     *    **`app/providers/ConvexProvider.tsx` (or `app/ConvexClientProvider.tsx`)**:
         *    Use `ConvexAuthNextjsProvider` from `@convex-dev/auth/nextjs` (as per user feedback, for scenarios potentially involving or preparing for Server-Side Authentication features).
@@ -155,7 +156,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
           ],
         });
         ```
-*   [x] **2.9 Implement Anonymous User Logic & Account Merging in `convex/users.ts`**
+*   [ ] **2.9 Implement Anonymous User Logic & Account Merging in `convex/users.ts`**
     *    Enhance `convex/users.ts`:
         *    `storeCurrentUser` (or `initializeUser`): Ensure it correctly handles anonymous users (e.g., sets `isAnonymous: true` if the profile from `Anonymous` provider indicates it).
         *    **`mergeAnonymousToGoogleAccount` mutation**:
@@ -165,6 +166,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
             *   Deletes the original anonymous user record (`ctx.db.delete(previousAnonymousUserId)`).
             *   Consider how to handle conflicts or merge strategies if needed.
         *    Ensure usage limit functions correctly apply different limits for `isAnonymous: true` users.
+    *    _Data migration for chats and attachments still incomplete._
 *   [x] **2.10 Update Client-Side `user-provider.tsx` for Anonymous Auth & Merging**
     *    Modify `app/providers/user-provider.tsx`:
         *    Implement logic to automatically call `signIn("anonymous")` if no authenticated user (Google) and no prior anonymous session exists (e.g., on initial app load or first interaction requiring auth).

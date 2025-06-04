@@ -1,7 +1,9 @@
-import { query, mutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+"use node";
+import { query, mutation, internalAction } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { createGuestServerClient } from "../lib/supabase/server-guest";
 
 export const getCurrentUser = query({
   args: {},
@@ -45,7 +47,15 @@ export const storeCurrentUser = mutation({
       }
       return { isNew: !wasInitialized };
     }
-    await ctx.db.insert("users", { isAnonymous });
+    const now = Date.now();
+    await ctx.db.insert("users", {
+      isAnonymous,
+      dailyMessageCount: 0,
+      monthlyMessageCount: 0,
+      totalMessageCount: 0,
+      dailyResetTimestamp: now + DAY,
+      monthlyResetTimestamp: now + MONTH,
+    });
     return { isNew: true };
   },
 });
@@ -86,6 +96,19 @@ export const incrementMessageCount = mutation({
   },
 });
 
+export const migrateAnonymousData = internalAction({
+  args: { fromUserId: v.string(), toUserId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { fromUserId, toUserId }) => {
+    const supabase = await createGuestServerClient();
+    const tables = ["chats", "messages", "feedback", "chat_attachments"];
+    for (const table of tables) {
+      await supabase.from(table).update({ user_id: toUserId }).eq("user_id", fromUserId);
+    }
+    return null;
+  },
+});
+
 export const mergeAnonymousToGoogleAccount = mutation({
   args: { previousAnonymousUserId: v.id("users") },
   returns: v.null(),
@@ -104,6 +127,10 @@ export const mergeAnonymousToGoogleAccount = mutation({
         (user.monthlyMessageCount ?? 0) + (anon.monthlyMessageCount ?? 0),
       totalMessageCount:
         (user.totalMessageCount ?? 0) + (anon.totalMessageCount ?? 0),
+    });
+    await ctx.runAction(internal.users.migrateAnonymousData, {
+      fromUserId: previousAnonymousUserId,
+      toUserId: currentId,
     });
     await ctx.db.delete(previousAnonymousUserId);
     return null;
@@ -144,8 +171,8 @@ export const checkAndIncrementUsage = mutation({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
-    await ctx.runMutation(internal.users.resetUsageCountersIfNeeded, {});
-    await ctx.runMutation(internal.users.incrementMessageCount, {});
+    await ctx.runMutation(api.users.resetUsageCountersIfNeeded, {});
+    await ctx.runMutation(api.users.incrementMessageCount, {});
     return null;
   },
 });

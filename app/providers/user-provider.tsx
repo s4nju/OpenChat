@@ -39,12 +39,14 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
 
     if (user && user._id !== lastUserId.current) {
       storeCurrentUser({ isAnonymous: user.isAnonymous ?? false }).then((res) => {
+        const anonId = localStorage.getItem("anonymousUserId");
         if (!user.isAnonymous && res?.isNew) {
-          const anonId = localStorage.getItem("anonymousUserId");
           if (anonId) {
             mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
             localStorage.removeItem("anonymousUserId");
           }
+        } else if (!user.isAnonymous && anonId) {
+          localStorage.removeItem("anonymousUserId");
         }
       });
       lastUserId.current = user._id as Id<"users">;
