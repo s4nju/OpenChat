@@ -162,11 +162,11 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    **`mergeAnonymousToGoogleAccount` mutation**:
             *   Accepts `previousAnonymousUserId: Id<"users">` (passed from client).
             *   Gets current Google user's ID via `getAuthUserId(ctx)`.
-            *   Transfers all relevant data (chats, messages, feedback, attachments) from the `previousAnonymousUserId` to the Google user's ID.
-            *   Deletes the original anonymous user record (`ctx.db.delete(previousAnonymousUserId)`).
-            *   Consider how to handle conflicts or merge strategies if needed.
+        *   Currently only merges usage counters and marks the account as non-anonymous.
+        *   Deleting the original anonymous user record (`ctx.db.delete(previousAnonymousUserId)`).
+        *   Data migration for chats, messages, feedback, and attachments will be revisited once those tables exist in Convex.
         *    Ensure usage limit functions correctly apply different limits for `isAnonymous: true` users.
-    *    _Data migration for chats and attachments still incomplete._
+    *    _Data migration postponed until Phase 3._
 *   [x] **2.10 Update Client-Side `user-provider.tsx` for Anonymous Auth & Merging**
     *    Modify `app/providers/user-provider.tsx`:
         *    Implement logic to automatically call `signIn("anonymous")` if no authenticated user (Google) and no prior anonymous session exists (e.g., on initial app load or first interaction requiring auth).
@@ -235,6 +235,11 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
     *   Identify all components and UI logic that previously interacted with Supabase client or Next.js API routes for data.
     *   Refactor this logic to use `useQuery` and `useMutation` hooks from `convex/react` with the newly created Convex functions (from tasks 3.3, 3.4, 3.5).
         *   Ensure loading states, error handling (e.g., displaying toasts for errors), and optimistic updates (if applicable) are implemented for a smooth UX.
+
+*   [ ] **3.8 Revisit Anonymous Account Merging**
+    *   Once the `chats`, `messages`, and `chat_attachments` tables are created in Convex,
+        update `mergeAnonymousToGoogleAccount` to migrate those records from the former anonymous user.
+    *   Remove any leftover Supabase migration logic if still present.
 
 ## Phase 4: Cleanup
 
