@@ -40,8 +40,31 @@ export const storeCurrentUser = mutation({
     const existing = await ctx.db.get(userId);
     if (existing) {
       const wasInitialized = existing.isAnonymous !== undefined;
+      const now = Date.now();
+      const updates: Record<string, unknown> = {};
       if (existing.isAnonymous !== isAnonymous) {
-        await ctx.db.patch(userId, { isAnonymous });
+        updates.isAnonymous = isAnonymous;
+      }
+      if (existing.dailyMessageCount === undefined) {
+        updates.dailyMessageCount = 0;
+      }
+      if (existing.monthlyMessageCount === undefined) {
+        updates.monthlyMessageCount = 0;
+      }
+      if (existing.totalMessageCount === undefined) {
+        updates.totalMessageCount = 0;
+      }
+      if (existing.dailyResetTimestamp === undefined) {
+        updates.dailyResetTimestamp = now + DAY;
+      }
+      if (existing.monthlyResetTimestamp === undefined) {
+        updates.monthlyResetTimestamp = now + MONTH;
+      }
+      if (existing.preferredModel === undefined) {
+        updates.preferredModel = MODEL_DEFAULT;
+      }
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(userId, updates);
       }
       return { isNew: !wasInitialized };
     }
@@ -53,6 +76,7 @@ export const storeCurrentUser = mutation({
       totalMessageCount: 0,
       dailyResetTimestamp: now + DAY,
       monthlyResetTimestamp: now + MONTH,
+      preferredModel: MODEL_DEFAULT,
     });
     return { isNew: true };
   },
@@ -121,6 +145,7 @@ export const mergeAnonymousToGoogleAccount = mutation({
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTH = 30 * DAY;
+const MODEL_DEFAULT = "gemini-2.0-flash";
 
 export const resetUsageCountersIfNeeded = mutation({
   args: {},
