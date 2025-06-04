@@ -42,7 +42,8 @@
 - [shadcn/ui](https://ui.shadcn.com) - Core components
 - [motion-primitives](https://motion-primitives.com) - Animated components
 - [Vercel AI SDK](https://vercel.com/blog/introducing-the-vercel-ai-sdk) - Model integration and AI features
-- [Supabase](https://supabase.com) - Authentication and storage
+- [Convex](https://convex.dev) - Authentication and serverless functions
+- [Supabase](https://supabase.com) - Storage and legacy database
 
 ## 🗺️ Roadmap
 
