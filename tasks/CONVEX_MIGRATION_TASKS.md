@@ -1,0 +1,265 @@
+# OpenChat Supabase to Convex Migration: Task List
+
+This document outlines the tasks required to migrate the OpenChat application from Supabase to Convex.
+Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and context.
+
+## Phase 1: Setup and Configuration (Assumed Complete by User)
+
+*   [x] **1.1 Install Convex Dependencies**
+    *   `convex`
+    *   `@convex-dev/auth`
+    *   `@auth/core` (specific version, e.g., `0.37.0`)
+    *   Command: `bun add convex @convex-dev/auth @auth/core@0.37.0`
+*   [x] **1.2 Initialize Convex Project**
+    *   Run `npx convex dev` to set up the `convex/` directory and link to a Convex project.
+*   [x] **1.3 Set Convex Environment Variables**
+    *   `NEXT_PUBLIC_CONVEX_URL` (usually set in `.env.local` by `convex dev`)
+    *   `SITE_URL` (e.g., `http://localhost:3000` for local dev)
+        *   Command: `npx convex env set SITE_URL http://localhost:3000`
+    *   Google OAuth Credentials:
+        *   `AUTH_GOOGLE_ID`: From Google Cloud Console.
+            *   Command: `npx convex env set AUTH_GOOGLE_ID <your_google_client_id>`
+        *   `AUTH_GOOGLE_SECRET`: From Google Cloud Console.
+            *   Command: `npx convex env set AUTH_GOOGLE_SECRET <your_google_client_secret>`
+
+## Phase 2: Core Authentication and User Schema Setup (Google First, then Anonymous)
+
+### A. Foundational Schema & General Configuration
+
+*   [ ] **2.1 Define `users` Table Schema in `convex/schema.ts`**
+    *    Create `convex/schema.ts`.
+    *    Import `authTables` from `@convex-dev/auth/server` and spread them into the schema: `...authTables`.
+    *    Extend Convex Auth's built-in `users` table with custom fields:
+        *   `isAnonymous: v.optional(v.boolean())` (True if guest user)
+        *   `dailyMessageCount: v.optional(v.number())`
+        *   `dailyResetTimestamp: v.optional(v.number())` (Store as ms timestamp)
+        *   `monthlyMessageCount: v.optional(v.number())`
+        *   `monthlyResetTimestamp: v.optional(v.number())` (Store as ms timestamp)
+        *   `totalMessageCount: v.optional(v.number())`
+        *   `preferredModel: v.optional(v.string())`
+        *   `isPremium: v.optional(v.boolean())`
+        *   *(Convex Auth automatically provides: _id, _creationTime, name, email, image, emailVerified. No manual tokenIdentifier needed).*
+    *    Add proper indexes, including an email index for lookups (e.g., `.index("by_email", ["email"])` if not automatically provided by `authTables`).
+*   [ ] **2.2 Deploy User Schema & Base Auth Config**
+    *    Run `npx convex dev` to sync schema changes. Verify `convex/_generated/` files are updated.
+    *    Ensure all Convex Auth tables (`authAccounts`, `authSessions`, etc.) and custom user fields/indexes are deployed.
+    *    **`convex/auth.config.ts`**: Ensure it's properly configured (usually with `CONVEX_SITE_URL`). Example:
+        ```typescript
+        // convex/auth.config.ts
+        export default {
+          providers: [
+            {
+              domain: process.env.CONVEX_SITE_URL,
+              applicationID: "convex",
+            },
+          ],
+        };
+        ```
+    *    **`convex/http.ts`**: Configure with auth routes.
+        ```typescript
+        // convex/http.ts
+        import { httpRouter } from "convex/server";
+        import { auth } from "./auth"; // Assuming auth is exported from convex/auth.ts
+
+        const http = httpRouter();
+        auth.addHttpRoutes(http);
+        // Add other http routes if any
+        export default http;
+        ```
+*   [ ] **2.3 Update Middleware (`middleware.ts`)**
+    *    Replace existing Supabase middleware with `convexAuthNextjsMiddleware` from `@convex-dev/auth/nextjs/server`.
+        ```typescript
+        // middleware.ts
+        import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server";
+        // Potentially import createRouteMatcher, nextjsMiddlewareRedirect for custom logic
+
+        export default convexAuthNextjsMiddleware(/* custom handler if needed */);
+
+        export const config = {
+          matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+        };
+        ```
+    *    Configure route protection logic and public routes as needed.
+    *    **2.3.1:** Evaluate and adapt CSRF strategy. Convex client SDK calls are typically handled by Convex Auth's security.
+    *    **2.3.2:** Update Content Security Policy (CSP) to include Convex domains (e.g., `NEXT_PUBLIC_CONVEX_URL`) and remove Supabase domains.
+
+### B. Google Authentication Implementation
+
+*   [ ] **2.4 Configure Convex Auth for Google (Server-Side)**
+    *    **`convex/auth.ts`**: Initialize with Google provider.
+        ```typescript
+        // convex/auth.ts
+        import Google from "@auth/core/providers/google";
+        import { convexAuth } from "@convex-dev/auth/server";
+
+        export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+          providers: [Google], // Initially only Google
+        });
+        ```
+*   [ ] **2.5 Implement Core User Functions (Google Focus) in `convex/users.ts`**
+    *    Create `convex/users.ts`.
+    *    Implement essential user management functions, initially focusing on Google-authenticated users:
+        *    `getCurrentUser`: Query to get current authenticated user (using `getAuthUserId(ctx)`).
+        *    `storeCurrentUser` (or `initializeUser`): Mutation to set up user profile with defaults after first Google sign-in.
+        *    `updateUserProfile`: Mutation for users to update their custom profile fields.
+        *    Usage limit functions (`resetDailyCountIfNeeded`, `incrementMessageCount`, `checkUsageLimits`, `checkAndIncrementUsage`, `checkFileUploadLimit`) – ensure these differentiate based on `isAnonymous` (which will be false for Google users initially) and `isPremium`.
+        *    All functions must use `getAuthUserId(ctx)` for secure access.
+*   [ ] **2.6 Configure Client-Side Auth Provider for Google**
+    *    **`app/providers/ConvexProvider.tsx` (or `app/ConvexClientProvider.tsx`)**:
+        *    Use `ConvexAuthNextjsProvider` from `@convex-dev/auth/nextjs` (as per user feedback, for scenarios potentially involving or preparing for Server-Side Authentication features).
+        *    Create and pass `ConvexReactClient` instance using `NEXT_PUBLIC_CONVEX_URL`.
+        *    Ensure it's a "use client" component.
+    *    **`app/layout.tsx`**:
+        *    Wrap application with this `ConvexClientProvider` at the top level.
+        *    Update provider hierarchy: `ConvexClientProvider` (containing `ConvexAuthProvider`) → `UserProvider` → etc.
+    *    **`app/providers/user-provider.tsx` (Google Focus)**:
+        *    Use `useConvexAuth()` from `convex/react` for auth state (`isAuthenticated`, `isLoading`).
+        *    Use `useAuthActions()` from `@convex-dev/auth/react` for `signIn` and `signOut`.
+        *    Implement Google sign-in using `signIn("google")`.
+        *    Call `storeCurrentUser` (or `initializeUser`) mutation from `convex/users.ts` after successful Google authentication.
+        *    Fetch current user data using `useQuery(api.users.getCurrentUser)`.
+        *    Initially, `isAnonymous` will be false for Google users.
+*   [ ] **2.7 Update Basic Auth UI & Logic for Google**
+    *    **2.7.1 Update Sign In/Out Functionality (Google)**
+        *    Update `app/auth/page.tsx` to use `signIn("google")`.
+        *    Update `app/components/layout/user-menu.tsx` to use Convex Auth `signOut`.
+        *    Remove Supabase sign out from `app/auth/login/actions.ts` (rename to `.bak` or delete).
+    *    **2.7.2 Migrate Auth UI Components (Google)**
+        *    Update `app/components/chat/dialog-auth.tsx` and `app/components/chat-input/popover-content-auth.tsx` to use `signIn("google")`.
+        *    Remove `lib/api.ts` `signInWithGoogle` function (obsolete).
+    *    **2.7.3 Update Auth Callback & Error Handling (Google)**
+        *    Convex Auth handles callbacks via `convex/http.ts` routes. Remove `app/auth/callback/route.ts` (rename to `.bak`).
+        *    Update `app/auth/error/page.tsx` to handle potential Convex Auth errors.
+    *    **2.7.4 Update User Type Usage & Route Protection (Google)**
+        *    Replace Supabase user types with Convex user types (e.g., from `api.users.getCurrentUser`) in components like `app/components/layout/user-menu.tsx`.
+        *    Ensure route protection in `middleware.ts` and page components (e.g., `app/c/[chatId]/page.tsx`) correctly uses Convex `isAuthenticated`.
+
+### C. Anonymous Authentication & Account Merging Implementation
+
+*   [ ] **2.8 Configure Convex Auth for Anonymous (Server-Side)**
+    *    **`convex/auth.ts`**: Add Anonymous provider.
+        ```typescript
+        // convex/auth.ts
+        import Google from "@auth/core/providers/google";
+        import { Anonymous } from "@convex-dev/auth/providers/Anonymous"; // Add this
+        import { convexAuth } from "@convex-dev/auth/server";
+
+        export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+          providers: [
+            Google,
+            Anonymous({ // Add Anonymous provider
+              profile() { // Optional: customize profile for anonymous users
+                return { isAnonymous: true };
+              }
+            })
+          ],
+        });
+        ```
+*   [ ] **2.9 Implement Anonymous User Logic & Account Merging in `convex/users.ts`**
+    *    Enhance `convex/users.ts`:
+        *    `storeCurrentUser` (or `initializeUser`): Ensure it correctly handles anonymous users (e.g., sets `isAnonymous: true` if the profile from `Anonymous` provider indicates it).
+        *    **`mergeAnonymousToGoogleAccount` mutation**:
+            *   Accepts `previousAnonymousUserId: Id<"users">` (passed from client).
+            *   Gets current Google user's ID via `getAuthUserId(ctx)`.
+            *   Transfers all relevant data (chats, messages, feedback, attachments) from the `previousAnonymousUserId` to the Google user's ID.
+            *   Deletes the original anonymous user record (`ctx.db.delete(previousAnonymousUserId)`).
+            *   Consider how to handle conflicts or merge strategies if needed.
+        *    Ensure usage limit functions correctly apply different limits for `isAnonymous: true` users.
+*   [ ] **2.10 Update Client-Side `user-provider.tsx` for Anonymous Auth & Merging**
+    *    Modify `app/providers/user-provider.tsx`:
+        *    Implement logic to automatically call `signIn("anonymous")` if no authenticated user (Google) and no prior anonymous session exists (e.g., on initial app load or first interaction requiring auth).
+        *    Store the `userId` of the anonymous session in `localStorage` (e.g., `localStorage.setItem("anonymousUserId", userId)`).
+        *    After a successful `signIn("google")`:
+            *   Check `localStorage` for a stored `anonymousUserId`.
+            *   If found, call the `api.users.mergeAnonymousToGoogleAccount` mutation, passing the stored ID.
+            *   Clear the `anonymousUserId` from `localStorage` after successful merge.
+        *    Ensure `storeCurrentUser` is called appropriately for anonymous users too.
+*   [ ] **2.11 Update Basic Auth UI & Logic for Anonymous Users**
+    *    **2.11.1** Remove Old Guest System
+        *    Delete `app/api/create-guest/route.ts` (rename to `.bak`).
+        *    Remove `API_ROUTE_CREATE_GUEST` from `lib/routes.ts` and `lib/api.ts`.
+        *    Delete `createGuestUser` function from `lib/api.ts`.
+    *    **2.11.2** Implement UI for Anonymous State
+        *    In `app/components/layout/header.tsx` and other relevant UI:
+            *   Update logic: `const isLoggedIn = !!user && !user.isAnonymous;`
+            *   Keep "Login" button visible for anonymous users to encourage Google sign-in.
+            *   Only show full authenticated user UI (UserMenu, avatar) for Google-authenticated users (where `!user.isAnonymous`).
+    *    **2.11.3** Finalize Auth Error Handling
+        *    Ensure error messages and user feedback are clear for both Google and Anonymous auth flows.
+*   [ ] **2.12 Update Server-Side Auth Utilities (Deferred to Phase 3.4.x if complex)**
+    *   Review `lib/server/api.ts` `validateUserIdentity` function. If it's simple, adapt for Convex Auth. If complex or tightly coupled with other logic being moved in Phase 3, defer.
+    *   Remove Supabase client usage from server utilities if not already done.
+
+## Phase 3: Full Database Migration (Chats, Messages, etc.)
+
+*   [ ] **3.1 Define Remaining Schema in `convex/schema.ts`**
+    *   Add definitions for all other tables: `chats`, `messages`, `feedback`, `chat_attachments`, `Logo`, `Order`, `purchases`, `usage_history`.
+    *   Map fields from `app/types/database.types.ts` to Convex types (`v.*`).
+        *   Pay close attention to mapping Supabase types (especially `Json`, `timestamp with time zone`) to appropriate Convex `v` validators.
+        *   Ensure correct `v.id("tableName")` usage for relationships (e.g., `parent_message_id` in `messages` to `v.optional(v.id("messages"))`).
+        *   Map Supabase JSON types (e.g., `experimental_attachments` in `messages`) to `v.any()` or specific `v.object()`/`v.array()` structures as appropriate.
+        *   Map Supabase enums (e.g., `orderstatus`) to `v.union(v.literal("VALUE1"), v.literal("VALUE2"), ...)` types.
+    *   Define necessary indexes for each table (e.g., `by_chat_and_creation` for messages).
+*   [ ] **3.2 Deploy Full Schema**
+    *   Run `npx convex deploy` or ensure `npx convex dev` syncs schema changes.
+    *   Verify `convex/_generated/` is updated.
+*   [ ] **3.3 Migrate Database Functions (Queries & Mutations)**
+    *   For each table, create corresponding files in `convex/` (e.g., `convex/chats.ts`, `convex/messages.ts`).
+    *   Implement Convex `query` and `mutation` functions to replace all Supabase CRUD operations.
+        *   Example: `listChatsForUser`, `createChat`, `sendMessageToChat`, `getMessagesForChat`, `createFeedback`.
+        *   For each Supabase query, analyze if it can be optimized with Convex indexes or if data modeling changes would simplify it.
+*   [ ] **3.4 Refactor Next.js API Routes to Convex Functions**
+    *   Identify existing Next.js API routes (under `app/api/`) that handle backend logic.
+    *   **3.4.1:** Analyze `app/api/chat/route.ts` (handles streaming, tool usage, message saving) and migrate its core logic to Convex actions (for side effects like AI SDK calls, tool usage) and mutations (for saving messages, updating chat state).
+    *   **3.4.2:** Migrate `app/api/create-chat/route.ts` logic to a Convex mutation.
+    *   **3.4.3:** Migrate `app/api/rate-limits/route.ts` logic to Convex mutations/queries, integrating with the user limits defined in the `users` table.
+    *   **3.4.4:** Migrate `app/api/update-chat-model/route.ts` logic to a Convex mutation.
+    *   **3.4.5:** Review and migrate any other custom API routes to equivalent Convex functions.
+*   [ ] **3.5 Migrate File Uploads to Convex File Storage**
+    *   Review existing file upload logic (e.g., in `lib/file-handling.ts` if it uses Supabase Storage).
+    *   Update the `chat_attachments` table schema in `convex/schema.ts` to store Convex file IDs: e.g., `fileId: v.id("_storage")` instead of a direct `file_url`. Also include `fileName`, `fileType`, `fileSize`.
+    *   Client-side:
+        *   Implement logic to call a Convex mutation (e.g., `generateUploadUrl` in `convex/files.ts`) to get a one-time upload URL from Convex.
+        *   Upload the file directly to this URL using `fetch` or a similar method.
+    *   Server-side (`convex/files.ts` or similar):
+        *   Create `generateUploadUrl` mutation.
+        *   Create a mutation (e.g., `saveFileAttachment`) that client calls after successful upload, passing the Convex storage ID (`StorageId`). This mutation creates/updates the `chat_attachments` record linking the file to a chat and user.
+    *   Refactor or replace usage of `lib/file-handling.ts`.
+*   [ ] **3.6 Implement Usage Limits**
+    *   Investigate existing Supabase implementation (relevant code sections or database triggers/policies) to understand how usage limits (e.g., `daily_message_count` from `users` table) are tracked and enforced for anonymous and registered users. (This may require reading specific Supabase-related files later).
+    *   Implement logic in relevant Convex mutations (e.g., `sendMessageToChat` or a dedicated message creation mutation) to check and update usage counts stored in the `users` table before proceeding with the core action.
+    *   Ensure limit logic correctly differentiates based on the `users.isAnonymous` field and potentially `users.isPremium`.
+*   [ ] **3.7 Update Application Logic to Use Convex Functions**
+    *   Identify all components and UI logic that previously interacted with Supabase client or Next.js API routes for data.
+    *   Refactor this logic to use `useQuery` and `useMutation` hooks from `convex/react` with the newly created Convex functions (from tasks 3.3, 3.4, 3.5).
+        *   Ensure loading states, error handling (e.g., displaying toasts for errors), and optimistic updates (if applicable) are implemented for a smooth UX.
+
+## Phase 4: Cleanup
+
+*   [ ] **4.1 Remove IndexedDB Usage**
+    *   Delete `lib/chat-store/persist.ts`.
+    *   Remove all imports and function calls related to IndexedDB from the codebase.
+    *   Adjust any client-side state management in `lib/chat-store/` that relied on it.
+*   [ ] **4.2 Remove Supabase Code and Configuration**
+    *   Delete the `lib/supabase/` directory.
+    *   Delete `utils/supabase/middleware.ts` (if not already done).
+    *   Remove all Supabase client instantiations and direct Supabase API calls.
+    *   Delete `app/types/database.types.ts` (as `convex/schema.ts` is the new source of truth).
+    *   Remove Supabase-specific environment variables from `.env.local` and other configurations.
+    *   Search globally for 'supabase' and 'Supabase' to catch any remaining references in comments, strings, or utility functions.
+    *   **4.2.1:** Review and update/remove CSRF token fetching in `app/layout-client.tsx` based on the new CSRF strategy (from Task 2.6.1).
+*   [ ] **4.3 Uninstall Supabase Dependencies**
+    *   Run `bun remove @supabase/supabase-js @supabase/auth-helpers-nextjs @supabase/ssr dexie` (and any other related packages like `idb-keyval` if it was also used).
+*   [ ] **4.4 Final Verification and Testing**
+    *   Thoroughly test all aspects of the application:
+        *   Google Sign-In / Sign-Out.
+        *   Session persistence.
+        *   User profile display and updates.
+        *   All chat functionalities (creating chats, sending/viewing messages, attachments if applicable).
+        *   Feedback submission.
+        *   Any other features relying on the database (Logo, Order, purchases, usage_history if they are still in scope).
+    *   Check browser console for errors/warnings thoroughly.
+    *   Test on different browsers if applicable.
+    *   Review application performance.
+
+This task list should guide the implementation process.

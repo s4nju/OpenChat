@@ -35,7 +35,6 @@ next-env.d.ts
 .aider*
 .cursor*
 docs*
-tasks*
 
 # vscode
 .vscode
