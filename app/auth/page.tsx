@@ -1,9 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { signInWithGoogle } from "@/lib/api"
 import { APP_NAME } from "@/lib/config"
-import { createClient } from "@/lib/supabase/client"
+import { useAuthActions } from "@convex-dev/auth/react"
 import Link from "next/link"
 import { useState } from "react"
 import { HeaderGoBack } from "../components/header-go-back"
@@ -12,19 +11,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const { signIn } = useAuthActions()
 
   async function handleSignInWithGoogle() {
     try {
       setIsLoading(true)
       setError(null)
 
-      const data = await signInWithGoogle(supabase)
-
-      // Redirect to the provider URL
-      if (data?.url) {
-        window.location.href = data.url
-      }
+      await signIn("google")
     } catch (err: any) {
       console.error("Error signing in with Google:", err)
       setError(err.message || "An unexpected error occurred. Please try again.")

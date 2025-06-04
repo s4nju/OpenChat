@@ -23,7 +23,7 @@ export function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const { chats, updateTitle, deleteChat } = useChats()
-  const isLoggedIn = !!user
+  const isLoggedIn = !!user && !user.isAnonymous
   const isMobile = useBreakpoint(768)
 
   const handleSaveEdit = async (id: string, newTitle: string) => {

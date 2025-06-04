@@ -1,137 +1,60 @@
-// app/providers/user-provider.tsx
-"use client"
+"use client";
+import { createContext, useContext, useEffect } from "react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { api } from "../../convex/_generated/api";
+import { Doc, Id } from "../../convex/_generated/dataModel";
 
-import { createClient } from "@/lib/supabase/client"
-import { createContext, useContext, useEffect, useState } from "react"
-import { UserProfile } from "../types/user"
+export type UserProfile = Doc<"users">;
 
 type UserContextType = {
-  user: UserProfile | null
-  isLoading: boolean
-  updateUser: (updates: Partial<UserProfile>) => Promise<void>
-  refreshUser: () => Promise<void>
-  signOut: () => Promise<void>
-}
+  user: UserProfile | null;
+  isLoading: boolean;
+  signInGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+};
 
-const UserContext = createContext<UserContextType | undefined>(undefined)
+const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export function UserProvider({
-  children,
-  initialUser,
-}: {
-  children: React.ReactNode
-  initialUser: UserProfile | null
-}) {
-  const [user, setUser] = useState<UserProfile | null>(initialUser)
-  const [isLoading, setIsLoading] = useState(false)
-  const supabase = createClient()
+export function UserProvider({ children }: { children: React.ReactNode; initialUser?: null }) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signIn, signOut } = useAuthActions();
+  const user = useQuery(api.users.getCurrentUser) ?? null;
+  const storeCurrentUser = useMutation(api.users.storeCurrentUser);
+  const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
 
-  // Refresh user data from the server
-  const refreshUser = async () => {
-    if (!user?.id) return
-
-    setIsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single()
-
-      if (error) throw error
-      if (data)
-        setUser({
-          ...data,
-          profile_image: data.profile_image || "",
-          display_name: data.display_name || "",
-        })
-    } catch (err) {
-      console.error("Failed to refresh user data:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Update user data both in DB and local state
-  const updateUser = async (updates: Partial<UserProfile>) => {
-    if (!user?.id) return
-
-    setIsLoading(true)
-    try {
-      const { error } = await supabase
-        .from("users")
-        .update(updates)
-        .eq("id", user.id)
-
-      if (error) throw error
-
-      // Update local state optimistically
-      setUser((prev) => (prev ? { ...prev, ...updates } : null))
-    } catch (err) {
-      console.error("Failed to update user:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Sign out and reset user state
-  const signOut = async () => {
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      // Reset user state
-      setUser(null)
-    } catch (err) {
-      console.error("Failed to sign out:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Set up realtime subscription for user data changes
   useEffect(() => {
-    if (!user?.id) return
-
-    const channel = supabase
-      .channel(`public:users:id=eq.${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "users",
-          filter: `id=eq.${user.id}`,
-        },
-        (payload) => {
-          setUser((previous) => ({
-            ...previous,
-            ...(payload.new as UserProfile),
-          }))
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+    if (!isLoading && !isAuthenticated) {
+      signIn("anonymous");
     }
-  }, [user?.id, supabase])
+  }, [isLoading, isAuthenticated, signIn]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      storeCurrentUser({ isAnonymous: user?.isAnonymous });
+      if (user?.isAnonymous) {
+        localStorage.setItem("anonymousUserId", user._id as unknown as string);
+      } else {
+        const anonId = localStorage.getItem("anonymousUserId");
+        if (anonId) {
+          mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
+          localStorage.removeItem("anonymousUserId");
+        }
+      }
+    }
+  }, [isAuthenticated, user, storeCurrentUser, mergeAnonymous]);
+
+  const signInGoogle = () => signIn("google");
 
   return (
-    <UserContext.Provider
-      value={{ user, isLoading, updateUser, refreshUser, signOut }}
-    >
+    <UserContext.Provider value={{ user, isLoading, signInGoogle, signOut }}>
       {children}
     </UserContext.Provider>
-  )
+  );
 }
 
-// Custom hook to use the user context
 export function useUser() {
-  const context = useContext(UserContext)
-  if (context === undefined) {
-    throw new Error("useUser must be used within a UserProvider")
-  }
-  return context
+  const context = useContext(UserContext);
+  if (!context) throw new Error("useUser must be used within a UserProvider");
+  return context;
 }

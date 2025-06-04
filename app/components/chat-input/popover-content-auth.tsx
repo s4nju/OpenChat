@@ -3,27 +3,21 @@
 import { Button } from "@/components/ui/button"
 import { PopoverContent } from "@/components/ui/popover"
 import React, { useState } from "react"
-import { signInWithGoogle } from "../../../lib/api"
+import { useAuthActions } from "@convex-dev/auth/react"
 import { APP_NAME } from "../../../lib/config"
-import { createClient } from "../../../lib/supabase/client"
 
 export function PopoverContentAuth() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const { signIn } = useAuthActions()
 
   const handleSignInWithGoogle = async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      const data = await signInWithGoogle(supabase)
-
-      // Redirect to the provider URL
-      if (data?.url) {
-        window.location.href = data.url
-      }
+      await signIn("google")
     } catch (err: any) {
       console.error("Error signing in with Google:", err)
       setError(err.message || "An unexpected error occurred. Please try again.")

@@ -26,7 +26,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 
 ### A. Foundational Schema & General Configuration
 
-*   [ ] **2.1 Define `users` Table Schema in `convex/schema.ts`**
+*   [x] **2.1 Define `users` Table Schema in `convex/schema.ts`**
     *    Create `convex/schema.ts`.
     *    Import `authTables` from `@convex-dev/auth/server` and spread them into the schema: `...authTables`.
     *    Extend Convex Auth's built-in `users` table with custom fields:
@@ -40,7 +40,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *   `isPremium: v.optional(v.boolean())`
         *   *(Convex Auth automatically provides: _id, _creationTime, name, email, image, emailVerified. No manual tokenIdentifier needed).*
     *    Add proper indexes, including an email index for lookups (e.g., `.index("by_email", ["email"])` if not automatically provided by `authTables`).
-*   [ ] **2.2 Deploy User Schema & Base Auth Config**
+*   [x] **2.2 Deploy User Schema & Base Auth Config**
     *    Run `npx convex dev` to sync schema changes. Verify `convex/_generated/` files are updated.
     *    Ensure all Convex Auth tables (`authAccounts`, `authSessions`, etc.) and custom user fields/indexes are deployed.
     *    **`convex/auth.config.ts`**: Ensure it's properly configured (usually with `CONVEX_SITE_URL`). Example:
@@ -66,7 +66,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         // Add other http routes if any
         export default http;
         ```
-*   [ ] **2.3 Update Middleware (`middleware.ts`)**
+*   [x] **2.3 Update Middleware (`middleware.ts`)**
     *    Replace existing Supabase middleware with `convexAuthNextjsMiddleware` from `@convex-dev/auth/nextjs/server`.
         ```typescript
         // middleware.ts
@@ -85,7 +85,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 
 ### B. Google Authentication Implementation
 
-*   [ ] **2.4 Configure Convex Auth for Google (Server-Side)**
+*   [x] **2.4 Configure Convex Auth for Google (Server-Side)**
     *    **`convex/auth.ts`**: Initialize with Google provider.
         ```typescript
         // convex/auth.ts
@@ -96,7 +96,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
           providers: [Google], // Initially only Google
         });
         ```
-*   [ ] **2.5 Implement Core User Functions (Google Focus) in `convex/users.ts`**
+*   [x] **2.5 Implement Core User Functions (Google Focus) in `convex/users.ts`**
     *    Create `convex/users.ts`.
     *    Implement essential user management functions, initially focusing on Google-authenticated users:
         *    `getCurrentUser`: Query to get current authenticated user (using `getAuthUserId(ctx)`).
@@ -104,7 +104,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    `updateUserProfile`: Mutation for users to update their custom profile fields.
         *    Usage limit functions (`resetDailyCountIfNeeded`, `incrementMessageCount`, `checkUsageLimits`, `checkAndIncrementUsage`, `checkFileUploadLimit`) – ensure these differentiate based on `isAnonymous` (which will be false for Google users initially) and `isPremium`.
         *    All functions must use `getAuthUserId(ctx)` for secure access.
-*   [ ] **2.6 Configure Client-Side Auth Provider for Google**
+*   [x] **2.6 Configure Client-Side Auth Provider for Google**
     *    **`app/providers/ConvexProvider.tsx` (or `app/ConvexClientProvider.tsx`)**:
         *    Use `ConvexAuthNextjsProvider` from `@convex-dev/auth/nextjs` (as per user feedback, for scenarios potentially involving or preparing for Server-Side Authentication features).
         *    Create and pass `ConvexReactClient` instance using `NEXT_PUBLIC_CONVEX_URL`.
@@ -119,7 +119,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *    Call `storeCurrentUser` (or `initializeUser`) mutation from `convex/users.ts` after successful Google authentication.
         *    Fetch current user data using `useQuery(api.users.getCurrentUser)`.
         *    Initially, `isAnonymous` will be false for Google users.
-*   [ ] **2.7 Update Basic Auth UI & Logic for Google**
+*   [x] **2.7 Update Basic Auth UI & Logic for Google**
     *    **2.7.1 Update Sign In/Out Functionality (Google)**
         *    Update `app/auth/page.tsx` to use `signIn("google")`.
         *    Update `app/components/layout/user-menu.tsx` to use Convex Auth `signOut`.
@@ -136,7 +136,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 
 ### C. Anonymous Authentication & Account Merging Implementation
 
-*   [ ] **2.8 Configure Convex Auth for Anonymous (Server-Side)**
+*   [x] **2.8 Configure Convex Auth for Anonymous (Server-Side)**
     *    **`convex/auth.ts`**: Add Anonymous provider.
         ```typescript
         // convex/auth.ts
@@ -155,7 +155,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
           ],
         });
         ```
-*   [ ] **2.9 Implement Anonymous User Logic & Account Merging in `convex/users.ts`**
+*   [x] **2.9 Implement Anonymous User Logic & Account Merging in `convex/users.ts`**
     *    Enhance `convex/users.ts`:
         *    `storeCurrentUser` (or `initializeUser`): Ensure it correctly handles anonymous users (e.g., sets `isAnonymous: true` if the profile from `Anonymous` provider indicates it).
         *    **`mergeAnonymousToGoogleAccount` mutation**:
@@ -165,7 +165,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
             *   Deletes the original anonymous user record (`ctx.db.delete(previousAnonymousUserId)`).
             *   Consider how to handle conflicts or merge strategies if needed.
         *    Ensure usage limit functions correctly apply different limits for `isAnonymous: true` users.
-*   [ ] **2.10 Update Client-Side `user-provider.tsx` for Anonymous Auth & Merging**
+*   [x] **2.10 Update Client-Side `user-provider.tsx` for Anonymous Auth & Merging**
     *    Modify `app/providers/user-provider.tsx`:
         *    Implement logic to automatically call `signIn("anonymous")` if no authenticated user (Google) and no prior anonymous session exists (e.g., on initial app load or first interaction requiring auth).
         *    Store the `userId` of the anonymous session in `localStorage` (e.g., `localStorage.setItem("anonymousUserId", userId)`).
@@ -174,7 +174,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
             *   If found, call the `api.users.mergeAnonymousToGoogleAccount` mutation, passing the stored ID.
             *   Clear the `anonymousUserId` from `localStorage` after successful merge.
         *    Ensure `storeCurrentUser` is called appropriately for anonymous users too.
-*   [ ] **2.11 Update Basic Auth UI & Logic for Anonymous Users**
+*   [x] **2.11 Update Basic Auth UI & Logic for Anonymous Users**
     *    **2.11.1** Remove Old Guest System
         *    Delete `app/api/create-guest/route.ts` (rename to `.bak`).
         *    Remove `API_ROUTE_CREATE_GUEST` from `lib/routes.ts` and `lib/api.ts`.
@@ -186,7 +186,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
             *   Only show full authenticated user UI (UserMenu, avatar) for Google-authenticated users (where `!user.isAnonymous`).
     *    **2.11.3** Finalize Auth Error Handling
         *    Ensure error messages and user feedback are clear for both Google and Anonymous auth flows.
-*   [ ] **2.12 Update Server-Side Auth Utilities (Deferred to Phase 3.4.x if complex)**
+*   [x] **2.12 Update Server-Side Auth Utilities (Deferred to Phase 3.4.x if complex)**
     *   Review `lib/server/api.ts` `validateUserIdentity` function. If it's simple, adapt for Convex Auth. If complex or tightly coupled with other logic being moved in Phase 3, defer.
     *   Remove Supabase client usage from server utilities if not already done.
 

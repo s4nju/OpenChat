@@ -4,7 +4,7 @@ import { ChatInput } from "@/app/components/chat-input/chat-input"
 import { Conversation } from "@/app/components/chat/conversation"
 import { useUser } from "@/app/providers/user-provider"
 import { toast } from "@/components/ui/toast"
-import { checkRateLimits, createGuestUser } from "@/lib/api"
+import { checkRateLimits } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { updateChatTimestamp } from "@/lib/chat-store/chats/api"
 import { useMessages } from "@/lib/chat-store/messages/provider"
@@ -69,7 +69,7 @@ export default function Chat() {
   useEffect(() => {
     setHydrated(true)
   }, [])
-  const isAuthenticated = !!user?.id
+  const isAuthenticated = !!user && !user.isAnonymous
 
   const {
     messages,
@@ -232,37 +232,7 @@ export default function Chat() {
   }, [error])
 
   const getOrCreateGuestUserId = async (): Promise<string | null> => {
-    if (user?.id) {
-      return user.id
-    }
-
-    const storedGuestId = localStorage.getItem("guestId")
-    if (storedGuestId) {
-      try {
-        await createGuestUser(storedGuestId)
-        return storedGuestId
-      } catch (validationError) {
-        // console.warn(
-        //   `[Chat] Stored guestId ${storedGuestId} failed validation or API call failed. Removing it. Error:`,
-        //   validationError
-        // )
-        localStorage.removeItem("guestId")
-      }
-    }
-
-    try {
-      const newGuestId = crypto.randomUUID()
-      await createGuestUser(newGuestId)
-      localStorage.setItem("guestId", newGuestId)
-      return newGuestId
-    } catch (creationError) {
-      // console.error(
-      //   "[Chat] Error during new guest ID generation or creation API call:",
-      //   creationError
-      // )
-      localStorage.removeItem("guestId")
-      return null
-    }
+    return user?._id ?? null
   }
 
   const checkLimitsAndNotify = async (uid: string): Promise<boolean> => {
@@ -323,11 +293,11 @@ export default function Chat() {
 
   const handleModelChange = useCallback(
     async (model: string) => {
-      if (!user?.id) {
+      if (!user || user.isAnonymous) {
         return
       }
 
-      if (!chatId && user?.id) {
+      if (!chatId && user && !user.isAnonymous) {
         setSelectedModel(model)
         return
       }
@@ -666,7 +636,7 @@ export default function Chat() {
 
       setIsSubmitting(false)
     },
-    [ensureChatExists, selectedModel, user?.id, append, checkLimitsAndNotify, getOrCreateGuestUserId, isAuthenticated, setMessages]
+    [ensureChatExists, selectedModel, user?._id, append, checkLimitsAndNotify, getOrCreateGuestUserId, isAuthenticated, setMessages]
   )
 
   const handleSelectSystemPrompt = useCallback((newSystemPrompt: string) => {
@@ -715,7 +685,7 @@ export default function Chat() {
     !isChatsLoading &&
     !currentChat &&
     messages.length === 0 &&
-    !user?.id
+    (!user || user.isAnonymous)
   ) {
     return redirect("/")
   }

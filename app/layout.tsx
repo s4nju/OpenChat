@@ -6,11 +6,10 @@ import { ChatsProvider } from "@/lib/chat-store/chats/provider"
 import { APP_DESCRIPTION, APP_NAME, APP_BASE_URL } from "@/lib/config"
 import { ThemeProvider } from "./providers/theme-provider"
 import Script from "next/script"
-import { createClient } from "../lib/supabase/server"
 import { ChatSessionProvider } from "./providers/chat-session-provider"
 import { LayoutClient } from "./layout-client"
 import { UserProvider } from "./providers/user-provider"
-import { UserProfile } from "./types/user"
+import { ConvexClientProvider } from "./providers/ConvexClientProvider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,29 +27,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_BASE_URL),
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   const isDev = process.env.NODE_ENV === "development"
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-
-  let userProfile = null
-  if (data.user) {
-    const { data: userProfileData } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", data.user?.id)
-      .single()
-
-    userProfile = {
-      ...userProfileData,
-      profile_image: data.user?.user_metadata.avatar_url,
-      display_name: data.user?.user_metadata.name,
-    } as UserProfile
-  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -65,16 +47,18 @@ export default async function RootLayout({
           />
         )}
         <LayoutClient />
-        <UserProvider initialUser={userProfile}>
-          <ChatsProvider userId={userProfile?.id}>
-            <ChatSessionProvider>
-              <ThemeProvider>
-                <Toaster position="top-center" />
-                {children}
-              </ThemeProvider>
-            </ChatSessionProvider>
-          </ChatsProvider>
-        </UserProvider>
+        <ConvexClientProvider>
+          <UserProvider initialUser={null}>
+            <ChatsProvider userId={undefined}>
+              <ChatSessionProvider>
+                <ThemeProvider>
+                  <Toaster position="top-center" />
+                  {children}
+                </ThemeProvider>
+              </ChatSessionProvider>
+            </ChatsProvider>
+          </UserProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   )

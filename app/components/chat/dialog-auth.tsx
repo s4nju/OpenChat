@@ -9,8 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { signInWithGoogle } from "@/lib/api"
-import { createClient } from "@/lib/supabase/client"
+import { useAuthActions } from "@convex-dev/auth/react"
 import { useState } from "react"
 
 type DialogAuthProps = {
@@ -22,19 +21,13 @@ export function DialogAuth({ open, setOpen }: DialogAuthProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const { signIn } = useAuthActions()
 
   const handleSignInWithGoogle = async () => {
     try {
       setIsLoading(true)
       setError(null)
-
-      const data = await signInWithGoogle(supabase)
-
-      // Redirect to the provider URL
-      if (data?.url) {
-        window.location.href = data.url
-      }
+      await signIn("google")
     } catch (err: any) {
       console.error("Error signing in with Google:", err)
       setError(err.message || "An unexpected error occurred. Please try again.")

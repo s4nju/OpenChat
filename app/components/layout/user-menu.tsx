@@ -1,6 +1,6 @@
 "use client"
 
-import { Database } from "@/app/types/database.types"
+import { Doc } from "../../../convex/_generated/dataModel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { clearAllIndexedDBStores } from "@/lib/chat-store/persist"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/toast"
 
-type User = Database["public"]["Tables"]["users"]["Row"]
+type User = Doc<"users">
 
 export function UserMenu({ user }: { user: User }) {
   const { signOut } = useUser()

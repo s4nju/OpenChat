@@ -7,32 +7,7 @@ import {
   NON_PREMIUM_MONTHLY_MESSAGE_LIMIT,
 } from "./config"
 import { fetchClient } from "./fetch"
-import { API_ROUTE_CREATE_GUEST, API_ROUTE_UPDATE_CHAT_MODEL } from "./routes"
-
-/**
- * Creates a guest user record on the server
- */
-export async function createGuestUser(guestId: string) {
-  try {
-    const res = await fetchClient(API_ROUTE_CREATE_GUEST, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: guestId }),
-    })
-    const responseData = await res.json()
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to create guest user: ${res.status} ${res.statusText}`
-      )
-    }
-
-    return responseData
-  } catch (err) {
-    console.error("Error creating guest user:", err)
-    throw err
-  }
-}
+import { API_ROUTE_UPDATE_CHAT_MODEL } from "./routes"
 
 export class UsageLimitError extends Error {
   code: string
@@ -306,38 +281,3 @@ export async function updateChatModel(chatId: string, model: string) {
 /**
  * Signs in user with Google OAuth via Supabase
  */
-export async function signInWithGoogle(supabase: SupabaseClient) {
-  try {
-    const isDev = process.env.NODE_ENV === "development"
-
-    // Get base URL dynamically (will work in both browser and server environments)
-    let baseUrl = isDev
-      ? "http://localhost:3000"
-      : typeof window !== "undefined"
-        ? window.location.origin
-        : process.env.NEXT_PUBLIC_VERCEL_URL
-          ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-          : APP_DOMAIN
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${baseUrl}/auth/callback`,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    })
-
-    if (error) {
-      throw error
-    }
-
-    // Return the provider URL
-    return data
-  } catch (err) {
-    console.error("Error signing in with Google:", err)
-    throw err
-  }
-}
