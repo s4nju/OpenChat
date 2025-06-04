@@ -202,7 +202,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *   Represent enums like `orderstatus` using `v.union(v.literal(...))`.
     *   Add helpful indexes for queries (`by_chat_and_creation` for messages, etc.).
     *   Run `bun x convex codegen` to regenerate types after updating the schema.
-*   [ ] **3.2 Deploy Full Schema**
+*   [x] **3.2 Deploy Full Schema**
     *   Run `npx convex dev` (or `npx convex deploy` for production) to push schema changes.
     *   Confirm `convex/_generated/` is refreshed and committed.
 *   [ ] **3.3 Migrate Database Functions (Queries & Mutations)**
