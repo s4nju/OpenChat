@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
@@ -22,24 +22,33 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
   const user = useQuery(api.users.getCurrentUser) ?? null;
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
+  const attemptedAnon = useRef(false);
+  const lastUserId = useRef<Id<"users"> | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !attemptedAnon.current) {
+      attemptedAnon.current = true;
       signIn("anonymous");
     }
   }, [isLoading, isAuthenticated, signIn]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      storeCurrentUser({ isAnonymous: user?.isAnonymous });
-      if (user?.isAnonymous) {
-        localStorage.setItem("anonymousUserId", user._id as unknown as string);
-      } else {
-        const anonId = localStorage.getItem("anonymousUserId");
-        if (anonId) {
-          mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
-          localStorage.removeItem("anonymousUserId");
-        }
+    if (!isAuthenticated || user === undefined) return;
+
+    if (user && user._id !== lastUserId.current) {
+      storeCurrentUser({ isAnonymous: user.isAnonymous });
+      lastUserId.current = user._id as Id<"users">;
+    }
+
+    if (!user) return;
+
+    if (user.isAnonymous) {
+      localStorage.setItem("anonymousUserId", user._id as unknown as string);
+    } else {
+      const anonId = localStorage.getItem("anonymousUserId");
+      if (anonId) {
+        mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
+        localStorage.removeItem("anonymousUserId");
       }
     }
   }, [isAuthenticated, user, storeCurrentUser, mergeAnonymous]);

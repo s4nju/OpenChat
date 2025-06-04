@@ -39,6 +39,7 @@ export const storeCurrentUser = mutation({
     if (!userId) return null;
     const existing = await ctx.db.get(userId);
     if (existing) {
+      if (existing.isAnonymous === isAnonymous) return null;
       await ctx.db.patch(userId, { isAnonymous });
       return null;
     }
@@ -94,6 +95,7 @@ export const mergeAnonymousToGoogleAccount = mutation({
     const user = await ctx.db.get(currentId);
     if (!anon || !user) return null;
     await ctx.db.patch(currentId, {
+      isAnonymous: false,
       dailyMessageCount:
         (user.dailyMessageCount ?? 0) + (anon.dailyMessageCount ?? 0),
       monthlyMessageCount:
