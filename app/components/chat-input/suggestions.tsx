@@ -36,10 +36,15 @@ export const Suggestions = memo(function Suggestions({
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       setActiveCategory(null)
-      onSuggestion(suggestion)
-      onValueChange("")
+      // Instead of immediately adding the suggestion as a message (which
+      // caused an empty `input` value and prevented the chat from being
+      // created), we now simply populate the input field with the selected
+      // suggestion. The user can then hit Enter / click Send to submit the
+      // message, ensuring that `ensureChatExists` has the correct `input`
+      // value and creates the chat before the first API request.
+      onValueChange(suggestion)
     },
-    [onSuggestion, onValueChange]
+    [onValueChange]
   )
 
   const handleCategoryClick = useCallback(

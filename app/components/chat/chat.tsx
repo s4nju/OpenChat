@@ -102,25 +102,61 @@ export default function Chat() {
   //   }
   // }, [])
 
-  // useEffect(() => {
-  //   console.log("useChat status:", status)
-  //   console.log("useChat messages:", messages)
-  // }, [status, messages])
+  useEffect(() => {
+    console.log("useChat status:", status)
+    console.log("useChat messages:", messages)
+  }, [status, messages])
 
   useEffect(() => {
     setHydrated(true)
   }, [])
 
-  // Sync messages from DB to AI SDK state, but only when chat is ready
+  // Sync messages from DB to AI SDK state ensuring IDs from Convex are merged
+  // into the client state. We avoid the flash by:
+  // 1. Replacing the entire list only when DB has >= messages.length
+  // 2. When DB has fewer messages (likely because the latest user message
+  //    hasn't persisted yet), we merge IDs/metadata for the overlap without
+  //    dropping optimistic messages.
+  // 3. While a delete operation is in flight (isDeleting), we skip syncing to
+  //    prevent the just-deleted message from reappearing.
   useEffect(() => {
-    if (status === 'ready' && messagesFromDB) {
-      // console.log("Syncing from DB because chat is ready.")
-      setMessages(messagesFromDB.map(mapMessage))
-    } else if (status === 'ready' && !chatId) {
-      // console.log("Setting messages empty")
-      setMessages([])
+    if (status !== "ready" || !messagesFromDB || isDeleting) return;
+
+    const mappedDb = messagesFromDB.map(mapMessage);
+
+    if (mappedDb.length >= messages.length) {
+      // DB is up-to-date or ahead – replace to ensure canonical IDs.
+      setMessages(mappedDb);
+    } else if (mappedDb.length > 0) {
+      // DB is behind: merge IDs for the portion we have *without* dropping
+      // recent optimistic messages (e.g., the just-streamed assistant reply).
+      // We still update canonical IDs/metadata for the overlapping range so
+      // that once the DB catches up the local state is already aligned.
+      const merged = messages.map((msg, idx) => {
+        if (idx < mappedDb.length) {
+          const dbMsg = mappedDb[idx];
+          return {
+            ...msg,
+            id: dbMsg.id,
+            experimental_attachments: dbMsg.experimental_attachments,
+            reasoning_text: dbMsg.reasoning_text,
+            model: dbMsg.model,
+          } as typeof msg;
+        }
+        // Keep optimistic messages beyond the DB length untouched to avoid
+        // momentary disappearance in the UI.
+        return msg;
+      });
+      setMessages(merged);
     }
-  }, [messagesFromDB, chatId, setMessages, status])
+  }, [messagesFromDB, status, messages, setMessages, isDeleting]);
+
+  // If we're in a brand-new chat (no chatId yet) ensure local state stays empty.
+  useEffect(() => {
+    if (status === "ready" && !chatId) {
+      setMessages([]);
+    }
+  }, [status, chatId, setMessages]);
 
   // Sync chat settings from DB to local state
   useEffect(() => {
@@ -299,21 +335,42 @@ export default function Chat() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const originalMessages = [...messages]
-      const filteredMessages = originalMessages.filter((m) => m.id !== id)
-      setMessages(filteredMessages) // Optimistic update
-      setIsDeleting(true)
+      // Build an optimistically updated list that mimics server deletion of the
+      // target message *and* its descendants (assistant replies, tools, etc.).
+      const buildOptimisticList = (msgList: typeof messages, targetId: string) => {
+        const idx = msgList.findIndex((m) => m.id === targetId);
+        if (idx === -1) return msgList; // fallback – shouldn't happen
+
+        const targetRole = msgList[idx].role;
+        let endIdx = idx + 1;
+
+        // If deleting a user message, also remove subsequent assistant (and
+        // related) messages until the next user message or end-of-list.
+        if (targetRole === "user") {
+          while (endIdx < msgList.length && msgList[endIdx].role !== "user") {
+            endIdx++;
+          }
+        }
+
+        return [...msgList.slice(0, idx), ...msgList.slice(endIdx)];
+      };
+
+      const originalMessages = [...messages];
+      const filteredMessages = buildOptimisticList(originalMessages, id);
+      setMessages(filteredMessages); // Optimistic update (user + assistant)
+      setIsDeleting(true);
 
       try {
-        const result = await deleteMessage({ messageId: id as Id<"messages"> })
+        const result = await deleteMessage({ messageId: id as Id<"messages"> });
         if (result.chatDeleted) {
-          router.push("/")
+          router.push("/");
+        } else {
+          setIsDeleting(false);
         }
-        // No need to reset isDeleting here, the provider will handle it on navigation
       } catch {
-        setMessages(originalMessages) // Rollback
-        toast({ title: "Failed to delete message", status: "error" })
-        setIsDeleting(false) // Reset on error
+        setMessages(originalMessages); // Rollback on error
+        toast({ title: "Failed to delete message", status: "error" });
+        setIsDeleting(false);
       }
     },
     [messages, setMessages, deleteMessage, router, setIsDeleting]
@@ -331,17 +388,46 @@ export default function Chat() {
   const handleReload = useCallback(async (messageId: string, opts?: { enableSearch?: boolean }) => {
     if (!user?._id || !chatId) return
 
+    // 1. Optimistically remove all messages that come *after* the one being reloaded so
+    //    they disappear from the UI immediately.
+    const originalMessages = [...messages]
+    const targetIdx = originalMessages.findIndex((m) => m.id === messageId)
+    if (targetIdx === -1) {
+      return
+    }
+    const trimmedMessages = originalMessages.slice(0, targetIdx + 1)
+    setMessages(trimmedMessages)
+
+    // 2. Persist the deletion of the following messages in the DB by invoking the existing
+    //    deleteMessageAndDescendants mutation on the first message *after* the target (if any).
+    const firstFollowing = originalMessages[targetIdx + 1]
+    if (firstFollowing) {
+      setIsDeleting(true)
+      try {
+        await deleteMessage({ messageId: firstFollowing.id as Id<"messages"> })
+      } catch {
+        // Roll back optimistic update if the deletion fails
+        setMessages(originalMessages)
+        toast({ title: "Failed to delete messages for reload", status: "error" })
+      } finally {
+        setIsDeleting(false)
+      }
+    }
+
+    // 3. Trigger the assistant reload once the slate after the target message is clean.
     const options = {
       body: {
         chatId,
         model: selectedModel,
         systemPrompt: systemPrompt || getSystemPromptDefault(),
         reloadAssistantMessageId: messageId,
-        ...(opts && typeof opts.enableSearch !== 'undefined' ? { enableSearch: opts.enableSearch } : {})
+        ...(opts && typeof opts.enableSearch !== "undefined"
+          ? { enableSearch: opts.enableSearch }
+          : {}),
       },
     }
     reload(options)
-  }, [user?._id, chatId, selectedModel, systemPrompt, reload]);
+  }, [user?._id, chatId, messages, setMessages, deleteMessage, selectedModel, systemPrompt, reload, setIsDeleting])
 
   // Redirect if chat is not found or user is not authorized
   useEffect(() => {
