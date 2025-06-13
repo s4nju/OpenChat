@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { SignOut, User, X } from "@phosphor-icons/react"
 import { useTheme } from "@/app/providers/theme-provider"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import type React from "react"
 import { useEffect, useState } from "react"
 
@@ -255,6 +256,16 @@ export function SettingsContent({
           <p className="text-muted-foreground mt-2 text-xs">
             This model will be used by default for new conversations
           </p>
+        </div>
+      </div>
+
+      {/* Customization Link */}
+      <div className="border-border border-t">
+        <div className="px-6 py-4">
+          <h3 className="mb-3 text-sm font-medium">Assistant Customization</h3>
+          <Link href="/settings/customization" className="text-sm text-primary hover:underline">
+            Edit personalization details
+          </Link>
         </div>
       </div>
 

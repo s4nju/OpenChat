@@ -9,6 +9,7 @@ import {
   MODEL_DEFAULT,
   REMAINING_QUERY_ALERT_THRESHOLD,
   getSystemPromptDefault,
+  buildSystemPrompt,
 } from "@/lib/config"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
@@ -65,7 +66,8 @@ export default function Chat() {
   const [hasDialogAuth, setHasDialogAuth] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [selectedModel, setSelectedModel] = useState(user?.preferredModel || MODEL_DEFAULT)
-  const [systemPrompt, setSystemPrompt] = useState(getSystemPromptDefault())
+  const [personaPrompt, setPersonaPrompt] = useState<string | undefined>()
+  const [systemPrompt, setSystemPrompt] = useState(() => buildSystemPrompt(user))
   const [hydrated, setHydrated] = useState(false)
 
   const isAuthenticated = !!user && !user.isAnonymous
@@ -162,9 +164,16 @@ export default function Chat() {
   useEffect(() => {
     if (currentChat) {
       setSelectedModel(currentChat.model || MODEL_DEFAULT)
-      setSystemPrompt(currentChat.systemPrompt || getSystemPromptDefault())
+      setSystemPrompt(currentChat.systemPrompt || buildSystemPrompt(user))
+      setPersonaPrompt(undefined)
     }
-  }, [currentChat])
+  }, [currentChat, user])
+
+  useEffect(() => {
+    if (!chatId) {
+      setSystemPrompt(buildSystemPrompt(user, personaPrompt))
+    }
+  }, [user?.preferredName, user?.occupation, user?.traits, user?.about, personaPrompt])
 
   // --- Error Handling ---
   useEffect(() => {
@@ -216,7 +225,7 @@ export default function Chat() {
         const result = await createChat({
           title: input.substring(0, 50), // Create a title from the first message
           model: selectedModel,
-          systemPrompt: systemPrompt || getSystemPromptDefault(),
+          systemPrompt: systemPrompt || buildSystemPrompt(user),
         })
         const newChatId = result.chatId
         window.history.pushState(null, "", `/c/${newChatId}`)
@@ -246,6 +255,15 @@ export default function Chat() {
       }
     },
     [chatId, user, updateChatModel]
+  )
+
+  const handlePersonaSelect = useCallback(
+    (prompt: string) => {
+      const base = prompt || undefined
+      setPersonaPrompt(base)
+      setSystemPrompt(buildSystemPrompt(user, base))
+    },
+    [user]
   )
 
   const uploadAndSaveFile = async (file: File, chatIdForUpload: Id<"chats">) => {
@@ -318,7 +336,7 @@ export default function Chat() {
       body: {
         chatId: currentChatId,
         model: selectedModel,
-        systemPrompt: systemPrompt || getSystemPromptDefault(),
+        systemPrompt: systemPrompt || buildSystemPrompt(user),
         ...(opts?.body && typeof opts.body.enableSearch !== 'undefined' ? { enableSearch: opts.body.enableSearch } : {})
       },
       experimental_attachments: vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
@@ -419,7 +437,7 @@ export default function Chat() {
       body: {
         chatId,
         model: selectedModel,
-        systemPrompt: systemPrompt || getSystemPromptDefault(),
+        systemPrompt: systemPrompt || buildSystemPrompt(user),
         reloadAssistantMessageId: messageId,
         ...(opts && typeof opts.enableSearch !== "undefined"
           ? { enableSearch: opts.enableSearch }
@@ -511,7 +529,7 @@ export default function Chat() {
           onFileRemove={(file) => setFiles((prev) => prev.filter((f) => f !== file))}
           hasSuggestions={!chatId && messages.length === 0}
           onSelectModel={handleModelChange}
-          onSelectSystemPrompt={setSystemPrompt}
+          onSelectSystemPrompt={handlePersonaSelect}
           selectedModel={selectedModel}
           isUserAuthenticated={isAuthenticated}
           systemPrompt={systemPrompt}

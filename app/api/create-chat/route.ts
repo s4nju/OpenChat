@@ -1,6 +1,7 @@
-import { fetchMutation } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
+import { buildSystemPrompt } from "@/lib/config";
 import { z } from "zod";
 
 export async function POST(request: Request) {
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
 
     const token = await convexAuthNextjsToken();
 
+    const user = await fetchQuery(api.users.getCurrentUser, {}, { token });
+    const composedPrompt = buildSystemPrompt(user, systemPrompt);
+
     // Check usage limits before creating the chat. This mutation will throw
     // an error if the user is over their limit, which will be caught below.
     await fetchMutation(api.users.assertNotOverLimit, {}, { token });
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
       {
         title,
         model,
-        systemPrompt,
+        systemPrompt: composedPrompt,
       },
       { token }
     );

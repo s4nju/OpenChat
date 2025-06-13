@@ -17,6 +17,10 @@ export default defineSchema({
     totalMessageCount: v.optional(v.number()),
     preferredModel: v.optional(v.string()),
     isPremium: v.optional(v.boolean()),
+    preferredName: v.optional(v.string()),
+    occupation: v.optional(v.string()),
+    traits: v.optional(v.string()),
+    about: v.optional(v.string()),
   })
     .index("email", ["email"]),
   chats: defineTable({

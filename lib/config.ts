@@ -11,6 +11,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { togetherai } from '@ai-sdk/togetherai';
 import { google } from '@ai-sdk/google';
 import { groq } from '@ai-sdk/groq';
+import type { Doc } from "@/convex/_generated/dataModel";
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   BookOpenTextIcon,
@@ -606,5 +607,21 @@ export const SUGGESTIONS = [
 
 export const getSystemPromptDefault = () =>
   `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention, never too much, never too little. You avoid cliches, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`
+
+export type UserProfile = Doc<"users">;
+
+export function buildSystemPrompt(
+  user?: UserProfile | null,
+  basePrompt?: string
+) {
+  const prompt = basePrompt ?? getSystemPromptDefault();
+  if (!user) return prompt;
+  const details: string[] = [];
+  if (user.preferredName) details.push(`Preferred Name: ${user.preferredName}`);
+  if (user.occupation) details.push(`Occupation: ${user.occupation}`);
+  if (user.traits) details.push(`Traits: ${user.traits}`);
+  if (user.about) details.push(`About: ${user.about}`);
+  return details.length > 0 ? `${prompt}\n\n${details.join("\n")}` : prompt;
+}
 
 export const MESSAGE_MAX_LENGTH = 4000

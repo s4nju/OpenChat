@@ -28,6 +28,10 @@ export const getCurrentUser = query({
       totalMessageCount: v.optional(v.number()),
       preferredModel: v.optional(v.string()),
       isPremium: v.optional(v.boolean()),
+      preferredName: v.optional(v.string()),
+      occupation: v.optional(v.string()),
+      traits: v.optional(v.string()),
+      about: v.optional(v.string()),
     })
   ),
   handler: async (ctx) => {
@@ -93,6 +97,10 @@ export const updateUserProfile = mutation({
     updates: v.object({
       preferredModel: v.optional(v.string()),
       isPremium: v.optional(v.boolean()),
+      preferredName: v.optional(v.string()),
+      occupation: v.optional(v.string()),
+      traits: v.optional(v.string()),
+      about: v.optional(v.string()),
     }),
   },
   returns: v.null(),
