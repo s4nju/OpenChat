@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/toast"
 
 export default function CustomizationPage() {
   const { user, updateUser } = useUser()
@@ -27,7 +28,8 @@ export default function CustomizationPage() {
 
   const handleSave = async () => {
     await updateUser({ preferredName, occupation, traits, about })
-    router.back()
+    toast({ title: "Preferences saved", status: "success" })
+    router.push("/settings")
   }
 
   return (
