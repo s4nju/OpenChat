@@ -20,6 +20,11 @@ export const sendUserMessageToChat = mutation({
     if (!userId) {
       throw new Error("Not authenticated");
     }
+    // Verify that the authenticated user owns the chat
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat || chat.userId !== userId) {
+      throw new Error("Chat not found or unauthorized");
+    }
     const messageId = await ctx.db.insert("messages", {
       chatId: args.chatId,
       userId,
@@ -52,7 +57,11 @@ export const saveAssistantMessage = mutation({
     if (!userId) {
       throw new Error("Not authenticated");
     }
-    // Note: No usage check here. This is only for saving the assistant's reply.
+    // Verify that the authenticated user owns the chat
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat || chat.userId !== userId) {
+      throw new Error("Chat not found or unauthorized");
+    }
     const messageId = await ctx.db.insert("messages", {
       chatId: args.chatId,
       userId,

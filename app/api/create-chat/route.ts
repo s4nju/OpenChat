@@ -1,10 +1,30 @@
 import { fetchMutation } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
+import { z } from "zod";
 
 export async function POST(request: Request) {
   try {
-    const { title, model, systemPrompt } = await request.json();
+    // --- Validate request body ---
+    const body = await request.json();
+
+    const schema = z.object({
+      title: z.string().min(1, "Title is required"),
+      model: z.string().min(1, "Model is required"),
+      systemPrompt: z.string().optional(),
+    });
+
+    const parseResult = schema.safeParse(body);
+
+    if (!parseResult.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body", details: parseResult.error.flatten() }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { title, model, systemPrompt } = parseResult.data;
+
     const token = await convexAuthNextjsToken();
 
     // Check usage limits before creating the chat. This mutation will throw

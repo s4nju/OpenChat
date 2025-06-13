@@ -70,6 +70,8 @@ export default function ChatSidebar({ isOpen, toggleSidebar }: ChatSidebarProps)
     if (params.chatId === id) {
       router.push("/");
     }
+    // Reset the deleting state after the mutation and any routing logic complete
+    setChatIsDeleting(false);
   };
   const filteredChats = chats.filter((chat) => (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -295,11 +297,9 @@ export default function ChatSidebar({ isOpen, toggleSidebar }: ChatSidebarProps)
                         <Link
                           href={`/c/${chat._id}`}
                           prefetch
+                          replace
+                          scroll={false}
                           key={chat._id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            router.replace(`/c/${chat._id}`, {scroll: false});
-                          }}
                           className="flex flex-1 flex-col items-start"
                         >
                           <span className="line-clamp-1 text-base font-normal">

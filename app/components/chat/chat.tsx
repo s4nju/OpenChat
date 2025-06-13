@@ -8,12 +8,12 @@ import {
   MESSAGE_MAX_LENGTH,
   MODEL_DEFAULT,
   REMAINING_QUERY_ALERT_THRESHOLD,
-  SYSTEM_PROMPT_DEFAULT,
+  getSystemPromptDefault,
 } from "@/lib/config"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat, type Message } from "@ai-sdk/react"
-import { useAction, useMutation, useQuery } from "convex/react"
+import { useAction, useMutation, useQuery, useConvex } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
 import { AnimatePresence, motion } from "framer-motion"
@@ -56,15 +56,16 @@ export default function Chat() {
   const createChat = useMutation(api.chats.createChat)
   const updateChatModel = useMutation(api.chats.updateChatModel)
   const deleteMessage = useMutation(api.messages.deleteMessageAndDescendants)
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
+  const generateUploadUrl = useAction(api.files.generateUploadUrl)
   const saveFileAttachment = useAction(api.files.saveFileAttachment)
+  const convex = useConvex()
 
   // --- Local State ---
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasDialogAuth, setHasDialogAuth] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [selectedModel, setSelectedModel] = useState(user?.preferredModel || MODEL_DEFAULT)
-  const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PROMPT_DEFAULT)
+  const [systemPrompt, setSystemPrompt] = useState(getSystemPromptDefault())
   const [hydrated, setHydrated] = useState(false)
 
   const isAuthenticated = !!user && !user.isAnonymous
@@ -125,7 +126,7 @@ export default function Chat() {
   useEffect(() => {
     if (currentChat) {
       setSelectedModel(currentChat.model || MODEL_DEFAULT)
-      setSystemPrompt(currentChat.systemPrompt || SYSTEM_PROMPT_DEFAULT)
+      setSystemPrompt(currentChat.systemPrompt || getSystemPromptDefault())
     }
   }, [currentChat])
 
@@ -149,24 +150,19 @@ export default function Chat() {
   // --- Core Logic Handlers ---
 
   const checkLimitsAndNotify = async (): Promise<boolean> => {
-    // This logic will be moved to the backend, but for now we keep the client-side check
-    // which calls the API route. The API route itself will be refactored.
     try {
-      const res = await fetch(`/api/rate-limits`)
-      const rateData = await res.json()
+      const rateData = await convex.query(api.users.getRateLimitStatus, {})
+      const remaining = rateData.effectiveRemaining
+      const plural = remaining === 1 ? "query" : "queries"
 
-      if (!res.ok) {
-        throw new Error(rateData.error || "Failed to check rate limits")
-      }
-
-      if (rateData.remaining === 0 && !isAuthenticated) {
+      if (remaining === 0 && !isAuthenticated) {
         setHasDialogAuth(true)
         return false
       }
 
-      if (rateData.remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
+      if (remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
         toast({
-          title: `Only ${rateData.remaining} ${rateData.remaining === 1 ? "query" : "queries"} remaining today.`,
+          title: `Only ${remaining} ${plural} remaining today.`,
           status: "info",
         })
       }
@@ -184,12 +180,10 @@ export default function Chat() {
         const result = await createChat({
           title: input.substring(0, 50), // Create a title from the first message
           model: selectedModel,
-          systemPrompt: systemPrompt,
+          systemPrompt: systemPrompt || getSystemPromptDefault(),
         })
         const newChatId = result.chatId
         window.history.pushState(null, "", `/c/${newChatId}`)
-        // Manually update the router to ensure re-render and session update
-        // router.push(`/c/${newChatId}`, { scroll: false })
         return newChatId
       } catch (err: any) {
         toast({ title: "Failed to create new chat.", status: "error" })
@@ -288,7 +282,7 @@ export default function Chat() {
       body: {
         chatId: currentChatId,
         model: selectedModel,
-        systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        systemPrompt: systemPrompt || getSystemPromptDefault(),
         ...(opts?.body && typeof opts.body.enableSearch !== 'undefined' ? { enableSearch: opts.body.enableSearch } : {})
       },
       experimental_attachments: vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
@@ -341,7 +335,7 @@ export default function Chat() {
       body: {
         chatId,
         model: selectedModel,
-        systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        systemPrompt: systemPrompt || getSystemPromptDefault(),
         reloadAssistantMessageId: messageId,
         ...(opts && typeof opts.enableSearch !== 'undefined' ? { enableSearch: opts.enableSearch } : {})
       },

@@ -7,6 +7,6 @@ const DOMPurify = createDOMPurify(window)
 export function sanitizeUserInput(input: string): string {
   // First, sanitize any HTML tags to avoid potential XSS.
   const purified = DOMPurify.sanitize(input)
-  // Then, remove characters whose char code exceeds 255 (they are incompatible with ByteString in some runtimes).
-  return purified.replace(/[\u0100-\u{10FFFF}]/gu, "")
+  // Storage and DB layers support UTF-8, so we keep the content intact (including emojis and non-Latin chars).
+  return purified
 }

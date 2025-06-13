@@ -6,6 +6,7 @@ import {
   useContext,
   useMemo,
   useState,
+  useEffect,
   Dispatch,
   SetStateAction,
 } from "react"
@@ -40,7 +41,7 @@ export function ChatSessionProvider({
   // When the chat page changes, reset the deleting state
   // This handles cases where a user navigates away before a delete operation finishes
   // or if the state gets stuck.
-  useMemo(() => {
+  useEffect(() => {
     setIsDeleting(false)
   }, [chatId])
 

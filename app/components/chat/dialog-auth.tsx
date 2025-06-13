@@ -28,9 +28,15 @@ export function DialogAuth({ open, setOpen }: DialogAuthProps) {
       setIsLoading(true)
       setError(null)
       await signIn("google")
-    } catch (err: any) {
-      console.error("Error signing in with Google:", err)
-      setError(err.message || "An unexpected error occurred. Please try again.")
+      setOpen(false)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error signing in with Google:", err)
+        setError(err.message || "An unexpected error occurred. Please try again.")
+      } else {
+        console.error("Unexpected non-Error thrown:", err)
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }

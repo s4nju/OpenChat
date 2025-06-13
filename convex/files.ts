@@ -7,7 +7,7 @@ import { api } from "./_generated/api";
 /**
  * Generates a secure URL for uploading a file to Convex storage.
  */
-export const generateUploadUrl = mutation(async (ctx) => {
+export const generateUploadUrl = action(async (ctx) => {
   return await ctx.storage.generateUploadUrl();
 });
 

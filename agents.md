@@ -20,7 +20,7 @@
 - Vercel AI SDK for AI
 - Next.js 15 and React 19 for the framework
 - Convex for authentication and serverless functions
-- Supabase as backend database
+
 - IndexedDB as client side persistance
 
 - Update the Project Details whenever the stack changes.

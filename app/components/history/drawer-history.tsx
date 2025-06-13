@@ -110,8 +110,8 @@ export function DrawerHistory({
 
           <ScrollArea className="flex-1 overflow-auto">
             <div className="flex flex-col space-y-2 px-4 pt-4 pb-8">
-              {filteredChat.map((chat, index) => (
-                <div key={index}>
+              {filteredChat.map((chat) => (
+                <div key={chat._id}>
                   <div className="space-y-1.5">
                     {editingId === chat._id ? (
                       <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
@@ -200,7 +200,6 @@ export function DrawerHistory({
                         <Link
                           href={`/c/${chat._id}`}
                           prefetch
-                          key={chat._id}
                           className="flex flex-1 flex-col items-start"
                         >
                           <span className="line-clamp-1 text-base font-normal">

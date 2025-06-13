@@ -43,7 +43,7 @@
 - [motion-primitives](https://motion-primitives.com) - Animated components
 - [Vercel AI SDK](https://vercel.com/blog/introducing-the-vercel-ai-sdk) - Model integration and AI features
 - [Convex](https://convex.dev) - Authentication and serverless functions
-- [Supabase](https://supabase.com) - Storage and legacy database
+
 
 ## 🗺️ Roadmap
 

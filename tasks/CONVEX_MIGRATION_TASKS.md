@@ -314,11 +314,11 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
 
 ## Phase 4: Cleanup
 
-*   [ ] **4.1 Remove IndexedDB Usage**
+*   [x] **4.1 Remove IndexedDB Usage**
     *   Delete `lib/chat-store/persist.ts`.
     *   Remove all imports and function calls related to IndexedDB from the codebase.
     *   Adjust any client-side state management in `lib/chat-store/` that relied on it.
-*   [ ] **4.2 Remove Supabase Code and Configuration**
+*   [x] **4.2 Remove Supabase Code and Configuration**
     *   Delete the `lib/supabase/` directory.
     *   Delete `utils/supabase/middleware.ts` (if not already done).
     *   Remove all Supabase client instantiations and direct Supabase API calls.
@@ -326,7 +326,7 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
     *   Remove Supabase-specific environment variables from `.env.local` and other configurations.
     *   Search globally for 'supabase' and 'Supabase' to catch any remaining references in comments, strings, or utility functions.
     *   **4.2.1:** Review and update/remove CSRF token fetching in `app/layout-client.tsx` based on the new CSRF strategy (from Task 2.6.1).
-*   [ ] **4.3 Uninstall Supabase Dependencies**
+*   [x] **4.3 Uninstall Supabase Dependencies**
     *   Run `bun remove @supabase/supabase-js @supabase/auth-helpers-nextjs @supabase/ssr dexie` (and any other related packages like `idb-keyval` if it was also used).
 *   [ ] **4.4 Final Verification and Testing**
     *   Thoroughly test all aspects of the application:

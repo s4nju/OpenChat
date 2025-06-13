@@ -38,17 +38,26 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
     if (!isAuthenticated || user === undefined) return;
 
     if (user && user._id !== lastUserId.current) {
-      storeCurrentUser({ isAnonymous: user.isAnonymous ?? false }).then((res) => {
-        const anonId = localStorage.getItem("anonymousUserId");
-        if (!user.isAnonymous && res?.isNew) {
-          if (anonId) {
-            mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
+      (async () => {
+        try {
+          const res = await storeCurrentUser({ isAnonymous: user.isAnonymous ?? false });
+          const anonId = localStorage.getItem("anonymousUserId");
+          if (!user.isAnonymous && res?.isNew) {
+            if (anonId) {
+              try {
+                await mergeAnonymous({ previousAnonymousUserId: anonId as Id<"users"> });
+              } catch (mergeErr) {
+                console.error("Failed to merge anonymous account:", mergeErr);
+              }
+              localStorage.removeItem("anonymousUserId");
+            }
+          } else if (!user.isAnonymous && anonId) {
             localStorage.removeItem("anonymousUserId");
           }
-        } else if (!user.isAnonymous && anonId) {
-          localStorage.removeItem("anonymousUserId");
+        } catch (err) {
+          console.error("Failed to store current user:", err);
         }
-      });
+      })();
       lastUserId.current = user._id as Id<"users">;
     }
 
@@ -59,7 +68,9 @@ export function UserProvider({ children }: { children: React.ReactNode; initialU
     }
   }, [isAuthenticated, user, storeCurrentUser, mergeAnonymous]);
 
-  const signInGoogle = () => signIn("google");
+  const signInGoogle = async () => {
+    await signIn("google");
+  };
   const updateUser = async (updates: Partial<UserProfile>) => {
     await updateUserProfile({ updates });
   };

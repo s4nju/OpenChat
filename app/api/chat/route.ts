@@ -47,7 +47,36 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- Enhanced Input Validation ---
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "'messages' must be a non-empty array." }),
+        { status: 400 }
+      );
+    }
+
+    if (typeof chatId !== "string" || chatId.trim() === "") {
+      return new Response(
+        JSON.stringify({ error: "'chatId' must be a non-empty string." }),
+        { status: 400 }
+      );
+    }
+
     const selectedModel = MODELS.find((m) => m.id === model);
+    if (!selectedModel) {
+      return new Response(
+        JSON.stringify({ error: "Invalid 'model' provided." }),
+        { status: 400 }
+      );
+    }
+
+    if (systemPrompt && systemPrompt.length > 1000) {
+      return new Response(
+        JSON.stringify({ error: "'systemPrompt' must not exceed 1000 characters." }),
+        { status: 400 }
+      );
+    }
+
     const token = await convexAuthNextjsToken();
 
     // --- Unified Rate-Limiting Check ---
@@ -146,14 +175,18 @@ export async function POST(req: Request) {
                     responseMessages: response.messages,
                   });
 
-                  // This mutation handles saving the message, usage increment, and chat timestamp update
+                  // Ensure userMsgId is available before proceeding
+                  if (!userMsgId) {
+                    throw new Error("Missing parent userMsgId when saving assistant message.");
+                  }
+
                   const { messageId } = await fetchMutation(
                     api.messages.saveAssistantMessage,
                     {
                       chatId: chatId,
                       role: "assistant",
                       content: textContent,
-                      parentMessageId: userMsgId!, // userMsgId must be set by this point
+                      parentMessageId: userMsgId, // userMsgId must be set by this point
                       reasoningText: reasoningText,
                       model: model,
                       experimentalAttachments: assistantMessage.parts,

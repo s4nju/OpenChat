@@ -20,6 +20,14 @@ export async function POST(request: Request) {
     }
 
     const token = await convexAuthNextjsToken();
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     await fetchMutation(
       api.chats.updateChatModel,
       {
