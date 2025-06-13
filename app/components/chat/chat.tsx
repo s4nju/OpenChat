@@ -102,10 +102,10 @@ export default function Chat() {
   //   }
   // }, [])
 
-  useEffect(() => {
-    console.log("useChat status:", status)
-    console.log("useChat messages:", messages)
-  }, [status, messages])
+  // useEffect(() => {
+  //   console.log("useChat status:", status)
+  //   console.log("useChat messages:", messages)
+  // }, [status, messages])
 
   useEffect(() => {
     setHydrated(true)
