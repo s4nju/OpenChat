@@ -4,7 +4,7 @@
  * Secret must be injected at runtime (e.g., via env or config).
  */
 
-import { cookies } from "next/headers"
+// import { cookies } from "next/headers"
 
 // Helper: Convert ArrayBuffer to hex string
 function bufferToHex(buffer: ArrayBuffer): string {
