@@ -3,17 +3,10 @@
 import { DrawerHistory } from "@/app/components/history/drawer-history"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { CommandHistory } from "@/app/components/history/command-history"
-import type { Chats } from "@/lib/chat-store/types"
 import { ListMagnifyingGlass } from "@phosphor-icons/react"
 import { useState } from "react"
 
-type HistoryTriggerProps = {
-  chatHistory: Chats[]
-  onSaveEdit: (id: string, newTitle: string) => Promise<void>
-  onConfirmDelete: (id: string) => Promise<void>
-}
-
-export function HistoryTrigger(props: HistoryTriggerProps) {
+export function HistoryTrigger() {
   const isMobileOrTablet = useBreakpoint(896)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -28,8 +21,8 @@ export function HistoryTrigger(props: HistoryTriggerProps) {
   )
 
   if (isMobileOrTablet) {
-    return <DrawerHistory {...props} trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
+    return <DrawerHistory trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
   }
 
-  return <CommandHistory {...props} />
-} 
+  return <CommandHistory />
+}

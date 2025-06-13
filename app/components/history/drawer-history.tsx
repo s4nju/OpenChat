@@ -7,7 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Chats } from "@/lib/chat-store/types"
+import { Doc, Id } from "@/convex/_generated/dataModel"
+import { useMutation, useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import {
   Check,
   MagnifyingGlass,
@@ -19,26 +21,24 @@ import Link from "next/link"
 import { useState } from "react"
 
 type DrawerHistoryProps = {
-  chatHistory: Chats[]
-  onSaveEdit: (id: string, newTitle: string) => Promise<void>
-  onConfirmDelete: (id: string) => Promise<void>
   trigger: React.ReactNode
   isOpen: boolean
   setIsOpen: (open: boolean) => void
 }
 
 export function DrawerHistory({
-  chatHistory,
-  onSaveEdit,
-  onConfirmDelete,
   trigger,
   isOpen,
   setIsOpen,
 }: DrawerHistoryProps) {
+  const chatHistory = useQuery(api.chats.listChatsForUser)
+  const deleteChat = useMutation(api.chats.deleteChat)
+  const updateChatTitle = useMutation(api.chats.updateChatTitle)
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<Id<"chats"> | null>(null)
   const [editTitle, setEditTitle] = useState("")
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<Id<"chats"> | null>(null)
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -50,36 +50,37 @@ export function DrawerHistory({
     }
   }
 
-  const handleEdit = (chat: Chats) => {
-    setEditingId(chat.id)
+  const handleEdit = (chat: Doc<"chats">) => {
+    setEditingId(chat._id)
     setEditTitle(chat.title || "")
   }
 
-  const handleSaveEdit = async (id: string) => {
+  const handleSaveEdit = async (id: Id<"chats">) => {
     setEditingId(null)
-    await onSaveEdit(id, editTitle)
+    await updateChatTitle({ chatId: id, title: editTitle })
   }
 
   const handleCancelEdit = () => {
     setEditingId(null)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: Id<"chats">) => {
     setDeletingId(id)
   }
 
-  const handleConfirmDelete = async (id: string) => {
+  const handleConfirmDelete = async (id: Id<"chats">) => {
     setDeletingId(null)
-    await onConfirmDelete(id)
+    await deleteChat({ chatId: id })
   }
 
   const handleCancelDelete = () => {
     setDeletingId(null)
   }
 
-  const filteredChat = chatHistory.filter((chat) =>
-    (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredChat =
+    chatHistory?.filter((chat) =>
+      (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
+    ) ?? []
 
   return (
     <Drawer open={isOpen} onOpenChange={handleOpenChange}>
@@ -112,13 +113,13 @@ export function DrawerHistory({
               {filteredChat.map((chat, index) => (
                 <div key={index}>
                   <div className="space-y-1.5">
-                    {editingId === chat.id ? (
+                    {editingId === chat._id ? (
                       <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
                         <form
                           className="flex w-full items-center justify-between"
                           onSubmit={(e) => {
                             e.preventDefault()
-                            handleSaveEdit(chat.id)
+                            handleSaveEdit(chat._id)
                           }}
                         >
                           <Input
@@ -148,12 +149,12 @@ export function DrawerHistory({
                           </div>
                         </form>
                       </div>
-                    ) : deletingId === chat.id ? (
+                    ) : deletingId === chat._id ? (
                       <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
                         <form
                           onSubmit={(e) => {
                             e.preventDefault()
-                            handleConfirmDelete(chat.id)
+                            handleConfirmDelete(chat._id)
                           }}
                           className="flex w-full items-center justify-between"
                         >
@@ -197,17 +198,17 @@ export function DrawerHistory({
                     ) : (
                       <div className="group flex items-center justify-between rounded-lg px-2 py-1.5">
                         <Link
-                          href={`/c/${chat.id}`}
+                          href={`/c/${chat._id}`}
                           prefetch
-                          key={chat.id}
+                          key={chat._id}
                           className="flex flex-1 flex-col items-start"
                         >
                           <span className="line-clamp-1 text-base font-normal">
                             {chat.title}
                           </span>
                           <span className="mr-2 text-xs font-normal text-gray-500">
-                            {(chat.updated_at || chat.created_at)
-                              ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
+                            {(chat.updatedAt || chat._creationTime)
+                              ? new Date(chat.updatedAt || chat._creationTime || "").toLocaleDateString()
                               : "Unknown Date"}
                           </span>
                         </Link>
@@ -231,7 +232,7 @@ export function DrawerHistory({
                               className="text-muted-foreground hover:text-destructive size-8"
                               onClick={(e) => {
                                 e.preventDefault()
-                                handleDelete(chat.id)
+                                handleDelete(chat._id)
                               }}
                               type="button"
                             >

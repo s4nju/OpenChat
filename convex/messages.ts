@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
 
-export const sendMessageToChat = mutation({
+export const sendUserMessageToChat = mutation({
   args: {
     chatId: v.id("chats"),
     role: v.string(),
@@ -12,6 +12,7 @@ export const sendMessageToChat = mutation({
     parentMessageId: v.optional(v.id("messages")),
     reasoningText: v.optional(v.string()),
     experimentalAttachments: v.optional(v.any()),
+    model: v.optional(v.string()),
   },
   returns: v.object({ messageId: v.id("messages") }),
   handler: async (ctx, args) => {
@@ -27,10 +28,43 @@ export const sendMessageToChat = mutation({
       parentMessageId: args.parentMessageId,
       reasoningText: args.reasoningText,
       experimentalAttachments: args.experimentalAttachments,
+      model: args.model,
       createdAt: Date.now(),
     });
     await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    await ctx.runMutation(api.users.checkAndIncrementUsage, {});
+    return { messageId };
+  },
+});
+
+export const saveAssistantMessage = mutation({
+  args: {
+    chatId: v.id("chats"),
+    role: v.string(),
+    content: v.string(),
+    parentMessageId: v.optional(v.id("messages")),
+    reasoningText: v.optional(v.string()),
+    experimentalAttachments: v.optional(v.any()),
+    model: v.optional(v.string()),
+  },
+  returns: v.object({ messageId: v.id("messages") }),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+    // Note: No usage check here. This is only for saving the assistant's reply.
+    const messageId = await ctx.db.insert("messages", {
+      chatId: args.chatId,
+      userId,
+      role: args.role,
+      content: args.content,
+      parentMessageId: args.parentMessageId,
+      reasoningText: args.reasoningText,
+      experimentalAttachments: args.experimentalAttachments,
+      model: args.model,
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
     return { messageId };
   },
 });
@@ -49,6 +83,7 @@ export const getMessagesForChat = query({
       experimentalAttachments: v.optional(v.any()),
       parentMessageId: v.optional(v.id("messages")),
       reasoningText: v.optional(v.string()),
+      model: v.optional(v.string()),
     })
   ),
   handler: async (ctx, { chatId }) => {
@@ -78,6 +113,33 @@ export const deleteMessage = mutation({
     return null;
   },
 });
+
+export const getMessageDetails = query({
+  args: { messageId: v.id("messages") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      parentMessageId: v.optional(v.id("messages")),
+      role: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) return null;
+
+    const chat = await ctx.db.get(message.chatId);
+    if (!chat || chat.userId !== userId) return null;
+
+    return {
+      parentMessageId: message.parentMessageId,
+      role: message.role,
+    };
+  },
+});
+
 export const deleteMessageAndDescendants = mutation({
   args: { messageId: v.id("messages") },
   returns: v.object({ chatDeleted: v.boolean() }),
@@ -109,7 +171,7 @@ export const deleteMessageAndDescendants = mutation({
     if (!remaining) {
       for await (const a of ctx.db
         .query("chat_attachments")
-        .withIndex("by_chat", q => q.eq("chatId", chat._id))) {
+        .withIndex("by_chatId", q => q.eq("chatId", chat._id))) {
         await ctx.db.delete(a._id);
       }
       await ctx.db.delete(chat._id);

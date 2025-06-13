@@ -214,38 +214,99 @@ Refer to `OPENCHAT_CONVEX_MIGRATION_PRD.md` for detailed requirements and contex
         *   Feedback helpers: `createFeedback`, etc.
     *   Use `query`, `mutation`, and when necessary `action` for side effects (e.g., AI streaming).
     *   Optimize each function with the indexes defined in the schema.
-*   [ ] **3.4 Refactor Next.js API Routes to Convex Functions**
+*   [x] **3.4 Refactor Next.js API Routes to Use Convex for Database Interactions**
     *   Identify existing Next.js API routes (under `app/api/`) that handle backend logic.
-    *   **3.4.1:** Analyze `app/api/chat/route.ts` (handles streaming, tool usage, message saving) and migrate its core logic to Convex actions (for side effects like AI SDK calls, tool usage) and mutations (for saving messages, updating chat state).
-        *   Stream AI responses to the client while **incrementally persisting** the assistant message to Convex.
-        *   **Throttle writes** during streaming so mutation calls occur at reasonable intervals (e.g., flush to Convex every ~0.5s instead of for each token).
-    *   **3.4.2:** Migrate `app/api/create-chat/route.ts` logic to a Convex mutation.
-    *   **3.4.3:** Migrate `app/api/rate-limits/route.ts` logic to Convex mutations/queries, integrating with the user limits defined in the `users` table.
-    *   **3.4.4:** Migrate `app/api/update-chat-model/route.ts` logic to a Convex mutation.
-    *   **3.4.5:** Review and migrate any other custom API routes to equivalent Convex functions.
-*   [ ] **3.5 Migrate File Uploads to Convex File Storage**
-    *   Review existing file upload logic (e.g., in `lib/file-handling.ts` if it uses Supabase Storage).
-    *   Update the `chat_attachments` table schema in `convex/schema.ts` to store Convex file IDs: e.g., `fileId: v.id("_storage")` instead of a direct `file_url`. Also include `fileName`, `fileType`, `fileSize`.
-    *   Client-side:
-        *   Implement logic to call a Convex mutation (e.g., `generateUploadUrl` in `convex/files.ts`) to get a one-time upload URL from Convex.
-        *   Upload the file directly to this URL using `fetch` or a similar method.
-    *   Server-side (`convex/files.ts` or similar):
-        *   Create `generateUploadUrl` mutation.
-        *   Create a mutation (e.g., `saveFileAttachment`) that client calls after successful upload, passing the Convex storage ID (`StorageId`). This mutation creates/updates the `chat_attachments` record linking the file to a chat and user.
-    *   Refactor or replace usage of `lib/file-handling.ts`.
-    *   Update any UI components that display or download files to use the new Convex storage URLs.
-*   [ ] **3.6 Implement Usage Limits**
+    *   **Ensure API routes rely on `convexAuthNextjsMiddleware` (from Task 2.3) for initial authentication. Remove any Supabase-specific user identity validation logic (e.g., direct calls to `validateUserIdentity` with a Supabase client) from these routes. The Convex functions invoked by these API routes will use `ctx.auth.getUserIdentity()` or helpers like `getAuthUserId(ctx)` (from Task 2.5) for secure user identification and authorization within Convex.**
+    *   **Implement robust error handling in Next.js API routes for Convex function calls, ensuring appropriate client feedback for failures (e.g., validation errors, network issues, permission denied).**
+    *   **3.4.1: Refactor `app/api/chat/route.ts` for Convex Database Interactions:**
+        *   Retain core logic for AI SDK calls, tool usage, and streaming within the Next.js route.
+        *   **3.4.1.1:** Replace Supabase insert for user messages with a Convex mutation.
+        *   **3.4.1.2:** In the `onFinish` callback of `streamText`, replace Supabase insert/update operations for assistant messages with corresponding Convex mutations.
+            *   *Consider strategies for handling failures during this assistant message save to maintain data consistency or inform the user (e.g., client notification via `dataStream`, server-side retry logic with caution for idempotency).*
+        *   **3.4.1.3:** Migrate `incrementUsage` calls: Ensure calls to the (to-be-created or existing) Convex `incrementUsage` function are correctly placed within the Next.js route logic, triggered after successful user message saving and after assistant message reload/update.
+        *   **3.4.1.4:** Migrate chat `updated_at` logic: Replace Supabase updates for the chat's `updated_at` timestamp with a Convex mutation, called from the Next.js route after user message saving and assistant message reload/update.
+        *   **3.4.1.5:** Adapt `reloadAssistantMessageId` logic:
+            *   Translate the Supabase logic for deleting downstream messages (messages with an `id` greater than `reloadAssistantMessageId` for the same `chat_id`) to a Convex mutation.
+            *   Ensure the existing assistant message (identified by `reloadAssistantMessageId`) is updated correctly using a Convex mutation.
+        *   **3.4.1.6:** Ensure `dataStream.writeData({ userMsgId, assistantMsgId });` correctly uses Convex-generated `Id<"messages">` for both user and assistant messages.
+    *   **3.4.2:** Modify `app/api/create-chat/route.ts` to use a Convex mutation for creating the chat in the database. Ensure it returns the new Convex `Id<"chats">`.
+    *   **3.4.3:** Modify `app/api/rate-limits/route.ts` to use Convex mutations/queries for checking and updating rate limits, integrating with the user limits defined in the `users` table.
+    *   **3.4.4:** Modify `app/api/update-chat-model/route.ts` to use a Convex mutation for updating the chat model in the database.
+    *   **3.4.5:** Review and modify any other custom API routes to use Convex functions for all database interactions.
+*   [x] **3.5 Migrate File Uploads to Convex File Storage**
+    *   **3.5.1: Schema and Backend Logic (`convex/`)**
+        *   **Action:** In `convex/schema.ts`, ensure the `chat_attachments` table is defined with `fileId: v.id("_storage")` and an index on `chatId`.
+        *   **Action:** Create `convex/files.ts` with the following functions:
+            *   `generateUploadUrl`: A mutation that takes no arguments and returns `ctx.storage.generateUploadUrl()`.
+            *   `saveFileAttachment`: A mutation that takes `storageId`, `chatId`, and file metadata, verifies auth with `ctx.auth.getUserIdentity()`, and inserts a record into `chat_attachments`.
+            *   `getAttachmentsForChat`: A query that takes a `chatId`, fetches the relevant attachments, and gets their downloadable URLs via `ctx.storage.getUrl()`.
+    *   **3.5.2: Refactor Client-Side Upload Workflow (`app/components/chat/chat.tsx`)**
+        *   **Action:** Implement conditional file handling logic based on the presence of `chatId`.
+        *   **Sub-Task 3.5.2.1: New Chat Workflow (Home Page / `chatId` is null)**
+            *   When a user selects a file, the `handleFileUpload` function will add the `File` object to a local React state (`files`). No upload occurs yet.
+            *   In the `submit` function, after a new chat is created and a `currentChatId` is available, it will iterate through the files in the local state and upload them one by one using the process below.
+        *   **Sub-Task 3.5.2.2: Existing Chat Workflow (`chatId` exists)**
+            *   The `handleFileUpload` function will be modified to immediately trigger the upload process for each selected file.
+            *   It will not add the file to the local `files` state, but instead directly call a new `uploadAndSaveFile(file, chatId)` helper function.
+        *   **Sub-Task 3.5.2.3: Create `uploadAndSaveFile` Helper**
+            *   This new async function will encapsulate the upload logic:
+                1.  Call the `generateUploadUrl` mutation.
+                2.  Perform a `POST` request to the returned `uploadUrl` with the file data.
+                3.  On success, parse the response to get the `storageId`.
+                4.  Call the `saveFileAttachment` mutation with the `storageId` and other file metadata.
+                5.  Use toasts to provide user feedback on success or failure.
+    *   **3.5.3: Update UI to Display Attachments**
+        *   **Action:** In `app/components/chat/chat.tsx`, use the `useQuery(api.files.getAttachmentsForChat, { chatId })` hook to fetch attachments for the current conversation.
+        *   **Action:** Pass the fetched attachments down to the `Conversation` and `Message` components to be rendered, using the `url` from the query result for links or image previews.
+        *   **Action:** Ensure the `experimental_attachments` prop for the `useChat` hook is correctly populated, likely from the results of the `getAttachmentsForChat` query, to maintain integration with the Vercel AI SDK.
+    *   **3.5.4: Final Cleanup**
+        *   **Action:** Once the new implementation is verified, rename the old `lib/file-handling.ts` file to .bak extension.
+        *   **Action:** Remove any remaining references to the old file upload logic from the codebase.
+*   [x] **3.6 Implement Usage Limits**
     *   Investigate existing Supabase implementation (relevant code sections or database triggers/policies) to understand how usage limits (e.g., `daily_message_count` from `users` table) are tracked and enforced for anonymous and registered users. (This may require reading specific Supabase-related files later).
     *   Implement logic in relevant Convex mutations (e.g., `sendMessageToChat` or a dedicated message creation mutation) to check and update usage counts stored in the `users` table before proceeding with the core action.
     *   Ensure limit logic correctly differentiates based on the `users.isAnonymous` field and potentially `users.isPremium`.
     *   Provide helpers for resetting daily and monthly counters (similar to Phase 2 usage helpers) and schedule them with Convex crons if needed.
-*   [ ] **3.7 Update Application Logic to Use Convex Functions**
-    *   Identify all components and UI logic that previously interacted with Supabase client or Next.js API routes for data.
-    *   Refactor this logic to use `useQuery` and `useMutation` hooks from `convex/react` with the newly created Convex functions (from tasks 3.3, 3.4, 3.5).
-        *   Ensure loading states, error handling (e.g., displaying toasts for errors), and optimistic updates (if applicable) are implemented for a smooth UX.
-    *   Remove any remaining Supabase API calls or data fetching logic.
+*   [x] **3.7 Update Application Logic to Use Convex Functions**
+    *   **3.7.1: Refactor Chat History Components (Self-Contained Data)**
+        *   **Objective:** Make the chat history components responsible for their own data fetching and mutations, removing the dependency on props passed from the `Header`.
+        *   **Files:** `app/components/history/drawer-history.tsx`, `app/components/history/command-history.tsx`, `app/components/layout/header.tsx`
+        *   **Actions:**
+            *   In `drawer-history.tsx` and `command-history.tsx`:
+                *   Remove `chatHistory`, `onSaveEdit`, `onConfirmDelete` props.
+                *   Add `useQuery(api.chats.listChatsForUser)` to fetch data.
+                *   Add `useMutation` hooks for `api.chats.deleteChat` and a new `api.chats.updateChatTitle`.
+                *   Update internal handlers to call these hooks.
+            *   In `app/components/layout/header.tsx`:
+                *   Remove the `useChats()` hook and its related state/handlers.
+                *   Render `<HistoryTrigger />` without passing any props.
+    *   **3.7.2: Refactor Core Chat Component (`chat.tsx`)**
+        *   **Objective:** Replace the IndexedDB-backed state management (`useChats`, `useMessages`) with direct Convex hooks.
+        *   **File:** `app/components/chat/chat.tsx`
+        *   **Actions:**
+            *   Remove all usage of `useChats()` and `useMessages()`.
+            *   Fetch messages with `useQuery(api.messages.getMessagesForChat, ...)` and sync to the Vercel AI SDK's `useChat` state via `setMessages`.
+            *   Replace `createNewChat` and `updateChatModel` calls with `useMutation` hooks.
+            *   Refactor `handleDelete` to use a `useMutation` hook for `api.messages.deleteMessageAndDescendants`.
+            *   Simplify component by removing manual cache management (`cacheAndAddMessage`, etc.).
+    *   **3.7.3: Refactor Message Feedback Submission**
+        *   **Objective:** Migrate feedback submission to a Convex mutation.
+        *   **File:** `components/common/feedback-form.tsx` (Note: This is the actual implementation file, not the widget wrapper).
+        *   **Actions:**
+            *   In the form submission handler, replace the existing logic with a `useMutation` hook for `api.feedback.createFeedback`.
+    *   **3.7.4: Clean Up Authentication Flow (`user-menu.tsx`)**
+        *   **Objective:** Remove obsolete IndexedDB cleanup logic from the sign-out process.
+        *   **File:** `app/components/layout/user-menu.tsx`
+        *   **Actions:**
+            *   In the `handleSignOut` function, remove calls to `resetMessages()`, `resetChats()`, and `clearAllIndexedDBStores()`.
+            *   Remove the `useChats` and `useMessages` hooks from the component.
+    *   **3.7.5: Decommission `lib/api.ts`**
+        *   **Objective:** Remove the file containing legacy Supabase helper functions.
+        *   **Actions:**
+            *   Confirm that all logic from this file (rate limiting, chat updates) has been moved to Convex functions or made redundant by direct hook usage in the UI.
+            *   Delete the file `lib/api.ts`.
 
-*   [ ] **3.8 Revisit Anonymous Account Merging**
+*   [x] **3.8 Revisit Anonymous Account Merging**
     *   Once the `chats`, `messages`, and `chat_attachments` tables are created in Convex,
         update `mergeAnonymousToGoogleAccount` to migrate those records from the former anonymous user.
     *   Ensure the anonymous user record is deleted after migration and verify related data is reassigned correctly.

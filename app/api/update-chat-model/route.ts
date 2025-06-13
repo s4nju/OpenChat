@@ -1,9 +1,14 @@
-import { createClient } from "@/lib/supabase/server"
+import { fetchMutation } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { chatId, model } = await request.json()
+    const { chatId, model } = (await request.json()) as {
+      chatId: Id<"chats">;
+      model: string;
+    };
 
     if (!chatId || !model) {
       return new Response(
@@ -11,37 +16,27 @@ export async function POST(request: Request) {
         {
           status: 400,
         }
-      )
+      );
     }
 
-    // Update the chat record with the new model and updated_at timestamp
-    const { error } = await supabase
-      .from("chats")
-      .update({
+    const token = await convexAuthNextjsToken();
+    await fetchMutation(
+      api.chats.updateChatModel,
+      {
+        chatId,
         model,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", chatId)
-
-    if (error) {
-      console.error("Error updating chat model:", error)
-      return new Response(
-        JSON.stringify({
-          error: "Failed to update chat model",
-          details: error.message,
-        }),
-        { status: 500 }
-      )
-    }
+      },
+      { token }
+    );
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-    })
+    });
   } catch (err: any) {
-    console.error("Error in update-chat-model endpoint:", err)
+    console.error("Error in update-chat-model endpoint:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal server error" }),
       { status: 500 }
-    )
+    );
   }
 }

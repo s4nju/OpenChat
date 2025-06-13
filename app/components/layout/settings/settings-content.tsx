@@ -1,13 +1,10 @@
 "use client"
 
-import { useBreakpoint } from "@/app/hooks/use-breakpoint" // Likely needed, keeping it
+import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
 import { ModelSelector } from "@/components/common/model-selector"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { useChats } from "@/lib/chat-store/chats/provider"
-import { useMessages } from "@/lib/chat-store/messages/provider"
-import { clearAllIndexedDBStores } from "@/lib/chat-store/persist"
 import { 
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT, 
@@ -19,7 +16,7 @@ import { cn } from "@/lib/utils"
 import { SignOut, User, X } from "@phosphor-icons/react"
 import { useTheme } from "@/app/providers/theme-provider"
 import { useRouter } from "next/navigation"
-import type React from "react" // Keep type import if needed
+import type React from "react"
 import { useEffect, useState } from "react"
 
 // The content previously inside settings.tsx
@@ -31,8 +28,6 @@ export function SettingsContent({
   isDrawer?: boolean
 }) {
   const { user, updateUser, signOut } = useUser()
-  const { resetChats } = useChats()
-  const { resetMessages } = useMessages()
   const { theme, setTheme } = useTheme()
   const [selectedTheme, setSelectedTheme] = useState(theme || "system")
   const [selectedModelId, setSelectedModelId] = useState<string>(
@@ -53,11 +48,9 @@ export function SettingsContent({
 
   const handleSignOut = async () => {
     try {
-      await resetMessages()
-      await resetChats()
       await signOut()
-      await clearAllIndexedDBStores()
       router.push("/")
+      toast({ title: "Logged out", status: "success" })
     } catch (e) {
       console.error("Sign out failed:", e)
       toast({ title: "Failed to sign out", status: "error" })
@@ -287,33 +280,6 @@ export function SettingsContent({
           </div>
         </div>
       </div>
-      {/* Delete Account, not ready yet */}
-      {/* <div className="border-border border-t">
-        <div className="px-6 py-4">
-          <div
-            className={`flex ${
-              isDrawer ? "flex-col space-y-3" : "items-center justify-between"
-            }`}
-          >
-            <div>
-              <h3 className="text-sm font-medium">Delete Account</h3>
-              <p className="text-muted-foreground max-w-xs text-xs">
-                Permanently delete your account and associated data. Deletions
-                are immediate and cannot be undone.
-              </p>
-            </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              className={`${
-                isDrawer ? "mt-3 self-start" : "whitespace-nowrap"
-              }`}
-            >
-              Delete Account
-            </Button>
-          </div>
-        </div>
-      </div> */}
     </div>
   )
 }

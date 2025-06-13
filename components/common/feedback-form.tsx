@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { createClient } from "@/lib/supabase/client"
+import { useUser } from "@/app/providers/user-provider"
+import { useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { CaretLeft, SealCheck, Spinner } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState } from "react"
@@ -13,11 +15,12 @@ const TRANSITION_CONTENT = {
 }
 
 type FeedbackFormProps = {
-  authUserId?: string
   onClose: () => void
 }
 
-export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
+export function FeedbackForm({ onClose }: FeedbackFormProps) {
+  const { user } = useUser()
+  const createFeedback = useMutation(api.feedback.createFeedback)
   const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error"
   >("idle")
@@ -36,7 +39,7 @@ export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!authUserId) {
+    if (!user) {
       toast({
         title: "Please login to submit feedback",
         status: "error",
@@ -48,21 +51,7 @@ export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
     if (!feedback.trim()) return
 
     try {
-      const supabase = createClient()
-
-      const { error } = await supabase.from("feedback").insert({
-        message: feedback,
-        user_id: authUserId,
-      })
-
-      if (error) {
-        toast({
-          title: `Error submitting feedback: ${error}`,
-          status: "error",
-        })
-        setStatus("error")
-        return
-      }
+      await createFeedback({ message: feedback })
 
       await new Promise((resolve) => setTimeout(resolve, 1200))
 

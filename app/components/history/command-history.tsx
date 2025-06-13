@@ -16,29 +16,25 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { Chats } from "@/lib/chat-store/types"
+import { Doc, Id } from "@/convex/_generated/dataModel"
+import { useMutation, useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import { Check, ListMagnifyingGlass, PencilSimple, TrashSimple, X } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-type CommandHistoryProps = {
-  chatHistory: Chats[]
-  onSaveEdit: (id: string, newTitle: string) => Promise<void>
-  onConfirmDelete: (id: string) => Promise<void>
-}
-
-export function CommandHistory({
-  chatHistory,
-  onSaveEdit,
-  onConfirmDelete,
-}: CommandHistoryProps) {
+export function CommandHistory() {
   const router = useRouter()
+  const chatHistory = useQuery(api.chats.listChatsForUser)
+  const deleteChat = useMutation(api.chats.deleteChat)
+  const updateChatTitle = useMutation(api.chats.updateChatTitle)
+
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<Id<"chats"> | null>(null)
   const [editTitle, setEditTitle] = useState("")
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<Id<"chats"> | null>(null)
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -50,14 +46,14 @@ export function CommandHistory({
     }
   }
 
-  const handleEdit = (chat: Chats) => {
-    setEditingId(chat.id)
+  const handleEdit = (chat: Doc<"chats">) => {
+    setEditingId(chat._id)
     setEditTitle(chat.title || "")
   }
 
-  const handleSaveEdit = async (id: string) => {
+  const handleSaveEdit = async (id: Id<"chats">) => {
     setEditingId(null)
-    await onSaveEdit(id, editTitle)
+    await updateChatTitle({ chatId: id, title: editTitle })
   }
 
   const handleCancelEdit = () => {
@@ -65,29 +61,30 @@ export function CommandHistory({
     setEditTitle("")
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: Id<"chats">) => {
     setDeletingId(id)
   }
 
-  const handleConfirmDelete = async (id: string) => {
+  const handleConfirmDelete = async (id: Id<"chats">) => {
     setDeletingId(null)
-    await onConfirmDelete(id)
+    await deleteChat({ chatId: id })
   }
 
   const handleCancelDelete = () => {
     setDeletingId(null)
   }
 
-  const filteredChat = chatHistory.filter((chat) =>
-    (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  // will add pagination later
+  const filteredChat =
+    chatHistory?.filter((chat) =>
+      (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
+    ) ?? []
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !chatHistory) return;
     chatHistory.forEach((chat) => {
-      router.prefetch(`/c/${chat.id}`);
+      router.prefetch(`/c/${chat._id}`);
     });
-  }, [isOpen, chatHistory]);
+  }, [isOpen, chatHistory, router]);
 
   return (
     <>
@@ -122,14 +119,14 @@ export function CommandHistory({
             )}
             <CommandGroup className="p-1.5">
               {filteredChat.map((chat) => (
-                <div key={chat.id} className="px-0 py-1">
-                  {editingId === chat.id ? (
+                <div key={chat._id} className="px-0 py-1">
+                  {editingId === chat._id ? (
                     <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
                       <form
                         className="flex w-full items-center justify-between"
                         onSubmit={(e) => {
                           e.preventDefault()
-                          handleSaveEdit(chat.id)
+                          handleSaveEdit(chat._id)
                         }}
                       >
                         <Input
@@ -140,7 +137,7 @@ export function CommandHistory({
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault()
-                              handleSaveEdit(chat.id)
+                              handleSaveEdit(chat._id)
                             }
                           }}
                         />
@@ -165,12 +162,12 @@ export function CommandHistory({
                         </div>
                       </form>
                     </div>
-                  ) : deletingId === chat.id ? (
+                  ) : deletingId === chat._id ? (
                     <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
                       <form
                         onSubmit={(e) => {
                           e.preventDefault()
-                          handleConfirmDelete(chat.id)
+                          handleConfirmDelete(chat._id)
                         }}
                         className="flex w-full items-center justify-between"
                       >
@@ -188,7 +185,7 @@ export function CommandHistory({
                                 handleCancelDelete()
                               } else if (e.key === "Enter") {
                                 e.preventDefault()
-                                handleConfirmDelete(chat.id)
+                                handleConfirmDelete(chat._id)
                               }
                             }}
                           />
@@ -216,10 +213,10 @@ export function CommandHistory({
                     </div>
                   ) : (
                     <CommandItem
-                      key={chat.id}
+                      key={chat._id}
                       onSelect={() => {
                         if (!editingId && !deletingId) {
-                          router.replace(`/c/${chat.id}`, {scroll: false})
+                          router.replace(`/c/${chat._id}`, {scroll: false})
                         }
                       }}
                       className={cn(
@@ -245,8 +242,8 @@ export function CommandHistory({
                             "group-hover:opacity-100"
                           )}
                         >
-                          {(chat?.updated_at || chat?.created_at)
-                            ? new Date(chat.updated_at || chat.created_at || "").toLocaleDateString()
+                          {(chat?.updatedAt || chat?._creationTime)
+                            ? new Date(chat.updatedAt || chat._creationTime || "").toLocaleDateString()
                             : "No date"}
                         </span>
 
@@ -276,7 +273,7 @@ export function CommandHistory({
                             className="text-muted-foreground hover:text-destructive size-8"
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (chat?.id) handleDelete(chat.id)
+                              if (chat?._id) handleDelete(chat._id)
                             }}
                             type="button"
                           >

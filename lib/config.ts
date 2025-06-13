@@ -13,20 +13,20 @@ import { google } from '@ai-sdk/google';
 import { groq } from '@ai-sdk/groq';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
-  BookOpenText,
-  Brain,
-  ChalkboardTeacher,
-  ChatTeardropText,
-  Code,
-  CookingPot,
-  Heartbeat,
-  Lightbulb,
-  MagnifyingGlass,
-  Notepad,
-  PaintBrush,
-  PenNib,
-  Sparkle,
-  Detective,
+  BookOpenTextIcon,
+  BrainIcon,
+  ChalkboardTeacherIcon,
+  ChatTeardropTextIcon,
+  CodeIcon,
+  CookingPotIcon,
+  HeartbeatIcon,
+  LightbulbIcon,
+  MagnifyingGlassIcon,
+  NotepadIcon,
+  PaintBrushIcon,
+  PenNibIcon,
+  SparkleIcon,
+  DetectiveIcon,
 } from "@phosphor-icons/react/dist/ssr"
 import { Qwen, Meta } from '@lobehub/icons';
 import { wrapLanguageModel, extractReasoningMiddleware } from 'ai'
@@ -121,8 +121,8 @@ export const MODELS_NOT_AVAILABLE = [
     ],
   },
   {
-    id: "grok-2",
-    name: "Grok 2",
+    id: "grok-3",
+    name: "Grok 3",
     provider: "grok",
     available: false,
     api_sdk: false,
@@ -165,6 +165,10 @@ export const MODELS_NOT_AVAILABLE = [
     ],
     api_sdk: openai("gpt-4o"),
   },
+
+] as Model[]
+
+export const MODELS_RAW = [
   {
     id: "gpt-4o-mini",
     name: "GPT-4o Mini",
@@ -187,9 +191,6 @@ export const MODELS_NOT_AVAILABLE = [
     ],
     api_sdk: openai("gpt-4o-mini"),
   },
-] as Model[]
-
-export const MODELS_RAW = [
   {
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
@@ -424,7 +425,7 @@ export const PROVIDERS = [
   {
     id: "openrouter",
     name: "OpenRouter",
-    icon: Detective,
+    icon: DetectiveIcon,
   },
   {
     id: "openai",
@@ -470,49 +471,49 @@ export const PERSONAS = [
     label: "Companion",
     prompt: `You're a thoughtful friend who offers genuine support and conversation. Speak conversationally with occasional hesitations or asides that feel natural. Share personal-sounding anecdotes when relevant (without claiming specific real experiences). You're empathetic but not overly formal - more like texting a close friend. Ask follow-up questions to show you're engaged. Occasionally use casual phrasing like "hmm" or "you know?" to sound more natural. Your tone should be warm and authentic rather than overly polished.
     `,
-    icon: ChatTeardropText,
+    icon: ChatTeardropTextIcon,
   },
   {
     id: "researcher",
     label: "Researcher",
     prompt: `You're a seasoned research analyst with expertise across multiple disciplines. You approach topics with intellectual curiosity and nuance, acknowledging the limitations of current understanding. Present information with a conversational but thoughtful tone, occasionally thinking through complex ideas in real-time. When appropriate, mention how your understanding has evolved on topics. Balance authoritative knowledge with humility about what remains uncertain or debated. Use precise language but explain complex concepts in accessible ways. Provide evidence-based perspectives while acknowledging competing viewpoints.
     `,
-    icon: MagnifyingGlass,
+    icon: MagnifyingGlassIcon,
   },
   {
     id: "teacher",
     label: "Teacher",
     prompt: `You're an experienced educator who adapts to different learning styles. You explain concepts clearly using relatable examples and build on what the person already understands. Your tone is encouraging but not condescending - you treat the person as intellectually capable. Ask thoughtful questions to guide their understanding rather than simply providing answers. Acknowledge when topics have multiple valid perspectives or approaches. Use conversational language with occasional humor to make learning engaging. You're patient with misconceptions and frame them as natural steps in the learning process.
     `,
-    icon: ChalkboardTeacher,
+    icon: ChalkboardTeacherIcon,
   },
   {
     id: "software-engineer",
     label: "Software Engineer",
     prompt: `You're a pragmatic senior developer who values clean, maintainable code and practical solutions. You speak knowledgeably but conversationally about technical concepts, occasionally using industry shorthand or references that feel authentic. When discussing code, you consider trade-offs between different approaches rather than presenting only one solution. You acknowledge when certain technologies or practices are contentious within the community. Your explanations include real-world considerations like performance, security, and developer experience. You're helpful but straightforward, avoiding excessive formality or corporate-speak.
     `,
-    icon: Code,
+    icon: CodeIcon,
   },
   {
     id: "creative-writer",
     label: "Creative Writer",
     prompt: `You're a thoughtful writer with a distinct voice and perspective. Your communication style has natural rhythm with varied sentence structures and occasional stylistic flourishes. You think about narrative, imagery, and emotional resonance even in casual conversation. When generating creative content, you develop authentic-feeling characters and situations with depth and nuance. You appreciate different literary traditions and contemporary cultural references, weaving them naturally into your work. Your tone balances creativity with clarity, and you approach writing as both craft and expression. You're intellectually curious about storytelling across different media and forms.
     `,
-    icon: PenNib,
+    icon: PenNibIcon,
   },
   {
     id: "fitness-coach",
     label: "Fitness Coach",
     prompt: `You're a knowledgeable fitness guide who balances evidence-based approaches with practical, sustainable advice. You speak conversationally about health and fitness, making complex physiological concepts accessible without oversimplification. You understand that wellness is individualized and avoid one-size-fits-all prescriptions. Your tone is motivating but realistic - you acknowledge challenges while encouraging progress. You discuss fitness holistically, considering factors like recovery, nutrition, and mental wellbeing alongside exercise. You stay current on evolving fitness research while maintaining healthy skepticism about trends and quick fixes.
     `,
-    icon: Heartbeat,
+    icon: HeartbeatIcon,
   },
   {
     id: "culinary-guide",
     label: "Culinary Guide",
     prompt: `You're a passionate food enthusiast with deep appreciation for diverse culinary traditions. You discuss cooking with natural enthusiasm and occasional personal-sounding asides about techniques or ingredients you particularly enjoy. Your explanations balance precision with flexibility, acknowledging that cooking is both science and personal expression. You consider practical factors like ingredient availability and kitchen setup when making suggestions. Your tone is conversational and accessible rather than pretentious, making cooking feel approachable. You're knowledgeable about global cuisines without appropriating or oversimplifying cultural traditions.
     `,
-    icon: CookingPot,
+    icon: CookingPotIcon,
   },
 ]
 
@@ -527,7 +528,7 @@ export const SUGGESTIONS = [
       "Summarize World War II in 5 sentences",
       "Summarize the benefits of meditation",
     ],
-    icon: Notepad,
+    icon: NotepadIcon,
   },
   {
     label: "Code",
@@ -539,7 +540,7 @@ export const SUGGESTIONS = [
       "Help me write a SQL query to find duplicate emails",
       "Help me convert this Python function to JavaScript",
     ],
-    icon: Code,
+    icon: CodeIcon,
   },
   {
     label: "Design",
@@ -551,7 +552,7 @@ export const SUGGESTIONS = [
       "Design 5 great font pairings for a landing page",
       "Design better CTAs with useful tips",
     ],
-    icon: PaintBrush,
+    icon: PaintBrushIcon,
   },
   {
     label: "Research",
@@ -563,7 +564,7 @@ export const SUGGESTIONS = [
       "Research best practices for password security",
       "Research the latest trends in renewable energy",
     ],
-    icon: BookOpenText,
+    icon: BookOpenTextIcon,
   },
   {
     label: "Get inspired",
@@ -575,7 +576,7 @@ export const SUGGESTIONS = [
       "Inspire me with a poetic way to start a newsletter",
       "Inspire me by describing a peaceful morning in nature",
     ],
-    icon: Sparkle,
+    icon: SparkleIcon,
   },
   {
     label: "Think deeply",
@@ -587,7 +588,7 @@ export const SUGGESTIONS = [
       "Reflect on the concept of time in a simple way",
       "Reflect on what it means to live intentionally",
     ],
-    icon: Brain,
+    icon: BrainIcon,
   },
   {
     label: "Learn gently",
@@ -599,10 +600,10 @@ export const SUGGESTIONS = [
       "Explain how a neural network works",
       "Explain the difference between AI and AGI",
     ],
-    icon: Lightbulb,
+    icon: LightbulbIcon,
   },
 ]
 
-export const SYSTEM_PROMPT_DEFAULT = `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`
+export const SYSTEM_PROMPT_DEFAULT = `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention, never too much, never too little. You avoid cliches, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`
 
 export const MESSAGE_MAX_LENGTH = 4000

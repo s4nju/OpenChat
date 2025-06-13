@@ -126,6 +126,11 @@ export function MessageAssistant({
 
   // console.log("Sources:", sources);
 
+  // Before rendering, combine reasoning parts into a single markdown string to avoid odd spacing between streaming chunks
+  const combinedReasoningMarkdown = reasoningParts.length > 0
+    ? reasoningParts.map((p) => p.reasoning).join("")
+    : reasoning_text ?? "";
+
   return (
     <Message
       className={cn(
@@ -177,18 +182,11 @@ export function MessageAssistant({
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   // layout // Removed layout prop to prevent bouncing during streaming
                 >
-                  {reasoningParts.length > 0
-                    ? reasoningParts.map((part: ReasoningUIPart, idx: number) => (
-                        <Markdown
-                          key={idx}
-                          className="!text-xs !p-0 !bg-transparent font-mono"
-                        >
-                          {part.reasoning}
-                        </Markdown>
-                      ))
-                    : reasoning_text
-                      ? <Markdown className="!text-xs !p-0 !bg-transparent font-mono">{reasoning_text}</Markdown>
-                      : null}
+                  {combinedReasoningMarkdown && (
+                    <Markdown className="prose prose-sm dark:prose-invert leading-relaxed break-words">
+                      {combinedReasoningMarkdown}
+                    </Markdown>
+                  )}
                 </MotionDiv>
               )}
             </AnimatePresence>

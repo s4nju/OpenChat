@@ -1,15 +1,14 @@
 "use client"
 import { toast } from "@/components/ui/toast"
 import type { Message as MessageAISDK } from "ai"
-import { createContext, useContext, useEffect, useState, useRef, useMemo } from "react"
-import { useRouter } from 'next/navigation';
-import { writeToIndexedDB } from "../persist"
-import {
-  clearMessagesForChat,
-  fetchAndCacheMessages,
-  getCachedMessages,
-} from "./api"
-type ExtendedMessage = MessageAISDK & { parent_message_id?: number | null }
+import { createContext, useContext, useEffect, useState, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { writeToIndexedDB } from "../persist";
+import { clearMessagesForChat } from "./api";
+type ExtendedMessage = MessageAISDK & { parent_message_id?: number | null };
 
 // Create a truly persistent module-level cache that exists outside the React component lifecycle
 // This will survive component unmounts/remounts, unlike useRef
@@ -57,103 +56,47 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     });
   }
   const { chatId } = useChatSession()
-  const [messages, setMessages] = useState<MessageAISDK[]>([])
-  const chatsContext = useChats()
-  const router = useRouter()
-  const loadingChatIdRef = useRef<string | null>(null); // Ref to track loading state
+  const [messages, setMessages] = useState<MessageAISDK[]>([]);
+  const chatsContext = useChats();
+  const router = useRouter();
+
+  // Fetch messages from Convex using useQuery
+  const convexMessages = useQuery(
+    api.messages.getMessagesForChat,
+    chatId ? { chatId: chatId as Id<"chats"> } : "skip"
+  );
 
   useEffect(() => {
-    if (chatId === null) {
-      setMessages([])
+    if (convexMessages) {
+      // When Convex data is available, update the local state and caches
+      const newMessages = convexMessages.map(
+        (m) =>
+          ({
+            ...m,
+            id: m._id,
+            createdAt: new Date(m._creationTime),
+            role: m.role as "user" | "assistant" | "system",
+          } as MessageAISDK)
+      );
+      setMessages(newMessages);
+      messagesMapRef.current = new Map(newMessages.map((m) => [m.id, m]));
+      if (chatId) {
+        GLOBAL_CHAT_MESSAGES_CACHE[chatId] = newMessages;
+        writeToIndexedDB("messages", { id: chatId, messages: newMessages });
+      }
+    } else if (chatId === null) {
+      // Clear messages if no chat is selected
+      setMessages([]);
       messagesMapRef.current = new Map();
     }
-  }, [chatId])
-
-  useEffect(() => {
-    if (!chatId) {
-      //console.log("[MessagesProvider] No chatId, returning.");
-      return;
-    }
-
-    // Prevent starting a new load if one is already in progress for the same chatId
-    if (loadingChatIdRef.current === chatId) {
-      //console.log(`[MessagesProvider] Load already in progress for chatId: ${chatId}. Skipping duplicate.`);
-      return;
-    }
-
-    //console.log(`[MessagesProvider] useEffect triggered for chatId: ${chatId}`);
-
-    // Serve instantly from in-memory cache - now using GLOBAL cache
-    const inMem = GLOBAL_CHAT_MESSAGES_CACHE[chatId];
-    if (inMem && inMem.length > 0) {
-      //console.log(`[MessagesProvider] Found messages in IN-MEMORY cache for chatId: ${chatId}. Count: ${inMem.length}`);
-      setMessages(inMem);
-      messagesMapRef.current = new Map(inMem.map(m => [m.id, m]));
-      return; // Important: Return early if found in memory
-    }
-
-    //console.log(`[MessagesProvider] Messages NOT in IN-MEMORY cache for chatId: ${chatId}. Loading...`);
-    // Fallback: load from IndexedDB or network
-    const load = async () => {
-      // Mark this chatId as loading
-      loadingChatIdRef.current = chatId;
-      //console.log(`[MessagesProvider] Checking IndexedDB (Dexie) for chatId: ${chatId}`);
-      try { // Wrap async logic in try...finally
-        const cached = await getCachedMessages(chatId);
-        // Check if the chatId changed *while* we were loading
-        if (loadingChatIdRef.current !== chatId) {
-          //console.log(`[MessagesProvider] ChatId changed during load (${loadingChatIdRef.current} -> current: ${chatId}). Aborting state update.`);
-          return; // Don't update state if the relevant chat changed
-        }
-
-        if (cached && cached.length > 0) {
-          //console.log(`[MessagesProvider] Found messages in IndexedDB for chatId: ${chatId}. Count: ${cached.length}`);
-          // Update both the global cache and the ref
-          GLOBAL_CHAT_MESSAGES_CACHE[chatId] = cached;
-          setMessages(cached);
-          messagesMapRef.current = new Map(cached.map(m => [m.id, m]));
-        } else {
-          //console.log(`[MessagesProvider] Messages NOT in IndexedDB for chatId: ${chatId}. Fetching from network...`);
-          try {
-            const fresh = await fetchAndCacheMessages(chatId);
-             // Check again if chatId changed during network fetch
-            if (loadingChatIdRef.current !== chatId) {
-               //console.log(`[MessagesProvider] ChatId changed during network fetch (${loadingChatIdRef.current} -> current: ${chatId}). Aborting state update.`);
-               return;
-            }
-            //console.log(`[MessagesProvider] Fetched ${fresh.length} messages from network for chatId: ${chatId}`);
-            // Update both the global cache and the ref
-            GLOBAL_CHAT_MESSAGES_CACHE[chatId] = fresh;
-            setMessages(fresh);
-            messagesMapRef.current = new Map(fresh.map(m => [m.id, m]));
-            // Assuming fetchAndCacheMessages handles caching internally on success
-          } catch (error) {
-            console.error(`[MessagesProvider] Failed to fetch messages for chatId: ${chatId}:`, error);
-            // Handle error state?
-          }
-        }
-      } finally {
-         // Ensure we reset loading state only if this load operation was for the *currently* marked loading chatId
-         if (loadingChatIdRef.current === chatId) {
-            loadingChatIdRef.current = null;
-            //console.log(`[MessagesProvider] Load finished for chatId: ${chatId}. Resetting loading state.`);
-         }
-      }
-    };
-    load();
-  }, [chatId]); // Dependency array is just chatId, which seems correct.
+  }, [convexMessages, chatId]);
 
   const refresh = async () => {
-    if (!chatId) return
-
-    try {
-      const fresh = await fetchAndCacheMessages(chatId)
-      chatMessagesCacheRef.current[chatId] = fresh
-      setMessages(fresh)
-    } catch (e) {
-      toast({ title: "Failed to refresh messages", status: "error" })
-    }
-  }
+    // useQuery handles refreshing automatically, but a manual refresh
+    // could be forced if needed, though it's often not necessary with Convex.
+    // For now, this can be a no-op or log a message.
+    console.log("useQuery handles data refreshing automatically.");
+  };
 
   const deleteMessages = async () => {
     if (!chatId) return

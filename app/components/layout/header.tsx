@@ -2,10 +2,9 @@
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
 import { AppInfoTrigger } from "@/app/components/layout/app-info/app-info-trigger"
 import { UserMenu } from "@/app/components/layout/user-menu"
-import { useChats } from "@/lib/chat-store/chats/provider"
 import { useUser } from "@/app/providers/user-provider"
 import Link from "next/link"
-import { useParams, useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { ButtonNewChat } from "./button-new-chat"
 import ThemeSwitchIcon from "./ThemeSwitchIcon"
 import { Info, Plus, ListMagnifyingGlass } from "@phosphor-icons/react"
@@ -19,20 +18,10 @@ import {
 
 export function Header() {
   const { user } = useUser()
-  const params = useParams<{ chatId?: string }>()
   const router = useRouter()
   const pathname = usePathname()
-  const { chats, updateTitle, deleteChat } = useChats()
   const isLoggedIn = !!user && !user.isAnonymous
   const isMobile = useBreakpoint(768)
-
-  const handleSaveEdit = async (id: string, newTitle: string) => {
-    await updateTitle(id, newTitle)
-  }
-
-  const handleConfirmDelete = async (id: string) => {
-    await deleteChat(id, params.chatId, () => router.push("/"))
-  }
 
   return (
     <header className="h-app-header fixed top-0 right-0 left-0 z-50">
@@ -94,11 +83,7 @@ export function Header() {
                     <TooltipContent>New Chat</TooltipContent>
                   </Tooltip>
                 )}
-                <HistoryTrigger
-                  chatHistory={chats}
-                  onSaveEdit={handleSaveEdit}
-                  onConfirmDelete={handleConfirmDelete}
-                />
+                <HistoryTrigger />
               </>
             )}
             <ThemeSwitchIcon />

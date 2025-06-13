@@ -52,6 +52,27 @@ export const listChatsForUser = query({
   },
 });
 
+export const getChat = query({
+  args: { chatId: v.id("chats") },
+  returns: v.union(v.null(), v.object({
+    _id: v.id("chats"),
+    _creationTime: v.number(),
+    userId: v.id("users"),
+    title: v.optional(v.string()),
+    model: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  })),
+  handler: async (ctx, { chatId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const chat = await ctx.db.get(chatId);
+    if (!chat || chat.userId !== userId) return null;
+    return chat;
+  },
+});
+
 export const updateChatModel = mutation({
   args: { chatId: v.id("chats"), model: v.string() },
   returns: v.null(),
@@ -61,6 +82,19 @@ export const updateChatModel = mutation({
     const chat = await ctx.db.get(chatId);
     if (!chat || chat.userId !== userId) return null;
     await ctx.db.patch(chatId, { model, updatedAt: Date.now() });
+    return null;
+  },
+});
+
+export const updateChatTitle = mutation({
+  args: { chatId: v.id("chats"), title: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { chatId, title }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const chat = await ctx.db.get(chatId);
+    if (!chat || chat.userId !== userId) return null;
+    await ctx.db.patch(chatId, { title, updatedAt: Date.now() });
     return null;
   },
 });
@@ -80,10 +114,39 @@ export const deleteChat = mutation({
     }
     for await (const a of ctx.db
       .query("chat_attachments")
-      .withIndex("by_chat", (q) => q.eq("chatId", chatId))) {
+      .withIndex("by_chatId", (q) => q.eq("chatId", chatId))) {
       await ctx.db.delete(a._id);
     }
     await ctx.db.delete(chatId);
+    return null;
+  },
+});
+
+export const deleteAllChatsForUser = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const chats = await ctx.db
+      .query("chats")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const chat of chats) {
+      for await (const m of ctx.db
+        .query("messages")
+        .withIndex("by_chat_and_created", (q) => q.eq("chatId", chat._id))) {
+        await ctx.db.delete(m._id);
+      }
+      for await (const a of ctx.db
+        .query("chat_attachments")
+        .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))) {
+        await ctx.db.delete(a._id);
+      }
+      await ctx.db.delete(chat._id);
+    }
     return null;
   },
 });

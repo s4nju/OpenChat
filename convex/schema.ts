@@ -36,6 +36,7 @@ export default defineSchema({
     experimentalAttachments: v.optional(v.any()),
     parentMessageId: v.optional(v.id("messages")),
     reasoningText: v.optional(v.string()),
+    model: v.optional(v.string()),
   }).index("by_chat_and_created", ["chatId", "createdAt"]),
   feedback: defineTable({
     userId: v.id("users"),
@@ -43,16 +44,13 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
   chat_attachments: defineTable({
-    chatId: v.id("chats"),
     userId: v.id("users"),
-    fileUrl: v.string(),
-    fileName: v.optional(v.string()),
-    fileSize: v.optional(v.number()),
-    fileType: v.optional(v.string()),
-    createdAt: v.optional(v.number()),
-  })
-    .index("by_chat", ["chatId"])
-    .index("by_user", ["userId"]),
+    chatId: v.id("chats"),
+    fileId: v.id("_storage"), // Reference to Convex File Storage
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+  }).index("by_chatId", ["chatId"]),
   Logo: defineTable({
     color: v.string(),
     filter: v.optional(v.string()),

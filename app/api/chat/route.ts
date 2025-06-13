@@ -1,236 +1,204 @@
-// /chat/api/chat.ts
-import { checkUsage, incrementUsage } from "@/lib/api"
-import { MODELS } from "@/lib/config"
-import { sanitizeUserInput } from "@/lib/sanitize"
-import { validateUserIdentity } from "@/lib/server/api"
-import { Attachment } from "@ai-sdk/ui-utils"
-import { Message as MessageAISDK, streamText, createDataStreamResponse, smoothStream, appendResponseMessages } from "ai"
-import { exaSearchTool, duckDuckGoTool } from "@/app/api/tools"
+import { MODELS } from "@/lib/config";
+import { sanitizeUserInput } from "@/lib/sanitize";
+import {
+  Message as MessageAISDK,
+  streamText,
+  createDataStreamResponse,
+  smoothStream,
+  appendResponseMessages,
+} from "ai";
+import { exaSearchTool } from "@/app/api/tools";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Maximum allowed duration for streaming (in seconds)
-export const maxDuration = 60
+export const maxDuration = 60;
 
 type ChatRequest = {
-  messages: MessageAISDK[]
-  chatId: string
-  userId: string
-  model: string
-  isAuthenticated: boolean
-  systemPrompt: string
-  reloadAssistantMessageId?: number
-  enableSearch?: boolean
-}
-
-
-// reasoningMiddleware is applied in config via MODELS
+  messages: MessageAISDK[];
+  chatId: Id<"chats">;
+  model: string;
+  systemPrompt: string;
+  reloadAssistantMessageId?: Id<"messages">;
+  enableSearch?: boolean;
+};
 
 export async function POST(req: Request) {
-  // Listen for client aborts
-  req.signal.addEventListener('abort', () => {
-    console.log('[API /chat] Request aborted by client');
-    // Any additional cleanup logic can go here if needed
+  req.signal.addEventListener("abort", () => {
+    console.log("[API /chat] Request aborted by client");
   });
+
   try {
     const {
       messages,
       chatId,
-      userId,
       model,
-      isAuthenticated,
       systemPrompt,
       reloadAssistantMessageId,
       enableSearch,
     } = (await req.json()) as ChatRequest;
 
-    if (!messages || !chatId || !userId) {
+    if (!messages || !chatId) {
       return new Response(
-        JSON.stringify({ error: "Error, missing information" }),
+        JSON.stringify({ error: "Error, missing required information" }),
         { status: 400 }
       );
     }
 
-    const supabase = await validateUserIdentity(userId, isAuthenticated);
-
-    // First check if the user is within their usage limits
-    await checkUsage(supabase, userId);
-
-    // Lookup model and check if it supports reasoning
     const selectedModel = MODELS.find((m) => m.id === model);
+    const token = await convexAuthNextjsToken();
+
+    // --- Unified Rate-Limiting Check ---
+    await fetchMutation(api.users.assertNotOverLimit, {}, { token });
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
-        // Use api_sdk from config, which includes reasoning middleware if enabled
-        let userMsgId: number | null = null;
-        let assistantMsgId: number | null = null;
+        let userMsgId: Id<"messages"> | null = null;
+        let assistantMsgId: Id<"messages"> | null = null;
 
-        // For reload, fetch existing parent_message_id
+        // --- Reload Logic (Delete and Recreate) ---
         if (reloadAssistantMessageId) {
-          const { data: existingMsg, error: parentErr } = await supabase
-            .from("messages")
-            .select("parent_message_id")
-            .eq("id", reloadAssistantMessageId)
-            .single();
-          if (parentErr) {
-            console.error("Error fetching parent_message_id:", parentErr);
-          } else {
-            userMsgId = existingMsg?.parent_message_id ?? null;
-          }
+          // 1. Get the parent (user) message ID of the message we are about to delete
+          const details = await fetchQuery(
+            api.messages.getMessageDetails,
+            {
+              messageId: reloadAssistantMessageId,
+            },
+            { token }
+          );
+          userMsgId = details?.parentMessageId ?? null;
+
+          // 2. Delete the assistant message and any subsequent messages
+          await fetchMutation(
+            api.messages.deleteMessageAndDescendants,
+            {
+              messageId: reloadAssistantMessageId,
+            },
+            { token }
+          );
         }
-        // *** NEW: delete all downstream messages after the one being reloaded ***
-        if (reloadAssistantMessageId) {
-          const { error: delErr } = await supabase
-            .from("messages")
-            .delete()
-            .eq("chat_id", chatId)
-            .gt("id", reloadAssistantMessageId);
-          if (delErr) console.error("Error deleting downstream messages:", delErr);
-        }
-        // Insert user message unless this is a reload
+
+        // --- Insert User Message (if not a reload) ---
         if (!reloadAssistantMessageId) {
           const userMessage = messages[messages.length - 1];
           if (userMessage && userMessage.role === "user") {
-            const { data: userMsgData, error: msgError } = await supabase
-              .from("messages")
-              .insert({
-                chat_id: chatId,
+            // This mutation now also checks usage, increments, and updates chat timestamp
+            const { messageId } = await fetchMutation(
+              api.messages.sendUserMessageToChat,
+              {
+                chatId: chatId,
                 role: "user",
-                content: sanitizeUserInput(userMessage.content),
-                parts: userMessage.parts,
-                experimental_attachments: userMessage.experimental_attachments
-                  ? JSON.parse(JSON.stringify(userMessage.experimental_attachments))
-                  : undefined,
-                user_id: userId,
-                model: selectedModel?.id,
-              })
-              .select("id")
-              .single();
-            if (msgError) {
-              console.error("Error saving user message:", msgError);
-            } else {
-              userMsgId = userMsgData?.id ?? null;
-              await incrementUsage(supabase, userId);
-
-              // Update the chat's updated_at timestamp
-              const { error: updateChatError } = await supabase
-                .from("chats")
-                .update({ updated_at: new Date().toISOString() })
-                .eq("id", chatId);
-
-              if (updateChatError) {
-                console.error("Error updating chat timestamp:", updateChatError);
-              }
-            }
+                content: sanitizeUserInput(userMessage.content as string),
+                experimentalAttachments: userMessage.experimental_attachments,
+              },
+              { token }
+            );
+            userMsgId = messageId;
           }
         }
 
-        // Stream AI response and insert assistant message on finish
-        const tools = enableSearch ? {exaSearch: exaSearchTool } : undefined;
-        // console.log("Streaming response with tools:", tools);
+        // --- Stream AI Response ---
+        const tools = enableSearch ? { exaSearch: exaSearchTool } : undefined;
         const result = streamText({
-          model: selectedModel?.api_sdk!,
+          model: selectedModel!.api_sdk,
           system: systemPrompt || "You are a helpful assistant.",
           messages,
           tools,
           maxSteps: 5,
-          experimental_transform: smoothStream({delayInMs: 20, chunking: 'word' }),
-          
-          
+          experimental_transform: smoothStream({
+            delayInMs: 20,
+            chunking: "word",
+          }),
+          onError: (error) => {
+            console.log("Error in streamText:", error);
+          },
+
           async onFinish({ response }) {
-            // Ensure userMessage is available in this scope
             const userMessage = messages[messages.length - 1];
             try {
-              // console.log("Assistant response:", response);
+              // console.log("response", response.messages)
               for (const msg of response.messages) {
-                // console.log("Processing message:", msg);
-                // console.log("Message Role:", msg.role);
-                // console.log("Message Content:", msg.content?.length);
+                // console.log("msg", msg)
                 if (
-                  msg.role === 'assistant' &&
+                  msg.role === "assistant" &&
                   Array.isArray(msg.content) &&
-                  msg.content.every(item => item.type === 'reasoning' || item.type === 'text')
+                  msg.content.every(
+                    (item) => item.type === "reasoning" || item.type === "text"
+                  )
                 ) {
-                  // Use the middleware-extracted reasoning
-                  const textContent = typeof msg.content === 'string' ? msg.content : (Array.isArray(msg.content) ? msg.content.filter(part => part.type === 'text').map(part => part.text).join('') : '');
-                  // The middleware will attach `reasoning` to the message if found
-                  const reasoningText = (msg as any).reasoning || null;
+                  const textContent =
+                    typeof msg.content === "string"
+                      ? msg.content
+                      : Array.isArray(msg.content)
+                      ? msg.content
+                          .filter((part) => part.type === "text")
+                          .map((part) => part.text)
+                          .join("")
+                      : "";
+                  const reasoningText = msg.content.find((part) => part.type === "reasoning")?.text || undefined;
+                  // console.log("textContent", textContent)
+                  // console.log("reasoningText", reasoningText)
 
                   const [, assistantMessage] = appendResponseMessages({
                     messages: [userMessage],
                     responseMessages: response.messages,
                   });
 
-                  const insertPayload = {
-                    chat_id: chatId,
-                    role: "assistant" as const,
-                    content: textContent,
-                    parent_message_id: userMsgId,
-                    user_id: userId,
-                    reasoning_text: reasoningText,
-                    model: selectedModel?.id,
-                    parts: assistantMessage.parts,
-                    
-                  };
+                  // This mutation handles saving the message, usage increment, and chat timestamp update
+                  const { messageId } = await fetchMutation(
+                    api.messages.saveAssistantMessage,
+                    {
+                      chatId: chatId,
+                      role: "assistant",
+                      content: textContent,
+                      parentMessageId: userMsgId!, // userMsgId must be set by this point
+                      reasoningText: reasoningText,
+                      model: model,
+                      experimentalAttachments: assistantMessage.parts,
+                    },
+                    { token }
+                  );
+                  assistantMsgId = messageId;
 
-                  if (reloadAssistantMessageId) {
-                    // Update existing assistant message on reload
-                    const { error: updErr } = await supabase
-                      .from("messages")
-                      .update({
-                        content: textContent,
-                        reasoning_text: reasoningText,
-                        model: selectedModel?.id,
-                      })
-                      .eq("id", reloadAssistantMessageId);
-                    if (updErr) console.error("Error updating assistant message:", updErr);
-                    assistantMsgId = reloadAssistantMessageId;
-                    // Increment usage count for reload
-                    await incrementUsage(supabase, userId);
-
-                    // Update the chat's updated_at timestamp
-                    const { error: updateChatError } = await supabase
-                      .from("chats")
-                      .update({ updated_at: new Date().toISOString() })
-                      .eq("id", chatId);
-
-                    if (updateChatError) {
-                      console.error("Error updating chat timestamp during reload:", updateChatError);
-                    }
-                  } else {
-                    const { data: assistantMsgData, error: assistantError } = await supabase
-                    .from("messages")
-                    .insert(insertPayload)
-                    .select("id")
-                    .single();
-                    if (assistantError) {
-                      console.error("Error saving assistant message:", assistantError);
-                    } else {
-                      assistantMsgId = assistantMsgData?.id ?? null;
-                    }
-                  }
+                  // Now, increment the usage
+                  await fetchMutation(
+                    api.users.incrementMessageCount,
+                    {},
+                    { token }
+                  );
                 }
               }
-              // Send both IDs to the frontend for IndexedDB sync
+              // Send both IDs to the frontend
               dataStream.writeData({ userMsgId, assistantMsgId });
             } catch (err) {
-              console.error("Error in onFinish while saving assistant messages:", err);
+              console.error(
+                "Error in onFinish while saving assistant messages:",
+                err
+              );
             }
           },
         });
         result.mergeIntoDataStream(dataStream, { sendReasoning: true });
       },
-      onError: error => {
+      onError: (error) => {
         return error instanceof Error ? error.message : String(error);
       },
     });
-  } catch (err: any) {
-    if (err.code === "DAILY_LIMIT_REACHED") {
+  } catch (err: unknown) {
+    const error = err as { message?: string };
+    if (
+      error.message?.includes("DAILY_LIMIT_REACHED") ||
+      error.message?.includes("MONTHLY_LIMIT_REACHED")
+    ) {
       return new Response(
-        JSON.stringify({ error: err.message, code: err.code }),
+        JSON.stringify({ error: error.message, code: "LIMIT_REACHED" }),
         { status: 403 }
       );
     }
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: error.message || "Internal server error" }),
       { status: 500 }
     );
   }

@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
-import { ChatsProvider } from "@/lib/chat-store/chats/provider"
 import { APP_DESCRIPTION, APP_NAME, APP_BASE_URL } from "@/lib/config"
 import { ThemeProvider } from "./providers/theme-provider"
 import Script from "next/script"
@@ -51,15 +50,13 @@ export default async function RootLayout({
         <LayoutClient />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
-            <UserProvider initialUser={null}>
-              <ChatsProvider userId={undefined}>
-                <ChatSessionProvider>
-                  <ThemeProvider>
-                    <Toaster position="top-center" />
-                    {children}
-                  </ThemeProvider>
-                </ChatSessionProvider>
-              </ChatsProvider>
+            <UserProvider>
+              <ChatSessionProvider>
+                <ThemeProvider>
+                  <Toaster position="top-center" />
+                  {children}
+                </ThemeProvider>
+              </ChatSessionProvider>
             </UserProvider>
           </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>

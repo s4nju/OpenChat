@@ -20,9 +20,6 @@ import { APP_NAME } from "../../../lib/config"
 import { AppInfoTrigger } from "./app-info/app-info-trigger"
 import { SettingsTrigger } from "./settings/settings-trigger"
 import { useUser } from "@/app/providers/user-provider"
-import { useChats } from "@/lib/chat-store/chats/provider"
-import { useMessages } from "@/lib/chat-store/messages/provider"
-import { clearAllIndexedDBStores } from "@/lib/chat-store/persist"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/toast"
 
@@ -30,16 +27,11 @@ type User = Doc<"users">
 
 export function UserMenu({ user }: { user: User }) {
   const { signOut } = useUser()
-  const { resetChats } = useChats()
-  const { resetMessages } = useMessages()
   const router = useRouter()
 
   const handleSignOut = async () => {
     try {
-      await resetMessages()
-      await resetChats()
       await signOut()
-      await clearAllIndexedDBStores()
       toast({ title: "Logged out", status: "success" })
       router.push("/")
     } catch (e) {

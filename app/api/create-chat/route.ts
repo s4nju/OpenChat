@@ -1,62 +1,50 @@
-import { checkUsage } from "@/lib/api"
-import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
-import { validateUserIdentity } from "@/lib/server/api"
+import { fetchMutation } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
+import { api } from "@/convex/_generated/api";
 
 export async function POST(request: Request) {
   try {
-    const { userId, title, model, isAuthenticated, systemPrompt } =
-      await request.json()
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Missing userId" }), {
-        status: 400,
-      })
-    }
+    const { title, model, systemPrompt } = await request.json();
+    const token = await convexAuthNextjsToken();
 
-    const supabase = await validateUserIdentity(userId, isAuthenticated)
+    // Check usage limits before creating the chat. This mutation will throw
+    // an error if the user is over their limit, which will be caught below.
+    await fetchMutation(api.users.assertNotOverLimit, {}, { token });
 
-    // Only check usage but don't increment
-    await checkUsage(supabase, userId)
+    // Create the new chat record in Convex
+    const { chatId } = await fetchMutation(
+      api.chats.createChat,
+      {
+        title,
+        model,
+        systemPrompt,
+      },
+      { token }
+    );
 
-    // Insert a new chat record in the chats table
-    const { data: chatData, error: chatError } = await supabase
-      .from("chats")
-      .insert({
-        user_id: userId,
-        title: title || "New Chat",
-        model: model,
-        system_prompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-      })
-      .select("*")
-      .single()
-
-    if (chatError || !chatData) {
-      console.error("Error creating chat record:", chatError)
-      return new Response(
-        JSON.stringify({
-          error: "Failed to create chat record",
-          details: chatError?.message,
-        }),
-        { status: 500 }
-      )
-    }
-
-    // return the new chat to write to indexedDB
-    return new Response(JSON.stringify({ chat: chatData }), {
+    // The client now only needs the ID to redirect to the new chat page.
+    // The chat data itself will be fetched on the client via a query.
+    return new Response(JSON.stringify({ chatId }), {
       status: 200,
-    })
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err: any) {
-    console.error("Error in create-chat endpoint:", err)
+    console.error("Error in create-chat endpoint:", err);
 
-    if (err.code === "DAILY_LIMIT_REACHED") {
+    // Handle specific error codes from Convex if they are thrown
+    if (
+      err.message?.includes("DAILY_LIMIT_REACHED") ||
+      err.message?.includes("MONTHLY_LIMIT_REACHED")
+    ) {
       return new Response(
-        JSON.stringify({ error: err.message, code: err.code }),
-        { status: 403 }
-      )
+        JSON.stringify({ error: err.message, code: "LIMIT_REACHED" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
       JSON.stringify({ error: err.message || "Internal server error" }),
-      { status: 500 }
-    )
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }

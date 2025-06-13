@@ -4,3 +4,9 @@ export type UserProfile = {
   profile_image: string
   display_name: string
 } & Tables<"users">
+
+export type Attachment = {
+  name: string
+  contentType: string
+  url: string
+}

@@ -191,48 +191,51 @@ export async function createNewChat(
   systemPrompt?: string
 ): Promise<Chats> {
   try {
+    const finalModel = model || MODEL_DEFAULT;
+    const finalSystemPrompt = systemPrompt || SYSTEM_PROMPT_DEFAULT;
+    const finalTitle = title || "New Chat";
+
     const res = await fetchClient(API_ROUTE_CREATE_CHAT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId,
-        title,
-        model: model || MODEL_DEFAULT,
-        isAuthenticated,
-        systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        // userId and isAuthenticated are no longer needed, auth is handled by middleware
+        title: finalTitle,
+        model: finalModel,
+        systemPrompt: finalSystemPrompt,
       }),
-    })
+    });
 
-    const responseData = await res.json()
+    const responseData = await res.json();
 
     if (!res.ok) {
-      // Throw an error object that includes the code if available
       const error: any = new Error(
         responseData.error || `Failed to create chat: ${res.statusText}`
-      )
+      );
       if (responseData.code) {
-        error.code = responseData.code
+        error.code = responseData.code;
       }
-      throw error
+      throw error;
     }
-    if (!responseData.chat) {
-      // Handle case where response is ok but chat data is missing
-      throw new Error("Failed to create chat: Invalid response data")
+    // The API now returns { chatId: "..." }
+    if (!responseData.chatId) {
+      throw new Error("Failed to create chat: Invalid response data");
     }
 
+    const now = new Date().toISOString();
     const chat: Chats = {
-      id: responseData.chat.id,
-      title: responseData.chat.title,
-      created_at: responseData.chat.created_at,
-      updated_at: responseData.chat.updated_at || responseData.chat.created_at,
-      model: responseData.chat.model,
-      system_prompt: responseData.chat.system_prompt,
-    }
-    await writeToIndexedDB("chats", chat)
+      id: responseData.chatId,
+      title: finalTitle,
+      created_at: now,
+      updated_at: now,
+      model: finalModel,
+      system_prompt: finalSystemPrompt,
+    };
+    await writeToIndexedDB("chats", chat);
 
-    return chat
+    return chat;
   } catch (error) {
     // console.error("Error creating new chat:", error)
-    throw error
+    throw error;
   }
 }

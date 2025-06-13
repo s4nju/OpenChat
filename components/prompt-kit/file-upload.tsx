@@ -115,7 +115,10 @@ function FileUpload({
       if (invalid.length) {
         toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
       }
-      if (selected.length) handleFiles({ ...e.target, files: selected } as any as FileList)
+      if (selected.length) {
+        const toAdd = multiple ? selected : selected.slice(0, 1)
+        onFilesAdded(toAdd)
+      }
       e.target.value = ""
     }
   }
