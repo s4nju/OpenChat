@@ -1,15 +1,4 @@
-export async function fetchClient(input: RequestInfo, init?: RequestInit) {
-  const csrf = document.cookie
-    .split("; ")
-    .find((c) => c.startsWith("csrf_token="))
-    ?.split("=")[1]
+// Deprecated CSRF helper removed.  If you still need a custom fetch wrapper,
+// implement it here; otherwise just use the global fetch.
 
-  return fetch(input, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      "x-csrf-token": csrf || "",
-      "Content-Type": "application/json",
-    },
-  })
-}
+export const fetchClient = fetch;

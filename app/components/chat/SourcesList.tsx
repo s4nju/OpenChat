@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import type { SourceUIPart } from "@ai-sdk/ui-utils"
 import { CaretDown, Link } from "@phosphor-icons/react"
+import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState } from "react"
 
@@ -51,8 +52,10 @@ export function SourcesList({ sources, className }: SourcesListProps) {
             Sources
             <div className="flex -space-x-1">
               {sources.slice(0, 3).map((source) => (
-                <img
+                <Image
                   key={source.id}
+                  unoptimized
+                  loader={({ src }) => src}
                   src={getFavicon(source.url)}
                   alt={`Favicon for ${source.title}`}
                   className="border-background h-4 w-4 rounded-sm border"
@@ -92,7 +95,9 @@ export function SourcesList({ sources, className }: SourcesListProps) {
                         rel="noopener noreferrer"
                         className="text-primary group line-clamp-1 flex items-center gap-1 hover:underline"
                       >
-                        <img
+                        <Image
+                          unoptimized
+                          loader={({ src }) => src}
                           src={getFavicon(source.url)}
                           alt={`Favicon for ${source.title}`}
                           className="h-4 w-4 flex-shrink-0 rounded-sm"

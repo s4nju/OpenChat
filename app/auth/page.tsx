@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { APP_NAME } from "@/lib/config"
 import { useAuthActions } from "@convex-dev/auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import { useState } from "react"
 import { HeaderGoBack } from "../components/header-go-back"
 
@@ -19,9 +20,13 @@ export default function LoginPage() {
       setError(null)
 
       await signIn("google")
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error signing in with Google:", err)
-      setError(err.message || "An unexpected error occurred. Please try again.")
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -54,12 +59,13 @@ export default function LoginPage() {
               onClick={handleSignInWithGoogle}
               disabled={isLoading}
             >
-              <img
+              <Image
                 src="https://www.google.com/favicon.ico"
                 alt="Google logo"
                 width={20}
                 height={20}
                 className="mr-2 size-4"
+                unoptimized
               />
               <span>
                 {isLoading ? "Connecting..." : "Continue with Google"}
