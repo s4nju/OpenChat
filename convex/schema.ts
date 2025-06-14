@@ -17,6 +17,7 @@ export default defineSchema({
     totalMessageCount: v.optional(v.number()),
     preferredModel: v.optional(v.string()),
     isPremium: v.optional(v.boolean()),
+    premiumCredits: v.optional(v.number()),
     preferredName: v.optional(v.string()),
     occupation: v.optional(v.string()),
     traits: v.optional(v.string()),
@@ -54,7 +55,9 @@ export default defineSchema({
     fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
-  }).index("by_chatId", ["chatId"]),
+  })
+    .index("by_chatId", ["chatId"])
+    .index("by_userId", ["userId"]),
   Logo: defineTable({
     color: v.string(),
     filter: v.optional(v.string()),

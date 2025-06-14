@@ -36,6 +36,19 @@ export function CommandHistory() {
   const [editTitle, setEditTitle] = useState("")
   const [deletingId, setDeletingId] = useState<Id<"chats"> | null>(null)
 
+  // Listen for global openCommandHistory event
+  useEffect(() => {
+    const open = () => setIsOpen(true)
+    window.addEventListener("openCommandHistory", open)
+    // close when floating search opens
+    const close=()=>setIsOpen(false)
+    window.addEventListener("toggleFloatingSearch", close)
+    return () => {
+      window.removeEventListener("openCommandHistory", open)
+      window.removeEventListener("toggleFloatingSearch", close)
+    }
+  }, [])
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (!open) {

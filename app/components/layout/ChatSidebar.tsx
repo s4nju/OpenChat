@@ -109,12 +109,14 @@ export default function ChatSidebar({ isOpen, toggleSidebar }: ChatSidebarProps)
     (chat.title || "").toLowerCase().includes(floatingSearchQuery.toLowerCase())
   );
 
-  // Close floating search if sidebar opens
-  useEffect(() => {
-    if (isOpen) {
-      setShowFloatingSearch(false);
-    }
-  }, [isOpen]);
+  // Listen for programmatic open
+  useEffect(()=>{
+    const toggle=()=>setShowFloatingSearch(prev=>!prev)
+    window.addEventListener('toggleFloatingSearch',toggle)
+    return ()=>window.removeEventListener('toggleFloatingSearch',toggle)
+  },[])
+
+
 
   // Prefetch chats when floating search opens
   useEffect(() => {

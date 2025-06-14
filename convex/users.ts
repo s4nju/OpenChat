@@ -1,4 +1,5 @@
 import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -284,6 +285,79 @@ export const mergeAnonymousToGoogleAccount = mutation({
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTH = 30 * DAY;
+
+// Delete account and all associated data
+export const deleteAccount = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) throw new Error("Not authenticated")
+
+    // Delete attachments and files
+    const attachments = await ctx.db
+      .query("chat_attachments")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect()
+    for (const att of attachments) {
+      try {
+        await ctx.storage.delete(att.fileId as Id<"_storage">)
+      } catch (e) {
+        console.error("Error deleting file storage", e)
+      }
+      await ctx.db.delete(att._id)
+    }
+
+    // Delete messages authored by user
+    const messages = await ctx.db
+      .query("messages")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect()
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id)
+    }
+
+    // Delete chats
+    const chats = await ctx.db
+      .query("chats")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+    for (const chat of chats) {
+      await ctx.db.delete(chat._id)
+    }
+
+    // Delete feedback
+    const feedback = await ctx.db
+      .query("feedback")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+    for (const f of feedback) {
+      await ctx.db.delete(f._id)
+    }
+
+    // Delete purchases
+    const purchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+    for (const p of purchases) {
+      await ctx.db.delete(p._id)
+    }
+
+    // Delete usage history
+    const usage = await ctx.db
+      .query("usage_history")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+    for (const u of usage) {
+      await ctx.db.delete(u._id)
+    }
+
+    // Finally delete user record
+    await ctx.db.delete(userId)
+    return null
+  },
+})
 const MODEL_DEFAULT = "gemini-2.0-flash";
 
 export const resetUsageCountersIfNeeded = mutation({

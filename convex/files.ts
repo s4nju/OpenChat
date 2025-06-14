@@ -68,6 +68,44 @@ export const getAttachment = query({
 /**
  * Fetches all attachments for a given chat, including their download URLs.
  */
+export const getAttachmentsForUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error("Not authenticated")
+    }
+
+    const attachments = await ctx.db
+      .query("chat_attachments")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect()
+
+    return Promise.all(
+      attachments.map(async (attachment) => ({
+        ...attachment,
+        url: await ctx.storage.getUrl(attachment.fileId),
+      }))
+    )
+  },
+})
+
+export const deleteAttachment = mutation({
+  args: { attachmentId: v.id("chat_attachments") },
+  handler: async (ctx, { attachmentId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) throw new Error("Not authenticated")
+
+    const attachment = await ctx.db.get(attachmentId)
+    if (!attachment || attachment.userId !== userId) {
+      throw new Error("Attachment not found or unauthorized")
+    }
+
+    await ctx.storage.delete(attachment.fileId as Id<"_storage">)
+    await ctx.db.delete(attachmentId)
+  },
+})
+
 export const getAttachmentsForChat = query({
     args: { chatId: v.id("chats") },
     handler: async (ctx, args) => {
