@@ -1,6 +1,6 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
+import { authTables } from "@convex-dev/auth/server"
+import { defineSchema, defineTable } from "convex/server"
+import { v } from "convex/values"
 
 export default defineSchema({
   ...authTables,
@@ -22,8 +22,7 @@ export default defineSchema({
     occupation: v.optional(v.string()),
     traits: v.optional(v.string()),
     about: v.optional(v.string()),
-  })
-    .index("email", ["email"]),
+  }).index("email", ["email"]),
   chats: defineTable({
     userId: v.id("users"),
     title: v.optional(v.string()),
@@ -31,6 +30,7 @@ export default defineSchema({
     systemPrompt: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+    originalChatId: v.optional(v.id("chats")),
   }).index("by_user", ["userId"]),
   messages: defineTable({
     chatId: v.id("chats"),
@@ -104,4 +104,4 @@ export default defineSchema({
     periodEnd: v.number(),
     createdAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
-});
+})

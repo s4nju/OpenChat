@@ -1,3 +1,4 @@
+import { Loader } from "@/components/prompt-kit/loader"
 import {
   Message,
   MessageAction,
@@ -5,12 +6,32 @@ import {
   MessageContent,
 } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
-import { ArrowClockwise, Check, Copy, CaretDown, CaretUp, SpinnerGap } from "@phosphor-icons/react"
-import { Loader } from "@/components/prompt-kit/loader"
-
 import { Message as MessageType } from "@ai-sdk/react"
+import type {
+  ReasoningUIPart,
+  SourceUIPart,
+  ToolInvocationUIPart,
+} from "@ai-sdk/ui-utils"
+import {
+  ArrowClockwise,
+  CaretDown,
+  CaretUp,
+  Check,
+  Copy,
+  GitBranch,
+  SpinnerGap,
+} from "@phosphor-icons/react"
+import { AnimatePresence, motion } from "framer-motion"
+import dynamic from "next/dynamic"
+import { useEffect, useRef, useState } from "react" // Import useEffect and useRef
 import { SourcesList } from "./SourcesList"
-import type { SourceUIPart } from "@ai-sdk/ui-utils"
+
+interface Source {
+  id: string
+  url: string
+  title: string
+  sourceType: "url"
+}
 
 type MessageAssistantProps = {
   children: string
@@ -19,28 +40,17 @@ type MessageAssistantProps = {
   copied?: boolean
   copyToClipboard?: () => void
   onReload?: () => void
+  onBranch?: () => void
   model?: string
   parts?: MessageType["parts"]
   status?: "streaming" | "idle" | "submitted" | "error"
-  reasoning_text?: string // NEW: reasoning_text from Supabase/IndexedDB
+  reasoning_text?: string
 }
-
-import { useState, useEffect, useRef } from "react" // Import useEffect and useRef
-import { AnimatePresence } from "framer-motion"
-import dynamic from "next/dynamic"
 
 const Markdown = dynamic(
   () => import("@/components/prompt-kit/markdown").then((mod) => mod.Markdown),
   { ssr: false }
 )
-
-import type { ReasoningUIPart, ToolInvocationUIPart } from "@ai-sdk/ui-utils"
-
-const MotionDiv = (typeof window !== "undefined" && (require("framer-motion").motion.create
-  ? require("framer-motion").motion.create("div")
-  : require("framer-motion").motion.div)) as typeof import("framer-motion").motion.div
-
-
 
 export function MessageAssistant({
   children,
@@ -49,29 +59,30 @@ export function MessageAssistant({
   copied,
   copyToClipboard,
   onReload,
+  onBranch,
   model,
   parts,
   status,
   reasoning_text,
 }: MessageAssistantProps) {
   const [showReasoning, setShowReasoning] = useState(status === "streaming") // Collapsed by default, open if streaming
-  const prevStatusRef = useRef(status); // Ref to track previous status
-  const [isTouch, setIsTouch] = useState(false);
+  const prevStatusRef = useRef(status) // Ref to track previous status
+  const [isTouch, setIsTouch] = useState(false)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      setIsTouch("ontouchstart" in window || navigator.maxTouchPoints > 0)
     }
-  }, []);
+  }, [])
 
   // Effect to auto-collapse reasoning when streaming finishes
   useEffect(() => {
     if (prevStatusRef.current === "streaming" && status !== "streaming") {
-      setShowReasoning(false);
+      setShowReasoning(false)
     }
     // Update previous status ref
-    prevStatusRef.current = status;
-  }, [status]);
+    prevStatusRef.current = status
+  }, [status])
 
   // Extract reasoning parts for streaming display
   const reasoningParts: ReasoningUIPart[] = parts
@@ -79,57 +90,92 @@ export function MessageAssistant({
     : []
 
   // Extract sources from source parts
-  const sourcesFromParts: SourceUIPart["source"][] = parts
-    ? parts.filter((part): part is SourceUIPart => part.type === "source").map((part) => part.source)
-    : [];
+  const sourcesFromParts: Source[] = parts
+    ? parts
+        .filter((part): part is SourceUIPart => part.type === "source")
+        .map((part) => part.source as Source)
+    : []
 
   // Extract sources from tool-invocation results (handles duckDuckGo and exaSearch)
-  const sourcesFromToolInvocations: SourceUIPart["source"][] = parts
+  const sourcesFromToolInvocations: Source[] = parts
     ? parts
-        .filter((part): part is ToolInvocationUIPart => part.type === "tool-invocation")
+        .filter(
+          (part): part is ToolInvocationUIPart =>
+            part.type === "tool-invocation"
+        )
         .flatMap((part) => {
-          const inv = part.toolInvocation as any;
+          const inv = part.toolInvocation as {
+            toolName?: string
+            toolCallId?: string
+            result?: unknown
+          }
           // duckDuckGo: result is array
           if (inv.toolName === "duckDuckGo" && Array.isArray(inv.result)) {
-            return inv.result
-              .filter((item: any) => item && item.url && item.title)
-              .map((item: any, idx: number) => ({
+            return (
+              inv.result as Array<{
+                id?: string
+                url?: string
+                title?: string
+              }>
+            )
+              .filter((item) => item && item.url && item.title)
+              .map((item, idx: number) => ({
                 id: item.id ?? `${inv.toolCallId}-${idx}`,
-                url: item.url,
-                title: item.title,
-              }));
+                url: item.url!,
+                title: item.title!,
+                sourceType: "url",
+              }))
           }
           // exaSearch: result is object with results array
-          if (inv.toolName === "exaSearch" && inv.result && Array.isArray(inv.result.results)) {
-            return inv.result.results
-              .filter((item: any) => item && item.url && item.title)
-              .map((item: any, idx: number) => ({
+          if (
+            inv.toolName === "exaSearch" &&
+            inv.result &&
+            typeof inv.result === "object" &&
+            inv.result !== null &&
+            "results" in inv.result &&
+            Array.isArray((inv.result as { results: unknown }).results)
+          ) {
+            const results = (
+              inv.result as {
+                results: Array<{
+                  id?: string
+                  url?: string
+                  title?: string
+                }>
+              }
+            ).results
+            return results
+              .filter((item) => item && item.url && item.title)
+              .map((item, idx: number) => ({
                 id: item.id ?? `${inv.toolCallId}-exa-${idx}`,
-                url: item.url,
-                title: item.title,
-              }));
+                url: item.url!,
+                title: item.title!,
+                sourceType: "url",
+              }))
           }
-          return [];
+          return []
         })
-    : [];
+    : []
 
-  const sources = [...sourcesFromParts, ...sourcesFromToolInvocations];
+  const sources = [...sourcesFromParts, ...sourcesFromToolInvocations]
 
   // Show 'thinking...' spinner if any tool-invocation is in progress
   const toolInvocationsInProgress = parts
     ? parts.filter(
         (part): part is ToolInvocationUIPart =>
-          part.type === "tool-invocation" && part.toolInvocation.state !== "result"
+          part.type === "tool-invocation" &&
+          part.toolInvocation.state !== "result"
       )
-    : [];
-  const isSearching = toolInvocationsInProgress.length > 0;
+    : []
+  const isSearching = toolInvocationsInProgress.length > 0
 
   // console.log("Sources:", sources);
 
   // Before rendering, combine reasoning parts into a single markdown string to avoid odd spacing between streaming chunks
-  const combinedReasoningMarkdown = reasoningParts.length > 0
-    ? reasoningParts.map((p) => p.reasoning).join("")
-    : reasoning_text ?? "";
+  const combinedReasoningMarkdown =
+    reasoningParts.length > 0
+      ? reasoningParts.map((p) => p.reasoning).join("")
+      : (reasoning_text ?? "")
 
   return (
     <Message
@@ -144,41 +190,63 @@ export function MessageAssistant({
             {/* Reasoning Header - Updated UI */}
             {status === "streaming" ? (
               // Display when reasoning is actively streaming
-              <div className="flex flex-row gap-2 items-center">
-                <div className="font-medium text-sm text-muted-foreground">Reasoning</div>
+              <div className="flex flex-row items-center gap-2">
+                <div className="text-muted-foreground text-sm font-medium">
+                  Reasoning
+                </div>
                 <div className="animate-spin">
-                   <SpinnerGap size={14} weight="bold" /> {/* Using existing icon */}
+                  <SpinnerGap size={14} weight="bold" />{" "}
+                  {/* Using existing icon */}
                 </div>
               </div>
             ) : (
               // Display when reasoning is finished
-              <div className="flex flex-row gap-2 items-center">
-                <div className="font-medium text-sm text-muted-foreground">Reasoned for a few seconds</div>
+              <div className="flex flex-row items-center gap-2">
+                <div className="text-muted-foreground text-sm font-medium">
+                  Reasoned for a few seconds
+                </div>
                 <button
                   className={cn(
-                    "cursor-pointer rounded-full p-1 transition dark:hover:bg-zinc-800 hover:bg-zinc-200", // Starter template styling
-                    showReasoning && "dark:bg-zinc-800 bg-zinc-200" // Apply active background if expanded
+                    "cursor-pointer rounded-full p-1 transition hover:bg-zinc-200 dark:hover:bg-zinc-800", // Starter template styling
+                    showReasoning && "bg-zinc-200 dark:bg-zinc-800" // Apply active background if expanded
                   )}
                   onClick={() => setShowReasoning((v) => !v)}
                   type="button"
-                  aria-label={showReasoning ? "Hide Reasoning" : "Show Reasoning"}
+                  aria-label={
+                    showReasoning ? "Hide Reasoning" : "Show Reasoning"
+                  }
                 >
                   {showReasoning ? (
-                     <CaretUp size={16} weight="bold" /> // Using existing icon
+                    <CaretUp size={16} weight="bold" /> // Using existing icon
                   ) : (
-                     <CaretDown size={16} weight="bold" /> // Using existing icon
+                    <CaretDown size={16} weight="bold" /> // Using existing icon
                   )}
                 </button>
               </div>
             )}
             <AnimatePresence initial={false}>
               {showReasoning && (
-                <MotionDiv
+                <motion.div
                   key="reasoning"
-                  className="text-sm dark:text-zinc-400 text-zinc-600 flex flex-col gap-4 border-l pl-3 dark:border-zinc-800 border-zinc-300" // Added border and padding like starter
-                  initial={{ opacity: 0, marginTop: 0, marginBottom: 0, height: 0 }}
-                  animate={{ opacity: 1, marginTop: "1rem", marginBottom: 0, height: "auto" }} // Adjusted margin like starter
-                  exit={{ opacity: 0, marginTop: 0, marginBottom: 0, height: 0 }}
+                  className="flex flex-col gap-4 border-l border-zinc-300 pl-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400" // Added border and padding like starter
+                  initial={{
+                    opacity: 0,
+                    marginTop: 0,
+                    marginBottom: 0,
+                    height: 0,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    marginTop: "1rem",
+                    marginBottom: 0,
+                    height: "auto",
+                  }} // Adjusted margin like starter
+                  exit={{
+                    opacity: 0,
+                    marginTop: 0,
+                    marginBottom: 0,
+                    height: 0,
+                  }}
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   // layout // Removed layout prop to prevent bouncing during streaming
                 >
@@ -187,15 +255,15 @@ export function MessageAssistant({
                       {combinedReasoningMarkdown}
                     </Markdown>
                   )}
-                </MotionDiv>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
         )}
         {/* Show 'thinking...' spinner if tool call in progress */}
         {isSearching && (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm my-2">
-            <Loader text="Searching the web"/>
+          <div className="text-muted-foreground my-2 flex items-center gap-2 text-sm">
+            <Loader text="Searching the web" />
           </div>
         )}
 
@@ -236,6 +304,21 @@ export function MessageAssistant({
               )}
             </button>
           </MessageAction>
+          <MessageAction
+            tooltip="Create a new chat starting from here"
+            side="bottom"
+            delayDuration={0}
+          >
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Branch chat"
+              onClick={onBranch}
+              type="button"
+              disabled={status === "streaming"}
+            >
+              <GitBranch className="size-4" />
+            </button>
+          </MessageAction>
           <MessageAction tooltip="Regenerate" side="bottom" delayDuration={0}>
             <button
               className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
@@ -248,7 +331,7 @@ export function MessageAssistant({
             </button>
           </MessageAction>
           {model && (
-            <span className="hidden md:inline-block ml-2 text-xs text-muted-foreground">
+            <span className="text-muted-foreground ml-2 hidden text-xs md:inline-block">
               {`Generated with ${model}`}
             </span>
           )}

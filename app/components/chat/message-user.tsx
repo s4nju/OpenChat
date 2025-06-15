@@ -17,8 +17,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react"
-import { Check, Copy, PencilSimple, Trash, FilePdf } from "@phosphor-icons/react"
-import { useRef, useState, useEffect } from "react"
+import { Check, Copy, FilePdf, Trash } from "@phosphor-icons/react"
+import { useEffect, useRef, useState } from "react"
 
 const getTextFromDataUrl = (dataUrl: string) => {
   const base64 = dataUrl.split(",")[1]
@@ -52,15 +52,15 @@ export function MessageUser({
 }: MessageUserProps) {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
-  const [isTouch, setIsTouch] = useState(false);
+  const [isTouch, setIsTouch] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
-  const displayContent = children.replace(/\n{2,}/g, '\n\n')
+  const displayContent = children.replace(/\n{2,}/g, "\n\n")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      setIsTouch("ontouchstart" in window || navigator.maxTouchPoints > 0)
     }
-  }, []);
+  }, [])
 
   const handleEditCancel = () => {
     setIsEditing(false)
@@ -129,27 +129,39 @@ export function MessageUser({
               download={attachment.name}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col justify-between px-4 py-2 bg-muted dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg mb-2 w-35 shadow-sm cursor-pointer hover:bg-muted/80 dark:hover:bg-zinc-700 focus:bg-muted/70 dark:focus:bg-zinc-800 focus:outline-none transition-colors"
+              className="bg-muted hover:bg-muted/80 focus:bg-muted/70 mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 px-4 py-2 shadow-sm transition-colors focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:focus:bg-zinc-800"
               style={{ minWidth: 0, minHeight: 64 }}
               role="button"
               tabIndex={0}
               aria-label={`Download PDF: ${attachment.name}`}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  (e.currentTarget as HTMLAnchorElement).click();
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  ;(e.currentTarget as HTMLAnchorElement).click()
                 }
               }}
             >
               {/* Placeholder preview lines */}
-              <div className="flex flex-col gap-0.5 flex-1 mt-1 mb-2" aria-hidden="true">
+              <div
+                className="mt-1 mb-2 flex flex-1 flex-col gap-0.5"
+                aria-hidden="true"
+              >
                 <div className="h-2 w-4/5 rounded bg-gray-200 dark:bg-zinc-600" />
                 <div className="h-2 w-3/5 rounded bg-gray-200 dark:bg-zinc-600" />
                 <div className="h-2 w-2/5 rounded bg-gray-200 dark:bg-zinc-600" />
               </div>
               {/* Footer with icon and filename */}
               <div className="flex items-center gap-2">
-                <FilePdf size={20} weight="duotone" className="shrink-0 text-gray-500 dark:text-gray-300" aria-hidden="true" />
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate overflow-hidden whitespace-nowrap" style={{ maxWidth: 'calc(100% - 28px)' }} title={attachment.name}>
+                <FilePdf
+                  size={20}
+                  weight="duotone"
+                  className="shrink-0 text-gray-500 dark:text-gray-300"
+                  aria-hidden="true"
+                />
+                <span
+                  className="truncate overflow-hidden text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100"
+                  style={{ maxWidth: "calc(100% - 28px)" }}
+                  title={attachment.name}
+                >
                   {attachment.name}
                 </span>
               </div>

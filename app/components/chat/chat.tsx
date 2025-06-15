@@ -2,26 +2,25 @@
 
 import { ChatInput } from "@/app/components/chat-input/chat-input"
 import { Conversation } from "@/app/components/chat/conversation"
+import { useChatSession } from "@/app/providers/chat-session-provider"
 import { useUser } from "@/app/providers/user-provider"
 import { toast } from "@/components/ui/toast"
+import { api } from "@/convex/_generated/api"
+import { Doc, Id } from "@/convex/_generated/dataModel"
 import {
+  buildSystemPrompt,
   MESSAGE_MAX_LENGTH,
   MODEL_DEFAULT,
   REMAINING_QUERY_ALERT_THRESHOLD,
-  getSystemPromptDefault,
-  buildSystemPrompt,
 } from "@/lib/config"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat, type Message } from "@ai-sdk/react"
-import { useAction, useMutation, useQuery, useConvex } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Doc, Id } from "@/convex/_generated/dataModel"
+import { useAction, useConvex, useMutation, useQuery } from "convex/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useChatSession } from "@/app/providers/chat-session-provider"
+import { useCallback, useEffect, useState } from "react"
 
 const DialogAuth = dynamic(
   () => import("./dialog-auth").then((mod) => mod.DialogAuth),
@@ -29,7 +28,9 @@ const DialogAuth = dynamic(
 )
 
 // Helper to map Convex message doc to AI SDK message type
-const mapMessage = (msg: Doc<"messages">): Message & { reasoning_text?: string; model?: string } => ({
+const mapMessage = (
+  msg: Doc<"messages">
+): Message & { reasoning_text?: string; model?: string } => ({
   id: msg._id,
   role: msg.role as "user" | "assistant",
   content: msg.content,
@@ -38,7 +39,7 @@ const mapMessage = (msg: Doc<"messages">): Message & { reasoning_text?: string; 
   reasoning_text: msg.reasoningText,
   model: msg.model,
   // Optionally include model if stored in message doc in future
-});
+})
 
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
@@ -56,6 +57,7 @@ export default function Chat() {
   )
   const createChat = useMutation(api.chats.createChat)
   const updateChatModel = useMutation(api.chats.updateChatModel)
+  const branchChat = useMutation(api.chats.branchChat)
   const deleteMessage = useMutation(api.messages.deleteMessageAndDescendants)
   const generateUploadUrl = useAction(api.files.generateUploadUrl)
   const saveFileAttachment = useAction(api.files.saveFileAttachment)
@@ -63,12 +65,16 @@ export default function Chat() {
 
   // --- Local State ---
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isBranching, setIsBranching] = useState(false)
   const [hasDialogAuth, setHasDialogAuth] = useState(false)
   const [files, setFiles] = useState<File[]>([])
-  const [selectedModel, setSelectedModel] = useState(user?.preferredModel || MODEL_DEFAULT)
+  const [selectedModel, setSelectedModel] = useState(
+    user?.preferredModel || MODEL_DEFAULT
+  )
   const [personaPrompt, setPersonaPrompt] = useState<string | undefined>()
-  const [systemPrompt, setSystemPrompt] = useState(() => buildSystemPrompt(user))
-  const [hydrated, setHydrated] = useState(false)
+  const [systemPrompt, setSystemPrompt] = useState(() =>
+    buildSystemPrompt(user)
+  )
 
   const isAuthenticated = !!user && !user.isAnonymous
 
@@ -87,10 +93,10 @@ export default function Chat() {
   } = useChat({
     api: API_ROUTE_CHAT,
     // initialMessages are now set via useEffect
-    onResponse: response => {
+    onResponse: () => {
       // console.log("onResponse", response)
     },
-    onFinish: message => {
+    onFinish: () => {
       // console.log("onFinish", message)
     },
   })
@@ -109,10 +115,6 @@ export default function Chat() {
   //   console.log("useChat messages:", messages)
   // }, [status, messages])
 
-  useEffect(() => {
-    setHydrated(true)
-  }, [])
-
   // Sync messages from DB to AI SDK state ensuring IDs from Convex are merged
   // into the client state. We avoid the flash by:
   // 1. Replacing the entire list only when DB has >= messages.length
@@ -122,13 +124,13 @@ export default function Chat() {
   // 3. While a delete operation is in flight (isDeleting), we skip syncing to
   //    prevent the just-deleted message from reappearing.
   useEffect(() => {
-    if (status !== "ready" || !messagesFromDB || isDeleting) return;
+    if (status !== "ready" || !messagesFromDB || isDeleting) return
 
-    const mappedDb = messagesFromDB.map(mapMessage);
+    const mappedDb = messagesFromDB.map(mapMessage)
 
     if (mappedDb.length >= messages.length) {
       // DB is up-to-date or ahead – replace to ensure canonical IDs.
-      setMessages(mappedDb);
+      setMessages(mappedDb)
     } else if (mappedDb.length > 0) {
       // DB is behind: merge IDs for the portion we have *without* dropping
       // recent optimistic messages (e.g., the just-streamed assistant reply).
@@ -136,29 +138,29 @@ export default function Chat() {
       // that once the DB catches up the local state is already aligned.
       const merged = messages.map((msg, idx) => {
         if (idx < mappedDb.length) {
-          const dbMsg = mappedDb[idx];
+          const dbMsg = mappedDb[idx]
           return {
             ...msg,
             id: dbMsg.id,
             experimental_attachments: dbMsg.experimental_attachments,
             reasoning_text: dbMsg.reasoning_text,
             model: dbMsg.model,
-          } as typeof msg;
+          } as typeof msg
         }
         // Keep optimistic messages beyond the DB length untouched to avoid
         // momentary disappearance in the UI.
-        return msg;
-      });
-      setMessages(merged);
+        return msg
+      })
+      setMessages(merged)
     }
-  }, [messagesFromDB, status, messages, setMessages, isDeleting]);
+  }, [messagesFromDB, status, messages, setMessages, isDeleting])
 
   // If we're in a brand-new chat (no chatId yet) ensure local state stays empty.
   useEffect(() => {
     if (status === "ready" && !chatId) {
-      setMessages([]);
+      setMessages([])
     }
-  }, [status, chatId, setMessages]);
+  }, [status, chatId, setMessages])
 
   // Sync chat settings from DB to local state
   useEffect(() => {
@@ -173,7 +175,15 @@ export default function Chat() {
     if (!chatId) {
       setSystemPrompt(buildSystemPrompt(user, personaPrompt))
     }
-  }, [user?.preferredName, user?.occupation, user?.traits, user?.about, personaPrompt])
+  }, [
+    chatId,
+    user,
+    user?.preferredName,
+    user?.occupation,
+    user?.traits,
+    user?.about,
+    personaPrompt,
+  ])
 
   // --- Error Handling ---
   useEffect(() => {
@@ -230,7 +240,7 @@ export default function Chat() {
         const newChatId = result.chatId
         window.history.pushState(null, "", `/c/${newChatId}`)
         return newChatId
-      } catch (err: any) {
+      } catch {
         toast({ title: "Failed to create new chat.", status: "error" })
         return null
       }
@@ -249,12 +259,12 @@ export default function Chat() {
       setSelectedModel(model)
       try {
         await updateChatModel({ chatId: chatId as Id<"chats">, model })
-      } catch (err) {
+      } catch {
         setSelectedModel(oldModel)
         toast({ title: "Failed to update chat model", status: "error" })
       }
     },
-    [chatId, user, updateChatModel]
+    [chatId, selectedModel, user, updateChatModel]
   )
 
   const handlePersonaSelect = useCallback(
@@ -266,30 +276,36 @@ export default function Chat() {
     [user]
   )
 
-  const uploadAndSaveFile = async (file: File, chatIdForUpload: Id<"chats">) => {
+  const uploadAndSaveFile = async (
+    file: File,
+    chatIdForUpload: Id<"chats">
+  ) => {
     try {
-      const uploadUrl = await generateUploadUrl();
+      const uploadUrl = await generateUploadUrl()
       const response = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": file.type },
         body: file,
-      });
-      const { storageId } = await response.json();
+      })
+      const { storageId } = await response.json()
       return await saveFileAttachment({
         storageId,
         chatId: chatIdForUpload,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-      });
+      })
     } catch (error) {
-      console.error("Error uploading file:", error);
-      toast({ title: "Error uploading file", status: "error" });
-      return null;
+      console.error("Error uploading file:", error)
+      toast({ title: "Error uploading file", status: "error" })
+      return null
     }
-  };
+  }
 
-  const submit = async (_?: unknown, opts?: { body?: { enableSearch?: boolean } }) => {
+  const submit = async (
+    _?: unknown,
+    opts?: { body?: { enableSearch?: boolean } }
+  ) => {
     if (!input.trim() && files.length === 0) return
     setIsSubmitting(true)
 
@@ -312,7 +328,10 @@ export default function Chat() {
     }
 
     if (input.length > MESSAGE_MAX_LENGTH) {
-      toast({ title: `Message is too long (max ${MESSAGE_MAX_LENGTH} chars).`, status: "error" })
+      toast({
+        title: `Message is too long (max ${MESSAGE_MAX_LENGTH} chars).`,
+        status: "error",
+      })
       setIsSubmitting(false)
       return
     }
@@ -320,7 +339,10 @@ export default function Chat() {
     const vercelAiAttachments = []
     if (files.length > 0) {
       for (const file of files) {
-        const newAttachment = await uploadAndSaveFile(file, currentChatId as Id<"chats">)
+        const newAttachment = await uploadAndSaveFile(
+          file,
+          currentChatId as Id<"chats">
+        )
         if (newAttachment) {
           vercelAiAttachments.push({
             name: newAttachment.fileName,
@@ -337,115 +359,193 @@ export default function Chat() {
         chatId: currentChatId,
         model: selectedModel,
         systemPrompt: systemPrompt || buildSystemPrompt(user),
-        ...(opts?.body && typeof opts.body.enableSearch !== 'undefined' ? { enableSearch: opts.body.enableSearch } : {})
+        ...(opts?.body && typeof opts.body.enableSearch !== "undefined"
+          ? { enableSearch: opts.body.enableSearch }
+          : {}),
       },
-      experimental_attachments: vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
+      experimental_attachments:
+        vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
     }
 
     try {
       handleSubmit(undefined, options)
-    } catch (error) {
+    } catch {
       toast({ title: "Failed to send message", status: "error" })
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleBranch = useCallback(
+    async (messageId: string) => {
+      if (!chatId || !user?._id) {
+        toast({
+          title: "Unable to branch chat. Please try again.",
+          status: "error",
+        })
+        return
+      }
+
+      if (isBranching) return
+
+      setIsBranching(true)
+
+      try {
+        const result = await branchChat({
+          originalChatId: chatId as Id<"chats">,
+          branchFromMessageId: messageId as Id<"messages">,
+        })
+
+        // Navigate to the new branched chat
+        router.push(`/c/${result.chatId}`)
+
+        toast({
+          title: "Chat branched successfully",
+          status: "success",
+        })
+      } catch (error: unknown) {
+        console.error("Branch chat error:", error)
+
+        let errorMessage = "Failed to branch chat"
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        if (errorMsg.includes("Can only branch from assistant messages")) {
+          errorMessage = "You can only branch from assistant messages"
+        } else if (errorMsg.includes("not found")) {
+          errorMessage = "Message not found or chat unavailable"
+        } else if (errorMsg.includes("unauthorized")) {
+          errorMessage = "You don&apos;t have permission to branch this chat"
+        }
+
+        toast({
+          title: errorMessage,
+          status: "error",
+        })
+      } finally {
+        setIsBranching(false)
+      }
+    },
+    [chatId, user, branchChat, router, isBranching]
+  )
+
   const handleDelete = useCallback(
     async (id: string) => {
       // Build an optimistically updated list that mimics server deletion of the
       // target message *and* its descendants (assistant replies, tools, etc.).
-      const buildOptimisticList = (msgList: typeof messages, targetId: string) => {
-        const idx = msgList.findIndex((m) => m.id === targetId);
-        if (idx === -1) return msgList; // fallback – shouldn't happen
+      const buildOptimisticList = (
+        msgList: typeof messages,
+        targetId: string
+      ) => {
+        const idx = msgList.findIndex((m) => m.id === targetId)
+        if (idx === -1) return msgList // fallback – shouldn't happen
 
-        const targetRole = msgList[idx].role;
-        let endIdx = idx + 1;
+        const targetRole = msgList[idx].role
+        let endIdx = idx + 1
 
         // If deleting a user message, also remove subsequent assistant (and
         // related) messages until the next user message or end-of-list.
         if (targetRole === "user") {
           while (endIdx < msgList.length && msgList[endIdx].role !== "user") {
-            endIdx++;
+            endIdx++
           }
         }
 
-        return [...msgList.slice(0, idx), ...msgList.slice(endIdx)];
-      };
+        return [...msgList.slice(0, idx), ...msgList.slice(endIdx)]
+      }
 
-      const originalMessages = [...messages];
-      const filteredMessages = buildOptimisticList(originalMessages, id);
-      setMessages(filteredMessages); // Optimistic update (user + assistant)
-      setIsDeleting(true);
+      const originalMessages = [...messages]
+      const filteredMessages = buildOptimisticList(originalMessages, id)
+      setMessages(filteredMessages) // Optimistic update (user + assistant)
+      setIsDeleting(true)
 
       try {
-        const result = await deleteMessage({ messageId: id as Id<"messages"> });
+        const result = await deleteMessage({ messageId: id as Id<"messages"> })
         if (result.chatDeleted) {
-          router.push("/");
+          router.push("/")
         } else {
-          setIsDeleting(false);
+          setIsDeleting(false)
         }
       } catch {
-        setMessages(originalMessages); // Rollback on error
-        toast({ title: "Failed to delete message", status: "error" });
-        setIsDeleting(false);
+        setMessages(originalMessages) // Rollback on error
+        toast({ title: "Failed to delete message", status: "error" })
+        setIsDeleting(false)
       }
     },
     [messages, setMessages, deleteMessage, router, setIsDeleting]
   )
 
-  const handleEdit = useCallback((id: string, newText: string) => {
-    // This is a client-side only edit for now, as there's no backend mutation for it yet.
-    setMessages(
-      messages.map((message) =>
-        message.id === id ? { ...message, content: newText } : message
+  const handleEdit = useCallback(
+    (id: string, newText: string) => {
+      // This is a client-side only edit for now, as there's no backend mutation for it yet.
+      setMessages(
+        messages.map((message) =>
+          message.id === id ? { ...message, content: newText } : message
+        )
       )
-    )
-  }, [messages, setMessages]);
+    },
+    [messages, setMessages]
+  )
 
-  const handleReload = useCallback(async (messageId: string, opts?: { enableSearch?: boolean }) => {
-    if (!user?._id || !chatId) return
+  const handleReload = useCallback(
+    async (messageId: string, opts?: { enableSearch?: boolean }) => {
+      if (!user?._id || !chatId) return
 
-    // 1. Optimistically remove all messages that come *after* the one being reloaded so
-    //    they disappear from the UI immediately.
-    const originalMessages = [...messages]
-    const targetIdx = originalMessages.findIndex((m) => m.id === messageId)
-    if (targetIdx === -1) {
-      return
-    }
-    const trimmedMessages = originalMessages.slice(0, targetIdx + 1)
-    setMessages(trimmedMessages)
-
-    // 2. Persist the deletion of the following messages in the DB by invoking the existing
-    //    deleteMessageAndDescendants mutation on the first message *after* the target (if any).
-    const firstFollowing = originalMessages[targetIdx + 1]
-    if (firstFollowing) {
-      setIsDeleting(true)
-      try {
-        await deleteMessage({ messageId: firstFollowing.id as Id<"messages"> })
-      } catch {
-        // Roll back optimistic update if the deletion fails
-        setMessages(originalMessages)
-        toast({ title: "Failed to delete messages for reload", status: "error" })
-      } finally {
-        setIsDeleting(false)
+      // 1. Optimistically remove all messages that come *after* the one being reloaded so
+      //    they disappear from the UI immediately.
+      const originalMessages = [...messages]
+      const targetIdx = originalMessages.findIndex((m) => m.id === messageId)
+      if (targetIdx === -1) {
+        return
       }
-    }
+      const trimmedMessages = originalMessages.slice(0, targetIdx + 1)
+      setMessages(trimmedMessages)
 
-    // 3. Trigger the assistant reload once the slate after the target message is clean.
-    const options = {
-      body: {
-        chatId,
-        model: selectedModel,
-        systemPrompt: systemPrompt || buildSystemPrompt(user),
-        reloadAssistantMessageId: messageId,
-        ...(opts && typeof opts.enableSearch !== "undefined"
-          ? { enableSearch: opts.enableSearch }
-          : {}),
-      },
-    }
-    reload(options)
-  }, [user?._id, chatId, messages, setMessages, deleteMessage, selectedModel, systemPrompt, reload, setIsDeleting])
+      // 2. Persist the deletion of the following messages in the DB by invoking the existing
+      //    deleteMessageAndDescendants mutation on the first message *after* the target (if any).
+      const firstFollowing = originalMessages[targetIdx + 1]
+      if (firstFollowing) {
+        setIsDeleting(true)
+        try {
+          await deleteMessage({
+            messageId: firstFollowing.id as Id<"messages">,
+          })
+        } catch {
+          // Roll back optimistic update if the deletion fails
+          setMessages(originalMessages)
+          toast({
+            title: "Failed to delete messages for reload",
+            status: "error",
+          })
+        } finally {
+          setIsDeleting(false)
+        }
+      }
+
+      // 3. Trigger the assistant reload once the slate after the target message is clean.
+      const options = {
+        body: {
+          chatId,
+          model: selectedModel,
+          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          reloadAssistantMessageId: messageId,
+          ...(opts && typeof opts.enableSearch !== "undefined"
+            ? { enableSearch: opts.enableSearch }
+            : {}),
+        },
+      }
+      reload(options)
+    },
+    [
+      user,
+      chatId,
+      messages,
+      setMessages,
+      deleteMessage,
+      selectedModel,
+      systemPrompt,
+      reload,
+      setIsDeleting,
+    ]
+  )
 
   // Redirect if chat is not found or user is not authorized
   useEffect(() => {
@@ -462,14 +562,7 @@ export default function Chat() {
       })
       router.replace("/")
     }
-  }, [
-    chatId,
-    currentChat,
-    messagesFromDB,
-    isUserLoading,
-    router,
-    isDeleting,
-  ])
+  }, [chatId, currentChat, messagesFromDB, isUserLoading, router, isDeleting])
 
   // Use user's preferred model when starting a brand-new chat
   useEffect(() => {
@@ -483,7 +576,11 @@ export default function Chat() {
   }
 
   return (
-    <div className={cn("@container/main relative flex h-full flex-col items-center justify-end md:justify-center")}>
+    <div
+      className={cn(
+        "@container/main relative flex h-full flex-col items-center justify-end md:justify-center"
+      )}
+    >
       <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} />
       <AnimatePresence initial={false} mode="popLayout">
         {!chatId && messages.length === 0 ? (
@@ -498,7 +595,7 @@ export default function Chat() {
             transition={{ layout: { duration: 0 } }}
           >
             <h1 className="mb-6 text-3xl font-medium tracking-tight">
-              What's on your mind?
+              What&apos;s on your mind?
             </h1>
           </motion.div>
         ) : (
@@ -509,24 +606,35 @@ export default function Chat() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            onBranch={handleBranch}
           />
         )}
       </AnimatePresence>
       <motion.div
-        className={cn("relative inset-x-0 bottom-0 z-50 mx-auto w-full max-w-3xl")}
+        className={cn(
+          "relative inset-x-0 bottom-0 z-50 mx-auto w-full max-w-3xl"
+        )}
         layout="position"
         layoutId="chat-input-container"
         transition={{ layout: { duration: messages.length === 1 ? 0.3 : 0 } }}
       >
         <ChatInput
           value={input}
-          onSuggestion={(suggestion) => append({ role: "user", content: suggestion })}
+          onSuggestion={(suggestion) =>
+            append({ role: "user", content: suggestion })
+          }
           onValueChange={setInput}
-          onSend={({ enableSearch }) => submit(undefined, { body: { enableSearch } })}
+          onSend={({ enableSearch }) =>
+            submit(undefined, { body: { enableSearch } })
+          }
           isSubmitting={isSubmitting || status === "streaming"}
           files={files}
-          onFileUpload={(newFiles) => setFiles((prev) => [...prev, ...newFiles])}
-          onFileRemove={(file) => setFiles((prev) => prev.filter((f) => f !== file))}
+          onFileUpload={(newFiles) =>
+            setFiles((prev) => [...prev, ...newFiles])
+          }
+          onFileRemove={(file) =>
+            setFiles((prev) => prev.filter((f) => f !== file))
+          }
           hasSuggestions={!chatId && messages.length === 0}
           onSelectModel={handleModelChange}
           onSelectSystemPrompt={handlePersonaSelect}
