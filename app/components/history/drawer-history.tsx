@@ -1,5 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -7,9 +14,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Doc, Id } from "@/convex/_generated/dataModel"
-import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { Doc, Id } from "@/convex/_generated/dataModel"
 import {
   Check,
   MagnifyingGlass,
@@ -17,6 +23,7 @@ import {
   TrashSimple,
   X,
 } from "@phosphor-icons/react"
+import { useMutation, useQuery } from "convex/react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -93,7 +100,9 @@ export function DrawerHistory({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>History</DrawerTitle>
-          <DrawerDescription className="hidden">History of your chats</DrawerDescription>
+          <DrawerDescription className="hidden">
+            History of your chats
+          </DrawerDescription>
         </DrawerHeader>
         <div className="flex h-dvh max-h-[80vh] flex-col">
           <div className="border-b p-4 pb-3">
@@ -204,11 +213,6 @@ export function DrawerHistory({
                         >
                           <span className="line-clamp-1 text-base font-normal">
                             {chat.title}
-                          </span>
-                          <span className="mr-2 text-xs font-normal text-gray-500">
-                            {(chat.updatedAt || chat._creationTime)
-                              ? new Date(chat.updatedAt || chat._creationTime || "").toLocaleDateString()
-                              : "Unknown Date"}
                           </span>
                         </Link>
                         <div className="flex items-center">

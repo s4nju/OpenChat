@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/tooltip"
 import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
+import {
+  getOrderedGroupKeys,
+  groupChatsByTime,
+  hasChatsInGroup,
+} from "@/lib/chat-utils/time-grouping"
 import { APP_NAME } from "@/lib/config"
 import {
   Check,
@@ -92,6 +97,18 @@ export default function ChatSidebar({
     (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Group chats by time for main sidebar
+  const groupedChats = groupChatsByTime(filteredChats)
+  const orderedGroupKeys = getOrderedGroupKeys()
+
+  // Filter for floating dialog
+  const floatingFilteredChats = chats.filter((chat) =>
+    (chat.title || "").toLowerCase().includes(floatingSearchQuery.toLowerCase())
+  )
+
+  // Group chats by time for floating search
+  const floatingGroupedChats = groupChatsByTime(floatingFilteredChats)
+
   // --- Handlers specifically for the Floating Command Dialog ---
   const handleFloatingEdit = (chat: Doc<"chats">) => {
     setFloatingEditingId(chat._id)
@@ -120,11 +137,6 @@ export default function ChatSidebar({
   const handleFloatingCancelDelete = () => {
     setFloatingDeletingId(null)
   }
-
-  // Filter for floating dialog
-  const floatingFilteredChats = chats.filter((chat) =>
-    (chat.title || "").toLowerCase().includes(floatingSearchQuery.toLowerCase())
-  )
 
   // Listen for programmatic open
   useEffect(() => {
@@ -253,160 +265,165 @@ export default function ChatSidebar({
                 No chat history found.
               </span>
             )}
-            {filteredChats.map((chat) => (
-              <div key={chat._id} className="space-y-1.5">
-                {editingId === chat._id ? (
-                  <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
-                    <form
-                      className="flex w-full items-center justify-between"
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        handleSaveEdit(chat._id, editTitle)
-                      }}
-                    >
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="h-8 flex-1"
-                        autoFocus
-                      />
-                      <div className="ml-2 flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive size-8"
-                          type="submit"
-                        >
-                          <Check className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive size-8"
-                          onClick={() => setEditingId(null)}
-                          type="button"
-                        >
-                          <X className="size-4" />
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "group flex items-center justify-between rounded-lg px-2 py-1.5",
-                      params.chatId === chat._id && "bg-accent",
-                      "hover:bg-accent"
-                    )}
-                  >
-                    {deletingId === chat._id ? (
-                      <div className="flex w-full items-center justify-between py-1">
-                        <span className="text-destructive mt-0.5 ml-1 text-sm font-medium">
-                          Delete chat?
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive size-8"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              handleConfirmDelete(chat._id)
-                            }}
-                            type="button"
+            {orderedGroupKeys.map(
+              (groupKey) =>
+                hasChatsInGroup(groupedChats, groupKey) && (
+                  <div key={groupKey} className="space-y-2">
+                    <h3 className="text-muted-foreground text-m px-2 font-medium tracking-wider uppercase">
+                      {groupKey}
+                    </h3>
+                    {groupedChats[groupKey].map((chat) => (
+                      <div key={chat._id} className="space-y-1.5">
+                        {editingId === chat._id ? (
+                          <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
+                            <form
+                              className="flex w-full items-center justify-between"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleSaveEdit(chat._id, editTitle)
+                              }}
+                            >
+                              <Input
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="h-8 flex-1"
+                                autoFocus
+                              />
+                              <div className="ml-2 flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive size-8"
+                                  type="submit"
+                                >
+                                  <Check className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive size-8"
+                                  onClick={() => setEditingId(null)}
+                                  type="button"
+                                >
+                                  <X className="size-4" />
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        ) : (
+                          <div
+                            className={cn(
+                              "group flex items-center justify-between rounded-lg px-2 py-1.5",
+                              params.chatId === chat._id && "bg-accent",
+                              "hover:bg-accent"
+                            )}
                           >
-                            <Check className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-foreground size-8"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setDeletingId(null)
-                            }}
-                            type="button"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Link
-                          href={`/c/${chat._id}`}
-                          prefetch
-                          replace
-                          scroll={false}
-                          key={chat._id}
-                          className="flex flex-1 flex-col items-start"
-                        >
-                          <div className="flex w-full items-center gap-1.5">
-                            {chat.originalChatId && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
+                            {deletingId === chat._id ? (
+                              <div className="flex w-full items-center justify-between py-1">
+                                <span className="text-destructive mt-0.5 ml-1 text-sm font-medium">
+                                  Delete chat?
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-destructive size-8"
                                     onClick={(e) => {
                                       e.preventDefault()
-                                      router.push(`/c/${chat.originalChatId}`)
+                                      handleConfirmDelete(chat._id)
                                     }}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                    type="button"
                                   >
-                                    <GitBranch className="size-3" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Go to original chat
-                                </TooltipContent>
-                              </Tooltip>
+                                    <Check className="size-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-foreground size-8"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      setDeletingId(null)
+                                    }}
+                                    type="button"
+                                  >
+                                    <X className="size-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <Link
+                                  href={`/c/${chat._id}`}
+                                  prefetch
+                                  replace
+                                  scroll={false}
+                                  key={chat._id}
+                                  className="flex flex-1 flex-col items-start"
+                                >
+                                  <div className="flex w-full items-center gap-1.5">
+                                    {chat.originalChatId && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={(e) => {
+                                              e.preventDefault()
+                                              router.push(
+                                                `/c/${chat.originalChatId}`
+                                              )
+                                            }}
+                                            className="text-muted-foreground hover:text-foreground transition-colors"
+                                          >
+                                            <GitBranch className="size-3" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Go to original chat
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    <span className="line-clamp-1 flex-1 p-0 text-sm font-normal">
+                                      {chat.title}
+                                    </span>
+                                  </div>
+                                </Link>
+                                <div className="flex items-center">
+                                  <div className="hidden gap-1 group-hover:flex">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="text-muted-foreground hover:text-foreground size-8"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        setEditingId(chat._id)
+                                        setEditTitle(chat.title || "")
+                                      }}
+                                      type="button"
+                                    >
+                                      <PencilSimple className="size-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="text-muted-foreground hover:text-destructive size-8"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        setDeletingId(chat._id)
+                                      }}
+                                      type="button"
+                                    >
+                                      <TrashSimple className="size-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </>
                             )}
-                            <span className="line-clamp-1 flex-1 text-base font-normal">
-                              {chat.title}
-                            </span>
                           </div>
-                          <span className="mr-2 text-xs font-normal text-gray-500">
-                            {chat.updatedAt || chat._creationTime
-                              ? new Date(
-                                  chat.updatedAt || chat._creationTime
-                                ).toLocaleDateString()
-                              : "Unknown Date"}
-                          </span>
-                        </Link>
-                        <div className="flex items-center">
-                          <div className="hidden gap-1 group-hover:flex">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-foreground size-8"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                setEditingId(chat._id)
-                                setEditTitle(chat.title || "")
-                              }}
-                              type="button"
-                            >
-                              <PencilSimple className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                setDeletingId(chat._id)
-                              }}
-                              type="button"
-                            >
-                              <TrashSimple className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            ))}
+                )
+            )}
           </div>
         </div>
       </aside>
@@ -434,180 +451,185 @@ export default function ChatSidebar({
             {floatingFilteredChats.length === 0 && (
               <CommandEmpty>No chat history found.</CommandEmpty>
             )}
-            <CommandGroup className="p-1.5">
-              {floatingFilteredChats.map((chat) => (
-                <div key={chat._id} className="px-0 py-1">
-                  {floatingEditingId === chat._id ? (
-                    <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
-                      <form
-                        className="flex w-full items-center justify-between"
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          handleFloatingSaveEdit(chat._id)
-                        }}
-                      >
-                        <Input
-                          value={floatingEditTitle}
-                          onChange={(e) => setFloatingEditTitle(e.target.value)}
-                          className="h-8 flex-1"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                              handleFloatingCancelEdit()
-                            }
-                          }}
-                        />
-                        <div className="ml-2 flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive size-8"
-                            type="submit"
-                          >
-                            <Check className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive size-8"
-                            onClick={handleFloatingCancelEdit}
-                            type="button"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  ) : floatingDeletingId === chat._id ? (
-                    <div className="bg-destructive/10 flex items-center justify-between rounded-lg px-2 py-2">
-                      <form
-                        className="flex w-full items-center justify-between"
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          handleFloatingConfirmDelete(chat._id)
-                        }}
-                      >
-                        <span className="text-destructive px-2 text-sm">
-                          Confirm delete?
-                        </span>
-                        <div className="ml-2 flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-destructive size-8"
-                            type="submit"
-                          >
-                            <Check className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-foreground size-8"
-                            onClick={handleFloatingCancelDelete}
-                            type="button"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  ) : (
-                    <CommandItem
-                      key={chat._id}
-                      onSelect={() => {
-                        if (!floatingEditingId && !floatingDeletingId) {
-                          router.replace(`/c/${chat._id}`, { scroll: false })
-                          setShowFloatingSearch(false) // Close dialog on selection
-                        }
-                      }}
-                      className={cn(
-                        "group hover:bg-accent! flex w-full items-center justify-between rounded-md data-[selected=true]:bg-transparent",
-                        Boolean(floatingEditingId || floatingDeletingId) &&
-                          "hover:bg-transparent! data-[selected=true]:bg-transparent"
-                      )}
-                      value={chat.title || "Untitled Chat"}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          {chat.originalChatId && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    router.push(`/c/${chat.originalChatId}`)
-                                    setShowFloatingSearch(false)
-                                  }}
-                                  className="text-muted-foreground hover:text-foreground transition-colors"
+            {orderedGroupKeys.map(
+              (groupKey) =>
+                hasChatsInGroup(floatingGroupedChats, groupKey) && (
+                  <CommandGroup
+                    key={groupKey}
+                    heading={groupKey}
+                    className="p-1.5"
+                  >
+                    {floatingGroupedChats[groupKey].map((chat) => (
+                      <div key={chat._id} className="px-0 py-1">
+                        {floatingEditingId === chat._id ? (
+                          <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
+                            <form
+                              className="flex w-full items-center justify-between"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleFloatingSaveEdit(chat._id)
+                              }}
+                            >
+                              <Input
+                                value={floatingEditTitle}
+                                onChange={(e) =>
+                                  setFloatingEditTitle(e.target.value)
+                                }
+                                className="h-8 flex-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") {
+                                    handleFloatingCancelEdit()
+                                  }
+                                }}
+                              />
+                              <div className="ml-2 flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive size-8"
+                                  type="submit"
                                 >
-                                  <GitBranch className="size-3" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Go to original chat
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          <span className="line-clamp-1 flex-1 text-base font-normal">
-                            {chat?.title || "Untitled Chat"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="relative flex min-w-[120px] flex-shrink-0 justify-end">
-                        <span
-                          className={cn(
-                            "text-muted-foreground text-base font-normal transition-opacity duration-0 group-hover:opacity-0",
-                            Boolean(floatingEditingId || floatingDeletingId) &&
-                              "group-hover:opacity-100"
-                          )}
-                        >
-                          {chat?.updatedAt || chat?._creationTime
-                            ? new Date(
-                                chat.updatedAt || chat._creationTime
-                              ).toLocaleDateString()
-                            : "No date"}
-                        </span>
-
-                        <div
-                          className={cn(
-                            "absolute inset-0 flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
-                            Boolean(floatingEditingId || floatingDeletingId) &&
-                              "group-hover:opacity-0"
-                          )}
-                        >
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-foreground size-8"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (chat) handleFloatingEdit(chat)
+                                  <Check className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive size-8"
+                                  onClick={handleFloatingCancelEdit}
+                                  type="button"
+                                >
+                                  <X className="size-4" />
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        ) : floatingDeletingId === chat._id ? (
+                          <div className="bg-destructive/10 flex items-center justify-between rounded-lg px-2 py-2">
+                            <form
+                              className="flex w-full items-center justify-between"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleFloatingConfirmDelete(chat._id)
+                              }}
+                            >
+                              <span className="text-destructive px-2 text-sm">
+                                Confirm delete?
+                              </span>
+                              <div className="ml-2 flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-destructive size-8"
+                                  type="submit"
+                                >
+                                  <Check className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-foreground size-8"
+                                  onClick={handleFloatingCancelDelete}
+                                  type="button"
+                                >
+                                  <X className="size-4" />
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        ) : (
+                          <CommandItem
+                            key={chat._id}
+                            onSelect={() => {
+                              if (!floatingEditingId && !floatingDeletingId) {
+                                router.replace(`/c/${chat._id}`, {
+                                  scroll: false,
+                                })
+                                setShowFloatingSearch(false) // Close dialog on selection
+                              }
                             }}
-                            type="button"
+                            className={cn(
+                              "group hover:bg-accent! flex w-full items-center justify-between rounded-md data-[selected=true]:bg-transparent",
+                              Boolean(
+                                floatingEditingId || floatingDeletingId
+                              ) &&
+                                "hover:bg-transparent! data-[selected=true]:bg-transparent"
+                            )}
+                            value={chat.title || "Untitled Chat"}
                           >
-                            <PencilSimple className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive size-8"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (chat?._id) handleFloatingDelete(chat._id)
-                            }}
-                            type="button"
-                          >
-                            <TrashSimple className="size-4" />
-                          </Button>
-                        </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                {chat.originalChatId && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          router.push(
+                                            `/c/${chat.originalChatId}`
+                                          )
+                                          setShowFloatingSearch(false)
+                                        }}
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                      >
+                                        <GitBranch className="size-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Go to original chat
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                <span className="line-clamp-1 flex-1 text-base font-normal">
+                                  {chat?.title || "Untitled Chat"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="relative flex min-w-[120px] flex-shrink-0 justify-end">
+                              <div
+                                className={cn(
+                                  "absolute inset-0 flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
+                                  Boolean(
+                                    floatingEditingId || floatingDeletingId
+                                  ) && "group-hover:opacity-0"
+                                )}
+                              >
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-foreground size-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (chat) handleFloatingEdit(chat)
+                                  }}
+                                  type="button"
+                                >
+                                  <PencilSimple className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive size-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (chat?._id)
+                                      handleFloatingDelete(chat._id)
+                                  }}
+                                  type="button"
+                                >
+                                  <TrashSimple className="size-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CommandItem>
+                        )}
                       </div>
-                    </CommandItem>
-                  )}
-                </div>
-              ))}
-            </CommandGroup>
+                    ))}
+                  </CommandGroup>
+                )
+            )}
           </CommandList>
         </Command>
       </CommandDialog>

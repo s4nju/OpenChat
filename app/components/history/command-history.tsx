@@ -16,11 +16,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Doc, Id } from "@/convex/_generated/dataModel"
-import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { Doc, Id } from "@/convex/_generated/dataModel"
 import { cn } from "@/lib/utils"
-import { Check, ListMagnifyingGlass, PencilSimple, TrashSimple, X } from "@phosphor-icons/react"
+import {
+  Check,
+  ListMagnifyingGlass,
+  PencilSimple,
+  TrashSimple,
+  X,
+} from "@phosphor-icons/react"
+import { useMutation, useQuery } from "convex/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -41,7 +47,7 @@ export function CommandHistory() {
     const open = () => setIsOpen(true)
     window.addEventListener("openCommandHistory", open)
     // close when floating search opens
-    const close=()=>setIsOpen(false)
+    const close = () => setIsOpen(false)
     window.addEventListener("toggleFloatingSearch", close)
     return () => {
       window.removeEventListener("openCommandHistory", open)
@@ -93,11 +99,11 @@ export function CommandHistory() {
     ) ?? []
 
   useEffect(() => {
-    if (!isOpen || !chatHistory) return;
+    if (!isOpen || !chatHistory) return
     chatHistory.forEach((chat) => {
-      router.prefetch(`/c/${chat._id}`);
-    });
-  }, [isOpen, chatHistory, router]);
+      router.prefetch(`/c/${chat._id}`)
+    })
+  }, [isOpen, chatHistory, router])
 
   return (
     <>
@@ -229,13 +235,13 @@ export function CommandHistory() {
                       key={chat._id}
                       onSelect={() => {
                         if (!editingId && !deletingId) {
-                          router.replace(`/c/${chat._id}`, {scroll: false})
+                          router.replace(`/c/${chat._id}`, { scroll: false })
                         }
                       }}
                       className={cn(
                         "group hover:bg-accent! flex w-full items-center justify-between rounded-md data-[selected=true]:bg-transparent",
                         Boolean(editingId || deletingId) &&
-                        "hover:bg-transparent! data-[selected=true]:bg-transparent"
+                          "hover:bg-transparent! data-[selected=true]:bg-transparent"
                       )}
                       value={chat.title || "Untitled Chat"}
                     >
@@ -247,25 +253,12 @@ export function CommandHistory() {
 
                       {/* Date and actions container with fixed width */}
                       <div className="relative flex min-w-[120px] flex-shrink-0 justify-end">
-                        {/* Date that shows by default but hides on hover */}
-                        <span
-                          className={cn(
-                            "text-muted-foreground text-base font-normal transition-opacity duration-0 group-hover:opacity-0",
-                            Boolean(editingId || deletingId) &&
-                            "group-hover:opacity-100"
-                          )}
-                        >
-                          {(chat?.updatedAt || chat?._creationTime)
-                            ? new Date(chat.updatedAt || chat._creationTime || "").toLocaleDateString()
-                            : "No date"}
-                        </span>
-
-                        {/* Action buttons that appear on hover, positioned over the date */}
+                        {/* Action buttons that appear on hover */}
                         <div
                           className={cn(
-                            "absolute inset-0 flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
+                            "flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
                             Boolean(editingId || deletingId) &&
-                            "group-hover:opacity-0"
+                              "group-hover:opacity-0"
                           )}
                         >
                           <Button

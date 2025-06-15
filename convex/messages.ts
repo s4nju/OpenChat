@@ -177,6 +177,21 @@ export const deleteMessageAndDescendants = mutation({
       .withIndex("by_chat_and_created", (q) => q.eq("chatId", message.chatId))
       .first()
     if (!remaining) {
+      // Branch cleanup: Find all chats that are branched from this chat
+      const branchedChats = await ctx.db
+        .query("chats")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("originalChatId"), chat._id))
+        .collect()
+
+      // Remove the branch reference from all branched chats
+      for (const branchedChat of branchedChats) {
+        await ctx.db.patch(branchedChat._id, {
+          originalChatId: undefined,
+          updatedAt: Date.now(),
+        })
+      }
+
       for await (const a of ctx.db
         .query("chat_attachments")
         .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))) {
