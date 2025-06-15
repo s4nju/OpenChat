@@ -16,9 +16,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Info, Question, User, SignOut } from "@phosphor-icons/react"
-import dynamic from "next/dynamic"
-import { APP_NAME } from "../../../lib/config"
+import { User, SignOut } from "@phosphor-icons/react"
+// import dynamic from "next/dynamic"
+// import { APP_NAME } from "../../../lib/config"
 import { AppInfoTrigger } from "./app-info/app-info-trigger"
 import { SettingsTrigger } from "./settings/settings-trigger"
 import { useUser } from "@/app/providers/user-provider"
@@ -66,21 +66,21 @@ export function UserMenu({ user }: { user: User }) {
         <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
           <span>{user?.name}</span>
           {(() => {
-            const [showEmail, setShowEmail] = React.useState<boolean>(()=>{
-              if(typeof window==="undefined")return false
-              return localStorage.getItem("showEmail")==="true"
+            const [showEmail, setShowEmail] = React.useState<boolean>(() => {
+              if (typeof window === "undefined") return false
+              return localStorage.getItem("showEmail") === "true"
             })
-            const maskEmail=(email?:string)=>{
-              if(!email) return ""
-              const [local,domain]=email.split("@")
-              const tld=domain.substring(domain.lastIndexOf("."))
-              const prefix=local.slice(0,2)
+            const maskEmail = (email?: string) => {
+              if (!email) return ""
+              const [local, domain] = email.split("@")
+              const tld = domain.substring(domain.lastIndexOf("."))
+              const prefix = local.slice(0, 2)
               return `${prefix}*****${tld}`
             }
-            return <button onClick={()=>{
-              setShowEmail(prev=>{localStorage.setItem("showEmail",(!prev).toString());return !prev})
+            return <button onClick={() => {
+              setShowEmail(prev => { localStorage.setItem("showEmail", (!prev).toString()); return !prev })
             }} className="text-muted-foreground flex items-center gap-1">
-              <span>{showEmail?user?.email:maskEmail(user?.email)}</span>{showEmail?<EyeSlash size={14}/>:<Eye size={14}/>}
+              <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>{showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
             </button>
           })()}
         </DropdownMenuItem>

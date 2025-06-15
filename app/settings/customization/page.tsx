@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/toast"
-import { SettingsNav } from "@/app/components/layout/settings/settings-nav"
 import { APP_NAME } from "@/lib/config"
 import {
   AlertDialog,
@@ -146,7 +145,6 @@ export default function CustomizationPage() {
 
   return (
     <div className="w-full">
-      <SettingsNav />
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold">Customize {APP_NAME}</h1>

@@ -1,6 +1,5 @@
 "use client"
 
-import { SettingsNav } from "@/app/components/layout/settings/settings-nav"
 import { Button } from "@/components/ui/button"
 import { useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
@@ -16,7 +15,6 @@ export default function AccountSettingsPage() {
   const router = useRouter()
   return (
     <div className="w-full">
-      <SettingsNav />
       <div className="space-y-12">
         {/* Pro Plan Benefits */}
         <section>

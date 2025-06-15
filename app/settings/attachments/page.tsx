@@ -1,6 +1,5 @@
 "use client"
 
-import { SettingsNav } from "@/app/components/layout/settings/settings-nav"
 
 import { api } from "@/convex/_generated/api"
 import { useState } from "react"
@@ -70,7 +69,6 @@ export default function AttachmentsPage() {
 
   return (
     <div className="w-full">
-      <SettingsNav />
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Attachments</h1>
         <p className="text-muted-foreground text-sm max-w-prose">

@@ -1,6 +1,5 @@
 "use client"
 
-import { SettingsNav } from "@/app/components/layout/settings/settings-nav"
 import { api } from "@/convex/_generated/api"
 import { useConvex, useMutation, useQuery } from "convex/react"
 import { Doc, Id } from "@/convex/_generated/dataModel"
@@ -228,7 +227,6 @@ export default function HistoryPage() {
 
   return (
     <div className="w-full">
-      <SettingsNav />
       <div className="space-y-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           Message History <ClockCounterClockwise className="size-5 text-muted-foreground" />

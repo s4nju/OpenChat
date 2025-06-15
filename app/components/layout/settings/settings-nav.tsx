@@ -18,8 +18,8 @@ function SettingsNavComponent() {
   
 
   return (
-    <nav className="mb-8 overflow-x-auto">
-      <ul className="flex flex-nowrap space-x-1 rounded-lg bg-muted p-1 overflow-x-auto md:overflow-x-visible whitespace-nowrap">
+    <nav className="mb-8">
+      <ul className="flex flex-nowrap space-x-1 overflow-x-auto md:overflow-x-visible whitespace-nowrap rounded-lg bg-muted p-1">
         {NAV_ITEMS.map(item => (
           <li key={item.href} className="shrink-0 md:flex-1">
             <Link
