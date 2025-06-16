@@ -31,6 +31,7 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
     originalChatId: v.optional(v.id("chats")),
+    isPinned: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
   messages: defineTable({
     chatId: v.id("chats"),

@@ -40,6 +40,7 @@ export const listChatsForUser = query({
       createdAt: v.optional(v.number()),
       updatedAt: v.optional(v.number()),
       originalChatId: v.optional(v.id("chats")),
+      isPinned: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx) => {
@@ -67,6 +68,7 @@ export const getChat = query({
       createdAt: v.optional(v.number()),
       updatedAt: v.optional(v.number()),
       originalChatId: v.optional(v.id("chats")),
+      isPinned: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx, { chatId }) => {
@@ -252,5 +254,26 @@ export const branchChat = mutation({
     }
 
     return { chatId: newChatId }
+  },
+})
+
+export const pinChatToggle = mutation({
+  args: { chatId: v.id("chats") },
+  returns: v.null(),
+  handler: async (ctx, { chatId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return null
+
+    const chat = await ctx.db.get(chatId)
+    if (!chat || chat.userId !== userId) return null
+
+    // Toggle the isPinned status
+    const newPinnedStatus = !chat.isPinned
+
+    await ctx.db.patch(chatId, {
+      isPinned: newPinnedStatus,
+    })
+
+    return null
   },
 })

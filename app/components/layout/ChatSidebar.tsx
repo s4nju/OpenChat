@@ -31,6 +31,8 @@ import {
   MagnifyingGlass,
   PencilSimple,
   Plus,
+  PushPinSimple,
+  PushPinSimpleSlash,
   SidebarSimple,
   TrashSimple,
   X,
@@ -57,6 +59,7 @@ export default function ChatSidebar({
   const chats = useQuery(api.chats.listChatsForUser) ?? []
   const updateChatTitle = useMutation(api.chats.updateChatTitle)
   const deleteChat = useMutation(api.chats.deleteChat)
+  const pinChatToggle = useMutation(api.chats.pinChatToggle)
   const { setIsDeleting: setChatIsDeleting } = useChatSession()
 
   const params = useParams<{ chatId?: string }>()
@@ -93,12 +96,20 @@ export default function ChatSidebar({
     // Reset the deleting state after the mutation and any routing logic complete
     setChatIsDeleting(false)
   }
+
+  const handleTogglePin = async (chat: Doc<"chats">) => {
+    await pinChatToggle({ chatId: chat._id })
+  }
   const filteredChats = chats.filter((chat) =>
     (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Group chats by time for main sidebar
-  const groupedChats = groupChatsByTime(filteredChats)
+  // Separate pinned and unpinned chats
+  const pinnedChats = filteredChats.filter((chat) => chat.isPinned)
+  const unpinnedChats = filteredChats.filter((chat) => !chat.isPinned)
+
+  // Group unpinned chats by time for main sidebar
+  const groupedChats = groupChatsByTime(unpinnedChats)
   const orderedGroupKeys = getOrderedGroupKeys()
 
   // Filter for floating dialog
@@ -106,8 +117,16 @@ export default function ChatSidebar({
     (chat.title || "").toLowerCase().includes(floatingSearchQuery.toLowerCase())
   )
 
+  // Separate pinned and unpinned for floating search
+  const floatingPinnedChats = floatingFilteredChats.filter(
+    (chat) => chat.isPinned
+  )
+  const floatingUnpinnedChats = floatingFilteredChats.filter(
+    (chat) => !chat.isPinned
+  )
+
   // Group chats by time for floating search
-  const floatingGroupedChats = groupChatsByTime(floatingFilteredChats)
+  const floatingGroupedChats = groupChatsByTime(floatingUnpinnedChats)
 
   // --- Handlers specifically for the Floating Command Dialog ---
   const handleFloatingEdit = (chat: Doc<"chats">) => {
@@ -234,17 +253,17 @@ export default function ChatSidebar({
 
         <div
           className={cn(
-            "flex flex-grow flex-col gap-3 overflow-y-auto px-4 pt-4",
+            "flex flex-grow flex-col gap-3 overflow-y-auto p-2", // Changed px-4 pt-4 to p-2
             "transition-opacity duration-300 ease-in-out",
             isOpen ? "opacity-100 delay-150" : "opacity-0"
           )}
         >
           <Button
             variant="outline"
-            className="h-9 w-full justify-start text-sm"
+            className="h-9 w-full justify-center text-sm font-bold"
             onClick={() => pathname !== "/" && router.push("/")}
           >
-            <Plus className="mr-2 h-4 w-4" /> New Chat
+            New Chat
           </Button>
 
           <div className="relative">
@@ -259,75 +278,284 @@ export default function ChatSidebar({
             />
           </div>
 
-          <div className="flex flex-col space-y-2 pt-2 pb-8">
+          <div className="flex flex-col pt-2 pb-8">
+            {" "}
+            {/* Removed space-y-1 */}
             {filteredChats.length === 0 && (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-muted-foreground px-1.5 text-sm">
+                {" "}
+                {/* Added px-1.5 for alignment */}
                 No chat history found.
               </span>
+            )}
+            {/* Pinned Chats Section */}
+            {pinnedChats.length > 0 && (
+              <div className="relative flex w-full min-w-0 flex-col p-2">
+                <h3 className="text-muted-foreground focus-visible:ring-primary flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
+                  <PushPinSimple className="mr-1 h-3 w-3" />
+                  Pinned
+                </h3>
+                <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
+                  {pinnedChats.map((chat) => (
+                    <li key={chat._id} className="group/menu-item relative">
+                      {editingId === chat._id ? (
+                        <div className="group/menu-item bg-accent relative flex h-9 items-center rounded-lg px-2 py-0.5">
+                          <form
+                            className="flex w-full items-center justify-between"
+                            onSubmit={(e) => {
+                              e.preventDefault()
+                              handleSaveEdit(chat._id, editTitle)
+                            }}
+                          >
+                            <Input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              className="h-8 flex-1 rounded-none border-0 bg-transparent px-1 text-sm shadow-none outline-none focus:ring-0"
+                              autoFocus
+                            />
+                            <div className="ml-2 flex gap-0.5">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-muted-foreground hover:text-primary size-8 rounded-md p-1.5"
+                                type="submit"
+                              >
+                                <Check className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-muted-foreground hover:text-destructive size-8 rounded-md p-1.5"
+                                onClick={() => setEditingId(null)}
+                                type="button"
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </div>
+                          </form>
+                        </div>
+                      ) : deletingId === chat._id ? (
+                        <div className="group/menu-item bg-accent text-accent-foreground relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm">
+                          <div className="flex w-full items-center justify-between">
+                            <span className="text-destructive text-sm font-medium">
+                              Delete chat?
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-muted-foreground hover:text-destructive size-8 rounded-md p-1.5"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  handleConfirmDelete(chat._id)
+                                }}
+                                type="button"
+                              >
+                                <Check className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-muted-foreground hover:text-primary size-8 rounded-md p-1.5"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setDeletingId(null)
+                                }}
+                                type="button"
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <Link
+                          href={`/c/${chat._id}`}
+                          prefetch
+                          replace
+                          scroll={false}
+                          key={chat._id}
+                          className={cn(
+                            "group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none",
+                            "hover:bg-accent hover:text-accent-foreground focus-visible:text-accent-foreground",
+                            "focus-visible:ring-primary focus-visible:ring-2",
+                            params.chatId === chat._id &&
+                              "bg-accent text-accent-foreground"
+                          )}
+                        >
+                          <div className="relative flex w-full items-center">
+                            {chat.originalChatId && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      router.push(`/c/${chat.originalChatId}`)
+                                    }}
+                                    className="text-muted-foreground/50 hover:text-muted-foreground mr-1"
+                                  >
+                                    <GitBranch className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Go to original chat
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <div className="relative w-full">
+                              <span className="hover:truncate-none pointer-events-none block h-full w-full cursor-pointer truncate overflow-hidden rounded bg-transparent px-1 py-1 text-sm outline-none">
+                                {chat.title}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground group-hover/link:bg-accent dark:group-hover/link:bg-muted pointer-events-auto absolute top-0 -right-0.25 bottom-0 z-10 flex translate-x-full items-center justify-end transition-transform duration-200 group-hover/link:translate-x-0">
+                            <div className="from-accent dark:from-muted pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 transition-opacity duration-200 group-hover/link:opacity-100"></div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground rounded-md p-1.5 hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    handleTogglePin(chat)
+                                  }}
+                                  type="button"
+                                  tabIndex={-1}
+                                >
+                                  <PushPinSimpleSlash className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="bottom"
+                                className="z-[9999]"
+                              >
+                                Unpin
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground rounded-md p-1.5 hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setEditingId(chat._id)
+                                    setEditTitle(chat.title || "")
+                                  }}
+                                  type="button"
+                                  tabIndex={-1}
+                                >
+                                  <PencilSimple className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="bottom"
+                                className="z-[9999]"
+                              >
+                                Edit
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:bg-destructive/50 hover:text-destructive-foreground rounded-md p-1.5"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setDeletingId(chat._id)
+                                  }}
+                                  type="button"
+                                  tabIndex={-1}
+                                >
+                                  <TrashSimple className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="bottom"
+                                className="z-[9999]"
+                              >
+                                Delete
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {orderedGroupKeys.map(
               (groupKey) =>
                 hasChatsInGroup(groupedChats, groupKey) && (
-                  <div key={groupKey} className="space-y-2">
-                    <h3 className="text-muted-foreground text-m px-2 font-medium tracking-wider uppercase">
+                  <div
+                    key={groupKey}
+                    className="relative flex w-full min-w-0 flex-col p-2"
+                  >
+                    {" "}
+                    {/* Matches example group container */}
+                    <h3 className="text-muted-foreground focus-visible:ring-primary flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
+                      {" "}
+                      {/* Matches example group-label */}
                       {groupKey}
                     </h3>
-                    {groupedChats[groupKey].map((chat) => (
-                      <div key={chat._id} className="space-y-1.5">
-                        {editingId === chat._id ? (
-                          <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2.5">
-                            <form
-                              className="flex w-full items-center justify-between"
-                              onSubmit={(e) => {
-                                e.preventDefault()
-                                handleSaveEdit(chat._id, editTitle)
-                              }}
-                            >
-                              <Input
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                className="h-8 flex-1"
-                                autoFocus
-                              />
-                              <div className="ml-2 flex gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-8"
-                                  type="submit"
-                                >
-                                  <Check className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-8"
-                                  onClick={() => setEditingId(null)}
-                                  type="button"
-                                >
-                                  <X className="size-4" />
-                                </Button>
-                              </div>
-                            </form>
-                          </div>
-                        ) : (
-                          <div
-                            className={cn(
-                              "group flex items-center justify-between rounded-lg px-2 py-1.5",
-                              params.chatId === chat._id && "bg-accent",
-                              "hover:bg-accent"
-                            )}
-                          >
-                            {deletingId === chat._id ? (
-                              <div className="flex w-full items-center justify-between py-1">
-                                <span className="text-destructive mt-0.5 ml-1 text-sm font-medium">
-                                  Delete chat?
-                                </span>
-                                <div className="flex items-center gap-1">
+                    <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
+                      {" "}
+                      {/* Matches example menu ul */}
+                      {groupedChats[groupKey].map((chat) => (
+                        <li key={chat._id} className="group/menu-item relative">
+                          {" "}
+                          {/* Matches example menu-item li */}
+                          {editingId === chat._id ? (
+                            <div className="group/menu-item bg-accent relative flex h-9 items-center rounded-lg px-2 py-0.5">
+                              <form
+                                className="flex w-full items-center justify-between"
+                                onSubmit={(e) => {
+                                  e.preventDefault()
+                                  handleSaveEdit(chat._id, editTitle)
+                                }}
+                              >
+                                <Input
+                                  value={editTitle}
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  className="h-8 flex-1 rounded-none border-0 bg-transparent px-1 text-sm shadow-none outline-none focus:ring-0"
+                                  autoFocus
+                                />
+                                <div className="ml-2 flex gap-0.5">
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="text-muted-foreground hover:text-destructive size-8"
+                                    className="text-muted-foreground hover:text-primary size-8 rounded-md p-1.5"
+                                    type="submit"
+                                  >
+                                    <Check className="size-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-destructive size-8 rounded-md p-1.5"
+                                    onClick={() => setEditingId(null)}
+                                    type="button"
+                                  >
+                                    <X className="size-4" />
+                                  </Button>
+                                </div>
+                              </form>
+                            </div>
+                          ) : deletingId === chat._id ? (
+                            <div className="group/menu-item bg-accent text-accent-foreground relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm">
+                              <div className="flex w-full items-center justify-between">
+                                <span className="text-destructive text-sm font-medium">
+                                  Delete chat?
+                                </span>
+                                <div className="flex items-center gap-0.5">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-destructive size-8 rounded-md p-1.5"
                                     onClick={(e) => {
                                       e.preventDefault()
                                       handleConfirmDelete(chat._id)
@@ -339,7 +567,7 @@ export default function ChatSidebar({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="text-muted-foreground hover:text-foreground size-8"
+                                    className="text-muted-foreground hover:text-primary size-8 rounded-md p-1.5"
                                     onClick={(e) => {
                                       e.preventDefault()
                                       setDeletingId(null)
@@ -350,77 +578,129 @@ export default function ChatSidebar({
                                   </Button>
                                 </div>
                               </div>
-                            ) : (
-                              <>
-                                <Link
-                                  href={`/c/${chat._id}`}
-                                  prefetch
-                                  replace
-                                  scroll={false}
-                                  key={chat._id}
-                                  className="flex flex-1 flex-col items-start"
-                                >
-                                  <div className="flex w-full items-center gap-1.5">
-                                    {chat.originalChatId && (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            onClick={(e) => {
-                                              e.preventDefault()
-                                              router.push(
-                                                `/c/${chat.originalChatId}`
-                                              )
-                                            }}
-                                            className="text-muted-foreground hover:text-foreground transition-colors"
-                                          >
-                                            <GitBranch className="size-3" />
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Go to original chat
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                    <span className="line-clamp-1 flex-1 p-0 text-sm font-normal">
+                            </div>
+                          ) : (
+                            <>
+                              <Link
+                                href={`/c/${chat._id}`}
+                                prefetch
+                                replace
+                                scroll={false}
+                                key={chat._id}
+                                className={cn(
+                                  "group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none",
+                                  "hover:bg-accent hover:text-accent-foreground focus-visible:text-accent-foreground",
+                                  "focus-visible:ring-primary focus-visible:ring-2",
+                                  params.chatId === chat._id &&
+                                    "bg-accent text-accent-foreground"
+                                )}
+                              >
+                                <div className="relative flex w-full items-center">
+                                  {chat.originalChatId && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault()
+                                            router.push(
+                                              `/c/${chat.originalChatId}`
+                                            )
+                                          }}
+                                          className="text-muted-foreground/50 hover:text-muted-foreground mr-1"
+                                        >
+                                          <GitBranch className="h-4 w-4" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        Go to original chat
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  <div className="relative w-full">
+                                    <span className="hover:truncate-none pointer-events-none block h-full w-full cursor-pointer truncate overflow-hidden rounded bg-transparent px-1 py-1 text-sm outline-none">
                                       {chat.title}
                                     </span>
                                   </div>
-                                </Link>
-                                <div className="flex items-center">
-                                  <div className="hidden gap-1 group-hover:flex">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="text-muted-foreground hover:text-foreground size-8"
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        setEditingId(chat._id)
-                                        setEditTitle(chat.title || "")
-                                      }}
-                                      type="button"
-                                    >
-                                      <PencilSimple className="size-4" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="text-muted-foreground hover:text-destructive size-8"
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        setDeletingId(chat._id)
-                                      }}
-                                      type="button"
-                                    >
-                                      <TrashSimple className="size-4" />
-                                    </Button>
-                                  </div>
                                 </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                                <div className="text-muted-foreground group-hover/link:bg-accent dark:group-hover/link:bg-muted pointer-events-auto absolute top-0 -right-0.25 bottom-0 z-10 flex translate-x-full items-center justify-end transition-transform duration-200 group-hover/link:translate-x-0">
+                                  <div className="from-accent dark:from-muted pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 transition-opacity duration-200 group-hover/link:opacity-100"></div>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-muted-foreground rounded-md p-1.5 hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          handleTogglePin(chat)
+                                        }}
+                                        type="button"
+                                        tabIndex={-1}
+                                      >
+                                        <PushPinSimple className="size-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="z-[9999]"
+                                    >
+                                      Pin Chat
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-muted-foreground rounded-md p-1.5 hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          setEditingId(chat._id)
+                                          setEditTitle(chat.title || "")
+                                        }}
+                                        type="button"
+                                        tabIndex={-1}
+                                      >
+                                        <PencilSimple className="size-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="z-[9999]"
+                                    >
+                                      Edit
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-muted-foreground hover:bg-destructive/50 hover:text-destructive-foreground rounded-md p-1.5"
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          setDeletingId(chat._id)
+                                        }}
+                                        type="button"
+                                        tabIndex={-1}
+                                      >
+                                        <TrashSimple className="size-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="z-[9999]"
+                                    >
+                                      Delete
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </Link>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )
             )}
@@ -438,8 +718,6 @@ export default function ChatSidebar({
             setFloatingDeletingId(null)
           }
         }}
-        title="Chat History"
-        description="Search through your past conversations"
       >
         <Command shouldFilter={false}>
           <CommandInput
@@ -450,6 +728,168 @@ export default function ChatSidebar({
           <CommandList className="max-h-[480px] min-h-[480px] flex-1">
             {floatingFilteredChats.length === 0 && (
               <CommandEmpty>No chat history found.</CommandEmpty>
+            )}
+            {/* Pinned Chats Section */}
+            {floatingPinnedChats.length > 0 && (
+              <CommandGroup heading="📌 Pinned" className="p-1.5">
+                {floatingPinnedChats.map((chat) => (
+                  <div key={chat._id} className="px-0 py-1">
+                    {floatingEditingId === chat._id ? (
+                      <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
+                        <form
+                          className="flex w-full items-center justify-between"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            handleFloatingSaveEdit(chat._id)
+                          }}
+                        >
+                          <Input
+                            value={floatingEditTitle}
+                            onChange={(e) =>
+                              setFloatingEditTitle(e.target.value)
+                            }
+                            className="h-8 flex-1"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                handleFloatingCancelEdit()
+                              }
+                            }}
+                          />
+                          <div className="ml-2 flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              type="submit"
+                            >
+                              <Check className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              onClick={handleFloatingCancelEdit}
+                              type="button"
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    ) : floatingDeletingId === chat._id ? (
+                      <div className="bg-destructive/10 flex items-center justify-between rounded-lg px-2 py-2">
+                        <form
+                          className="flex w-full items-center justify-between"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            handleFloatingConfirmDelete(chat._id)
+                          }}
+                        >
+                          <span className="text-destructive px-2 text-sm">
+                            Delete this chat?
+                          </span>
+                          <div className="ml-2 flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              type="submit"
+                            >
+                              <Check className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              onClick={() => setFloatingDeletingId(null)}
+                              type="button"
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    ) : (
+                      <CommandItem
+                        key={chat._id}
+                        value={chat._id}
+                        className="hover:bg-accent group relative flex h-auto w-full items-center justify-between px-2 py-2 text-sm"
+                        onSelect={() => {
+                          if (!floatingEditingId && !floatingDeletingId) {
+                            router.replace(`/c/${chat._id}`, {
+                              scroll: false,
+                            })
+                            setShowFloatingSearch(false)
+                          }
+                        }}
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          {chat.originalChatId && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                router.push(`/c/${chat.originalChatId}`)
+                                setShowFloatingSearch(false)
+                              }}
+                              className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
+                            >
+                              <GitBranch className="h-3 w-3" />
+                            </button>
+                          )}
+                          <span className="line-clamp-1 flex-1 text-left">
+                            {chat.title || "Untitled Chat"}
+                          </span>
+                        </div>
+                        <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleTogglePin(chat)
+                              }}
+                              type="button"
+                            >
+                              <PushPinSimpleSlash className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-foreground size-8"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleFloatingEdit(chat)
+                              }}
+                              type="button"
+                            >
+                              <PencilSimple className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive size-8"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setFloatingDeletingId(chat._id)
+                              }}
+                              type="button"
+                            >
+                              <TrashSimple className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    )}
+                  </div>
+                ))}
+              </CommandGroup>
             )}
             {orderedGroupKeys.map(
               (groupKey) =>
@@ -596,6 +1036,18 @@ export default function ChatSidebar({
                                   ) && "group-hover:opacity-0"
                                 )}
                               >
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground size-8 hover:text-orange-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (chat) handleTogglePin(chat)
+                                  }}
+                                  type="button"
+                                >
+                                  <PushPinSimple className="size-4" />
+                                </Button>
                                 <Button
                                   size="icon"
                                   variant="ghost"
