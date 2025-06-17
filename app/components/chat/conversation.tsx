@@ -12,7 +12,7 @@ type MessageWithReasoning = MessageType & {
 
 type ConversationProps = {
   messages: MessageWithReasoning[]
-  status?: "streaming" | "idle" | "submitted" | "error"
+  status?: "streaming" | "ready" | "submitted" | "error"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void
@@ -21,7 +21,7 @@ type ConversationProps = {
 
 const Conversation = React.memo(function Conversation({
   messages,
-  status = "idle",
+  status = "ready",
   onDelete,
   onEdit,
   onReload,
@@ -75,7 +75,7 @@ const Conversation = React.memo(function Conversation({
           messages.length > 0 &&
           messages[messages.length - 1].role === "user" && (
             <div className="group min-h-scroll-anchor flex w-full max-w-3xl flex-col items-start gap-2 px-6 pb-2">
-              <Loader />
+              <Loader variant="dots" size="md" />
             </div>
           )}
       </ChatContainer>

@@ -35,7 +35,7 @@ export type MessageUserProps = {
   onReload: () => void
   onDelete: (id: string) => void
   id: string
-  status?: "streaming" | "idle" | "submitted" | "error"
+  status?: "streaming" | "ready" | "submitted" | "error"
 }
 
 export function MessageUser({
@@ -227,7 +227,7 @@ export function MessageUser({
             aria-label="Copy text"
             onClick={copyToClipboard}
             type="button"
-            disabled={!!status && status !== "idle"}
+            disabled={!!status && status !== "ready"}
           >
             {copied ? (
               <Check className="size-4" />
@@ -257,7 +257,7 @@ export function MessageUser({
             aria-label="Delete"
             onClick={handleDelete}
             type="button"
-            disabled={!!status && status !== "idle"}
+            disabled={!!status && status !== "ready"}
           >
             <Trash className="size-4" />
           </button>

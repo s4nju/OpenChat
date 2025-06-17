@@ -16,7 +16,7 @@ export type MessageProps = {
   onBranch: () => void
   hasScrollAnchor?: boolean
   parts?: MessageType["parts"]
-  status?: "streaming" | "idle" | "submitted" | "error" // Add status prop
+  status?: "streaming" | "ready" | "submitted" | "error" // Add status prop
   reasoning_text?: string
 }
 

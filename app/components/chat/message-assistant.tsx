@@ -43,7 +43,7 @@ type MessageAssistantProps = {
   onBranch?: () => void
   model?: string
   parts?: MessageType["parts"]
-  status?: "streaming" | "idle" | "submitted" | "error"
+  status?: "streaming" | "ready" | "submitted" | "error"
   reasoning_text?: string
 }
 

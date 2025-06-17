@@ -602,7 +602,7 @@ export default function Chat() {
           <Conversation
             key="conversation"
             messages={messages}
-            status={status === "streaming" ? "streaming" : "idle"}
+            status={status}
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
