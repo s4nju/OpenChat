@@ -171,16 +171,18 @@ export function ChatInput({
                 isUserAuthenticated={isUserAuthenticated}
               />
             </div>
-            <PromptInputAction tooltip={isSubmitting ? "Sending..." : "Send"}>
+            <PromptInputAction
+              tooltip={(isSubmitting || status === "submitted" || status === "streaming") ? "Stop" : "Send"}
+            >
               <Button
                 size="sm"
                 className="size-9 rounded-full transition-all duration-300 ease-out"
-                disabled={status !== "streaming" && !value}
+                disabled={!value && status !== "streaming" && status !== "submitted" && !isSubmitting}
                 type="button"
                 onClick={handleMainClick}
                 aria-label="Send message"
               >
-                {status === "streaming" ? (
+                {isSubmitting || status === "submitted" || status === "streaming" ? (
                   <Stop className="size-4" />
                 ) : (
                   <ArrowUp className="size-4" />
