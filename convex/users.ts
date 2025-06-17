@@ -299,14 +299,20 @@ export const deleteAccount = mutation({
       .query("chat_attachments")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect()
-    for (const att of attachments) {
-      try {
-        await ctx.storage.delete(att.fileId as Id<"_storage">)
-      } catch (e) {
-        console.error("Error deleting file storage", e)
-      }
-      await ctx.db.delete(att._id)
-    }
+    await Promise.all(
+      attachments.map(async (att) => {
+        try {
+          await ctx.storage.delete(att.fileId as Id<"_storage">)
+        } catch (e) {
+          console.error("Error deleting file storage", e)
+        }
+        try {
+          await ctx.db.delete(att._id)
+        } catch (e) {
+          console.error("Error deleting attachment db record", e)
+        }
+      }),
+    )
 
     // Delete messages authored by user
     const messages = await ctx.db

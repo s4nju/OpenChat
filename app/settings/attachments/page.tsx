@@ -22,7 +22,7 @@ export default function AttachmentsPage() {
     (undefined as
       | (Doc<"chat_attachments"> & { url: string | null })[]
       | undefined)
-  const deleteAttachment = useMutation(api.files.deleteAttachment)
+  const deleteAttachments = useMutation(api.files.deleteAttachments)
   const [selectedIds, setSelectedIds] = useState<Set<Id<"chat_attachments">>>(
     new Set()
   )
@@ -48,11 +48,7 @@ export default function AttachmentsPage() {
     if (selectedIds.size === 0) return
     if (!confirm(`Delete ${selectedIds.size} selected attachment(s)?`)) return
     try {
-      await Promise.all(
-        Array.from(selectedIds).map((id) =>
-          deleteAttachment({ attachmentId: id })
-        )
-      )
+      await deleteAttachments({ attachmentIds: Array.from(selectedIds) })
       toast({ title: "Selected attachments deleted", status: "success" })
       setSelectedIds(new Set())
     } catch (e: any) {
@@ -64,7 +60,7 @@ export default function AttachmentsPage() {
   const handleDelete = async (attachmentId: Id<"chat_attachments">) => {
     if (!confirm("Are you sure you want to delete this attachment?")) return
     try {
-      await deleteAttachment({ attachmentId })
+      await deleteAttachments({ attachmentIds: [attachmentId] })
       toast({ title: "Attachment deleted", status: "success" })
     } catch (e: any) {
       console.error(e)

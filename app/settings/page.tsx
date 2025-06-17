@@ -6,10 +6,12 @@ import { api } from "@/convex/_generated/api"
 import { useUser } from "@/app/providers/user-provider"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/toast"
-import { Rocket, Sparkle, Headset } from "@phosphor-icons/react"
+import { Rocket, Sparkle, Headset, CircleNotch } from "@phosphor-icons/react"
 import { MessageUsageCard } from "@/app/components/layout/settings/message-usage-card"
+import { useState } from "react"
 
 export default function AccountSettingsPage() {
+  const [isDeleting, setIsDeleting] = useState(false)
   const deleteAccount = useMutation(api.users.deleteAccount)
   const { signOut } = useUser()
   const router = useRouter()
@@ -71,21 +73,40 @@ export default function AccountSettingsPage() {
             <Button
               size="sm"
               variant="destructive"
+              disabled={isDeleting}
               onClick={async () => {
-                  if (!confirm("This will permanently delete your account and all associated data. This action cannot be undone. Continue?")) return
-                  try {
-                    await deleteAccount({})
-                    await signOut()
-                    toast({ title: "Account deleted", status: "success" })
-                    router.push("/")
-                  } catch (e: any) {
-                    console.error(e)
-                    toast({ title: "Failed to delete account", status: "error" })
-                  }
-                }}
-              >
-                Delete Account
-              </Button>
+                if (
+                  !confirm(
+                    "This will permanently delete your account and all associated data. This action cannot be undone. Continue?"
+                  )
+                )
+                  return
+                setIsDeleting(true)
+                try {
+                  await deleteAccount({})
+                  await signOut()
+                  toast({ title: "Account deleted", status: "success" })
+                  router.push("/")
+                } catch (e: any) {
+                  console.error(e)
+                  toast({
+                    title: "Failed to delete account",
+                    status: "error"
+                  })
+                } finally {
+                  setIsDeleting(false)
+                }
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Account"
+              )}
+            </Button>
           </div>
         </section>
       </div>

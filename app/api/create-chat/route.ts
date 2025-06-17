@@ -29,6 +29,15 @@ export async function POST(request: Request) {
     const token = await convexAuthNextjsToken();
 
     const user = await fetchQuery(api.users.getCurrentUser, {}, { token });
+
+    // If the user is not authenticated or the token is invalid, short-circuit early
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const composedPrompt = buildSystemPrompt(user, systemPrompt);
 
     // Check usage limits before creating the chat. This mutation will throw

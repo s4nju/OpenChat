@@ -237,7 +237,10 @@ export default function HistoryPage() {
                 }
               )
             }
-            idMap.set(msg._id ?? msg.id ?? "", result.messageId)
+            const originalId = msg._id ?? msg.id
+            if (originalId) {
+              idMap.set(originalId, result.messageId)
+            }
           } catch (innerErr) {
             console.error("Error importing message", innerErr)
           }

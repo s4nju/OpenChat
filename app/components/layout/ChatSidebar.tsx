@@ -317,11 +317,11 @@ export default function ChatSidebar({
                                     }}
                                     className="text-muted-foreground/50 hover:text-muted-foreground mr-1"
                                   >
-                                    <GitBranch className="h-4 w-4" />
+                                    <GitBranch className="h-4 w-4 rotate-180" />
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                  Go to original chat
+                                <TooltipContent side="top" className="z-[9999]">
+                                  Branched From: {chats.find((c) => c._id === chat.originalChatId)?.title ?? "Parent Chat"}
                                 </TooltipContent>
                               </Tooltip>
                             )}
@@ -525,17 +525,15 @@ export default function ChatSidebar({
                                         <button
                                           onClick={(e) => {
                                             e.preventDefault()
-                                            router.push(
-                                              `/c/${chat.originalChatId}`
-                                            )
+                                            router.push(`/c/${chat.originalChatId}`)
                                           }}
                                           className="text-muted-foreground/50 hover:text-muted-foreground mr-1"
                                         >
-                                          <GitBranch className="h-4 w-4" />
+                                          <GitBranch className="h-4 w-4 rotate-180" />
                                         </button>
                                       </TooltipTrigger>
-                                      <TooltipContent>
-                                        Go to original chat
+                                      <TooltipContent side="bottom" className="z-[9999]">
+                                        Branched From: {chats.find((c) => c._id === chat.originalChatId)?.title ?? "Parent Chat"}
                                       </TooltipContent>
                                     </Tooltip>
                                   )}

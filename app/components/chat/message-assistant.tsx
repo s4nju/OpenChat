@@ -120,9 +120,9 @@ export function MessageAssistant({
             )
               .filter((item) => item && item.url && item.title)
               .map((item, idx: number) => ({
-                id: item.id ?? `${inv.toolCallId}-${idx}`,
-                url: item.url!,
-                title: item.title!,
+              id: item.id ?? (inv.toolCallId ? `${inv.toolCallId}-${idx}` : `tmp-${idx}`),
+              url: item.url ?? "",
+              title: item.title ?? "",
                 sourceType: "url",
               }))
           }

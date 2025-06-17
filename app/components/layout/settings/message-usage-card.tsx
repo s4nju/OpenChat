@@ -94,7 +94,7 @@ export function MessageUsageCard() {
             <div className="bg-muted h-2 w-full rounded-full">
               <div
                 className="bg-accent h-2 rounded-full"
-                style={{ width: `${(premiumCount / premiumLimit) * 100}%` }}
+                style={{ width: `${Math.min((premiumCount / premiumLimit) * 100, 100)}%` }}
               ></div>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">{premiumRemaining} messages remaining</p>

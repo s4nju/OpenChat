@@ -152,13 +152,18 @@ export function CommandHistory() {
             onValueChange={(value) => setSearchQuery(value)}
           />
           <CommandList className="max-h-[480px] min-h-[480px] flex-1">
+            {/* Invisible placeholder (size zero, no pointer) so nothing visible is preselected */}
+            <CommandItem
+              value="__placeholder"
+              className="h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
+            />
             {filteredChat.length === 0 && (
               <CommandEmpty>No chat history found.</CommandEmpty>
             )}
             {/* Pinned Chats Section */}
             {pinnedChats.length > 0 && (
               <div className="px-2 pb-2">
-                <div className="text-muted-foreground text-m flex h-8 shrink-0 items-center rounded-md px-1.5 font-semibold tracking-wide uppercase">
+                <div className="text-muted-foreground text-sm flex h-8 shrink-0 items-center rounded-md px-1.5 font-semibold tracking-wide uppercase">
                   <PushPinSimple className="mr-1.5 h-4 w-4" />
                   Pinned
                 </div>
@@ -265,26 +270,33 @@ export function CommandHistory() {
                           }
                         }}
                         className={cn(
-                          "group hover:bg-accent! flex h-9 w-full items-center justify-between rounded-md px-2 py-1 data-[selected=true]:bg-transparent",
+                          "group hover:bg-accent flex h-9 w-full items-center justify-between rounded-md px-2 py-1",
                           Boolean(editingId || deletingId) &&
-                            "hover:bg-transparent! data-[selected=true]:bg-transparent"
+                            "hover:bg-transparent data-[selected=true]:bg-transparent"
                         )}
-                        value={chat.title || "Untitled Chat"}
+                        value={chat._id}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1">
                             {chat.originalChatId && (
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  router.push(`/c/${chat.originalChatId}`)
-                                  setIsOpen(false)
-                                }}
-                                className="text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                <GitBranch className="size-3" />
-                              </button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      router.push(`/c/${chat.originalChatId}`)
+                                      setIsOpen(false)
+                                    }}
+                                    className="text-muted-foreground/50 hover:text-muted-foreground transition-colors mr-1"
+                                  >
+                                    <GitBranch className="size-3 rotate-180" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="z-[9999]">
+                                  Branched From: {chatHistory?.find((c) => c._id === chat.originalChatId)?.title ?? "Parent Chat"}
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                             <span className="line-clamp-1 flex-1 text-sm font-normal">
                               {chat?.title || "Untitled Chat"}
@@ -299,42 +311,63 @@ export function CommandHistory() {
                                 "group-hover:opacity-0"
                             )}
                           >
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground size-7 hover:text-orange-600"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleTogglePin(chat)
-                              }}
-                              type="button"
-                            >
-                              <PushPinSimpleSlash className="size-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-foreground size-7"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (chat) handleEdit(chat)
-                              }}
-                              type="button"
-                            >
-                              <PencilSimple className="size-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-7"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (chat?._id) handleDelete(chat._id)
-                              }}
-                              type="button"
-                            >
-                              <TrashSimple className="size-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleTogglePin(chat)
+                                  }}
+                                  type="button"
+                                >
+                                  <PushPinSimpleSlash className="size-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="z-[9999]">
+                                Unpin
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (chat) handleEdit(chat)
+                                  }}
+                                  type="button"
+                                >
+                                  <PencilSimple className="size-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="z-[9999]">
+                                Edit
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-destructive/50 hover:text-destructive-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (chat?._id) handleDelete(chat._id)
+                                  }}
+                                  type="button"
+                                >
+                                  <TrashSimple className="size-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="z-[9999]">
+                                Delete
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       </CommandItem>
@@ -456,26 +489,33 @@ export function CommandHistory() {
                               }
                             }}
                             className={cn(
-                              "group hover:bg-accent! flex h-9 w-full items-center justify-between rounded-md px-2 py-1 data-[selected=true]:bg-transparent",
+                              "group hover:bg-accent flex h-9 w-full items-center justify-between rounded-md px-2 py-1",
                               Boolean(editingId || deletingId) &&
-                                "hover:bg-transparent! data-[selected=true]:bg-transparent"
+                                "hover:bg-transparent data-[selected=true]:bg-transparent"
                             )}
-                            value={chat.title || "Untitled Chat"}
+                            value={chat._id}
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1">
                                 {chat.originalChatId && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault()
-                                      e.stopPropagation()
-                                      router.push(`/c/${chat.originalChatId}`)
-                                      setIsOpen(false)
-                                    }}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                  >
-                                    <GitBranch className="size-3" />
-                                  </button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          router.push(`/c/${chat.originalChatId}`)
+                                          setIsOpen(false)
+                                        }}
+                                        className="text-muted-foreground/50 hover:text-muted-foreground transition-colors mr-1"
+                                      >
+                                        <GitBranch className="size-3 rotate-180" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="z-[9999]">
+                                      Branched From: {chatHistory?.find((c) => c._id === chat.originalChatId)?.title ?? "Parent Chat"}
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                                 <span className="line-clamp-1 flex-1 text-sm font-normal">
                                   {chat?.title || "Untitled Chat"}
@@ -490,42 +530,63 @@ export function CommandHistory() {
                                     "group-hover:opacity-0"
                                 )}
                               >
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground size-7 hover:text-orange-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleTogglePin(chat)
-                                  }}
-                                  type="button"
-                                >
-                                  <PushPinSimple className="size-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-foreground size-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (chat) handleEdit(chat)
-                                  }}
-                                  type="button"
-                                >
-                                  <PencilSimple className="size-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (chat?._id) handleDelete(chat._id)
-                                  }}
-                                  type="button"
-                                >
-                                  <TrashSimple className="size-3.5" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleTogglePin(chat)
+                                      }}
+                                      type="button"
+                                    >
+                                      <PushPinSimple className="size-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="z-[9999]">
+                                    Pin Chat
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (chat) handleEdit(chat)
+                                      }}
+                                      type="button"
+                                    >
+                                      <PencilSimple className="size-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="z-[9999]">
+                                    Edit
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="text-muted-foreground rounded-md p-1.5 size-7 hover:bg-destructive/50 hover:text-destructive-foreground"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (chat?._id) handleDelete(chat._id)
+                                      }}
+                                      type="button"
+                                    >
+                                      <TrashSimple className="size-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="z-[9999]">
+                                    Delete
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                             </div>
                           </CommandItem>

@@ -254,7 +254,7 @@ export function DrawerHistory({
                                   }}
                                   type="button"
                                 >
-                                  <PushPinSimpleSlash className="size-4" />
+                                  <PushPinSimple className="size-4" />
                                 </Button>
                                 <Button
                                   size="icon"
@@ -407,7 +407,7 @@ export function DrawerHistory({
                                       }}
                                       type="button"
                                     >
-                                      <PushPinSimpleSlash className="size-4" />
+                                      <PushPinSimple className="size-4" />
                                     </Button>
                                     <Button
                                       size="icon"

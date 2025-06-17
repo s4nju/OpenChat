@@ -90,20 +90,35 @@ export const getAttachmentsForUser = query({
   },
 })
 
-export const deleteAttachment = mutation({
-  args: { attachmentId: v.id("chat_attachments") },
-  handler: async (ctx, { attachmentId }) => {
+export const deleteAttachments = mutation({
+  args: { attachmentIds: v.array(v.id("chat_attachments")) },
+  handler: async (ctx, { attachmentIds }) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) throw new Error("Not authenticated")
 
-    const attachment = await ctx.db.get(attachmentId)
-    if (!attachment || attachment.userId !== userId) {
-      throw new Error("Attachment not found or unauthorized")
+    const validAttachments = []
+    const attachments = await Promise.all(
+      attachmentIds.map(id => ctx.db.get(id))
+    )
+
+    for (const attachment of attachments) {
+      if (attachment && attachment.userId === userId) {
+        validAttachments.push(attachment)
+      } else {
+        console.warn(
+          `Skipping deletion for attachment: ${attachment?._id} due to invalid permissions or not found.`
+        )
+      }
     }
 
-    await ctx.storage.delete(attachment.fileId as Id<"_storage">)
-    await ctx.db.delete(attachmentId)
-  },
+    const fileIdsToDelete = validAttachments.map(
+      a => a.fileId as Id<"_storage">
+    )
+    await Promise.all(fileIdsToDelete.map(id => ctx.storage.delete(id)))
+
+    const docIdsToDelete = validAttachments.map(a => a._id)
+    await Promise.all(docIdsToDelete.map(id => ctx.db.delete(id)))
+  }
 })
 
 export const getAttachmentsForChat = query({

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import ChatSidebar from "./ChatSidebar"
 import { Header } from "./header"
 
@@ -17,15 +17,17 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const toggleSidebar = () => {
-    const newState = !isSidebarOpen
-    setIsSidebarOpen(newState)
-    localStorage.setItem("sidebarOpen", String(newState))
-  }
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => {
+      const newState = !prev
+      localStorage.setItem("sidebarOpen", String(newState))
+      return newState
+    })
+  }, [])
 
   // Keyboard shortcuts: Cmd+Shift+O for new chat, Cmd+B to toggle sidebar, Cmd+K for search
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+  const handler = useCallback(
+    (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       const isMeta = e.metaKey || e.ctrlKey
 
@@ -53,10 +55,13 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
         e.preventDefault()
         toggleSidebar()
       }
-    }
+    },
+    [router, toggleSidebar]
+  )
+  useEffect(() => {
     document.addEventListener("keydown", handler, true)
     return () => document.removeEventListener("keydown", handler, true)
-  }, [router, toggleSidebar])
+  }, [handler])
 
   return (
     // Main flex container
