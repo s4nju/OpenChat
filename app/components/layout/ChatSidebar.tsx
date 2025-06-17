@@ -2,15 +2,6 @@
 
 import { useChatSession } from "@/app/providers/chat-session-provider"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -40,7 +31,7 @@ import {
 import { useMutation, useQuery } from "convex/react"
 import Link from "next/link"
 import { useParams, usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 // Helper function for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) =>
@@ -71,14 +62,6 @@ export default function ChatSidebar({
   const [editingId, setEditingId] = useState<Id<"chats"> | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [deletingId, setDeletingId] = useState<Id<"chats"> | null>(null)
-  // State for the floating command history (search icon in collapsed mode)
-  const [showFloatingSearch, setShowFloatingSearch] = useState(false)
-  const [floatingSearchQuery, setFloatingSearchQuery] = useState("")
-  const [floatingEditingId, setFloatingEditingId] =
-    useState<Id<"chats"> | null>(null)
-  const [floatingEditTitle, setFloatingEditTitle] = useState("")
-  const [floatingDeletingId, setFloatingDeletingId] =
-    useState<Id<"chats"> | null>(null)
 
   // --- Handlers for main sidebar list ---
   const handleSaveEdit = async (id: Id<"chats">, newTitle: string) => {
@@ -87,7 +70,6 @@ export default function ChatSidebar({
   }
   const handleConfirmDelete = async (id: Id<"chats">) => {
     setDeletingId(null)
-    setFloatingDeletingId(null) // Ensure floating delete state is also cleared
     setChatIsDeleting(true)
     await deleteChat({ chatId: id })
     if (params.chatId === id) {
@@ -111,66 +93,6 @@ export default function ChatSidebar({
   // Group unpinned chats by time for main sidebar
   const groupedChats = groupChatsByTime(unpinnedChats)
   const orderedGroupKeys = getOrderedGroupKeys()
-
-  // Filter for floating dialog
-  const floatingFilteredChats = chats.filter((chat) =>
-    (chat.title || "").toLowerCase().includes(floatingSearchQuery.toLowerCase())
-  )
-
-  // Separate pinned and unpinned for floating search
-  const floatingPinnedChats = floatingFilteredChats.filter(
-    (chat) => chat.isPinned
-  )
-  const floatingUnpinnedChats = floatingFilteredChats.filter(
-    (chat) => !chat.isPinned
-  )
-
-  // Group chats by time for floating search
-  const floatingGroupedChats = groupChatsByTime(floatingUnpinnedChats)
-
-  // --- Handlers specifically for the Floating Command Dialog ---
-  const handleFloatingEdit = (chat: Doc<"chats">) => {
-    setFloatingEditingId(chat._id)
-    setFloatingEditTitle(chat.title || "")
-  }
-
-  const handleFloatingSaveEdit = async (id: Id<"chats">) => {
-    setFloatingEditingId(null)
-    await handleSaveEdit(id, floatingEditTitle)
-  }
-
-  const handleFloatingCancelEdit = () => {
-    setFloatingEditingId(null)
-    setFloatingEditTitle("")
-  }
-
-  const handleFloatingDelete = (id: Id<"chats">) => {
-    setFloatingDeletingId(id)
-  }
-
-  const handleFloatingConfirmDelete = async (id: Id<"chats">) => {
-    setFloatingDeletingId(null)
-    await handleConfirmDelete(id)
-  }
-
-  const handleFloatingCancelDelete = () => {
-    setFloatingDeletingId(null)
-  }
-
-  // Listen for programmatic open
-  useEffect(() => {
-    const toggle = () => setShowFloatingSearch((prev) => !prev)
-    window.addEventListener("toggleFloatingSearch", toggle)
-    return () => window.removeEventListener("toggleFloatingSearch", toggle)
-  }, [])
-
-  // Prefetch chats when floating search opens
-  useEffect(() => {
-    if (!showFloatingSearch) return
-    chats.forEach((chat) => {
-      router.prefetch(`/c/${chat._id}`)
-    })
-  }, [showFloatingSearch, chats, router])
 
   return (
     <div className="z-51 hidden md:block">
@@ -198,7 +120,8 @@ export default function ChatSidebar({
               aria-label="Search"
               tabIndex={isOpen ? -1 : 0}
               onClick={() => {
-                if (!isOpen) setShowFloatingSearch(true)
+                if (!isOpen)
+                  window.dispatchEvent(new Event("openCommandHistory"))
               }}
               style={{ transitionDelay: isOpen ? "0ms" : "100ms" }}
               className={`group hover:bg-accent focus-visible:ring-primary ml-1 flex items-center justify-center rounded-full p-2 transition-all duration-300 ease-in-out outline-none focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-offset-2 ${isOpen ? "pointer-events-none -translate-x-2 scale-50 opacity-0" : "translate-x-0 scale-100 opacity-100"}`}
@@ -707,384 +630,6 @@ export default function ChatSidebar({
           </div>
         </div>
       </aside>
-      <CommandDialog
-        open={showFloatingSearch}
-        onOpenChange={(open) => {
-          setShowFloatingSearch(open)
-          if (!open) {
-            setFloatingSearchQuery("")
-            setFloatingEditingId(null)
-            setFloatingEditTitle("")
-            setFloatingDeletingId(null)
-          }
-        }}
-      >
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search history..."
-            value={floatingSearchQuery}
-            onValueChange={(value) => setFloatingSearchQuery(value)}
-          />
-          <CommandList className="max-h-[480px] min-h-[480px] flex-1">
-            {floatingFilteredChats.length === 0 && (
-              <CommandEmpty>No chat history found.</CommandEmpty>
-            )}
-            {/* Pinned Chats Section */}
-            {floatingPinnedChats.length > 0 && (
-              <CommandGroup heading="📌 Pinned" className="p-1.5">
-                {floatingPinnedChats.map((chat) => (
-                  <div key={chat._id} className="px-0 py-1">
-                    {floatingEditingId === chat._id ? (
-                      <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
-                        <form
-                          className="flex w-full items-center justify-between"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            handleFloatingSaveEdit(chat._id)
-                          }}
-                        >
-                          <Input
-                            value={floatingEditTitle}
-                            onChange={(e) =>
-                              setFloatingEditTitle(e.target.value)
-                            }
-                            className="h-8 flex-1"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") {
-                                handleFloatingCancelEdit()
-                              }
-                            }}
-                          />
-                          <div className="ml-2 flex gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              type="submit"
-                            >
-                              <Check className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={handleFloatingCancelEdit}
-                              type="button"
-                            >
-                              <X className="size-4" />
-                            </Button>
-                          </div>
-                        </form>
-                      </div>
-                    ) : floatingDeletingId === chat._id ? (
-                      <div className="bg-destructive/10 flex items-center justify-between rounded-lg px-2 py-2">
-                        <form
-                          className="flex w-full items-center justify-between"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            handleFloatingConfirmDelete(chat._id)
-                          }}
-                        >
-                          <span className="text-destructive px-2 text-sm">
-                            Delete this chat?
-                          </span>
-                          <div className="ml-2 flex gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              type="submit"
-                            >
-                              <Check className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={() => setFloatingDeletingId(null)}
-                              type="button"
-                            >
-                              <X className="size-4" />
-                            </Button>
-                          </div>
-                        </form>
-                      </div>
-                    ) : (
-                      <CommandItem
-                        key={chat._id}
-                        value={chat._id}
-                        className="hover:bg-accent group relative flex h-auto w-full items-center justify-between px-2 py-2 text-sm"
-                        onSelect={() => {
-                          if (!floatingEditingId && !floatingDeletingId) {
-                            router.replace(`/c/${chat._id}`, {
-                              scroll: false,
-                            })
-                            setShowFloatingSearch(false)
-                          }
-                        }}
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                          {chat.originalChatId && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                router.push(`/c/${chat.originalChatId}`)
-                                setShowFloatingSearch(false)
-                              }}
-                              className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                            >
-                              <GitBranch className="h-3 w-3" />
-                            </button>
-                          )}
-                          <span className="line-clamp-1 flex-1 text-left">
-                            {chat.title || "Untitled Chat"}
-                          </span>
-                        </div>
-                        <div className="opacity-0 transition-opacity group-hover:opacity-100">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleTogglePin(chat)
-                              }}
-                              type="button"
-                            >
-                              <PushPinSimpleSlash className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-foreground size-8"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleFloatingEdit(chat)
-                              }}
-                              type="button"
-                            >
-                              <PencilSimple className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setFloatingDeletingId(chat._id)
-                              }}
-                              type="button"
-                            >
-                              <TrashSimple className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CommandItem>
-                    )}
-                  </div>
-                ))}
-              </CommandGroup>
-            )}
-            {orderedGroupKeys.map(
-              (groupKey) =>
-                hasChatsInGroup(floatingGroupedChats, groupKey) && (
-                  <CommandGroup
-                    key={groupKey}
-                    heading={groupKey}
-                    className="p-1.5"
-                  >
-                    {floatingGroupedChats[groupKey].map((chat) => (
-                      <div key={chat._id} className="px-0 py-1">
-                        {floatingEditingId === chat._id ? (
-                          <div className="bg-accent flex items-center justify-between rounded-lg px-2 py-2">
-                            <form
-                              className="flex w-full items-center justify-between"
-                              onSubmit={(e) => {
-                                e.preventDefault()
-                                handleFloatingSaveEdit(chat._id)
-                              }}
-                            >
-                              <Input
-                                value={floatingEditTitle}
-                                onChange={(e) =>
-                                  setFloatingEditTitle(e.target.value)
-                                }
-                                className="h-8 flex-1"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Escape") {
-                                    handleFloatingCancelEdit()
-                                  }
-                                }}
-                              />
-                              <div className="ml-2 flex gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-8"
-                                  type="submit"
-                                >
-                                  <Check className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-8"
-                                  onClick={handleFloatingCancelEdit}
-                                  type="button"
-                                >
-                                  <X className="size-4" />
-                                </Button>
-                              </div>
-                            </form>
-                          </div>
-                        ) : floatingDeletingId === chat._id ? (
-                          <div className="bg-destructive/10 flex items-center justify-between rounded-lg px-2 py-2">
-                            <form
-                              className="flex w-full items-center justify-between"
-                              onSubmit={(e) => {
-                                e.preventDefault()
-                                handleFloatingConfirmDelete(chat._id)
-                              }}
-                            >
-                              <span className="text-destructive px-2 text-sm">
-                                Confirm delete?
-                              </span>
-                              <div className="ml-2 flex gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-destructive size-8"
-                                  type="submit"
-                                >
-                                  <Check className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-foreground size-8"
-                                  onClick={handleFloatingCancelDelete}
-                                  type="button"
-                                >
-                                  <X className="size-4" />
-                                </Button>
-                              </div>
-                            </form>
-                          </div>
-                        ) : (
-                          <CommandItem
-                            key={chat._id}
-                            onSelect={() => {
-                              if (!floatingEditingId && !floatingDeletingId) {
-                                router.replace(`/c/${chat._id}`, {
-                                  scroll: false,
-                                })
-                                setShowFloatingSearch(false) // Close dialog on selection
-                              }
-                            }}
-                            className={cn(
-                              "group hover:bg-accent! flex w-full items-center justify-between rounded-md data-[selected=true]:bg-transparent",
-                              Boolean(
-                                floatingEditingId || floatingDeletingId
-                              ) &&
-                                "hover:bg-transparent! data-[selected=true]:bg-transparent"
-                            )}
-                            value={chat.title || "Untitled Chat"}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                {chat.originalChatId && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        onClick={(e) => {
-                                          e.preventDefault()
-                                          e.stopPropagation()
-                                          router.push(
-                                            `/c/${chat.originalChatId}`
-                                          )
-                                          setShowFloatingSearch(false)
-                                        }}
-                                        className="text-muted-foreground hover:text-foreground transition-colors"
-                                      >
-                                        <GitBranch className="size-3" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      Go to original chat
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                <span className="line-clamp-1 flex-1 text-base font-normal">
-                                  {chat?.title || "Untitled Chat"}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="relative flex min-w-[120px] flex-shrink-0 justify-end">
-                              <div
-                                className={cn(
-                                  "absolute inset-0 flex items-center justify-end gap-1 opacity-0 transition-opacity duration-0 group-hover:opacity-100",
-                                  Boolean(
-                                    floatingEditingId || floatingDeletingId
-                                  ) && "group-hover:opacity-0"
-                                )}
-                              >
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground size-8 hover:text-orange-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (chat) handleTogglePin(chat)
-                                  }}
-                                  type="button"
-                                >
-                                  <PushPinSimple className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-foreground size-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (chat) handleFloatingEdit(chat)
-                                  }}
-                                  type="button"
-                                >
-                                  <PencilSimple className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-muted-foreground hover:text-destructive size-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (chat?._id)
-                                      handleFloatingDelete(chat._id)
-                                  }}
-                                  type="button"
-                                >
-                                  <TrashSimple className="size-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CommandItem>
-                        )}
-                      </div>
-                    ))}
-                  </CommandGroup>
-                )
-            )}
-          </CommandList>
-        </Command>
-      </CommandDialog>
     </div>
   )
 }

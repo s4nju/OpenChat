@@ -68,27 +68,24 @@ export function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            {/* Mobile buttons for new chat and search history */}
-            {isMobile && (
-              <>
-                {pathname !== "/" && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => router.push("/")}
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
-                        type="button"
-                        aria-label="New Chat"
-                      >
-                        <Plus size={24} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>New Chat</TooltipContent>
-                  </Tooltip>
-                )}
-                <HistoryTrigger />
-              </>
+            {/* Mobile button for new chat */}
+            {isMobile && pathname !== "/" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => router.push("/")}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
+                    type="button"
+                    aria-label="New Chat"
+                  >
+                    <Plus size={24} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>New Chat</TooltipContent>
+              </Tooltip>
             )}
+            {/* History trigger - always rendered for Cmd+K functionality */}
+            <HistoryTrigger />
             <ThemeSwitchIcon />
             <UserMenu user={user} />
           </div>
