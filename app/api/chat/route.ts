@@ -27,7 +27,7 @@ type ChatRequest = {
 
 export async function POST(req: Request) {
   req.signal.addEventListener("abort", () => {
-    console.log("[API /chat] Request aborted by client");
+    console.log("Request aborted by client");
   });
 
   try {
