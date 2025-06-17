@@ -13,6 +13,7 @@ export type MessageProps = {
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: () => void
+  onBranch: () => void
   hasScrollAnchor?: boolean
   parts?: MessageType["parts"]
   status?: "streaming" | "idle" | "submitted" | "error" // Add status prop
@@ -29,6 +30,7 @@ export function Message({
   onDelete,
   onEdit,
   onReload,
+  onBranch,
   hasScrollAnchor,
   parts,
   status, // Receive status prop
@@ -45,7 +47,6 @@ export function Message({
   if (variant === "user") {
     return (
       <MessageUser
-        children={children}
         copied={copied}
         copyToClipboard={copyToClipboard}
         onReload={onReload}
@@ -55,26 +56,30 @@ export function Message({
         hasScrollAnchor={hasScrollAnchor}
         attachments={attachments}
         status={status}
-      />
+      >
+        {children}
+      </MessageUser>
     )
   }
 
   if (variant === "assistant") {
-      return (
-        <MessageAssistant
-          model={model}
-          children={children}
-          copied={copied}
-          copyToClipboard={copyToClipboard}
-          onReload={onReload}
-          isLast={isLast}
-          hasScrollAnchor={hasScrollAnchor}
-          parts={parts}
-          status={status}
-          reasoning_text={reasoning_text}
-        />
-      )
-    }
+    return (
+      <MessageAssistant
+        model={model}
+        copied={copied}
+        copyToClipboard={copyToClipboard}
+        onReload={onReload}
+        onBranch={onBranch}
+        isLast={isLast}
+        hasScrollAnchor={hasScrollAnchor}
+        parts={parts}
+        status={status}
+        reasoning_text={reasoning_text}
+      >
+        {children}
+      </MessageAssistant>
+    )
+  }
 
   return null
 }

@@ -4,14 +4,15 @@ import Gemini from "@/components/icons/gemini"
 import Grok from "@/components/icons/grok"
 import Mistral from "@/components/icons/mistral"
 import OpenAI from "@/components/icons/openai"
+import type { Doc } from "@/convex/_generated/dataModel"
+import { google } from "@ai-sdk/google"
+import { groq } from "@ai-sdk/groq"
 import { mistral } from "@ai-sdk/mistral"
-import { openai } from "@ai-sdk/openai"
-import { openrouter } from "@openrouter/ai-sdk-provider"
-import { createOpenAI } from '@ai-sdk/openai';
-import { togetherai } from '@ai-sdk/togetherai';
-import { google } from '@ai-sdk/google';
-import { groq } from '@ai-sdk/groq';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+// import { openrouter } from "@openrouter/ai-sdk-provider"
+import { createOpenAI, openai } from "@ai-sdk/openai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import { togetherai } from "@ai-sdk/togetherai"
+import { Meta, Qwen } from "@lobehub/icons"
 import {
   BookOpenTextIcon,
   BrainIcon,
@@ -19,6 +20,7 @@ import {
   ChatTeardropTextIcon,
   CodeIcon,
   CookingPotIcon,
+  DetectiveIcon,
   HeartbeatIcon,
   LightbulbIcon,
   MagnifyingGlassIcon,
@@ -26,36 +28,35 @@ import {
   PaintBrushIcon,
   PenNibIcon,
   SparkleIcon,
-  DetectiveIcon,
 } from "@phosphor-icons/react/dist/ssr"
-import { Qwen, Meta } from '@lobehub/icons';
-import { wrapLanguageModel, extractReasoningMiddleware } from 'ai'
+import { extractReasoningMiddleware, wrapLanguageModel } from "ai"
 
-const reasoningMiddleware = extractReasoningMiddleware({ tagName: 'think' })
+const reasoningMiddleware = extractReasoningMiddleware({ tagName: "think" })
 
 const chutes = createOpenAI({
   // custom settings, e.g.
   // compatibility: 'strict', // strict mode, enable when using the OpenAI API
-  baseURL : 'https://llm.chutes.ai/v1/',
-  apiKey : process.env.CHUTES_API_KEY,
+  baseURL: "https://llm.chutes.ai/v1/",
+  apiKey: process.env.CHUTES_API_KEY,
   headers: {
-    'Authorization': `Bearer ${process.env.CHUTES_API_KEY}`,
-    'Content-Type': 'application/json',
+    Authorization: `Bearer ${process.env.CHUTES_API_KEY}`,
+    "Content-Type": "application/json",
   },
   // other options...
-});
+})
 
 const nim = createOpenAICompatible({
-  name: 'nim',
-  baseURL: 'https://integrate.api.nvidia.com/v1',
+  name: "nim",
+  baseURL: "https://integrate.api.nvidia.com/v1",
   headers: {
     Authorization: `Bearer ${process.env.NIM_API_KEY}`,
   },
-});
+})
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
 export const AUTH_DAILY_MESSAGE_LIMIT = 50
 export const PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500
+export const PREMIUM_CREDITS = 100
 export const NON_PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 5
@@ -88,12 +89,12 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
   },
@@ -111,12 +112,12 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
   },
@@ -134,12 +135,12 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
   },
@@ -155,17 +156,16 @@ export const MODELS_NOT_AVAILABLE = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
     api_sdk: openai("gpt-4o"),
   },
-
 ] as Model[]
 
 export const MODELS_RAW = [
@@ -181,12 +181,12 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
     api_sdk: openai("gpt-4o-mini"),
@@ -204,22 +204,22 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
       {
         id: "web-search",
         enabled: true,
-        label: "Supports web search"
+        label: "Supports web search",
       },
     ],
   },
   {
-    id: "gemini-2.5-pro-exp-03-25",
+    id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "gemini",
     features: [
@@ -230,20 +230,20 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: true,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
       {
         id: "web-search",
         enabled: true,
-        label: "Supports web search"
+        label: "Supports web search",
       },
     ],
-    api_sdk: google("gemini-2.5-pro-exp-03-25"),
+    api_sdk: google("gemini-2.5-pro"),
   },
   {
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
@@ -257,12 +257,12 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: false,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
     api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
@@ -279,12 +279,12 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: false,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
@@ -301,12 +301,12 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: true,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: false,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
     api_sdk: mistral("pixtral-large-latest"),
@@ -337,8 +337,8 @@ export const MODELS_RAW = [
     ],
   },
   {
-    id: "deepseek-r1",
-    name: "DeepSeek R1",
+    id: "deepseek-r1-0528",
+    name: "DeepSeek R1 (0528)",
     provider: "deepseek",
     features: [
       {
@@ -348,15 +348,15 @@ export const MODELS_RAW = [
       {
         id: "pdf-processing",
         enabled: false,
-        label: "Supports PDF uploads and analysis"
+        label: "Supports PDF uploads and analysis",
       },
       {
         id: "reasoning",
         enabled: true,
-        label: "Supports reasoning capabilities"
+        label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: nim("deepseek-ai/deepseek-r1"),
+    api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
   // {
   //   id: "qwen/qwq-32b:free",
@@ -372,9 +372,9 @@ export const MODELS_RAW = [
   // },
 ] as Model[]
 
-export const MODELS = MODELS_RAW.map(m => ({
+export const MODELS = MODELS_RAW.map((m) => ({
   ...m,
-  api_sdk: m.features?.some(f => f.id === 'reasoning' && f.enabled)
+  api_sdk: m.features?.some((f) => f.id === "reasoning" && f.enabled)
     ? wrapLanguageModel({ model: m.api_sdk, middleware: reasoningMiddleware })
     : m.api_sdk,
 }))
@@ -446,7 +446,7 @@ export const PROVIDERS = [
     id: "Qwen",
     name: "Qwen",
     icon: Qwen.Color,
-  }
+  },
 ] as Provider[]
 
 export const PROVIDERS_OPTIONS = [
@@ -463,7 +463,8 @@ export const APP_NAME = "OpenChat "
 export const APP_DOMAIN = "https://chat.ajanraj.com"
 export const APP_DESCRIPTION =
   "OpenChat is a AI chat app with multi-model support."
-export const APP_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+export const APP_BASE_URL =
+  process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
 
 export const PERSONAS = [
   {
@@ -606,5 +607,21 @@ export const SUGGESTIONS = [
 
 export const getSystemPromptDefault = () =>
   `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention, never too much, never too little. You avoid cliches, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`
+
+export type UserProfile = Doc<"users">
+
+export function buildSystemPrompt(
+  user?: UserProfile | null,
+  basePrompt?: string
+) {
+  const prompt = basePrompt ?? getSystemPromptDefault()
+  if (!user) return prompt
+  const details: string[] = []
+  if (user.preferredName) details.push(`Preferred Name: ${user.preferredName}`)
+  if (user.occupation) details.push(`Occupation: ${user.occupation}`)
+  if (user.traits) details.push(`Traits: ${user.traits}`)
+  if (user.about) details.push(`About: ${user.about}`)
+  return details.length > 0 ? `${prompt}\n\n${details.join("\n")}` : prompt
+}
 
 export const MESSAGE_MAX_LENGTH = 4000

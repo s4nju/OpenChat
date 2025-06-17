@@ -1,77 +1,70 @@
 "use client"
 
-import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { User } from "@phosphor-icons/react"
-import type React from "react"
+import { DrawerSettings } from "@/app/components/layout/settings/drawer-settings"
+import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useState } from "react"
-import { SettingsContent } from "./settings-content"
+import { User } from "@phosphor-icons/react"
+import Link from "next/link"
+import type React from "react"
 
 interface SettingsTriggerProps {
-  trigger?: React.ReactNode
-  isMenuItem?: boolean // Added prop to determine trigger type
+  isMenuItem?: boolean
 }
 
-export function SettingsTrigger({ trigger, isMenuItem = false }: SettingsTriggerProps) {
+export function SettingsTrigger({ isMenuItem = false }: SettingsTriggerProps) {
   const { user } = useUser()
-  const [open, setOpen] = useState(false)
-  const isMobile = useBreakpoint(768)
 
   if (!user) return null
 
-  const defaultTrigger = isMenuItem ? (
-    <DropdownMenuItem
-      onSelect={(e) => e.preventDefault()}
-      onClick={() => setOpen(true)}
-    >
-      <User className="size-4" />
-      <span>Settings</span>
-    </DropdownMenuItem>
-  ) : (
-    <button
-      onClick={() => setOpen(true)} // Add onClick to trigger opening
-      className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
-      type="button"
-    >
-      <User className="size-4" />
-    </button>
-  )
+  const isMobileOrTablet = useBreakpoint(896)
+  const [isOpen, setIsOpen] = useState(false)
 
-  if (isMobile) {
+  if (isMenuItem && !isMobileOrTablet) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>{trigger || defaultTrigger}</DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Settings</DrawerTitle>
-            <DrawerDescription className="hidden">Application settings</DrawerDescription>
-          </DrawerHeader>
-          <SettingsContent isDrawer onClose={() => setOpen(false)} />
-        </DrawerContent>
-      </Drawer>
+      <DropdownMenuItem asChild>
+        <Link href="/settings" className="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
+          <User className="size-4" />
+          <span>Settings</span>
+        </Link>
+      </DropdownMenuItem>
+    )
+  }
+
+  if (isMenuItem && isMobileOrTablet) {
+    const trigger = (
+      <button type="button" className="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
+        <User className="size-4" />
+        <span>Settings</span>
+      </button>
+    )
+    return (
+      <DrawerSettings trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
+    )
+  }
+
+  if (isMobileOrTablet) {
+    const trigger = (
+      <button
+        className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
+        type="button"
+        onClick={() => setIsOpen(true)}
+      >
+        <User className="size-4" />
+      </button>
+    )
+    return (
+      <DrawerSettings trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
     )
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      <DialogContent className="gap-0 p-0 sm:max-w-xl">
-        <DialogHeader className="border-border border-b px-6 py-4">
-          <DialogTitle>Settings</DialogTitle>
-        </DialogHeader>
-        <DialogDescription className="sr-only">Settings dialog for user preferences and configuration.</DialogDescription>
-        <SettingsContent onClose={() => setOpen(false)} />
-      </DialogContent>
-    </Dialog>
+    <Link
+      href="/settings"
+      className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
+    >
+      <User className="size-4" />
+    </Link>
   )
-} 
+}

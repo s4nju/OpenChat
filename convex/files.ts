@@ -68,6 +68,59 @@ export const getAttachment = query({
 /**
  * Fetches all attachments for a given chat, including their download URLs.
  */
+export const getAttachmentsForUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error("Not authenticated")
+    }
+
+    const attachments = await ctx.db
+      .query("chat_attachments")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect()
+
+    return Promise.all(
+      attachments.map(async (attachment) => ({
+        ...attachment,
+        url: await ctx.storage.getUrl(attachment.fileId),
+      }))
+    )
+  },
+})
+
+export const deleteAttachments = mutation({
+  args: { attachmentIds: v.array(v.id("chat_attachments")) },
+  handler: async (ctx, { attachmentIds }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) throw new Error("Not authenticated")
+
+    const validAttachments = []
+    const attachments = await Promise.all(
+      attachmentIds.map(id => ctx.db.get(id))
+    )
+
+    for (const attachment of attachments) {
+      if (attachment && attachment.userId === userId) {
+        validAttachments.push(attachment)
+      } else {
+        console.warn(
+          `Skipping deletion for attachment: ${attachment?._id} due to invalid permissions or not found.`
+        )
+      }
+    }
+
+    const fileIdsToDelete = validAttachments.map(
+      a => a.fileId as Id<"_storage">
+    )
+    await Promise.all(fileIdsToDelete.map(id => ctx.storage.delete(id)))
+
+    const docIdsToDelete = validAttachments.map(a => a._id)
+    await Promise.all(docIdsToDelete.map(id => ctx.db.delete(id)))
+  }
+})
+
 export const getAttachmentsForChat = query({
     args: { chatId: v.id("chats") },
     handler: async (ctx, args) => {

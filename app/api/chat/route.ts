@@ -27,7 +27,7 @@ type ChatRequest = {
 
 export async function POST(req: Request) {
   req.signal.addEventListener("abort", () => {
-    console.log("[API /chat] Request aborted by client");
+    console.log("Request aborted by client");
   });
 
   try {
@@ -136,6 +136,16 @@ export async function POST(req: Request) {
           messages,
           tools,
           maxSteps: 5,
+          providerOptions:
+            selectedModel?.provider === "gemini"
+              ? {
+                  google: {
+                    thinkingConfig: {
+                      includeThoughts: true,
+                    },
+                  },
+                }
+              : undefined,
           experimental_transform: smoothStream({
             delayInMs: 20,
             chunking: "word",

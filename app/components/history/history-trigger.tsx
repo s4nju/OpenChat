@@ -1,8 +1,8 @@
 "use client"
 
+import { CommandHistory } from "@/app/components/history/command-history"
 import { DrawerHistory } from "@/app/components/history/drawer-history"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { CommandHistory } from "@/app/components/history/command-history"
 import { ListMagnifyingGlass } from "@phosphor-icons/react"
 import { useState } from "react"
 
@@ -21,8 +21,15 @@ export function HistoryTrigger() {
   )
 
   if (isMobileOrTablet) {
-    return <DrawerHistory trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
+    return (
+      <DrawerHistory trigger={trigger} isOpen={isOpen} setIsOpen={setIsOpen} />
+    )
   }
 
-  return <CommandHistory />
+  // On desktop, render CommandHistory but hide its trigger button
+  return (
+    <div className="[&_button]:hidden">
+      <CommandHistory />
+    </div>
+  )
 }

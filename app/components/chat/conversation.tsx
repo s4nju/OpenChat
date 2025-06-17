@@ -1,26 +1,31 @@
-import React, { useRef } from "react";
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
 import { ChatContainer } from "@/components/prompt-kit/chat-container"
 import { Loader } from "@/components/prompt-kit/loader"
 import { Message as MessageType } from "@ai-sdk/react"
+import React, { useRef } from "react"
 import { Message } from "./message"
 
-type MessageWithReasoning = MessageType & { reasoning_text?: string; model?: string }
+type MessageWithReasoning = MessageType & {
+  reasoning_text?: string
+  model?: string
+}
 
 type ConversationProps = {
   messages: MessageWithReasoning[]
-  status?: "streaming" | "idle" | "submitted" | "error" 
+  status?: "streaming" | "idle" | "submitted" | "error"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void
+  onBranch: (messageId: string) => void
 }
 
 const Conversation = React.memo(function Conversation({
   messages,
-  status = "idle", 
+  status = "idle",
   onDelete,
   onEdit,
   onReload,
+  onBranch,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -42,29 +47,30 @@ const Conversation = React.memo(function Conversation({
       >
         {messages?.map((message, index) => {
           const isLast = index === messages.length - 1 && status !== "submitted"
-           const hasScrollAnchor =
-             isLast && messages.length > initialMessageCount.current
+          const hasScrollAnchor =
+            isLast && messages.length > initialMessageCount.current
 
-           return (
-             <Message
-               key={message.id}
-               id={message.id}
-               variant={message.role}
-               attachments={message.experimental_attachments}
-               isLast={isLast}
-               onDelete={onDelete}
-               onEdit={onEdit}
-               onReload={() => onReload(message.id)}
-               hasScrollAnchor={hasScrollAnchor}
-               parts={message.parts}
-               status={status}
-               reasoning_text={message.reasoning_text}
-               model={message.model}
-             >
-               {message.content}
-             </Message>
-           )
-         })}
+          return (
+            <Message
+              key={message.id}
+              id={message.id}
+              variant={message.role}
+              attachments={message.experimental_attachments}
+              isLast={isLast}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onReload={() => onReload(message.id)}
+              onBranch={() => onBranch(message.id)}
+              hasScrollAnchor={hasScrollAnchor}
+              parts={message.parts}
+              status={status}
+              reasoning_text={message.reasoning_text}
+              model={message.model}
+            >
+              {message.content}
+            </Message>
+          )
+        })}
         {status === "submitted" &&
           messages.length > 0 &&
           messages[messages.length - 1].role === "user" && (
@@ -82,6 +88,6 @@ const Conversation = React.memo(function Conversation({
       </div>
     </div>
   )
-});
+})
 
-export { Conversation };
+export { Conversation }

@@ -1,8 +1,7 @@
-import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server"
+import { v } from "convex/values"
+import type { Id } from "./_generated/dataModel"
+import { mutation, query } from "./_generated/server"
 
 export const sendUserMessageToChat = mutation({
   args: {
@@ -16,14 +15,14 @@ export const sendUserMessageToChat = mutation({
   },
   returns: v.object({ messageId: v.id("messages") }),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      throw new Error("Not authenticated");
+      throw new Error("Not authenticated")
     }
     // Verify that the authenticated user owns the chat
-    const chat = await ctx.db.get(args.chatId);
+    const chat = await ctx.db.get(args.chatId)
     if (!chat || chat.userId !== userId) {
-      throw new Error("Chat not found or unauthorized");
+      throw new Error("Chat not found or unauthorized")
     }
     const messageId = await ctx.db.insert("messages", {
       chatId: args.chatId,
@@ -35,11 +34,11 @@ export const sendUserMessageToChat = mutation({
       experimentalAttachments: args.experimentalAttachments,
       model: args.model,
       createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    })
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() })
+    return { messageId }
   },
-});
+})
 
 export const saveAssistantMessage = mutation({
   args: {
@@ -53,14 +52,14 @@ export const saveAssistantMessage = mutation({
   },
   returns: v.object({ messageId: v.id("messages") }),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      throw new Error("Not authenticated");
+      throw new Error("Not authenticated")
     }
     // Verify that the authenticated user owns the chat
-    const chat = await ctx.db.get(args.chatId);
+    const chat = await ctx.db.get(args.chatId)
     if (!chat || chat.userId !== userId) {
-      throw new Error("Chat not found or unauthorized");
+      throw new Error("Chat not found or unauthorized")
     }
     const messageId = await ctx.db.insert("messages", {
       chatId: args.chatId,
@@ -72,11 +71,11 @@ export const saveAssistantMessage = mutation({
       experimentalAttachments: args.experimentalAttachments,
       model: args.model,
       createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    })
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() })
+    return { messageId }
   },
-});
+})
 
 export const getMessagesForChat = query({
   args: { chatId: v.id("chats") },
@@ -96,32 +95,32 @@ export const getMessagesForChat = query({
     })
   ),
   handler: async (ctx, { chatId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
-    const chat = await ctx.db.get(chatId);
-    if (!chat || chat.userId !== userId) return [];
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return []
+    const chat = await ctx.db.get(chatId)
+    if (!chat || chat.userId !== userId) return []
     return await ctx.db
       .query("messages")
       .withIndex("by_chat_and_created", (q) => q.eq("chatId", chatId))
       .order("asc")
-      .collect();
+      .collect()
   },
-});
+})
 
 export const deleteMessage = mutation({
   args: { messageId: v.id("messages") },
   returns: v.null(),
   handler: async (ctx, { messageId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-    const message = await ctx.db.get(messageId);
-    if (!message) return null;
-    const chat = await ctx.db.get(message.chatId);
-    if (!chat || chat.userId !== userId) return null;
-    await ctx.db.delete(messageId);
-    return null;
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return null
+    const message = await ctx.db.get(messageId)
+    if (!message) return null
+    const chat = await ctx.db.get(message.chatId)
+    if (!chat || chat.userId !== userId) return null
+    await ctx.db.delete(messageId)
+    return null
   },
-});
+})
 
 export const getMessageDetails = query({
   args: { messageId: v.id("messages") },
@@ -133,59 +132,74 @@ export const getMessageDetails = query({
     })
   ),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return null
 
-    const message = await ctx.db.get(args.messageId);
-    if (!message) return null;
+    const message = await ctx.db.get(args.messageId)
+    if (!message) return null
 
-    const chat = await ctx.db.get(message.chatId);
-    if (!chat || chat.userId !== userId) return null;
+    const chat = await ctx.db.get(message.chatId)
+    if (!chat || chat.userId !== userId) return null
 
     return {
       parentMessageId: message.parentMessageId,
       role: message.role,
-    };
+    }
   },
-});
+})
 
 export const deleteMessageAndDescendants = mutation({
   args: { messageId: v.id("messages") },
   returns: v.object({ chatDeleted: v.boolean() }),
   handler: async (ctx, { messageId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return { chatDeleted: false };
-    const message = await ctx.db.get(messageId);
-    if (!message) return { chatDeleted: false };
-    const chat = await ctx.db.get(message.chatId);
-    if (!chat || chat.userId !== userId) return { chatDeleted: false };
-    const threshold = message.createdAt ?? message._creationTime;
-    const ids: Array<Id<"messages">> = [];
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return { chatDeleted: false }
+    const message = await ctx.db.get(messageId)
+    if (!message) return { chatDeleted: false }
+    const chat = await ctx.db.get(message.chatId)
+    if (!chat || chat.userId !== userId) return { chatDeleted: false }
+    const threshold = message.createdAt ?? message._creationTime
+    const ids: Array<Id<"messages">> = []
     for await (const m of ctx.db
       .query("messages")
-      .withIndex("by_chat_and_created", q => q.eq("chatId", message.chatId))
+      .withIndex("by_chat_and_created", (q) => q.eq("chatId", message.chatId))
       .order("asc")) {
-      const created = m.createdAt ?? m._creationTime;
-      if (created >= threshold) ids.push(m._id);
+      const created = m.createdAt ?? m._creationTime
+      if (created >= threshold) ids.push(m._id)
     }
     for (const id of ids) {
-      await ctx.db.delete(id);
+      await ctx.db.delete(id)
     }
     // update chat timestamp
-    await ctx.db.patch(chat._id, { updatedAt: Date.now() });
+    await ctx.db.patch(chat._id, { updatedAt: Date.now() })
     const remaining = await ctx.db
       .query("messages")
-      .withIndex("by_chat_and_created", q => q.eq("chatId", message.chatId))
-      .first();
+      .withIndex("by_chat_and_created", (q) => q.eq("chatId", message.chatId))
+      .first()
     if (!remaining) {
+      // Branch cleanup: Find all chats that are branched from this chat
+      const branchedChats = await ctx.db
+        .query("chats")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("originalChatId"), chat._id))
+        .collect()
+
+      // Remove the branch reference from all branched chats
+      for (const branchedChat of branchedChats) {
+        await ctx.db.patch(branchedChat._id, {
+          originalChatId: undefined,
+          updatedAt: Date.now(),
+        })
+      }
+
       for await (const a of ctx.db
         .query("chat_attachments")
-        .withIndex("by_chatId", q => q.eq("chatId", chat._id))) {
-        await ctx.db.delete(a._id);
+        .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))) {
+        await ctx.db.delete(a._id)
       }
-      await ctx.db.delete(chat._id);
-      return { chatDeleted: true };
+      await ctx.db.delete(chat._id)
+      return { chatDeleted: true }
     }
-    return { chatDeleted: false };
+    return { chatDeleted: false }
   },
-});
+})

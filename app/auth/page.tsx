@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="bg-background flex h-screen flex-col">
-      <HeaderGoBack href="/" />
+      <HeaderGoBack href="/" showControls={false} />
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-md space-y-8">

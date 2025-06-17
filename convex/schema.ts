@@ -1,6 +1,6 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
+import { authTables } from "@convex-dev/auth/server"
+import { defineSchema, defineTable } from "convex/server"
+import { v } from "convex/values"
 
 export default defineSchema({
   ...authTables,
@@ -17,8 +17,12 @@ export default defineSchema({
     totalMessageCount: v.optional(v.number()),
     preferredModel: v.optional(v.string()),
     isPremium: v.optional(v.boolean()),
-  })
-    .index("email", ["email"]),
+    premiumCredits: v.optional(v.number()),
+    preferredName: v.optional(v.string()),
+    occupation: v.optional(v.string()),
+    traits: v.optional(v.string()),
+    about: v.optional(v.string()),
+  }).index("email", ["email"]),
   chats: defineTable({
     userId: v.id("users"),
     title: v.optional(v.string()),
@@ -26,6 +30,8 @@ export default defineSchema({
     systemPrompt: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+    originalChatId: v.optional(v.id("chats")),
+    isPinned: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
   messages: defineTable({
     chatId: v.id("chats"),
@@ -50,7 +56,9 @@ export default defineSchema({
     fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
-  }).index("by_chatId", ["chatId"]),
+  })
+    .index("by_chatId", ["chatId"])
+    .index("by_userId", ["userId"]),
   Logo: defineTable({
     color: v.string(),
     filter: v.optional(v.string()),
@@ -97,4 +105,4 @@ export default defineSchema({
     periodEnd: v.number(),
     createdAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
-});
+})

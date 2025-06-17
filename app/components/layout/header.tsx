@@ -1,20 +1,20 @@
 "use client"
+
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
 import { AppInfoTrigger } from "@/app/components/layout/app-info/app-info-trigger"
 import { UserMenu } from "@/app/components/layout/user-menu"
-import { useUser } from "@/app/providers/user-provider"
-import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
-import { ButtonNewChat } from "./button-new-chat"
-import ThemeSwitchIcon from "./ThemeSwitchIcon"
-import { Info, Plus, ListMagnifyingGlass } from "@phosphor-icons/react"
-import { APP_NAME } from "@/lib/config"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
+import { useUser } from "@/app/providers/user-provider"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { APP_NAME } from "@/lib/config"
+import { Info, Plus } from "@phosphor-icons/react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import ThemeSwitchIcon from "./ThemeSwitchIcon"
 
 export function Header() {
   const { user } = useUser()
@@ -37,21 +37,24 @@ export function Header() {
             {APP_NAME}
           </Link>
         </div>
-        
+
         {/* Hidden placeholder to prevent layout shift on desktop */}
-        <div className="w-24 hidden md:block"></div>
-        
+        <div className="hidden w-24 md:block"></div>
+
         {!isLoggedIn ? (
           <div className="flex items-center gap-4">
             <AppInfoTrigger
               trigger={
                 <button
                   type="button"
-                  className="group flex items-center justify-center rounded-full p-2 hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:rounded-full outline-none"
+                  className="group hover:bg-accent focus-visible:ring-primary flex items-center justify-center rounded-full p-2 outline-none focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-offset-2"
                   aria-label={`About`}
                   tabIndex={0}
                 >
-                  <Info className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" weight="bold" />
+                  <Info
+                    className="text-muted-foreground group-hover:text-foreground size-5 transition-colors"
+                    weight="bold"
+                  />
                 </button>
               }
             />
@@ -65,27 +68,24 @@ export function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            {/* Mobile buttons for new chat and search history */}
-            {isMobile && (
-              <>
-                {pathname !== "/" && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => router.push("/")}
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
-                        type="button"
-                        aria-label="New Chat"
-                      >
-                        <Plus size={24} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>New Chat</TooltipContent>
-                  </Tooltip>
-                )}
-                <HistoryTrigger />
-              </>
+            {/* Mobile button for new chat */}
+            {isMobile && pathname !== "/" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => router.push("/")}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1.5 transition-colors"
+                    type="button"
+                    aria-label="New Chat"
+                  >
+                    <Plus size={24} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>New Chat</TooltipContent>
+              </Tooltip>
             )}
+            {/* History trigger - always rendered for Cmd+K functionality */}
+            <HistoryTrigger />
             <ThemeSwitchIcon />
             <UserMenu user={user} />
           </div>
