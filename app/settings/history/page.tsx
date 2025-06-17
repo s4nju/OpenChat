@@ -438,6 +438,11 @@ export default function HistoryPage() {
             <Trash className="mr-2 size-4" /> Delete All Chats
           </Button>
         </div>
+
+        {/* Retention policy note */}
+        <p className="text-muted-foreground text-xs italic mt-6">
+          *The retention policies of our LLM hosting partners may vary.
+        </p>
       </div>
     </div>
   )

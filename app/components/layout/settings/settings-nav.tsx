@@ -26,7 +26,8 @@ function SettingsNavComponent() {
               href={item.href}
               className={cn(
                 "block rounded-md px-4 py-2 text-center text-sm font-medium",
-                pathname.startsWith(item.href)
+                ((item.href === "/settings" && (pathname === "/settings" || pathname === "/settings/")) ||
+                  (item.href !== "/settings" && pathname.startsWith(item.href)))
                   ? "bg-background text-foreground"
                   : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
               )}
