@@ -102,7 +102,7 @@ export function MessageUsageCard() {
         )}
       </div>
       <button className="mt-4 w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-        Buy more premium credits &rarr;
+        {user.isPremium ? "Buy more premium credits →" : "Subscribe to Premium →"}
       </button>
     </div>
   )
