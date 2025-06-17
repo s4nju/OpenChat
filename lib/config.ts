@@ -219,7 +219,7 @@ export const MODELS_RAW = [
     ],
   },
   {
-    id: "gemini-2.5-pro-exp-03-25",
+    id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "gemini",
     features: [
@@ -243,7 +243,7 @@ export const MODELS_RAW = [
         label: "Supports web search",
       },
     ],
-    api_sdk: google("gemini-2.5-pro-exp-03-25"),
+    api_sdk: google("gemini-2.5-pro"),
   },
   {
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
@@ -337,8 +337,8 @@ export const MODELS_RAW = [
     ],
   },
   {
-    id: "deepseek-r1",
-    name: "DeepSeek R1",
+    id: "deepseek-r1-0528",
+    name: "DeepSeek R1 (0528)",
     provider: "deepseek",
     features: [
       {
@@ -356,7 +356,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: nim("deepseek-ai/deepseek-r1"),
+    api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
   // {
   //   id: "qwen/qwq-32b:free",

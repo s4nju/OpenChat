@@ -136,6 +136,16 @@ export async function POST(req: Request) {
           messages,
           tools,
           maxSteps: 5,
+          providerOptions:
+            selectedModel?.provider === "gemini"
+              ? {
+                  google: {
+                    thinkingConfig: {
+                      includeThoughts: true,
+                    },
+                  },
+                }
+              : undefined,
           experimental_transform: smoothStream({
             delayInMs: 20,
             chunking: "word",
