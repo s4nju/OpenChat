@@ -22,8 +22,10 @@ import {
   SpinnerGap,
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
-import dynamic from "next/dynamic"
-import React, { useEffect, useRef, useState, memo } from "react" // Import React to access memo
+import dynamic from "next/dynamic"// Client component – required when using React hooks in the app router
+"use client"
+
+import { memo, useEffect, useRef, useState } from "react" // Import React to access memo
 import { SourcesList } from "./SourcesList"
 
 interface Source {
