@@ -23,6 +23,7 @@ import {
   hasChatsInGroup,
 } from "@/lib/chat-utils/time-grouping"
 import { cn } from "@/lib/utils"
+import React from "react"
 import {
   Check,
   GitBranch,
@@ -38,15 +39,36 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { CommandHistoryItem } from "./CommandHistoryItem"
 
+function getSnippet(text: string, query: string, length = 80): React.ReactNode {
+  const lower = text.toLowerCase()
+  const q = query.toLowerCase()
+  const idx = lower.indexOf(q)
+  if (idx === -1) return text.slice(0, length)
+  const start = Math.max(0, idx - Math.floor((length - q.length) / 2))
+  const snippet = text.slice(start, start + length)
+  const matchStart = idx - start
+  return (
+    <>
+      {snippet.slice(0, matchStart)}
+      <mark>{snippet.slice(matchStart, matchStart + q.length)}</mark>
+      {snippet.slice(matchStart + q.length)}
+    </>
+  )
+}
+
 export function CommandHistory() {
   const router = useRouter()
   const chatHistory = useQuery(api.chats.listChatsForUser)
   const deleteChat = useMutation(api.chats.deleteChat)
   const updateChatTitle = useMutation(api.chats.updateChatTitle)
   const pinChatToggle = useMutation(api.chats.pinChatToggle)
-
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const messageResults =
+    useQuery(
+      api.messages.searchMessages,
+      searchQuery ? { query: searchQuery } : "skip"
+    ) ?? []
   const [editingId, setEditingId] = useState<Id<"chats"> | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [deletingId, setDeletingId] = useState<Id<"chats"> | null>(null)
@@ -167,8 +189,39 @@ export function CommandHistory() {
               value="__placeholder"
               className="h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
             />
-            {filteredChat.length === 0 && (
+            {filteredChat.length === 0 && messageResults.length === 0 && (
               <CommandEmpty>No chat history found.</CommandEmpty>
+            )}
+
+            {searchQuery && messageResults.length > 0 && (
+              <div className="px-2 pb-2">
+                <div className="text-muted-foreground text-sm flex h-8 shrink-0 items-center rounded-md px-1.5 font-semibold tracking-wide uppercase">
+                  Messages
+                </div>
+                {messageResults.map((msg) => (
+                  <CommandItem
+                    key={msg._id}
+                    onSelect={() => {
+                      router.replace(`/c/${msg.chatId}?m=${msg._id}`, {
+                        scroll: false,
+                      })
+                      setIsOpen(false)
+                    }}
+                    value={msg._id}
+                    className="px-2 py-1"
+                  >
+                    <div className="flex flex-col">
+                      <span className="line-clamp-2 text-sm">
+                        {getSnippet(msg.content, searchQuery)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {chatHistory?.find((c) => c._id === msg.chatId)?.title ||
+                          "Untitled Chat"}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </div>
             )}
             {/* Pinned Chats Section */}
             {pinnedChats.length > 0 && (

@@ -44,7 +44,12 @@ export default defineSchema({
     parentMessageId: v.optional(v.id("messages")),
     reasoningText: v.optional(v.string()),
     model: v.optional(v.string()),
-  }).index("by_chat_and_created", ["chatId", "createdAt"]),
+  })
+    .index("by_chat_and_created", ["chatId", "createdAt"])
+    .searchIndex("by_user_content", {
+      searchField: "content",
+      filterFields: ["userId", "chatId"],
+    }),
   feedback: defineTable({
     userId: v.id("users"),
     message: v.string(),

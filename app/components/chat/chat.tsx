@@ -19,7 +19,7 @@ import { useChat, type Message } from "@ai-sdk/react"
 import { useAction, useConvex, useMutation, useQuery } from "convex/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
 const DialogAuth = dynamic(
@@ -61,6 +61,7 @@ function humaniseUploadError(err: unknown): string {
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, isLoading: isUserLoading } = useUser()
 
   // --- Convex Data Hooks ---
@@ -587,6 +588,15 @@ export default function Chat() {
       setSelectedModel(user.preferredModel)
     }
   }, [user?.preferredModel, chatId])
+
+  const targetMessageId = searchParams.get("m")
+  useEffect(() => {
+    if (!targetMessageId) return
+    const el = document.getElementById(targetMessageId)
+    if (el) {
+      el.scrollIntoView({ block: "center" })
+    }
+  }, [targetMessageId, messages])
 
   if (currentChat === null && chatId) {
     return null // Render nothing while redirecting
