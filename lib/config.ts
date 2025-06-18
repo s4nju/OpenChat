@@ -621,7 +621,9 @@ export function buildSystemPrompt(
   if (user.occupation) details.push(`Occupation: ${user.occupation}`)
   if (user.traits) details.push(`Traits: ${user.traits}`)
   if (user.about) details.push(`About: ${user.about}`)
-  return details.length > 0 ? `${prompt}\n\n${details.join("\n")}` : prompt
+  return details.length > 0
+    ? `${prompt}\n\nThe following are details shared by the user about themselves:\n${details.join("\n")}`
+    : prompt
 }
 
 export const MESSAGE_MAX_LENGTH = 4000

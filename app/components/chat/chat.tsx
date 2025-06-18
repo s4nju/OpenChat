@@ -657,7 +657,7 @@ export default function Chat() {
           onSelectSystemPrompt={handlePersonaSelect}
           selectedModel={selectedModel}
           isUserAuthenticated={isAuthenticated}
-          systemPrompt={systemPrompt}
+          systemPrompt={personaPrompt}
           stop={stop}
           status={status}
         />
