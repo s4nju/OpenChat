@@ -7,9 +7,17 @@ import { api } from "./_generated/api";
 /**
  * Generates a secure URL for uploading a file to Convex storage.
  */
-export const generateUploadUrl = action(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
-});
+export const generateUploadUrl = action({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error("Not authenticated")
+    }
+    return await ctx.storage.generateUploadUrl()
+  },
+})
 
 /**
  * Saves the metadata of a successfully uploaded file to the database.
@@ -33,6 +41,33 @@ export const saveFileAttachment = action({
   },
 });
 
+// Allowed MIME types and file size limit (10 MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MiB
+const ALLOWED_FILE_MIME_TYPES = [
+  // Images
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  // PDF
+  "application/pdf",
+] as const;
+
+// Only these models currently support file inputs. Update as new ones roll out.
+const FILE_UPLOAD_MODELS = [
+  "gpt-4o-mini",
+  "gpt-4o",
+  "gemini-2.0-flash",
+  "gemini-2.5-pro",
+  "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "Llama-4-Scout-17B-16E-Instruct",
+  "pixtral-large-latest",
+  // Upcoming / temporarily unavailable models still supporting file uploads
+  "claude-3-5-sonnet",
+  "claude-3.7-sonnet",
+  "grok-3",
+] as const;
+
 export const internalSave = mutation({
   args: {
     storageId: v.id("_storage"),
@@ -42,9 +77,36 @@ export const internalSave = mutation({
     fileSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      throw new Error("Not authenticated");
+      throw new Error("Not authenticated")
+    }
+
+    // Verify ownership of the chat before attaching the file
+    const chat = await ctx.db.get(args.chatId)
+    if (!chat || chat.userId !== userId) {
+      // Clean up orphaned file if chat not found
+      await ctx.storage.delete(args.storageId)
+      throw new Error("Chat not found or unauthorized")
+    }
+
+    // Check that the chat's model can accept file uploads
+    const modelName = chat.model ?? undefined
+    if (!modelName || !FILE_UPLOAD_MODELS.includes(modelName as any)) {
+      await ctx.storage.delete(args.storageId)
+      throw new Error("ERR_UNSUPPORTED_MODEL")
+    }
+
+    // Enforce MIME type allow-list
+    if (!ALLOWED_FILE_MIME_TYPES.includes(args.fileType as any)) {
+      await ctx.storage.delete(args.storageId)
+      throw new Error("ERR_BAD_MIME")
+    }
+
+    // Enforce maximum size
+    if (args.fileSize > MAX_FILE_SIZE) {
+      await ctx.storage.delete(args.storageId)
+      throw new Error("ERR_FILE_TOO_LARGE")
     }
 
     return await ctx.db.insert("chat_attachments", {
@@ -54,14 +116,23 @@ export const internalSave = mutation({
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
-    });
+    })
   },
 });
 
 export const getAttachment = query({
   args: { attachmentId: v.id("chat_attachments") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.attachmentId);
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error("Not authenticated")
+    }
+
+    const attachment = await ctx.db.get(args.attachmentId)
+    if (!attachment || attachment.userId !== userId) {
+      throw new Error("Attachment not found or unauthorized")
+    }
+    return attachment
   },
 });
 
@@ -124,6 +195,17 @@ export const deleteAttachments = mutation({
 export const getAttachmentsForChat = query({
     args: { chatId: v.id("chats") },
     handler: async (ctx, args) => {
+        const userId = await getAuthUserId(ctx)
+        if (!userId) {
+          throw new Error("Not authenticated")
+        }
+
+        // Verify ownership of the chat
+        const chat = await ctx.db.get(args.chatId)
+        if (!chat || chat.userId !== userId) {
+          throw new Error("Chat not found or unauthorized")
+        }
+
         const attachments = await ctx.db
             .query("chat_attachments")
             .withIndex("by_chatId", q => q.eq("chatId", args.chatId))

@@ -42,6 +42,22 @@ const mapMessage = (
   // Optionally include model if stored in message doc in future
 })
 
+// Map backend error codes to user-friendly messages
+function humaniseUploadError(err: unknown): string {
+  if (!(err instanceof Error)) return "Error uploading file";
+  const msg = err.message;
+  if (msg.includes("ERR_UNSUPPORTED_MODEL")) {
+    return "File uploads are not supported for the selected model.";
+  }
+  if (msg.includes("ERR_BAD_MIME")) {
+    return "Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.";
+  }
+  if (msg.includes("ERR_FILE_TOO_LARGE")) {
+    return "Files can be at most 10 MB.";
+  }
+  return "Error uploading file";
+}
+
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
@@ -306,8 +322,8 @@ export default function Chat() {
         fileSize: file.size,
       })
     } catch (error) {
-      console.error("Error uploading file:", error)
-      toast({ title: "Error uploading file", status: "error" })
+      const friendly = humaniseUploadError(error)
+      toast({ title: friendly, status: "error" })
       return null
     }
   }
