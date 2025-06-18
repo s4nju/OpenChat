@@ -17,6 +17,7 @@ type ConversationProps = {
   onEdit: (id: string, newText: string) => void
   onReload: (id: string) => void
   onBranch: (messageId: string) => void
+  autoScroll?: boolean
 }
 
 const Conversation = React.memo(function Conversation({
@@ -26,6 +27,7 @@ const Conversation = React.memo(function Conversation({
   onEdit,
   onReload,
   onBranch,
+  autoScroll = true,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -38,7 +40,7 @@ const Conversation = React.memo(function Conversation({
     <div className="relative flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto">
       <ChatContainer
         className="relative flex w-full flex-col items-center pt-20 pb-4"
-        autoScroll={true}
+        autoScroll={autoScroll}
         ref={containerRef}
         scrollToRef={scrollRef}
         style={{

@@ -20,7 +20,7 @@ import { useAction, useConvex, useMutation, useQuery } from "convex/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 const DialogAuth = dynamic(
   () => import("./dialog-auth").then((mod) => mod.DialogAuth),
@@ -590,11 +590,23 @@ export default function Chat() {
   }, [user?.preferredModel, chatId])
 
   const targetMessageId = searchParams.get("m")
+  const [autoScroll, setAutoScroll] = useState(() => !targetMessageId)
+  const hasScrolledRef = useRef(false)
+
   useEffect(() => {
-    if (!targetMessageId) return
+    if (targetMessageId) {
+      setAutoScroll(false)
+      hasScrolledRef.current = false
+    }
+  }, [targetMessageId])
+
+  useEffect(() => {
+    if (!targetMessageId || hasScrolledRef.current) return
     const el = document.getElementById(targetMessageId)
     if (el) {
       el.scrollIntoView({ block: "center" })
+      hasScrolledRef.current = true
+      setAutoScroll(true)
     }
   }, [targetMessageId, messages])
 
@@ -634,6 +646,7 @@ export default function Chat() {
             onEdit={handleEdit}
             onReload={handleReload}
             onBranch={handleBranch}
+            autoScroll={autoScroll}
           />
         )}
       </AnimatePresence>
