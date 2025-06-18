@@ -43,6 +43,7 @@ type MessageAssistantProps = {
   onBranch?: () => void
   model?: string
   parts?: MessageType["parts"]
+  attachments?: MessageType["experimental_attachments"]
   status?: "streaming" | "ready" | "submitted" | "error"
   reasoning_text?: string
 }
@@ -62,6 +63,7 @@ export function MessageAssistant({
   onBranch,
   model,
   parts,
+  attachments,
   status,
   reasoning_text,
 }: MessageAssistantProps) {
@@ -84,21 +86,28 @@ export function MessageAssistant({
     prevStatusRef.current = status
   }, [status])
 
+  // Prefer `parts` prop, but fall back to `attachments` if `parts` is undefined.
+  const combinedParts = (parts ?? attachments) as
+    | MessageType["parts"]
+    | undefined
+
   // Extract reasoning parts for streaming display
-  const reasoningParts: ReasoningUIPart[] = parts
-    ? parts.filter((part): part is ReasoningUIPart => part.type === "reasoning")
+  const reasoningParts: ReasoningUIPart[] = combinedParts
+    ? combinedParts.filter(
+        (part): part is ReasoningUIPart => part.type === "reasoning"
+      )
     : []
 
   // Extract sources from source parts
-  const sourcesFromParts: Source[] = parts
-    ? parts
+  const sourcesFromParts: Source[] = combinedParts
+    ? combinedParts
         .filter((part): part is SourceUIPart => part.type === "source")
         .map((part) => part.source as Source)
     : []
 
   // Extract sources from tool-invocation results (handles duckDuckGo and exaSearch)
-  const sourcesFromToolInvocations: Source[] = parts
-    ? parts
+  const sourcesFromToolInvocations: Source[] = combinedParts
+    ? combinedParts
         .filter(
           (part): part is ToolInvocationUIPart =>
             part.type === "tool-invocation"
@@ -160,8 +169,8 @@ export function MessageAssistant({
   const sources = [...sourcesFromParts, ...sourcesFromToolInvocations]
 
   // Show 'thinking...' spinner if any tool-invocation is in progress
-  const toolInvocationsInProgress = parts
-    ? parts.filter(
+  const toolInvocationsInProgress = combinedParts
+    ? combinedParts.filter(
         (part): part is ToolInvocationUIPart =>
           part.type === "tool-invocation" &&
           part.toolInvocation.state !== "result"

@@ -40,6 +40,7 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.optional(v.number()),
     experimentalAttachments: v.optional(v.any()),
+    parts: v.optional(v.any()),
     parentMessageId: v.optional(v.id("messages")),
     reasoningText: v.optional(v.string()),
     model: v.optional(v.string()),

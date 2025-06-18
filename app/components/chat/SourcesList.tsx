@@ -57,6 +57,8 @@ export function SourcesList({ sources, className }: SourcesListProps) {
                   unoptimized
                   loader={({ src }) => src}
                   src={getFavicon(source.url)}
+                  width={16}
+                  height={16}
                   alt={`Favicon for ${source.title}`}
                   className="border-background h-4 w-4 rounded-sm border"
                 />
@@ -99,6 +101,8 @@ export function SourcesList({ sources, className }: SourcesListProps) {
                           unoptimized
                           loader={({ src }) => src}
                           src={getFavicon(source.url)}
+                          width={16}
+                          height={16}
                           alt={`Favicon for ${source.title}`}
                           className="h-4 w-4 flex-shrink-0 rounded-sm"
                         />

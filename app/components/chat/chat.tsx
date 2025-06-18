@@ -38,6 +38,7 @@ const mapMessage = (
   experimental_attachments: msg.experimentalAttachments,
   reasoning_text: msg.reasoningText,
   model: msg.model,
+  parts: msg.parts,
   // Optionally include model if stored in message doc in future
 })
 
@@ -129,8 +130,16 @@ export default function Chat() {
     const mappedDb = messagesFromDB.map(mapMessage)
 
     if (mappedDb.length >= messages.length) {
-      // DB is up-to-date or ahead – replace to ensure canonical IDs.
-      setMessages(mappedDb)
+      // DB is up-to-date or ahead – merge to ensure we keep streaming-only
+      // properties (e.g. `parts`) that are not yet persisted in the DB.
+      const merged = mappedDb.map((dbMsg, idx) => {
+        const prev = messages[idx]
+        if (prev && prev.parts && !dbMsg.parts) {
+          return { ...dbMsg, parts: prev.parts }
+        }
+        return dbMsg
+      })
+      setMessages(merged)
     } else if (mappedDb.length > 0) {
       // DB is behind: merge IDs for the portion we have *without* dropping
       // recent optimistic messages (e.g., the just-streamed assistant reply).
@@ -145,6 +154,7 @@ export default function Chat() {
             experimental_attachments: dbMsg.experimental_attachments,
             reasoning_text: dbMsg.reasoning_text,
             model: dbMsg.model,
+            parts: msg.parts ?? dbMsg.parts,
           } as typeof msg
         }
         // Keep optimistic messages beyond the DB length untouched to avoid

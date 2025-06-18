@@ -199,7 +199,7 @@ export async function POST(req: Request) {
                       parentMessageId: userMsgId, // userMsgId must be set by this point
                       reasoningText: reasoningText,
                       model: model,
-                      experimentalAttachments: assistantMessage.parts,
+                      parts: assistantMessage.parts,
                     },
                     { token }
                   );

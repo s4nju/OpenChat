@@ -73,6 +73,7 @@ export function Message({
         isLast={isLast}
         hasScrollAnchor={hasScrollAnchor}
         parts={parts}
+        attachments={attachments}
         status={status}
         reasoning_text={reasoning_text}
       >
