@@ -223,11 +223,18 @@ export const searchMessages = query({
     const userId = await getAuthUserId(ctx)
     if (!userId || search.trim() === "") return []
 
-    return await ctx.db
+    const results = await ctx.db
       .query("messages")
       .withSearchIndex("by_user_content", (q) =>
         q.search("content", search).eq("userId", userId)
       )
       .take(limit)
+
+    return results.map((msg) => ({
+      _id: msg._id,
+      chatId: msg.chatId,
+      content: msg.content,
+      createdAt: msg.createdAt,
+    }))
   },
 })
