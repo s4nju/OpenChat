@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react"
 import { Check, Copy, FilePdf, Trash } from "@phosphor-icons/react"
-import { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState, memo } from "react"
 
 const getTextFromDataUrl = (dataUrl: string) => {
   const base64 = dataUrl.split(",")[1]
@@ -38,7 +38,7 @@ export type MessageUserProps = {
   status?: "streaming" | "ready" | "submitted" | "error"
 }
 
-export function MessageUser({
+function MessageUserInner({
   hasScrollAnchor,
   attachments,
   children,
@@ -49,7 +49,7 @@ export function MessageUser({
   onDelete,
   id,
   status,
-}: MessageUserProps) {
+}: MessageUserProps): React.ReactElement {
   const [editInput, setEditInput] = useState(children)
   const [isEditing, setIsEditing] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
@@ -266,3 +266,5 @@ export function MessageUser({
     </MessageContainer>
   )
 }
+
+export const MessageUser = memo(MessageUserInner)

@@ -23,7 +23,7 @@ import {
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
-import { useEffect, useRef, useState } from "react" // Import useEffect and useRef
+import React, { useEffect, useRef, useState, memo } from "react" // Import React to access memo
 import { SourcesList } from "./SourcesList"
 
 interface Source {
@@ -53,7 +53,7 @@ const Markdown = dynamic(
   { ssr: false }
 )
 
-export function MessageAssistant({
+function MessageAssistantInner({
   children,
   isLast,
   hasScrollAnchor,
@@ -349,3 +349,8 @@ export function MessageAssistant({
     </Message>
   )
 }
+
+// Default shallow comparison is fine – re-render will happen whenever
+// `parts`, `attachments`, `status`, or any primitive prop reference changes
+// which is what we want during streaming.
+export const MessageAssistant = memo(MessageAssistantInner)
