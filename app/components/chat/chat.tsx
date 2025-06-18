@@ -590,23 +590,21 @@ export default function Chat() {
   }, [user?.preferredModel, chatId])
 
   const targetMessageId = searchParams.get("m")
-  const [autoScroll, setAutoScroll] = useState(() => !targetMessageId)
   const hasScrolledRef = useRef(false)
 
   useEffect(() => {
     if (targetMessageId) {
-      setAutoScroll(false)
       hasScrolledRef.current = false
     }
   }, [targetMessageId])
 
   useEffect(() => {
-    if (!targetMessageId || hasScrolledRef.current) return
+    if (!targetMessageId || hasScrolledRef.current || messages.length === 0)
+      return
     const el = document.getElementById(targetMessageId)
     if (el) {
-      el.scrollIntoView({ block: "center" })
+      el.scrollIntoView({ block: "center", behavior: "smooth" })
       hasScrolledRef.current = true
-      setAutoScroll(true)
     }
   }, [targetMessageId, messages])
 
@@ -646,7 +644,7 @@ export default function Chat() {
             onEdit={handleEdit}
             onReload={handleReload}
             onBranch={handleBranch}
-            autoScroll={autoScroll}
+            autoScroll={!targetMessageId}
           />
         )}
       </AnimatePresence>

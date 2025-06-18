@@ -220,6 +220,7 @@ export const searchMessages = query({
     })
   ),
   handler: async (ctx, { query: search, limit = 20 }) => {
+    const safeLimit = Math.min(Math.max(1, limit), 100) // Cap between 1-100
     const userId = await getAuthUserId(ctx)
     if (!userId || search.trim() === "") return []
 
@@ -228,7 +229,7 @@ export const searchMessages = query({
       .withSearchIndex("by_user_content", (q) =>
         q.search("content", search).eq("userId", userId)
       )
-      .take(limit)
+      .take(safeLimit)
 
     return results.map((msg) => ({
       _id: msg._id,

@@ -23,7 +23,6 @@ import {
   hasChatsInGroup,
 } from "@/lib/chat-utils/time-grouping"
 import { cn } from "@/lib/utils"
-import React from "react"
 import {
   Check,
   GitBranch,
