@@ -208,3 +208,34 @@ export const deleteMessageAndDescendants = mutation({
     return { chatDeleted: false }
   },
 })
+
+export const searchMessages = query({
+  args: { query: v.string(), limit: v.optional(v.number()) },
+  returns: v.array(
+    v.object({
+      _id: v.id("messages"),
+      chatId: v.id("chats"),
+      content: v.string(),
+      createdAt: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, { query: search, limit = 20 }) => {
+    const safeLimit = Math.min(Math.max(1, limit), 100) // Cap between 1-100
+    const userId = await getAuthUserId(ctx)
+    if (!userId || search.trim() === "") return []
+
+    const results = await ctx.db
+      .query("messages")
+      .withSearchIndex("by_user_content", (q) =>
+        q.search("content", search).eq("userId", userId)
+      )
+      .take(safeLimit)
+
+    return results.map((msg) => ({
+      _id: msg._id,
+      chatId: msg.chatId,
+      content: msg.content,
+      createdAt: msg.createdAt,
+    }))
+  },
+})

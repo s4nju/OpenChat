@@ -65,6 +65,7 @@ export function Message({
   if (variant === "assistant") {
     return (
       <MessageAssistant
+        id={id}
         model={model}
         copied={copied}
         copyToClipboard={copyToClipboard}

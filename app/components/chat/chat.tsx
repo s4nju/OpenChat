@@ -19,8 +19,8 @@ import { useChat, type Message } from "@ai-sdk/react"
 import { useAction, useConvex, useMutation, useQuery } from "convex/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 const DialogAuth = dynamic(
   () => import("./dialog-auth").then((mod) => mod.DialogAuth),
@@ -61,6 +61,7 @@ function humaniseUploadError(err: unknown): string {
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, isLoading: isUserLoading } = useUser()
 
   // --- Convex Data Hooks ---
@@ -588,6 +589,25 @@ export default function Chat() {
     }
   }, [user?.preferredModel, chatId])
 
+  const targetMessageId = searchParams.get("m")
+  const hasScrolledRef = useRef(false)
+
+  useEffect(() => {
+    if (targetMessageId) {
+      hasScrolledRef.current = false
+    }
+  }, [targetMessageId])
+
+  useEffect(() => {
+    if (!targetMessageId || hasScrolledRef.current || messages.length === 0)
+      return
+    const el = document.getElementById(targetMessageId)
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" })
+      hasScrolledRef.current = true
+    }
+  }, [targetMessageId, messages])
+
   if (currentChat === null && chatId) {
     return null // Render nothing while redirecting
   }
@@ -624,6 +644,7 @@ export default function Chat() {
             onEdit={handleEdit}
             onReload={handleReload}
             onBranch={handleBranch}
+            autoScroll={!targetMessageId}
           />
         )}
       </AnimatePresence>

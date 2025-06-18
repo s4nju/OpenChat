@@ -88,6 +88,7 @@
 - **Keyboard Shortcuts** - Full keyboard navigation support for power users
 - **Chat Management** - Pin important chats, export/import history, edit titles, and create conversation branches
 - **User Personalization** - Customize AI behavior with personal traits, occupation details, and preferences
+- **Advanced Search** - Quickly find messages with full-text search snippets
 - **Message Usage Tracking** - Visual indicators for daily/monthly message limits and premium credits (to be implemented)
 - **Responsive Mobile UI** - Optimized mobile experience with drawer-based navigation
 
