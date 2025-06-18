@@ -25,8 +25,8 @@ import {
   Check,
   MagnifyingGlass,
   PencilSimple,
-  PushPinSimple,
-  PushPinSimpleSlash,
+  PushPinSimpleIcon,
+  PushPinSimpleSlashIcon,
   TrashSimple,
   X,
 } from "@phosphor-icons/react"
@@ -143,7 +143,7 @@ export function DrawerHistory({
               {pinnedChats.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="text-muted-foreground flex items-center px-2 text-xs font-medium tracking-wider uppercase">
-                    <PushPinSimple className="mr-1 h-3 w-3" />
+                    <PushPinSimpleIcon className="mr-1 h-3 w-3" />
                     Pinned
                   </h3>
                   {pinnedChats.map((chat) => (
@@ -254,7 +254,7 @@ export function DrawerHistory({
                                   }}
                                   type="button"
                                 >
-                                  <PushPinSimple className="size-4" />
+                                  <PushPinSimpleSlashIcon className="size-4" />
                                 </Button>
                                 <Button
                                   size="icon"
@@ -407,7 +407,7 @@ export function DrawerHistory({
                                       }}
                                       type="button"
                                     >
-                                      <PushPinSimple className="size-4" />
+                                      <PushPinSimpleIcon className="size-4" />
                                     </Button>
                                     <Button
                                       size="icon"
