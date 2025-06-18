@@ -1,3 +1,5 @@
+"use client"
+
 import { Loader } from "@/components/prompt-kit/loader"
 import {
   Message,
@@ -23,7 +25,6 @@ import {
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"// Client component – required when using React hooks in the app router
-"use client"
 
 import { memo, useEffect, useRef, useState } from "react" // Import React to access memo
 import { SourcesList } from "./SourcesList"
@@ -96,76 +97,76 @@ function MessageAssistantInner({
   // Extract reasoning parts for streaming display
   const reasoningParts: ReasoningUIPart[] = combinedParts
     ? combinedParts.filter(
-        (part): part is ReasoningUIPart => part.type === "reasoning"
-      )
+      (part): part is ReasoningUIPart => part.type === "reasoning"
+    )
     : []
 
   // Extract sources from source parts
   const sourcesFromParts: Source[] = combinedParts
     ? combinedParts
-        .filter((part): part is SourceUIPart => part.type === "source")
-        .map((part) => part.source as Source)
+      .filter((part): part is SourceUIPart => part.type === "source")
+      .map((part) => part.source as Source)
     : []
 
   // Extract sources from tool-invocation results (handles duckDuckGo and exaSearch)
   const sourcesFromToolInvocations: Source[] = combinedParts
     ? combinedParts
-        .filter(
-          (part): part is ToolInvocationUIPart =>
-            part.type === "tool-invocation"
-        )
-        .flatMap((part) => {
-          const inv = part.toolInvocation as {
-            toolName?: string
-            toolCallId?: string
-            result?: unknown
-          }
-          // duckDuckGo: result is array
-          if (inv.toolName === "duckDuckGo" && Array.isArray(inv.result)) {
-            return (
-              inv.result as Array<{
+      .filter(
+        (part): part is ToolInvocationUIPart =>
+          part.type === "tool-invocation"
+      )
+      .flatMap((part) => {
+        const inv = part.toolInvocation as {
+          toolName?: string
+          toolCallId?: string
+          result?: unknown
+        }
+        // duckDuckGo: result is array
+        if (inv.toolName === "duckDuckGo" && Array.isArray(inv.result)) {
+          return (
+            inv.result as Array<{
+              id?: string
+              url?: string
+              title?: string
+            }>
+          )
+            .filter((item) => item && item.url && item.title)
+            .map((item, idx: number) => ({
+              id: item.id ?? (inv.toolCallId ? `${inv.toolCallId}-${idx}` : `tmp-${idx}`),
+              url: item.url ?? "",
+              title: item.title ?? "",
+              sourceType: "url",
+            }))
+        }
+        // exaSearch: result is object with results array
+        if (
+          inv.toolName === "exaSearch" &&
+          inv.result &&
+          typeof inv.result === "object" &&
+          inv.result !== null &&
+          "results" in inv.result &&
+          Array.isArray((inv.result as { results: unknown }).results)
+        ) {
+          const results = (
+            inv.result as {
+              results: Array<{
                 id?: string
                 url?: string
                 title?: string
               }>
-            )
-              .filter((item) => item && item.url && item.title)
-              .map((item, idx: number) => ({
-              id: item.id ?? (inv.toolCallId ? `${inv.toolCallId}-${idx}` : `tmp-${idx}`),
-              url: item.url ?? "",
-              title: item.title ?? "",
-                sourceType: "url",
-              }))
-          }
-          // exaSearch: result is object with results array
-          if (
-            inv.toolName === "exaSearch" &&
-            inv.result &&
-            typeof inv.result === "object" &&
-            inv.result !== null &&
-            "results" in inv.result &&
-            Array.isArray((inv.result as { results: unknown }).results)
-          ) {
-            const results = (
-              inv.result as {
-                results: Array<{
-                  id?: string
-                  url?: string
-                  title?: string
-                }>
-              }
-            ).results
-            return results
-              .filter((item) => item && item.url && item.title)
-              .map((item, idx: number) => ({
-                id: item.id ?? `${inv.toolCallId}-exa-${idx}`,
-                url: item.url!,
-                title: item.title!,
-                sourceType: "url",
-              }))
-          }
-          return []
-        })
+            }
+          ).results
+          return results
+            .filter((item) => item && item.url && item.title)
+            .map((item, idx: number) => ({
+              id: item.id ?? `${inv.toolCallId}-exa-${idx}`,
+              url: item.url!,
+              title: item.title!,
+              sourceType: "url",
+            }))
+        }
+        return []
+      })
     : []
 
   const sources = [...sourcesFromParts, ...sourcesFromToolInvocations]
@@ -173,10 +174,10 @@ function MessageAssistantInner({
   // Show 'thinking...' spinner if any tool-invocation is in progress
   const toolInvocationsInProgress = combinedParts
     ? combinedParts.filter(
-        (part): part is ToolInvocationUIPart =>
-          part.type === "tool-invocation" &&
-          part.toolInvocation.state !== "result"
-      )
+      (part): part is ToolInvocationUIPart =>
+        part.type === "tool-invocation" &&
+        part.toolInvocation.state !== "result"
+    )
     : []
   const isSearching = toolInvocationsInProgress.length > 0
 
@@ -259,7 +260,7 @@ function MessageAssistantInner({
                     height: 0,
                   }}
                   transition={{ duration: 0.2, ease: "easeInOut" }}
-                  // layout // Removed layout prop to prevent bouncing during streaming
+                // layout // Removed layout prop to prevent bouncing during streaming
                 >
                   {combinedReasoningMarkdown && (
                     <Markdown className="prose prose-sm dark:prose-invert leading-relaxed break-words">
