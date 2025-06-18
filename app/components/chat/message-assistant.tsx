@@ -49,7 +49,8 @@ type MessageAssistantProps = {
   attachments?: MessageType["experimental_attachments"]
   status?: "streaming" | "ready" | "submitted" | "error"
   reasoning_text?: string
-}
+  id: string
+} 
 
 const Markdown = dynamic(
   () => import("@/components/prompt-kit/markdown").then((mod) => mod.Markdown),
@@ -69,6 +70,7 @@ function MessageAssistantInner({
   attachments,
   status,
   reasoning_text,
+  id,
 }: MessageAssistantProps) {
   const [showReasoning, setShowReasoning] = useState(status === "streaming") // Collapsed by default, open if streaming
   const prevStatusRef = useRef(status) // Ref to track previous status
@@ -191,6 +193,7 @@ function MessageAssistantInner({
 
   return (
     <Message
+      id={id}
       className={cn(
         "group flex w-full max-w-3xl flex-1 items-start gap-4 px-6 pb-2",
         hasScrollAnchor && "min-h-scroll-anchor"

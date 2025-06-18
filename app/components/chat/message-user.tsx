@@ -81,6 +81,7 @@ function MessageUserInner({
 
   return (
     <MessageContainer
+      id={id}
       className={cn(
         "group flex w-full max-w-3xl flex-col items-end gap-2 px-6 pb-2",
         hasScrollAnchor && "min-h-scroll-anchor"
