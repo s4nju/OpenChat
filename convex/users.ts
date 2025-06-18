@@ -359,6 +359,30 @@ export const deleteAccount = mutation({
       await ctx.db.delete(u._id)
     }
 
+    // --- Delete auth-related records (accounts, sessions, verificationTokens) ---
+    // These tables are provided by `@convex-dev/auth` via `authTables` in schema.ts.
+    // They store OAuth linkage and session data that still reference the `users` document.
+    // If we remove the user without removing these, future logins with the same provider
+    // will fail because the auth library will try to update a non-existent user.
+
+    // Delete accounts that reference this user
+    const authAccounts = await ctx.db
+      .query("authAccounts")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect()
+    for (const acc of authAccounts) {
+      await ctx.db.delete(acc._id as Id<"authAccounts">)
+    }
+
+    // Delete sessions associated with this user
+    const authSessions = await ctx.db
+      .query("authSessions")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect()
+    for (const sess of authSessions) {
+      await ctx.db.delete(sess._id as Id<"authSessions">)
+    }
+
     // Finally delete user record
     await ctx.db.delete(userId)
     return null
