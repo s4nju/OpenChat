@@ -10,7 +10,7 @@ import LayoutApp from "../../components/layout/layout-app";
 export default async function ChatPage({
   params,
 }: {
-  params: Promise<{ chatId: string }> | { chatId: string };
+  params: Promise<{ chatId: string }>;
 }) {
   // Validate the chat on the server to avoid client-side flashes.
   const token = await convexAuthNextjsToken();
@@ -20,7 +20,7 @@ export default async function ChatPage({
   // return chats owned by an anonymous session.
 
   // `params` is asynchronous in Next.js 15.
-  const { chatId } = await params as { chatId: string };
+  const { chatId } = await params;
 
   const chat = await fetchQuery(
     api.chats.getChat,
