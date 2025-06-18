@@ -573,22 +573,13 @@ export default function Chat() {
     ]
   )
 
-  // Redirect if chat is not found or user is not authorized
+  // Silent fallback redirect if chat somehow becomes inaccessible after initial
+  // server validation (e.g., the chat is deleted in another tab).
   useEffect(() => {
-    if (
-      !isUserLoading &&
-      chatId &&
-      currentChat === null &&
-      messagesFromDB !== undefined &&
-      !isDeleting
-    ) {
-      toast({
-        title: "Chat not found or you don't have permission to view it.",
-        status: "error",
-      })
+    if (!isUserLoading && chatId && currentChat === null && !isDeleting) {
       router.replace("/")
     }
-  }, [chatId, currentChat, messagesFromDB, isUserLoading, router, isDeleting])
+  }, [chatId, currentChat, isUserLoading, router, isDeleting])
 
   // Use user's preferred model when starting a brand-new chat
   useEffect(() => {

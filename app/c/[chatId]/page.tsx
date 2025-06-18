@@ -1,10 +1,43 @@
-import Chat from "../../components/chat/chat"
-import LayoutApp from "../../components/layout/layout-app"
+import { redirect } from "next/navigation";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { fetchQuery } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 
-export default function ChatPage() {
+import Chat from "../../components/chat/chat";
+import LayoutApp from "../../components/layout/layout-app";
+
+export default async function ChatPage({
+  params,
+}: {
+  params: Promise<{ chatId: string }> | { chatId: string };
+}) {
+  // Validate the chat on the server to avoid client-side flashes.
+  const token = await convexAuthNextjsToken();
+
+  // If we fail to obtain a token (anonymous visitor with cookies disabled, etc.)
+  // we still attempt the query – Convex will treat it as anonymous and only
+  // return chats owned by an anonymous session.
+
+  // `params` is asynchronous in Next.js 15.
+  const { chatId } = await params as { chatId: string };
+
+  const chat = await fetchQuery(
+    api.chats.getChat,
+    { chatId: chatId as Id<"chats"> },
+    { token }
+  );
+
+  if (!chat) {
+    // Chat either does not exist or is not owned by the user.
+    redirect("/");
+  }
+
+  // Render the regular chat shell. The Chat component is a client component
+  // and will fetch its messages as usual.
   return (
     <LayoutApp>
       <Chat />
     </LayoutApp>
-  )
+  );
 }

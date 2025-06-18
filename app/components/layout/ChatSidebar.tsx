@@ -70,13 +70,32 @@ export default function ChatSidebar({
   }
   const handleConfirmDelete = async (id: Id<"chats">) => {
     setDeletingId(null)
-    setChatIsDeleting(true)
-    await deleteChat({ chatId: id })
-    if (params.chatId === id) {
-      router.push("/")
+    const isCurrentChat = params.chatId === id
+    if (isCurrentChat) {
+      // Signal to the active Chat component that we are deleting it so it can
+      // suppress the "Chat not found" toast during the brief race condition
+      // between the mutation completing and the route change finishing.
+      setChatIsDeleting(true)
     }
-    // Reset the deleting state after the mutation and any routing logic complete
-    setChatIsDeleting(false)
+
+    try {
+      await deleteChat({ chatId: id })
+
+      if (isCurrentChat) {
+        router.push("/")
+        // We intentionally do NOT reset `isDeleting` here. The
+        // ChatSessionProvider will automatically clear this flag when the route
+        // (and therefore the chatId) changes, ensuring the flag remains set
+        // long enough for the Chat component to unmount and preventing a false
+        // "Chat not found" error toast.
+      }
+    } catch (err) {
+      // Roll back deletion flag on error so UI interactions are not blocked.
+      if (isCurrentChat) {
+        setChatIsDeleting(false)
+      }
+      throw err
+    }
   }
 
   const handleTogglePin = async (chat: Doc<"chats">) => {
