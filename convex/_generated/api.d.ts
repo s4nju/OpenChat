@@ -13,13 +13,13 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as api_keys from "../api_keys.js";
 import type * as auth from "../auth.js";
 import type * as chats from "../chats.js";
 import type * as feedback from "../feedback.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
-import type * as apiKeys from "../api-keys.js";
 import type * as users from "../users.js";
 
 /**
@@ -31,15 +31,15 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  api_keys: typeof api_keys;
   auth: typeof auth;
   chats: typeof chats;
   feedback: typeof feedback;
   files: typeof files;
   http: typeof http;
   messages: typeof messages;
-  apiKeys: typeof apiKeys;
   users: typeof users;
-}>; 
+}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">

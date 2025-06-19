@@ -6,6 +6,7 @@ import {
   createDataStreamResponse,
   smoothStream,
   appendResponseMessages,
+  JSONValue,
 } from "ai";
 import { exaSearchTool } from "@/app/api/tools";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
@@ -131,24 +132,45 @@ export async function POST(req: Request) {
         // --- Stream AI Response ---
         const tools = enableSearch ? { exaSearch: exaSearchTool } : undefined;
 
-        const userKeys = await fetchQuery(api.apiKeys.getApiKeys, {}, { token });
-        const keyEntry = userKeys.find((k) => k.provider === selectedModel?.provider);
+        // Fetch user API keys with error handling
+        let userKeys: Array<{ provider: string; mode?: string }> = [];
+        let keyEntry: { provider: string; mode?: string } | undefined = undefined;
         let userApiKey: string | null = null;
-        if (keyEntry) {
-          userApiKey = await fetchQuery(
-            api.apiKeys.getDecryptedKey,
-            { provider: selectedModel!.provider },
-            { token }
-          );
+
+        try {
+          userKeys = await fetchQuery(api.api_keys.getApiKeys, {}, { token });
+          keyEntry = userKeys.find((k) => k.provider === selectedModel?.provider);
+
+          if (keyEntry) {
+            try {
+              userApiKey = await fetchQuery(
+                api.api_keys.getDecryptedKey,
+                { provider: selectedModel!.provider },
+                { token }
+              );
+            } catch (decryptionError) {
+              console.error(`Failed to decrypt API key for provider ${selectedModel?.provider}:`, decryptionError);
+              // Continue with null userApiKey - will fall back to system defaults
+              userApiKey = null;
+            }
+          }
+        } catch (keysError) {
+          console.error('Failed to fetch user API keys:', keysError);
+          // Continue with empty array and null userApiKey - will fall back to system defaults
+          userKeys = [];
+          keyEntry = undefined;
+          userApiKey = null;
         }
 
-        const makeOptions = (useUser: boolean): Record<string, unknown> | undefined => {
+        const makeOptions = (useUser: boolean) => {
           if (selectedModel?.provider === "gemini") {
-            const google: Record<string, unknown> = {
+            const options = {
               thinkingConfig: { includeThoughts: true },
             };
-            if (useUser && userApiKey) google.apiKey = userApiKey;
-            return { google };
+            if (useUser && userApiKey) {
+              return { google: { ...options, apiKey: userApiKey } };
+            }
+            return { google: options };
           }
           if (selectedModel?.provider === "openai" && useUser && userApiKey) {
             return { openai: { apiKey: userApiKey } };
@@ -166,7 +188,7 @@ export async function POST(req: Request) {
             messages,
             tools,
             maxSteps: 5,
-            providerOptions: makeOptions(useUser),
+            providerOptions: makeOptions(useUser) as Record<string, Record<string, JSONValue>> | undefined,
             experimental_transform: smoothStream({
               delayInMs: 20,
               chunking: "word",
@@ -175,85 +197,100 @@ export async function POST(req: Request) {
               console.log("Error in streamText:", error);
             },
 
-          async onFinish({ response }) {
-            const userMessage = messages[messages.length - 1];
-            try {
-              // console.log("response", response.messages)
-              for (const msg of response.messages) {
-                // console.log("msg", msg)
-                if (
-                  msg.role === "assistant" &&
-                  Array.isArray(msg.content) &&
-                  msg.content.every(
-                    (item) => item.type === "reasoning" || item.type === "text"
-                  )
-                ) {
-                  const textContent =
-                    typeof msg.content === "string"
-                      ? msg.content
-                      : Array.isArray(msg.content)
-                      ? msg.content
-                          .filter((part) => part.type === "text")
-                          .map((part) => part.text)
-                          .join("")
-                      : "";
-                  const reasoningText = msg.content.find((part) => part.type === "reasoning")?.text || undefined;
-                  // console.log("textContent", textContent)
-                  // console.log("reasoningText", reasoningText)
+            async onFinish({ response }) {
+              const userMessage = messages[messages.length - 1];
+              try {
+                // console.log("response", response.messages)
+                for (const msg of response.messages) {
+                  // console.log("msg", msg)
+                  if (
+                    msg.role === "assistant" &&
+                    Array.isArray(msg.content) &&
+                    msg.content.every(
+                      (item) => item.type === "reasoning" || item.type === "text"
+                    )
+                  ) {
+                    const textContent =
+                      typeof msg.content === "string"
+                        ? msg.content
+                        : Array.isArray(msg.content)
+                          ? msg.content
+                            .filter((part) => part.type === "text")
+                            .map((part) => part.text)
+                            .join("")
+                          : "";
+                    const reasoningText = msg.content.find((part) => part.type === "reasoning")?.text || undefined;
+                    // console.log("textContent", textContent)
+                    // console.log("reasoningText", reasoningText)
 
-                  const [, assistantMessage] = appendResponseMessages({
-                    messages: [userMessage],
-                    responseMessages: response.messages,
-                  });
+                    const [, assistantMessage] = appendResponseMessages({
+                      messages: [userMessage],
+                      responseMessages: response.messages,
+                    });
 
-                  // Ensure userMsgId is available before proceeding
-                  if (!userMsgId) {
-                    throw new Error("Missing parent userMsgId when saving assistant message.");
+                    // Ensure userMsgId is available before proceeding
+                    if (!userMsgId) {
+                      throw new Error("Missing parent userMsgId when saving assistant message.");
+                    }
+
+                    const { messageId } = await fetchMutation(
+                      api.messages.saveAssistantMessage,
+                      {
+                        chatId: chatId,
+                        role: "assistant",
+                        content: textContent,
+                        parentMessageId: userMsgId, // userMsgId must be set by this point
+                        reasoningText: reasoningText,
+                        model: model,
+                        parts: assistantMessage.parts,
+                      },
+                      { token }
+                    );
+                    assistantMsgId = messageId;
+
+                    // Now, increment the usage
+                    await fetchMutation(
+                      api.users.incrementMessageCount,
+                      {},
+                      { token }
+                    );
                   }
-
-                  const { messageId } = await fetchMutation(
-                    api.messages.saveAssistantMessage,
-                    {
-                      chatId: chatId,
-                      role: "assistant",
-                      content: textContent,
-                      parentMessageId: userMsgId, // userMsgId must be set by this point
-                      reasoningText: reasoningText,
-                      model: model,
-                      parts: assistantMessage.parts,
-                    },
-                    { token }
-                  );
-                  assistantMsgId = messageId;
-
-                  // Now, increment the usage
-                  await fetchMutation(
-                    api.users.incrementMessageCount,
-                    {},
-                    { token }
-                  );
                 }
+                // Send both IDs to the frontend
+                dataStream.writeData({ userMsgId, assistantMsgId });
+              } catch (err) {
+                console.error(
+                  "Error in onFinish while saving assistant messages:",
+                  err
+                );
               }
-              // Send both IDs to the frontend
-              dataStream.writeData({ userMsgId, assistantMsgId });
-            } catch (err) {
-              console.error(
-                "Error in onFinish while saving assistant messages:",
-                err
-              );
-            }
-          },
-        });
+            },
+          });
 
         let result;
-        try {
-          result = runStream(keyEntry?.mode === "priority");
-        } catch (err) {
-          if (keyEntry?.mode === "fallback" && userApiKey) {
-            result = runStream(true);
-          } else {
-            throw err;
+
+        // Determine the execution strategy based on API key mode
+        const mode = keyEntry?.mode || "fallback"; // Default to fallback if no mode set
+
+        if (mode === "priority" && userApiKey) {
+          // Priority mode: Try user API key first, fall back to system on failure
+          try {
+            result = await runStream(true); // Use user API key
+          } catch (err) {
+            console.log("Priority mode failed with user API key, falling back to system:", err);
+            result = await runStream(false); // Fall back to system API key
           }
+        } else if (mode === "fallback" && userApiKey) {
+          // Fallback mode: Try system API key first, fall back to user on failure
+          try {
+            result = await runStream(false); // Use system API key
+          } catch (err) {
+            console.log("Fallback mode failed with system API key, trying user:", err);
+            result = await runStream(true); // Fall back to user API key
+          }
+        } else {
+          // No user API key or unrecognized mode: use system API key only
+          result = await runStream(false);
         }
 
         result.mergeIntoDataStream(dataStream, { sendReasoning: true });

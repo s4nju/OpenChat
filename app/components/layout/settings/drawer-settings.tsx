@@ -32,8 +32,8 @@ const NAV_ITEMS = [
   { key: "account", name: "Account" },
   { key: "customization", name: "Customization" },
   { key: "history", name: "History & Sync" },
-  { key: "attachments", name: "Attachments" },
   { key: "api-keys", name: "API Keys" },
+  { key: "attachments", name: "Attachments" },
 ] as const
 
 export function DrawerSettings({ trigger, isOpen, setIsOpen }: DrawerSettingsProps) {

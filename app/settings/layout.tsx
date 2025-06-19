@@ -56,20 +56,20 @@ export default function SettingsLayout({
       }}>
         <DrawerContent>
           <div className="flex h-dvh max-h-[80vh] flex-col">
-          <DrawerHeader className="border-border border-b px-6 py-4">
-            <DrawerTitle>Settings</DrawerTitle>
-            <DrawerClose asChild>
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <SettingsNav />
+            <DrawerHeader className="border-border border-b px-6 py-4">
+              <DrawerTitle>Settings</DrawerTitle>
+              <DrawerClose asChild>
+                <Button variant="ghost" size="icon">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </DrawerHeader>
+            <SettingsNav />
             <div className="flex-1 overflow-auto">
-            <div className="px-6 py-4">
-              {children}
+              <div className="px-6 py-4">
+                {children}
+              </div>
             </div>
-          </div>
           </div>
         </DrawerContent>
       </Drawer>
