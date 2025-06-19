@@ -35,12 +35,12 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
 function hexToArrayBuffer(hex: string): ArrayBuffer {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
   }
   return bytes.buffer;
 }
 
-async function getKey(): Promise<CryptoKey> {
+async function getKey(userId: string): Promise<CryptoKey> {
   if (!API_KEY_SECRET) {
     throw new Error("API_KEY_SECRET not configured");
   }
@@ -53,10 +53,13 @@ async function getKey(): Promise<CryptoKey> {
     ['deriveKey']
   );
 
+  // Create a unique salt per user by combining a base salt with the userId
+  const userSalt = `convex-api-keys-${userId}`;
+
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: stringToArrayBuffer('convex-api-keys'), // Fixed salt for consistency
+      salt: stringToArrayBuffer(userSalt), // User-specific salt for security
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -67,12 +70,12 @@ async function getKey(): Promise<CryptoKey> {
   );
 }
 
-async function encrypt(text: string): Promise<string> {
+async function encrypt(text: string, userId: string): Promise<string> {
   if (!API_KEY_SECRET) {
     throw new Error("Cannot encrypt API key: API_KEY_SECRET not configured");
   }
 
-  const key = await getKey();
+  const key = await getKey(userId);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = stringToArrayBuffer(text);
 
@@ -85,13 +88,13 @@ async function encrypt(text: string): Promise<string> {
   return `${arrayBufferToHex(iv.buffer)}:${arrayBufferToHex(encrypted)}`;
 }
 
-async function decrypt(payload: string): Promise<string> {
+async function decrypt(payload: string, userId: string): Promise<string> {
   if (!API_KEY_SECRET) {
     throw new Error("Cannot decrypt API key: API_KEY_SECRET not configured");
   }
 
   const [ivHex, dataHex] = payload.split(':');
-  const key = await getKey();
+  const key = await getKey(userId);
   const iv = hexToArrayBuffer(ivHex);
   const data = hexToArrayBuffer(dataHex);
 
@@ -138,7 +141,7 @@ export const saveApiKey = mutation({
   handler: async (ctx, { provider, key, mode }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-    const encrypted = await encrypt(key);
+    const encrypted = await encrypt(key, userId);
     const existing = await ctx.db
       .query("user_api_keys")
       .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
@@ -199,10 +202,10 @@ export const getDecryptedKey = query({
       .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
       .unique();
     if (!existing) return null;
-    return await decryptKey(existing.encryptedKey);
+    return await decryptKey(existing.encryptedKey, userId);
   },
 });
 
-export async function decryptKey(encrypted: string) {
-  return await decrypt(encrypted);
+export async function decryptKey(encrypted: string, userId: string) {
+  return await decrypt(encrypted, userId);
 }

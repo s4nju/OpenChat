@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import { api } from "@/convex/_generated/api"
 import { useMutation, useQuery } from "convex/react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 // API key validation patterns
 const API_KEY_PATTERNS = {
@@ -85,13 +85,30 @@ export default function ApiKeysPage() {
   const saveApiKey = useMutation(api.api_keys.saveApiKey)
   const deleteApiKey = useMutation(api.api_keys.deleteApiKey)
   const updateMode = useMutation(api.api_keys.updateApiKeyMode)
-  const [values, setValues] = useState<Record<string, string>>({})
+
+  // Use refs to store API key inputs securely - not exposed in React DevTools
+  // This prevents sensitive API keys from being visible in component state
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [isValidating, setIsValidating] = useState<Record<string, boolean>>({})
 
+  // Clear all input values on component unmount for security
+  useEffect(() => {
+    const currentInputs = inputRefs.current
+    return () => {
+      Object.values(currentInputs).forEach(input => {
+        if (input) {
+          input.value = ""
+        }
+      })
+    }
+  }, [])
+
   const handleSave = async (provider: string) => {
-    const key = values[provider]
-    if (!key) return
+    const inputElement = inputRefs.current[provider]
+    const key = inputElement?.value || ""
+
+    if (!key.trim()) return
 
     // Validate the API key
     const validation = validateApiKey(provider, key)
@@ -107,7 +124,11 @@ export default function ApiKeysPage() {
     try {
       await saveApiKey({ provider, key })
       toast({ title: "API key saved", status: "success" })
-      setValues((v) => ({ ...v, [provider]: "" }))
+
+      // Immediately clear the input value for security
+      if (inputElement) {
+        inputElement.value = ""
+      }
     } catch (e) {
       console.error(e)
       toast({ title: "Failed to save key", status: "error" })
@@ -116,8 +137,7 @@ export default function ApiKeysPage() {
     }
   }
 
-  const handleInputChange = (provider: string, value: string) => {
-    setValues(prev => ({ ...prev, [provider]: value }))
+  const handleInputChange = (provider: string) => {
     // Clear validation error when user starts typing
     if (validationErrors[provider]) {
       setValidationErrors(prev => ({ ...prev, [provider]: "" }))
@@ -264,28 +284,14 @@ export default function ApiKeysPage() {
                 <div className="space-y-2">
                   <div className="relative">
                     <Input
+                      ref={(el) => {
+                        inputRefs.current[p.id] = el
+                      }}
                       type="password"
                       placeholder={p.placeholder}
-                      value={values[p.id] ?? ""}
-                      onChange={(e) => handleInputChange(p.id, e.target.value)}
+                      onChange={() => handleInputChange(p.id)}
                       className={validationErrors[p.id] ? "border-red-500" : ""}
                     />
-                    {values[p.id] && !validationErrors[p.id] && validateApiKey(p.id, values[p.id]).isValid && (
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="size-4 text-green-500"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
                   </div>
                   {validationErrors[p.id] && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
@@ -319,7 +325,7 @@ export default function ApiKeysPage() {
                 <div className="flex w-full justify-end gap-2">
                   <Button
                     onClick={() => handleSave(p.id)}
-                    disabled={isValidating[p.id] || !values[p.id]?.trim()}
+                    disabled={isValidating[p.id]}
                   >
                     {isValidating[p.id] ? "Saving..." : "Save"}
                   </Button>
