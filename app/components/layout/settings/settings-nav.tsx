@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { name: "Customization", href: "/settings/customization" },
   { name: "History & Sync", href: "/settings/history" },
   { name: "Attachments", href: "/settings/attachments" },
+  { name: "API Keys", href: "/settings/api-keys" },
 ] as const;
 
 function SettingsNavComponent() {

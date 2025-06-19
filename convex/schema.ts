@@ -111,4 +111,14 @@ export default defineSchema({
     periodEnd: v.number(),
     createdAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
+  user_api_keys: defineTable({
+    userId: v.id("users"),
+    provider: v.string(),
+    encryptedKey: v.string(),
+    mode: v.optional(
+      v.union(v.literal("priority"), v.literal("fallback"))
+    ),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  }).index("by_user_provider", ["userId", "provider"]),
 })

@@ -155,6 +155,9 @@ GROQ_API_KEY=your-groq-key
 MISTRAL_API_KEY=your-mistral-key
 TOGETHER_API_KEY=your-together-key
 
+# Secret used to encrypt user-provided API keys
+API_KEY_SECRET=change-me
+
 # Authentication (Convex handles this automatically)
 CONVEX_AUTH_ADAPTER=convex
 
@@ -162,6 +165,9 @@ CONVEX_AUTH_ADAPTER=convex
 EXA_API_KEY=your-exa-key  # For web search functionality (recommended)
 TAVILY_API_KEY=your-tavily-key  # Alternative web search provider
 ```
+
+`API_KEY_SECRET` is used server-side to encrypt any API keys users save in the
+settings page. Keep it long and random.
 
 ### 4. Set up Authentication
 

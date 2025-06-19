@@ -26,12 +26,14 @@ const AccountPage = dynamic(() => import("@/app/settings/page").then(m => m.defa
 const CustomizationPage = dynamic(() => import("@/app/settings/customization/page").then(m => m.default), { ssr: false })
 const HistorySettingsPage = dynamic(() => import("@/app/settings/history/page").then(m => m.default), { ssr: false })
 const AttachmentsPage = dynamic(() => import("@/app/settings/attachments/page").then(m => m.default), { ssr: false })
+const ApiKeysPage = dynamic(() => import("@/app/settings/api-keys/page").then(m => m.default), { ssr: false })
 
 const NAV_ITEMS = [
   { key: "account", name: "Account" },
   { key: "customization", name: "Customization" },
   { key: "history", name: "History & Sync" },
   { key: "attachments", name: "Attachments" },
+  { key: "api-keys", name: "API Keys" },
 ] as const
 
 export function DrawerSettings({ trigger, isOpen, setIsOpen }: DrawerSettingsProps) {
@@ -45,6 +47,8 @@ export function DrawerSettings({ trigger, isOpen, setIsOpen }: DrawerSettingsPro
         return <HistorySettingsPage />
       case "attachments":
         return <AttachmentsPage />
+      case "api-keys":
+        return <ApiKeysPage />
       default:
         return <AccountPage />
     }

@@ -130,29 +130,50 @@ export async function POST(req: Request) {
 
         // --- Stream AI Response ---
         const tools = enableSearch ? { exaSearch: exaSearchTool } : undefined;
-        const result = streamText({
-          model: selectedModel!.api_sdk,
-          system: systemPrompt || "You are a helpful assistant.",
-          messages,
-          tools,
-          maxSteps: 5,
-          providerOptions:
-            selectedModel?.provider === "gemini"
-              ? {
-                  google: {
-                    thinkingConfig: {
-                      includeThoughts: true,
-                    },
-                  },
-                }
-              : undefined,
-          experimental_transform: smoothStream({
-            delayInMs: 20,
-            chunking: "word",
-          }),
-          onError: (error) => {
-            console.log("Error in streamText:", error);
-          },
+
+        const userKeys = await fetchQuery(api.apiKeys.getApiKeys, {}, { token });
+        const keyEntry = userKeys.find((k) => k.provider === selectedModel?.provider);
+        let userApiKey: string | null = null;
+        if (keyEntry) {
+          userApiKey = await fetchQuery(
+            api.apiKeys.getDecryptedKey,
+            { provider: selectedModel!.provider },
+            { token }
+          );
+        }
+
+        const makeOptions = (useUser: boolean): Record<string, unknown> | undefined => {
+          if (selectedModel?.provider === "gemini") {
+            const google: Record<string, unknown> = {
+              thinkingConfig: { includeThoughts: true },
+            };
+            if (useUser && userApiKey) google.apiKey = userApiKey;
+            return { google };
+          }
+          if (selectedModel?.provider === "openai" && useUser && userApiKey) {
+            return { openai: { apiKey: userApiKey } };
+          }
+          if (selectedModel?.provider === "claude" && useUser && userApiKey) {
+            return { anthropic: { apiKey: userApiKey } };
+          }
+          return undefined;
+        };
+
+        const runStream = (useUser: boolean) =>
+          streamText({
+            model: selectedModel!.api_sdk,
+            system: systemPrompt || "You are a helpful assistant.",
+            messages,
+            tools,
+            maxSteps: 5,
+            providerOptions: makeOptions(useUser),
+            experimental_transform: smoothStream({
+              delayInMs: 20,
+              chunking: "word",
+            }),
+            onError: (error) => {
+              console.log("Error in streamText:", error);
+            },
 
           async onFinish({ response }) {
             const userMessage = messages[messages.length - 1];
@@ -223,6 +244,18 @@ export async function POST(req: Request) {
             }
           },
         });
+
+        let result;
+        try {
+          result = runStream(keyEntry?.mode === "priority");
+        } catch (err) {
+          if (keyEntry?.mode === "fallback" && userApiKey) {
+            result = runStream(true);
+          } else {
+            throw err;
+          }
+        }
+
         result.mergeIntoDataStream(dataStream, { sendReasoning: true });
       },
       onError: (error) => {
