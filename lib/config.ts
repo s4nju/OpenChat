@@ -8,6 +8,7 @@ import type { Doc } from "@/convex/_generated/dataModel"
 import { google } from "@ai-sdk/google"
 import { groq } from "@ai-sdk/groq"
 import { mistral } from "@ai-sdk/mistral"
+import { anthropic } from "@ai-sdk/anthropic"
 // import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
@@ -66,7 +67,7 @@ export type Model = {
   name: string
   provider: string
   available?: boolean
-  api_sdk?: any
+  api_sdk?: any // eslint-disable-line @typescript-eslint/no-explicit-any
   features?: {
     id: string
     enabled: boolean
@@ -75,52 +76,6 @@ export type Model = {
 }
 
 export const MODELS_NOT_AVAILABLE = [
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "claude",
-    available: false,
-    api_sdk: false,
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-  },
-  {
-    id: "claude-3.7-sonnet",
-    name: "Claude 3.7 Sonnet",
-    provider: "claude",
-    available: false,
-    api_sdk: false,
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-  },
   {
     id: "grok-3",
     name: "Grok 3",
@@ -169,6 +124,138 @@ export const MODELS_NOT_AVAILABLE = [
 ] as Model[]
 
 export const MODELS_RAW = [
+  {
+    id: "claude-3-5-sonnet-20241022",
+    name: "Claude 3.5 Sonnet",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+  },
+  {
+    id: "claude-3-7-sonnet-20240307",
+    name: "Claude 3.7 Sonnet",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-sonnet-20240229"),
+  },
+  {
+    id: "claude-3-7-sonnet-reasoning",
+    name: "Claude 3.7 Sonnet (Reasoning)",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-sonnet-20240229"),
+  },
+  {
+    id: "claude-4-opus",
+    name: "Claude 4 Opus",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-opus-20240229"),
+  },
+  {
+    id: "claude-4-sonnet",
+    name: "Claude 4 Sonnet",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+  },
+  {
+    id: "claude-4-sonnet-reasoning",
+    name: "Claude 4 Sonnet (Reasoning)",
+    provider: "claude",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+  },
   {
     id: "gpt-4o-mini",
     name: "GPT-4o Mini",
@@ -408,12 +495,6 @@ const PROVIDERS_NOT_AVAILABLE = [
     available: false,
   },
   {
-    id: "claude",
-    name: "Claude",
-    available: false,
-    icon: Claude,
-  },
-  {
     id: "grok",
     name: "Grok",
     available: false,
@@ -431,6 +512,11 @@ export const PROVIDERS = [
     id: "openai",
     name: "OpenAI",
     icon: OpenAI,
+  },
+  {
+    id: "claude",
+    name: "Claude",
+    icon: Claude,
   },
   {
     id: "mistral",
@@ -627,3 +713,28 @@ export function buildSystemPrompt(
 }
 
 export const MESSAGE_MAX_LENGTH = 4000
+
+// Function to get available models based on API keys
+export function getAvailableModels(apiKeys: { [key: string]: string } = {}) {
+  const allModels = MODELS.map((model) => {
+    // Only check for Claude models - all others are always available
+    if (model.provider === 'claude') {
+      const hasAnthropicKey = apiKeys.anthropic?.trim() !== '' && apiKeys.anthropic !== undefined
+      return {
+        ...model,
+        available: hasAnthropicKey
+      }
+    }
+
+    // All other models are always available
+    return {
+      ...model,
+      available: true
+    }
+  })
+
+  return [
+    ...allModels,
+    ...MODELS_NOT_AVAILABLE
+  ] as Model[]
+}

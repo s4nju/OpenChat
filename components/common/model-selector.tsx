@@ -14,7 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { getAvailableModels, PROVIDERS_OPTIONS } from "@/lib/config"
+import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { cn } from "@/lib/utils"
 import { CaretDown, Eye, FilePdf, Brain, Globe } from "@phosphor-icons/react" // Swapped MagnifyingGlass for Globe for web search feature
 
@@ -29,9 +30,21 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
+  const { apiKeys } = useApiKeys()
+
+  // Transform API keys array to object format expected by getAvailableModels
+  const apiKeysObject = React.useMemo(() => {
+    return apiKeys.reduce((acc, key) => {
+      acc[key.provider] = 'available' // We just need to know if the key exists
+      return acc
+    }, {} as { [key: string]: string })
+  }, [apiKeys])
+
+  const availableModels = React.useMemo(() => getAvailableModels(apiKeysObject), [apiKeysObject])
+
   const model = React.useMemo(
-    () => MODELS_OPTIONS.find((model) => model.id === selectedModelId),
-    [selectedModelId]
+    () => availableModels.find((model) => model.id === selectedModelId),
+    [selectedModelId, availableModels]
   )
   const provider = React.useMemo(
     () => PROVIDERS_OPTIONS.find((provider) => provider.id === model?.provider),
@@ -39,7 +52,7 @@ export function ModelSelector({
   )
 
   // Function to render a single model option
-  const renderModelOption = (modelOption: typeof MODELS_OPTIONS[number]) => {
+  const renderModelOption = (modelOption: (typeof availableModels)[number]) => {
     const providerOption = PROVIDERS_OPTIONS.find(
       (p) => p.id === modelOption.provider
     )
@@ -75,7 +88,7 @@ export function ModelSelector({
         key={modelOption.id}
         className={cn(
           "flex items-center justify-between px-3 py-2",
-          !modelOption.available && "cursor-not-allowed opacity-50",
+          !modelOption.available && "cursor-not-allowed opacity-60",
           selectedModelId === modelOption.id && "bg-accent"
         )}
         disabled={!modelOption.available}
@@ -105,8 +118,8 @@ export function ModelSelector({
           {hasPdfProcessing && (
             <Tooltip>
               <TooltipTrigger asChild>
-                 <div className={cn(iconWrapperBaseClasses, pdfColorClasses)}>
-                   <div className={iconOverlayClasses}></div>
+                <div className={cn(iconWrapperBaseClasses, pdfColorClasses)}>
+                  <div className={iconOverlayClasses}></div>
                   <FilePdf className={cn(iconSizeClasses, "relative")} />
                 </div>
               </TooltipTrigger>
@@ -119,7 +132,7 @@ export function ModelSelector({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={cn(iconWrapperBaseClasses, reasoningColorClasses)}>
-                   <div className={iconOverlayClasses}></div>
+                  <div className={iconOverlayClasses}></div>
                   <Brain className={cn(iconSizeClasses, "relative")} />
                 </div>
               </TooltipTrigger>
@@ -154,10 +167,8 @@ export function ModelSelector({
             variant="outline"
             className={cn(
               "dark:bg-secondary justify-between",
-              !model?.available && "cursor-not-allowed opacity-50",
               className
             )}
-            disabled={!model?.available}
           >
             <div className="flex items-center gap-2">
               {provider?.icon && <provider.icon className="size-5" />}
@@ -171,10 +182,28 @@ export function ModelSelector({
           align="start"
           sideOffset={4}
         >
-          <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
-            Available Models
-          </div>
-          {MODELS_OPTIONS.map(renderModelOption)}
+          {/* Available Models Section */}
+          {availableModels.filter(model => model.available).length > 0 && (
+            <>
+              <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
+                Available Models
+              </div>
+              {availableModels.filter(model => model.available).map(renderModelOption)}
+            </>
+          )}
+
+          {/* API Key Required Section */}
+          {availableModels.filter(model => !model.available).length > 0 && (
+            <>
+              {availableModels.filter(model => model.available).length > 0 && (
+                <div className="mx-2 my-1 border-t border-border" />
+              )}
+              <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
+                API Key Required
+              </div>
+              {availableModels.filter(model => !model.available).map(renderModelOption)}
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>

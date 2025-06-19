@@ -10,7 +10,7 @@ import { useState } from "react"
 // API key validation patterns
 const API_KEY_PATTERNS = {
   openai: /^sk-[a-zA-Z0-9]{20,}$/,
-  anthropic: /^sk-ant-[a-zA-Z0-9]{95,}$/,
+  anthropic: /^sk-ant-[a-zA-Z0-9_-]{8,}$/,
   gemini: /^AIza[a-zA-Z0-9_-]{35,}$/,
 } as const
 
@@ -30,7 +30,7 @@ function validateApiKey(provider: string, key: string): { isValid: boolean; erro
       case 'openai':
         return { isValid: false, error: "OpenAI API keys should start with 'sk-' followed by at least 20 characters" }
       case 'anthropic':
-        return { isValid: false, error: "Anthropic API keys should start with 'sk-ant-' followed by 95+ characters" }
+        return { isValid: false, error: "Anthropic API keys should start with 'sk-ant-' followed by at least 8 characters (letters, numbers, hyphens, underscores)" }
       case 'gemini':
         return { isValid: false, error: "Google API keys should start with 'AIza' followed by 35+ characters" }
       default:
