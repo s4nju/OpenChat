@@ -147,7 +147,7 @@ export const MODELS_RAW = [
     api_sdk: anthropic("claude-3-5-sonnet-20241022"),
   },
   {
-    id: "claude-3-7-sonnet-20240307",
+    id: "claude-3-7-sonnet-20250219",
     name: "Claude 3.7 Sonnet",
     provider: "claude",
     features: [
@@ -166,7 +166,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: anthropic("claude-3-sonnet-20240229"),
+    api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
   {
     id: "claude-3-7-sonnet-reasoning",
@@ -188,7 +188,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: anthropic("claude-3-sonnet-20240229"),
+    api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
   {
     id: "claude-4-opus",
@@ -210,7 +210,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: anthropic("claude-3-opus-20240229"),
+    api_sdk: anthropic("claude-opus-4-20250514"),
   },
   {
     id: "claude-4-sonnet",
@@ -232,7 +232,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+    api_sdk: anthropic("claude-sonnet-4-20250514"),
   },
   {
     id: "claude-4-sonnet-reasoning",
@@ -254,7 +254,7 @@ export const MODELS_RAW = [
         label: "Supports reasoning capabilities",
       },
     ],
-    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+    api_sdk: anthropic("claude-sonnet-4-20250514"),
   },
   {
     id: "gpt-4o-mini",

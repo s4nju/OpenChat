@@ -33,6 +33,24 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
 
 // Convert hex string to ArrayBuffer
 function hexToArrayBuffer(hex: string): ArrayBuffer {
+  // Input validation
+  if (typeof hex !== 'string') {
+    throw new Error('Input must be a string');
+  }
+
+  if (hex.length === 0) {
+    throw new Error('Input string cannot be empty');
+  }
+
+  if (hex.length % 2 !== 0) {
+    throw new Error('Hex string must have an even length');
+  }
+
+  // Check if string contains only valid hexadecimal characters
+  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+    throw new Error('Input string contains invalid hexadecimal characters');
+  }
+
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
@@ -53,8 +71,9 @@ async function getKey(userId: string): Promise<CryptoKey> {
     ['deriveKey']
   );
 
-  // Create a unique salt per user by combining a base salt with the userId
-  const userSalt = `convex-api-keys-${userId}`;
+  // Create a unique salt per user using a hash for additional security
+  const userIdHash = await crypto.subtle.digest('SHA-256', stringToArrayBuffer(userId));
+  const userSalt = `convex-api-keys-${arrayBufferToHex(userIdHash)}`;
 
   return crypto.subtle.deriveKey(
     {
@@ -75,22 +94,41 @@ async function encrypt(text: string, userId: string): Promise<string> {
     throw new Error("Cannot encrypt API key: API_KEY_SECRET not configured");
   }
 
-  const key = await getKey(userId);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = stringToArrayBuffer(text);
+  try {
+    const key = await getKey(userId);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const data = stringToArrayBuffer(text);
 
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    data
-  );
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      data
+    );
 
-  return `${arrayBufferToHex(iv.buffer)}:${arrayBufferToHex(encrypted)}`;
+    return `${arrayBufferToHex(iv.buffer)}:${arrayBufferToHex(encrypted)}`;
+  } catch {
+    // Prevent sensitive information leakage by throwing a generic error
+    throw new Error("Failed to encrypt API key");
+  }
 }
 
 async function decrypt(payload: string, userId: string): Promise<string> {
   if (!API_KEY_SECRET) {
     throw new Error("Cannot decrypt API key: API_KEY_SECRET not configured");
+  }
+
+  // Validate payload format before splitting
+  if (typeof payload !== 'string') {
+    throw new Error('Payload must be a string');
+  }
+
+  if (payload.length === 0) {
+    throw new Error('Payload cannot be empty');
+  }
+
+  const colonCount = (payload.match(/:/g) || []).length;
+  if (colonCount !== 1) {
+    throw new Error('Invalid payload format: must contain exactly one colon separator between IV and data parts');
   }
 
   const [ivHex, dataHex] = payload.split(':');
