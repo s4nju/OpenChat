@@ -152,6 +152,7 @@ export const getApiKeys = query({
       _id: v.id("user_api_keys"),
       provider: v.string(),
       mode: v.optional(v.union(v.literal("priority"), v.literal("fallback"))),
+      messageCount: v.optional(v.number()),
       createdAt: v.optional(v.number()),
       updatedAt: v.optional(v.number()),
     })
@@ -163,10 +164,11 @@ export const getApiKeys = query({
       .query("user_api_keys")
       .withIndex("by_user_provider", (q) => q.eq("userId", userId))
       .collect();
-    return keys.map(({ _id, provider, mode, createdAt, updatedAt }) => ({
+    return keys.map(({ _id, provider, mode, messageCount, createdAt, updatedAt }) => ({
       _id,
       provider,
       mode,
+      messageCount,
       createdAt,
       updatedAt,
     }));
@@ -190,7 +192,7 @@ export const saveApiKey = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, { encryptedKey: encrypted, mode: finalMode, updatedAt: now });
     } else {
-      await ctx.db.insert("user_api_keys", { userId, provider, encryptedKey: encrypted, mode: finalMode, createdAt: now, updatedAt: now });
+      await ctx.db.insert("user_api_keys", { userId, provider, encryptedKey: encrypted, mode: finalMode, messageCount: 0, createdAt: now, updatedAt: now });
     }
     return null;
   },
@@ -247,3 +249,21 @@ export const getDecryptedKey = query({
 export async function decryptKey(encrypted: string, userId: string) {
   return await decrypt(encrypted, userId);
 }
+
+export const incrementUserApiKeyUsage = mutation({
+  args: { provider: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { provider }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const existing = await ctx.db
+      .query("user_api_keys")
+      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .unique();
+    if (existing) {
+      const currentCount = existing.messageCount || 0;
+      await ctx.db.patch(existing._id, { messageCount: currentCount + 1 });
+    }
+    return null;
+  },
+});

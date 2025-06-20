@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getAvailableModels, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { cn } from "@/lib/utils"
 import { CaretDown, Eye, FilePdf, Brain, Globe } from "@phosphor-icons/react" // Swapped MagnifyingGlass for Globe for web search feature
@@ -40,7 +40,17 @@ export function ModelSelector({
     }, {} as { [key: string]: string })
   }, [apiKeys])
 
-  const availableModels = React.useMemo(() => getAvailableModels(apiKeysObject), [apiKeysObject])
+  const availableModels = React.useMemo(() => {
+    return MODELS_OPTIONS.map(model => {
+      const userHasKey = !!apiKeysObject[model.provider];
+      const isAvailable = model.available !== false && (!model.apiKeyUsage?.userKeyOnly || userHasKey);
+
+      return {
+        ...model,
+        available: isAvailable,
+      };
+    });
+  }, [apiKeysObject])
 
   const model = React.useMemo(
     () => availableModels.find((model) => model.id === selectedModelId),

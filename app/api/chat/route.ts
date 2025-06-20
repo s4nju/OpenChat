@@ -80,8 +80,45 @@ export async function POST(req: Request) {
 
     const token = await convexAuthNextjsToken();
 
-    // --- Unified Rate-Limiting Check ---
-    await fetchMutation(api.users.assertNotOverLimit, {}, { token });
+    // --- API Key and Model Configuration ---
+    const { apiKeyUsage } = selectedModel;
+    let userApiKey: string | null = null;
+    let keyEntry: { provider: string; mode?: string } | undefined;
+
+    if (apiKeyUsage?.allowUserKey) {
+      try {
+        const userKeys = await fetchQuery(api.api_keys.getApiKeys, {}, { token });
+        keyEntry = userKeys.find((k) => k.provider === selectedModel.provider);
+        if (keyEntry) {
+          userApiKey = await fetchQuery(
+            api.api_keys.getDecryptedKey,
+            { provider: selectedModel.provider },
+            { token }
+          );
+        }
+      } catch (e) {
+        console.error("Failed to fetch or decrypt user API key:", e);
+      }
+    }
+
+    // Determine if we should use a user-provided API key
+    const useUserKey = Boolean(
+      (apiKeyUsage?.userKeyOnly && userApiKey) ||
+      (keyEntry?.mode === "priority" && userApiKey)
+    );
+
+    // Reject early if model requires user key only but no user API key provided
+    if (apiKeyUsage?.userKeyOnly && !userApiKey) {
+      return new Response(
+        JSON.stringify({ error: "USER_KEY_REQUIRED", message: "This model requires a user-provided API key." }),
+        { status: 401 }
+      );
+    }
+
+    // --- Rate Limiting (only if not using user key) ---
+    if (!useUserKey) {
+      await fetchMutation(api.users.assertNotOverLimit, {}, { token });
+    }
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
@@ -90,22 +127,15 @@ export async function POST(req: Request) {
 
         // --- Reload Logic (Delete and Recreate) ---
         if (reloadAssistantMessageId) {
-          // 1. Get the parent (user) message ID of the message we are about to delete
           const details = await fetchQuery(
             api.messages.getMessageDetails,
-            {
-              messageId: reloadAssistantMessageId,
-            },
+            { messageId: reloadAssistantMessageId },
             { token }
           );
           userMsgId = details?.parentMessageId ?? null;
-
-          // 2. Delete the assistant message and any subsequent messages
           await fetchMutation(
             api.messages.deleteMessageAndDescendants,
-            {
-              messageId: reloadAssistantMessageId,
-            },
+            { messageId: reloadAssistantMessageId },
             { token }
           );
         }
@@ -114,7 +144,6 @@ export async function POST(req: Request) {
         if (!reloadAssistantMessageId) {
           const userMessage = messages[messages.length - 1];
           if (userMessage && userMessage.role === "user") {
-            // This mutation now also checks usage, increments, and updates chat timestamp
             const { messageId } = await fetchMutation(
               api.messages.sendUserMessageToChat,
               {
@@ -129,106 +158,46 @@ export async function POST(req: Request) {
           }
         }
 
-        // --- Stream AI Response ---
-        const tools = enableSearch ? { exaSearch: exaSearchTool } : undefined;
-
-        // Fetch user API keys with error handling
-        let userKeys: Array<{ provider: string; mode?: string }> = [];
-        let keyEntry: { provider: string; mode?: string } | undefined = undefined;
-        let userApiKey: string | null = null;
-
-        try {
-          userKeys = await fetchQuery(api.api_keys.getApiKeys, {}, { token });
-          keyEntry = userKeys.find((k) => k.provider === selectedModel?.provider);
-
-          if (keyEntry) {
-            try {
-              userApiKey = await fetchQuery(
-                api.api_keys.getDecryptedKey,
-                { provider: selectedModel!.provider },
-                { token }
-              );
-            } catch (decryptionError) {
-              console.error(`Failed to decrypt API key for provider ${selectedModel?.provider}:`, decryptionError);
-              // Continue with null userApiKey - will fall back to system defaults
-              userApiKey = null;
-            }
-          }
-        } catch (keysError) {
-          console.error('Failed to fetch user API keys:', keysError);
-          // Continue with empty array and null userApiKey - will fall back to system defaults
-          userKeys = [];
-          keyEntry = undefined;
-          userApiKey = null;
-        }
-
         const makeOptions = (useUser: boolean) => {
-          if (selectedModel?.provider === "gemini") {
-            const options = {
-              thinkingConfig: { includeThoughts: true },
-            };
-            if (useUser && userApiKey) {
-              return { google: { ...options, apiKey: userApiKey } };
-            }
-            return { google: options };
+          const key = useUser ? userApiKey : undefined;
+          if (selectedModel.provider === "gemini") {
+            return { google: { apiKey: key, thinkingConfig: { includeThoughts: true } } };
           }
-          if (selectedModel?.provider === "openai" && useUser && userApiKey) {
-            return { openai: { apiKey: userApiKey } };
+          if (selectedModel.provider === "openai") {
+            return { openai: { apiKey: key } };
           }
-          if (selectedModel?.provider === "claude" && useUser && userApiKey) {
-            return { anthropic: { apiKey: userApiKey } };
+          if (selectedModel.provider === "anthropic") {
+            return { anthropic: { apiKey: key } };
           }
           return undefined;
         };
 
         const runStream = (useUser: boolean) =>
           streamText({
-            model: selectedModel!.api_sdk,
+            model: selectedModel.api_sdk,
             system: systemPrompt || "You are a helpful assistant.",
             messages,
-            tools,
+            tools: enableSearch ? { exaSearch: exaSearchTool } : undefined,
             maxSteps: 5,
             providerOptions: makeOptions(useUser) as Record<string, Record<string, JSONValue>> | undefined,
-            experimental_transform: smoothStream({
-              delayInMs: 20,
-              chunking: "word",
-            }),
-            onError: (error) => {
-              console.log("Error in streamText:", error);
-            },
-
+            experimental_transform: smoothStream({ delayInMs: 20, chunking: "word" }),
+            onError: (error) => console.log("Error in streamText:", error),
             async onFinish({ response }) {
               const userMessage = messages[messages.length - 1];
               try {
-                // console.log("response", response.messages)
                 for (const msg of response.messages) {
-                  // console.log("msg", msg)
                   if (
                     msg.role === "assistant" &&
                     Array.isArray(msg.content) &&
-                    msg.content.every(
-                      (item) => item.type === "reasoning" || item.type === "text"
-                    )
+                    msg.content.every((item) => item.type === "reasoning" || item.type === "text")
                   ) {
-                    const textContent =
-                      typeof msg.content === "string"
-                        ? msg.content
-                        : Array.isArray(msg.content)
-                          ? msg.content
-                            .filter((part) => part.type === "text")
-                            .map((part) => part.text)
-                            .join("")
-                          : "";
-                    const reasoningText = msg.content.find((part) => part.type === "reasoning")?.text || undefined;
-                    // console.log("textContent", textContent)
-                    // console.log("reasoningText", reasoningText)
-
+                    const textContent = msg.content.filter((p) => p.type === "text").map((p) => p.text).join("");
+                    const reasoningText = msg.content.find((p) => p.type === "reasoning")?.text;
                     const [, assistantMessage] = appendResponseMessages({
                       messages: [userMessage],
                       responseMessages: response.messages,
                     });
 
-                    // Ensure userMsgId is available before proceeding
                     if (!userMsgId) {
                       throw new Error("Missing parent userMsgId when saving assistant message.");
                     }
@@ -236,61 +205,57 @@ export async function POST(req: Request) {
                     const { messageId } = await fetchMutation(
                       api.messages.saveAssistantMessage,
                       {
-                        chatId: chatId,
+                        chatId,
                         role: "assistant",
                         content: textContent,
-                        parentMessageId: userMsgId, // userMsgId must be set by this point
-                        reasoningText: reasoningText,
-                        model: model,
+                        parentMessageId: userMsgId,
+                        reasoningText,
+                        model,
                         parts: assistantMessage.parts,
                       },
                       { token }
                     );
                     assistantMsgId = messageId;
 
-                    // Now, increment the usage
-                    await fetchMutation(
-                      api.users.incrementMessageCount,
-                      {},
-                      { token }
-                    );
+                    if (useUser) {
+                      await fetchMutation(
+                        api.api_keys.incrementUserApiKeyUsage,
+                        { provider: selectedModel.provider },
+                        { token }
+                      );
+                    } else {
+                      await fetchMutation(api.users.incrementMessageCount, {}, { token });
+                    }
                   }
                 }
-                // Send both IDs to the frontend
                 dataStream.writeData({ userMsgId, assistantMsgId });
               } catch (err) {
-                console.error(
-                  "Error in onFinish while saving assistant messages:",
-                  err
-                );
+                console.error("Error in onFinish while saving assistant messages:", err);
               }
             },
           });
 
         let result;
-
-        // Determine the execution strategy based on API key mode
-        const mode = keyEntry?.mode || "fallback"; // Default to fallback if no mode set
-
-        if (mode === "priority" && userApiKey) {
-          // Priority mode: Try user API key first, fall back to system on failure
+        if (apiKeyUsage?.allowUserKey) {
           try {
-            result = await runStream(true); // Use user API key
+            console.log(`Using ${useUserKey ? 'user' : 'internal'} key for ${selectedModel.provider} in ${keyEntry?.mode || 'default'} mode.`);
+            result = runStream(useUserKey);
           } catch (err) {
-            console.log("Priority mode failed with user API key, falling back to system:", err);
-            result = await runStream(false); // Fall back to system API key
-          }
-        } else if (mode === "fallback" && userApiKey) {
-          // Fallback mode: Try system API key first, fall back to user on failure
-          try {
-            result = await runStream(false); // Use system API key
-          } catch (err) {
-            console.log("Fallback mode failed with system API key, trying user:", err);
-            result = await runStream(true); // Fall back to user API key
+            console.log(`Stream failed with ${useUserKey ? 'user' : 'internal'} key.`, err);
+            // Fallback only if the alternate key mode has a valid API key
+            if (useUserKey) {
+              console.log('Falling back to internal key.');
+              result = runStream(false);
+            } else if (userApiKey) {
+              console.log('Falling back to user key.');
+              result = runStream(true);
+            } else {
+              throw err;
+            }
           }
         } else {
-          // No user API key or unrecognized mode: use system API key only
-          result = await runStream(false);
+          console.log(`Model ${selectedModel.id} does not allow user key; using internal key only.`);
+          result = runStream(false);
         }
 
         result.mergeIntoDataStream(dataStream, { sendReasoning: true });

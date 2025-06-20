@@ -118,6 +118,7 @@ export default defineSchema({
     mode: v.optional(
       v.union(v.literal("priority"), v.literal("fallback"))
     ),
+    messageCount: v.optional(v.number()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   }).index("by_user_provider", ["userId", "provider"]),
