@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip"
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
+import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { cn } from "@/lib/utils"
 import { CaretDown, Eye, FilePdf, Brain, Globe } from "@phosphor-icons/react" // Swapped MagnifyingGlass for Globe for web search feature
 
@@ -31,6 +32,7 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   const { apiKeys } = useApiKeys()
+  const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
 
   // Transform API keys array to object format expected by getAvailableModels
   const apiKeysObject = React.useMemo(() => {
@@ -62,6 +64,21 @@ export function ModelSelector({
   )
 
   // Function to render a single model option
+  // Helper function to parse model name and extract reasoning info
+  const parseModelName = (name: string) => {
+    const reasoningMatch = name.match(/^(.+?)\s*\(reasoning\)$/i)
+    if (reasoningMatch) {
+      return {
+        baseName: reasoningMatch[1].trim(),
+        hasReasoningInName: true
+      }
+    }
+    return {
+      baseName: name,
+      hasReasoningInName: false
+    }
+  }
+
   const renderModelOption = (modelOption: (typeof availableModels)[number]) => {
     const providerOption = PROVIDERS_OPTIONS.find(
       (p) => p.id === modelOption.provider
@@ -177,12 +194,22 @@ export function ModelSelector({
             variant="outline"
             className={cn(
               "dark:bg-secondary justify-between",
+              isMobile && "py-3",
               className
             )}
           >
             <div className="flex items-center gap-2">
               {provider?.icon && <provider.icon className="size-5" />}
-              <span>{model?.name ?? "Select Model"}</span>
+              {isMobile ? (
+                <div className="flex flex-col items-start">
+                  <span className="text-sm leading-tight">{parseModelName(model?.name ?? "Select Model").baseName}</span>
+                  {model && parseModelName(model.name).hasReasoningInName && (
+                    <span className="text-xs text-muted-foreground leading-tight">Reasoning</span>
+                  )}
+                </div>
+              ) : (
+                <span>{model?.name ?? "Select Model"}</span>
+              )}
             </div>
             <CaretDown className="size-4 opacity-50" />
           </Button>

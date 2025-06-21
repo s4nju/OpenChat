@@ -15,6 +15,9 @@ import { ButtonSearch } from "./button-search"
 import { FileList } from "./file-list"
 import { PromptSystem } from "./prompt-system"
 import { SelectModel } from "./select-model"
+import { SelectReasoningEffort } from "./select-reasoning-effort"
+
+type ReasoningEffort = "low" | "medium" | "high";
 
 type ChatInputProps = {
   value: string
@@ -34,6 +37,9 @@ type ChatInputProps = {
   systemPrompt?: string
   stop: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
+  isReasoningModel: boolean
+  reasoningEffort: ReasoningEffort
+  onSelectReasoningEffort: (reasoningEffort: ReasoningEffort) => void
 }
 
 export function ChatInput({
@@ -53,6 +59,9 @@ export function ChatInput({
   systemPrompt,
   stop,
   status,
+  isReasoningModel,
+  reasoningEffort,
+  onSelectReasoningEffort,
 }: ChatInputProps) {
   const [searchEnabled, setSearchEnabled] = React.useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -85,7 +94,7 @@ export function ChatInput({
 
     onSend({ enableSearch: searchEnabled });
   }
-  
+
   const handlePaste = useCallback(
     async (e: ClipboardEvent) => {
       if (!isUserAuthenticated) {
@@ -152,8 +161,8 @@ export function ChatInput({
             ref={textareaRef}
             disabled={isSubmitting}
           />
-          <PromptInputActions className="mt-5 w-full justify-between px-2">
-            <div className="flex gap-2">
+          <PromptInputActions className="mt-5 w-full justify-between sm:px-2 px-2">
+            <div className="flex sm:gap-2 gap-1 transform origin-left sm:scale-100 scale-90">
               <ButtonFileUpload
                 onFileUpload={onFileUpload}
                 isUserAuthenticated={isUserAuthenticated}
@@ -170,13 +179,19 @@ export function ChatInput({
                 onSelectModel={onSelectModel}
                 isUserAuthenticated={isUserAuthenticated}
               />
+              {isReasoningModel && (
+                <SelectReasoningEffort
+                  reasoningEffort={reasoningEffort}
+                  onSelectReasoningEffort={onSelectReasoningEffort}
+                />
+              )}
             </div>
             <PromptInputAction
               tooltip={(isSubmitting || status === "submitted" || status === "streaming") ? "Stop" : "Send"}
             >
               <Button
                 size="sm"
-                className="size-9 rounded-full transition-all duration-300 ease-out"
+                className="rounded-full transition-all duration-300 ease-out transform origin-right sm:scale-100 scale-90"
                 disabled={!value && status !== "streaming" && status !== "submitted" && !isSubmitting}
                 type="button"
                 onClick={handleMainClick}

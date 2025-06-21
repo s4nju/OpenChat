@@ -7,6 +7,7 @@ import { useMemo } from "react"
 export function useApiKeys() {
     const apiKeysQuery = useQuery(api.api_keys.getApiKeys)
     const apiKeys = useMemo(() => apiKeysQuery ?? [], [apiKeysQuery])
+    const isLoading = apiKeysQuery === undefined
 
     const hasApiKey = useMemo(() => {
         const keyMap = new Map<string, boolean>()
@@ -26,5 +27,6 @@ export function useApiKeys() {
         hasOpenAI,
         hasAnthropic,
         hasGemini,
+        isLoading,
     }
 }

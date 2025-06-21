@@ -13,9 +13,14 @@ import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
+import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 60;
+
+type ReasoningEffort = "low" | "medium" | "high";
 
 type ChatRequest = {
   messages: MessageAISDK[];
@@ -24,6 +29,68 @@ type ChatRequest = {
   systemPrompt: string;
   reloadAssistantMessageId?: Id<"messages">;
   enableSearch?: boolean;
+  reasoningEffort?: ReasoningEffort;
+};
+
+const buildGoogleProviderOptions = (
+  modelId: string,
+  reasoningEffort?: ReasoningEffort
+): GoogleGenerativeAIProviderOptions => {
+  const options: GoogleGenerativeAIProviderOptions = {};
+
+  if (["2.5-flash", "2.5-pro"].some((m) => modelId.includes(m))) {
+    options.thinkingConfig = {
+      includeThoughts: true,
+      thinkingBudget:
+        reasoningEffort === "low"
+          ? 1000
+          : reasoningEffort === "medium"
+            ? 6000
+            : 12000,
+    };
+  }
+
+  return options;
+};
+
+const buildOpenAIProviderOptions = (
+  modelId: string,
+  reasoningEffort?: ReasoningEffort
+): OpenAIResponsesProviderOptions => {
+  const options: OpenAIResponsesProviderOptions = {};
+
+  if (["o1", "o3", "o4"].some((m) => modelId.includes(m)) && reasoningEffort) {
+    options.reasoningEffort = reasoningEffort;
+    options.reasoningSummary = "detailed";
+  }
+
+  return options;
+};
+
+const buildAnthropicProviderOptions = (
+  modelId: string,
+  reasoningEffort?: ReasoningEffort
+): AnthropicProviderOptions => {
+  const options: AnthropicProviderOptions = {};
+
+  if (
+    reasoningEffort &&
+    ["sonnet-4", "4-sonnet", "4-opus", "opus-4", "3-7"].some((m) =>
+      modelId.includes(m)
+    )
+  ) {
+    options.thinking = {
+      type: "enabled",
+      budgetTokens:
+        reasoningEffort === "low"
+          ? 1024
+          : reasoningEffort === "medium"
+            ? 6000
+            : 12000,
+    };
+  }
+
+  return options;
 };
 
 export async function POST(req: Request) {
@@ -39,6 +106,7 @@ export async function POST(req: Request) {
       systemPrompt,
       reloadAssistantMessageId,
       enableSearch,
+      reasoningEffort,
     } = (await req.json()) as ChatRequest;
 
     if (!messages || !chatId) {
@@ -98,6 +166,13 @@ export async function POST(req: Request) {
         }
       } catch (e) {
         console.error("Failed to fetch or decrypt user API key:", e);
+        // If this is a critical error (auth failure), we should return early
+        if (e instanceof Error && e.message.includes("Not authenticated")) {
+          return new Response(
+            JSON.stringify({ error: "Authentication required" }),
+            { status: 401 }
+          );
+        }
       }
     }
 
@@ -160,14 +235,33 @@ export async function POST(req: Request) {
 
         const makeOptions = (useUser: boolean) => {
           const key = useUser ? userApiKey : undefined;
+
           if (selectedModel.provider === "gemini") {
-            return { google: { apiKey: key, thinkingConfig: { includeThoughts: true } } };
+            return {
+              google: {
+                ...buildGoogleProviderOptions(selectedModel.id, reasoningEffort),
+                apiKey: key,
+              },
+            };
           }
           if (selectedModel.provider === "openai") {
-            return { openai: { apiKey: key } };
+            return {
+              openai: {
+                ...buildOpenAIProviderOptions(selectedModel.id, reasoningEffort),
+                apiKey: key,
+              },
+            };
           }
           if (selectedModel.provider === "anthropic") {
-            return { anthropic: { apiKey: key } };
+            return {
+              anthropic: {
+                ...buildAnthropicProviderOptions(
+                  selectedModel.id,
+                  reasoningEffort
+                ),
+                apiKey: key,
+              },
+            };
           }
           return undefined;
         };
@@ -237,24 +331,31 @@ export async function POST(req: Request) {
 
         let result;
         if (apiKeyUsage?.allowUserKey) {
+          const primaryIsUserKey = useUserKey;
           try {
-            console.log(`Using ${useUserKey ? 'user' : 'internal'} key for ${selectedModel.provider} in ${keyEntry?.mode || 'default'} mode.`);
-            result = runStream(useUserKey);
-          } catch (err) {
-            console.log(`Stream failed with ${useUserKey ? 'user' : 'internal'} key.`, err);
-            // Fallback only if the alternate key mode has a valid API key
-            if (useUserKey) {
-              console.log('Falling back to internal key.');
-              result = runStream(false);
-            } else if (userApiKey) {
-              console.log('Falling back to user key.');
-              result = runStream(true);
+            // console.log(`Attempting stream with ${primaryIsUserKey ? 'user' : 'internal'} key for ${selectedModel.provider}.`);
+            result = runStream(primaryIsUserKey);
+          } catch (primaryError) {
+            // console.warn(`Stream with ${primaryIsUserKey ? 'user' : 'internal'} key failed.`, primaryError);
+
+            const fallbackIsPossible = primaryIsUserKey || (!primaryIsUserKey && !!userApiKey);
+
+            if (fallbackIsPossible) {
+              const fallbackIsUserKey = !primaryIsUserKey;
+              // console.log(`Falling back to ${fallbackIsUserKey ? 'user' : 'internal'} key.`);
+              try {
+                result = runStream(fallbackIsUserKey);
+              } catch (fallbackError) {
+                // console.error(`Fallback with ${fallbackIsUserKey ? 'user' : 'internal'} key also failed.`, fallbackError);
+                throw fallbackError;
+              }
             } else {
-              throw err;
+              // console.error('No fallback key available. Rethrowing initial error.');
+              throw primaryError;
             }
           }
         } else {
-          console.log(`Model ${selectedModel.id} does not allow user key; using internal key only.`);
+          // console.log(`Model ${selectedModel.id} does not allow user key; using internal key only.`);
           result = runStream(false);
         }
 
