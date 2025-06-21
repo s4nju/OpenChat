@@ -8,6 +8,7 @@ import type { Doc } from "@/convex/_generated/dataModel"
 import { google } from "@ai-sdk/google"
 import { groq } from "@ai-sdk/groq"
 import { mistral } from "@ai-sdk/mistral"
+import { anthropic } from "@ai-sdk/anthropic"
 // import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
@@ -66,61 +67,19 @@ export type Model = {
   name: string
   provider: string
   available?: boolean
-  api_sdk?: any
+  api_sdk?: any // eslint-disable-line @typescript-eslint/no-explicit-any
   features?: {
     id: string
     enabled: boolean
     label?: string
   }[]
+  apiKeyUsage?: {
+    allowUserKey: boolean
+    userKeyOnly: boolean
+  }
 }
 
 export const MODELS_NOT_AVAILABLE = [
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "claude",
-    available: false,
-    api_sdk: false,
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-  },
-  {
-    id: "claude-3.7-sonnet",
-    name: "Claude 3.7 Sonnet",
-    provider: "claude",
-    available: false,
-    api_sdk: false,
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-  },
   {
     id: "grok-3",
     name: "Grok 3",
@@ -148,6 +107,7 @@ export const MODELS_NOT_AVAILABLE = [
     id: "gpt-4o",
     name: "GPT-4o",
     provider: "openai",
+    available: false,
     features: [
       {
         id: "file-upload",
@@ -170,9 +130,148 @@ export const MODELS_NOT_AVAILABLE = [
 
 export const MODELS_RAW = [
   {
+    id: "claude-3-5-sonnet-20241022",
+    name: "Claude 3.5 Sonnet",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-5-sonnet-20241022"),
+  },
+  {
+    id: "claude-3-7-sonnet-20250219",
+    name: "Claude 3.7 Sonnet",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-7-sonnet-20250219"),
+  },
+  {
+    id: "claude-3-7-sonnet-reasoning",
+    name: "Claude 3.7 Sonnet (Reasoning)",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-3-7-sonnet-20250219"),
+  },
+  {
+    id: "claude-4-opus",
+    name: "Claude 4 Opus",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-opus-4-20250514"),
+  },
+  {
+    id: "claude-4-sonnet",
+    name: "Claude 4 Sonnet",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: false,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-sonnet-4-20250514"),
+  },
+  {
+    id: "claude-4-sonnet-reasoning",
+    name: "Claude 4 Sonnet (Reasoning)",
+    provider: "anthropic",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: anthropic("claude-sonnet-4-20250514"),
+  },
+  {
     id: "gpt-4o-mini",
     name: "GPT-4o Mini",
     provider: "openai",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -195,6 +294,7 @@ export const MODELS_RAW = [
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
     provider: "gemini",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.0-flash"),
     features: [
       {
@@ -222,6 +322,7 @@ export const MODELS_RAW = [
     id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "gemini",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -249,6 +350,7 @@ export const MODELS_RAW = [
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
     name: "Llama 4 Maverick 17B",
     provider: "meta",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -271,6 +373,7 @@ export const MODELS_RAW = [
     id: "Llama-4-Scout-17B-16E-Instruct",
     name: "Llama 4 Scout 17B",
     provider: "meta",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -293,6 +396,7 @@ export const MODELS_RAW = [
     id: "pixtral-large-latest",
     name: "Pixtral Large",
     provider: "mistral",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -316,6 +420,7 @@ export const MODELS_RAW = [
     id: "mistral-large-latest",
     name: "Mistral Large",
     provider: "mistral",
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -328,6 +433,7 @@ export const MODELS_RAW = [
     id: "deepseek-ai/DeepSeek-V3-0324",
     name: "DeepSeek V3 0324",
     provider: "deepseek",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: chutes("deepseek-ai/DeepSeek-V3-0324"),
     features: [
       {
@@ -340,6 +446,7 @@ export const MODELS_RAW = [
     id: "deepseek-r1-0528",
     name: "DeepSeek R1 (0528)",
     provider: "deepseek",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       {
         id: "file-upload",
@@ -362,6 +469,7 @@ export const MODELS_RAW = [
   //   id: "qwen/qwq-32b:free",
   //   name: "QWEN 32B",
   //   provider: "Qwen",
+  //   apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
   //   features: [
   //     {
   //       id: "file-upload",
@@ -408,12 +516,6 @@ const PROVIDERS_NOT_AVAILABLE = [
     available: false,
   },
   {
-    id: "claude",
-    name: "Claude",
-    available: false,
-    icon: Claude,
-  },
-  {
     id: "grok",
     name: "Grok",
     available: false,
@@ -431,6 +533,11 @@ export const PROVIDERS = [
     id: "openai",
     name: "OpenAI",
     icon: OpenAI,
+  },
+  {
+    id: "anthropic",
+    name: "Claude",
+    icon: Claude,
   },
   {
     id: "mistral",

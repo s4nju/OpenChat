@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { useBreakpoint } from "../../hooks/use-breakpoint"
 import {
   Popover,
-  PopoverContent,
+  // PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
@@ -53,7 +53,7 @@ export function ButtonSearch({
               disabled
             >
               <Globe className="size-5" />
-              {isMobile && <span className="text-sm">Search</span>}
+              {/* {isMobile && <span className="text-sm">Search</span>} */}
             </Button>
           </span>
         </TooltipTrigger>
@@ -79,7 +79,7 @@ export function ButtonSearch({
                 aria-label="Search the internet"
               >
                 <Globe className="size-4" />
-                {isMobile && <span className="text-sm">Search</span>}
+                {/* {isMobile && <span className="text-sm">Search</span>} */}
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
@@ -99,22 +99,22 @@ export function ButtonSearch({
           className={
             isMobile
               ? (
-                  searchEnabled
-                    ? "transition bg-blue-500/50 hover:bg-blue-600/50 text-accent-foreground  h-9 w-auto  rounded-full"
-                    : "border-border dark:bg-secondary border bg-transparent px-3 h-9 flex items-center w-auto rounded-full"
-                )
+                searchEnabled
+                  ? "transition bg-blue-500/50 hover:bg-blue-600/50 text-accent-foreground  h-9 w-auto  rounded-full"
+                  : "border-border dark:bg-secondary border bg-transparent px-3 h-9 flex items-center w-auto rounded-full"
+              )
               : (
-                  searchEnabled
-                    ? "size-9 rounded-full transition bg-blue-500/50 hover:bg-blue-600/50"
-                    : "border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-                )
+                searchEnabled
+                  ? "size-9 rounded-full transition bg-blue-500/50 hover:bg-blue-600/50"
+                  : "border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
+              )
           }
           type="button"
           aria-label="Search the internet"
           onClick={onSearch}
         >
           <Globe className={searchEnabled ? "size-4 text-blue-400" : "size-4"} />
-          {isMobile && <span className="text-sm">Search</span>}
+          {/* {isMobile && <span className="text-sm">Search</span>} */}
         </Button>
       </TooltipTrigger>
       <TooltipContent>Search the internet</TooltipContent>

@@ -12,6 +12,7 @@ import {
   MESSAGE_MAX_LENGTH,
   MODEL_DEFAULT,
   REMAINING_QUERY_ALERT_THRESHOLD,
+  MODELS,
 } from "@/lib/config"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
@@ -58,6 +59,15 @@ function humaniseUploadError(err: unknown): string {
   return "Error uploading file";
 }
 
+// Helper to check if a model supports reasoning
+function supportsReasoning(modelId: string): boolean {
+  const model = MODELS.find((m) => m.id === modelId);
+  if (!model || !model.features) {
+    return false;
+  }
+  return model.features.some((f) => f.id === "reasoning" && f.enabled);
+}
+
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
@@ -89,6 +99,7 @@ export default function Chat() {
   const [selectedModel, setSelectedModel] = useState(
     user?.preferredModel || MODEL_DEFAULT
   )
+  const [reasoningEffort, setReasoningEffort] = useState<"low" | "medium" | "high">("low");
   const [personaPrompt, setPersonaPrompt] = useState<string | undefined>()
   const [systemPrompt, setSystemPrompt] = useState(() =>
     buildSystemPrompt(user)
@@ -381,6 +392,8 @@ export default function Chat() {
       setFiles([])
     }
 
+    const isReasoningModel = supportsReasoning(selectedModel);
+
     const options = {
       body: {
         chatId: currentChatId,
@@ -389,6 +402,7 @@ export default function Chat() {
         ...(opts?.body && typeof opts.body.enableSearch !== "undefined"
           ? { enableSearch: opts.body.enableSearch }
           : {}),
+        ...(isReasoningModel ? { reasoningEffort } : {}),
       },
       experimental_attachments:
         vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
@@ -681,6 +695,9 @@ export default function Chat() {
           systemPrompt={personaPrompt}
           stop={stop}
           status={status}
+          isReasoningModel={supportsReasoning(selectedModel)}
+          reasoningEffort={reasoningEffort}
+          onSelectReasoningEffort={setReasoningEffort}
         />
       </motion.div>
     </div>

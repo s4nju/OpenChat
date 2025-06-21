@@ -10,12 +10,13 @@ const NAV_ITEMS = [
   { name: "Account", href: "/settings" },
   { name: "Customization", href: "/settings/customization" },
   { name: "History & Sync", href: "/settings/history" },
+  { name: "API Keys", href: "/settings/api-keys" },
   { name: "Attachments", href: "/settings/attachments" },
 ] as const;
 
 function SettingsNavComponent() {
   const pathname = usePathname()
-  
+
 
   return (
     <nav className="mb-8">
