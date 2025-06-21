@@ -20,11 +20,12 @@ import {
 } from "@/components/ui/drawer"
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
 import { Info } from "@phosphor-icons/react"
+import Image from "next/image"
 
 const InfoContent = () => (
   <div className="space-y-4">
     <p className="text-foreground leading-relaxed">
-      {APP_DESCRIPTION} Built with Vercel's AI SDK, Supabase, and prompt-kit
+      {APP_DESCRIPTION} Built with Vercel&apos;s AI SDK, Supabase, and prompt-kit
       components.
     </p>
     <p className="text-foreground leading-relaxed">
@@ -76,10 +77,12 @@ export function AppInfo({ trigger = defaultTrigger }: AppInfoProps) {
           <DrawerTrigger asChild>{trigger}</DrawerTrigger>
           <DrawerContent className="bg-background border-border">
             <DrawerHeader>
-              <img
+              <Image
                 src="/banner_ocean.jpg"
                 alt={`calm paint generate by ${APP_NAME}`}
                 className="h-32 w-full object-cover"
+                width={400}
+                height={128}
               />
               <DrawerTitle className="hidden">{APP_NAME}</DrawerTitle>
               <DrawerDescription className="hidden">
@@ -101,10 +104,12 @@ export function AppInfo({ trigger = defaultTrigger }: AppInfoProps) {
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent className="[&>button:last-child]:bg-background gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:p-1">
           <DialogHeader className="p-0">
-            <img
+            <Image
               src="/banner_ocean.jpg"
               alt={`calm paint generate by ${APP_NAME}`}
               className="h-32 w-full object-cover"
+              width={400}
+              height={128}
             />
             <DialogTitle className="hidden">{APP_NAME}</DialogTitle>
             <DialogDescription className="hidden">

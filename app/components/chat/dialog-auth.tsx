@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useState } from "react"
+import Image from 'next/image'
 
 type DialogAuthProps = {
   open: boolean
@@ -48,7 +49,7 @@ export function DialogAuth({ open, setOpen }: DialogAuthProps) {
         <DialogDescription className="sr-only">Authenticate with your account to access the chat application.</DialogDescription>
         <DialogHeader>
           <DialogTitle className="text-xl">
-            You've reached the limit for today
+            You&apos;ve reached the limit for today
           </DialogTitle>
           <DialogDescription className="pt-2 text-base">
             Sign in below to increase your message limits.
@@ -67,7 +68,7 @@ export function DialogAuth({ open, setOpen }: DialogAuthProps) {
             onClick={handleSignInWithGoogle}
             disabled={isLoading}
           >
-            <img
+            <Image
               src="https://www.google.com/favicon.ico"
               alt="Google logo"
               width={20}

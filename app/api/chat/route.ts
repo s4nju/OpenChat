@@ -21,6 +21,32 @@ import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 export const maxDuration = 60;
 
 type ReasoningEffort = "low" | "medium" | "high";
+type SupportedProvider = "openrouter" | "openai" | "anthropic" | "mistral" | "meta" | "Qwen";
+
+/**
+ * Token budget configuration for reasoning models
+ * - low: For quick responses with minimal reasoning depth
+ * - medium: Balanced reasoning depth for most use cases  
+ * - high: Maximum reasoning depth for complex problems
+ * 
+ * Anthropic uses 1024 for low (aligned with their API minimum),
+ * while Google uses 1000 (their minimum threshold)
+ */
+const REASONING_BUDGETS = {
+  low: { google: 1000, openai: "low", anthropic: 1024 },
+  medium: { google: 6000, openai: "medium", anthropic: 6000 },
+  high: { google: 12000, openai: "high", anthropic: 12000 }
+} as const;
+
+/**
+ * Model identifiers that support reasoning capabilities
+ * Uses substring matching for version flexibility (e.g., "2.5-flash-001", "o1-preview")
+ */
+const REASONING_MODELS = {
+  google: ["2.5-flash", "2.5-pro"],
+  openai: ["o1", "o3", "o4"],
+  anthropic: ["sonnet-4", "4-sonnet", "4-opus", "opus-4", "3-7"]
+} as const;
 
 type ChatRequest = {
   messages: MessageAISDK[];
@@ -38,15 +64,13 @@ const buildGoogleProviderOptions = (
 ): GoogleGenerativeAIProviderOptions => {
   const options: GoogleGenerativeAIProviderOptions = {};
 
-  if (["2.5-flash", "2.5-pro"].some((m) => modelId.includes(m))) {
+  // Check if model supports reasoning using centralized configuration
+  if (REASONING_MODELS.google.some((m) => modelId.includes(m))) {
     options.thinkingConfig = {
       includeThoughts: true,
-      thinkingBudget:
-        reasoningEffort === "low"
-          ? 1000
-          : reasoningEffort === "medium"
-            ? 6000
-            : 12000,
+      thinkingBudget: reasoningEffort
+        ? REASONING_BUDGETS[reasoningEffort].google
+        : REASONING_BUDGETS.medium.google,
     };
   }
 
@@ -59,8 +83,9 @@ const buildOpenAIProviderOptions = (
 ): OpenAIResponsesProviderOptions => {
   const options: OpenAIResponsesProviderOptions = {};
 
-  if (["o1", "o3", "o4"].some((m) => modelId.includes(m)) && reasoningEffort) {
-    options.reasoningEffort = reasoningEffort;
+  // Check if model supports reasoning using centralized configuration
+  if (REASONING_MODELS.openai.some((m) => modelId.includes(m)) && reasoningEffort) {
+    options.reasoningEffort = REASONING_BUDGETS[reasoningEffort].openai as ReasoningEffort;
     options.reasoningSummary = "detailed";
   }
 
@@ -73,20 +98,14 @@ const buildAnthropicProviderOptions = (
 ): AnthropicProviderOptions => {
   const options: AnthropicProviderOptions = {};
 
+  // Check if model supports reasoning using centralized configuration
   if (
     reasoningEffort &&
-    ["sonnet-4", "4-sonnet", "4-opus", "opus-4", "3-7"].some((m) =>
-      modelId.includes(m)
-    )
+    REASONING_MODELS.anthropic.some((m) => modelId.includes(m))
   ) {
     options.thinking = {
       type: "enabled",
-      budgetTokens:
-        reasoningEffort === "low"
-          ? 1024
-          : reasoningEffort === "medium"
-            ? 6000
-            : 12000,
+      budgetTokens: REASONING_BUDGETS[reasoningEffort].anthropic,
     };
   }
 
@@ -160,7 +179,7 @@ export async function POST(req: Request) {
         if (keyEntry) {
           userApiKey = await fetchQuery(
             api.api_keys.getDecryptedKey,
-            { provider: selectedModel.provider as "openrouter" | "openai" | "anthropic" | "mistral" | "meta" | "Qwen" },
+            { provider: selectedModel.provider as SupportedProvider },
             { token }
           );
         }

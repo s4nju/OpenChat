@@ -1,30 +1,13 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { Doc, Id } from "@/convex/_generated/dataModel"
 import { TimeGroup } from "@/lib/chat-utils/time-grouping"
 import {
-  Check,
-  GitBranch,
-  PencilSimple,
-  PushPinSimple,
-  PushPinSimpleSlash,
-  TrashSimple,
-  X,
+  PushPinSimpleIcon,
 } from "@phosphor-icons/react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
 import { ChatItem } from "./ChatItem"
 
 // Helper function for conditional classes
-const cn = (...classes: (string | boolean | undefined)[]) =>
-  classes.filter(Boolean).join(" ")
 
 interface ChatListProps {
   pinnedChats: Doc<"chats">[]
@@ -48,8 +31,6 @@ export function ChatList({
   handleTogglePin,
   hasChatsInGroup,
 }: ChatListProps) {
-  const params = useParams<{ chatId?: string }>()
-  const router = useRouter()
 
   return (
     <div className="flex flex-col pt-2 pb-8">
@@ -62,7 +43,7 @@ export function ChatList({
       {pinnedChats.length > 0 && (
         <div className="relative flex w-full min-w-0 flex-col p-2">
           <h3 className="text-muted-foreground focus-visible:ring-primary flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
-            <PushPinSimple className="mr-1 h-3 w-3" />
+            <PushPinSimpleIcon className="mr-1 h-3 w-3" />
             Pinned
           </h3>
           <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
@@ -75,10 +56,10 @@ export function ChatList({
                 parentChatTitle={
                   chat.originalChatId
                     ? pinnedChats.find((c) => c._id === chat.originalChatId)
-                        ?.title ??
-                      Object.values(groupedChats)
-                        .flat()
-                        .find((c) => c._id === chat.originalChatId)?.title
+                      ?.title ??
+                    Object.values(groupedChats)
+                      .flat()
+                      .find((c) => c._id === chat.originalChatId)?.title
                     : undefined
                 }
                 handleSaveEdit={handleSaveEdit}
@@ -110,10 +91,10 @@ export function ChatList({
                     parentChatTitle={
                       chat.originalChatId
                         ? pinnedChats.find((c) => c._id === chat.originalChatId)
-                            ?.title ??
-                          Object.values(groupedChats)
-                            .flat()
-                            .find((c) => c._id === chat.originalChatId)?.title
+                          ?.title ??
+                        Object.values(groupedChats)
+                          .flat()
+                          .find((c) => c._id === chat.originalChatId)?.title
                         : undefined
                     }
                     handleSaveEdit={handleSaveEdit}

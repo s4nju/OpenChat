@@ -76,7 +76,9 @@ export default function CustomizationPage() {
         const url = anchor.getAttribute("href") || anchor.href
         if (url && url.startsWith("/")) {
           e.preventDefault()
-          document.activeElement instanceof HTMLElement && document.activeElement.blur()
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+          }
           setTimeout(() => {
             setPendingUrl(url)
             setShowUnsavedChangesDialog(true)
@@ -87,24 +89,6 @@ export default function CustomizationPage() {
     document.addEventListener("click", handleDocumentClick, true)
     return () => {
       document.removeEventListener("click", handleDocumentClick, true)
-    }
-  }, [hasUnsavedChanges])
-
-  useEffect(() => {
-    const handleRouteChangeStart = (url: string) => {
-      if (hasUnsavedChanges) {
-        setPendingUrl(url)
-        setTimeout(() => setShowUnsavedChangesDialog(true), 0)
-      }
-    }
-
-    // next/router still exposes events even in app router
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const nextRouter = require("next/router").Router
-    nextRouter.events.on("routeChangeStart", handleRouteChangeStart)
-
-    return () => {
-      nextRouter.events.off("routeChangeStart", handleRouteChangeStart)
     }
   }, [hasUnsavedChanges])
 

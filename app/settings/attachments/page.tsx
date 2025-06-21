@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
 import { ArrowSquareOut, FileText, Trash } from "@phosphor-icons/react"
 import { useMutation, useQuery } from "convex/react"
+import Image from "next/image"
 import { useState } from "react"
 
 function formatBytes(bytes: number) {
@@ -51,7 +52,7 @@ export default function AttachmentsPage() {
       await deleteAttachments({ attachmentIds: Array.from(selectedIds) })
       toast({ title: "Selected attachments deleted", status: "success" })
       setSelectedIds(new Set())
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       toast({ title: "Failed to delete some attachments", status: "error" })
     }
@@ -62,7 +63,7 @@ export default function AttachmentsPage() {
     try {
       await deleteAttachments({ attachmentIds: [attachmentId] })
       toast({ title: "Attachment deleted", status: "success" })
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       toast({ title: "Failed to delete attachment", status: "error" })
     }
@@ -171,10 +172,12 @@ export default function AttachmentsPage() {
                 />
                 {att.fileType.startsWith("image/") && att.url ? (
                   <div className="h-10 w-10 overflow-hidden rounded border">
-                    <img
+                    <Image
                       src={att.url}
                       alt={att.fileName}
                       className="h-full w-full object-cover"
+                      width={40}
+                      height={40}
                     />
                   </div>
                 ) : (

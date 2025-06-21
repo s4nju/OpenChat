@@ -5,9 +5,23 @@ import React from "react"
 import { MessageUsageCard } from "@/app/components/layout/settings/message-usage-card"
 import { User, Eye, EyeSlash } from "@phosphor-icons/react"
 import { Kbd } from "@/components/ui/kbd"
+import Image from "next/image"
 
 export function SettingsSidebar() {
   const { user } = useUser()
+
+  const [showEmail, setShowEmail] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("showEmail") === "true"
+  })
+
+  const maskEmail = (email?: string) => {
+    if (!email) return ""
+    const [local, domain] = email.split("@")
+    const tld = domain.substring(domain.lastIndexOf("."))
+    const prefix = local.slice(0, 2)
+    return `${prefix}*****${tld}`
+  }
 
   if (!user) return null
 
@@ -18,9 +32,11 @@ export function SettingsSidebar() {
         <div className="relative mb-4">
           <div className="bg-muted flex h-24 w-24 items-center justify-center overflow-hidden rounded-full">
             {user?.image ? (
-              <img
+              <Image
                 src={user.image}
                 alt="Profile"
+                width={96}
+                height={96}
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -29,34 +45,19 @@ export function SettingsSidebar() {
           </div>
         </div>
         <h2 className="text-xl font-semibold">{user?.name}</h2>
-        {(() => {
-          const [showEmail, setShowEmail] = React.useState<boolean>(() => {
-            if (typeof window === "undefined") return false
-            return localStorage.getItem("showEmail") === "true"
-          })
-          const maskEmail = (email?: string) => {
-            if (!email) return ""
-            const [local, domain] = email.split("@")
-            const tld = domain.substring(domain.lastIndexOf("."))
-            const prefix = local.slice(0, 2)
-            return `${prefix}*****${tld}`
-          }
-          return (
-            <button
-              type="button"
-              className="text-muted-foreground text-sm flex items-center gap-1"
-              onClick={() => {
-                setShowEmail(prev => {
-                  localStorage.setItem("showEmail", (!prev).toString())
-                  return !prev
-                })
-              }}
-            >
-              <span>{showEmail ? user.email : maskEmail(user.email)}</span>
-              {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
-            </button>
-          )
-        })()}
+        <button
+          type="button"
+          className="text-muted-foreground text-sm flex items-center gap-1"
+          onClick={() => {
+            setShowEmail(prev => {
+              localStorage.setItem("showEmail", (!prev).toString())
+              return !prev
+            })
+          }}
+        >
+          <span>{showEmail ? user.email : maskEmail(user.email)}</span>
+          {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
+        </button>
         {user?.isPremium && (
           <div className="mt-2">
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">

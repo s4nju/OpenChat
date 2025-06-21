@@ -87,7 +87,7 @@ export default function AccountSettingsPage() {
                   await signOut()
                   toast({ title: "Account deleted", status: "success" })
                   router.push("/")
-                } catch (e: any) {
+                } catch (e: unknown) {
                   console.error(e)
                   toast({
                     title: "Failed to delete account",

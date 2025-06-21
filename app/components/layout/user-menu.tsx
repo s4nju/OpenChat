@@ -31,6 +31,19 @@ export function UserMenu({ user }: { user: User }) {
   const { signOut } = useUser()
   const router = useRouter()
 
+  const [showEmail, setShowEmail] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("showEmail") === "true"
+  })
+
+  const maskEmail = (email?: string) => {
+    if (!email) return ""
+    const [local, domain] = email.split("@")
+    const tld = domain.substring(domain.lastIndexOf("."))
+    const prefix = local.slice(0, 2)
+    return `${prefix}*****${tld}`
+  }
+
   const handleSignOut = async () => {
     try {
       await signOut()
@@ -65,24 +78,15 @@ export function UserMenu({ user }: { user: User }) {
       >
         <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
           <span>{user?.name}</span>
-          {(() => {
-            const [showEmail, setShowEmail] = React.useState<boolean>(() => {
-              if (typeof window === "undefined") return false
-              return localStorage.getItem("showEmail") === "true"
+          <button onClick={() => {
+            setShowEmail(prev => {
+              localStorage.setItem("showEmail", (!prev).toString())
+              return !prev
             })
-            const maskEmail = (email?: string) => {
-              if (!email) return ""
-              const [local, domain] = email.split("@")
-              const tld = domain.substring(domain.lastIndexOf("."))
-              const prefix = local.slice(0, 2)
-              return `${prefix}*****${tld}`
-            }
-            return <button onClick={() => {
-              setShowEmail(prev => { localStorage.setItem("showEmail", (!prev).toString()); return !prev })
-            }} className="text-muted-foreground flex items-center gap-1">
-              <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>{showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
-            </button>
-          })()}
+          }} className="text-muted-foreground flex items-center gap-1">
+            <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>
+            {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
+          </button>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>

@@ -61,22 +61,24 @@ export async function POST(request: Request) {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in create-chat endpoint:", err);
+
+    const errorMessage = err instanceof Error ? err.message : "Internal server error";
 
     // Handle specific error codes from Convex if they are thrown
     if (
-      err.message?.includes("DAILY_LIMIT_REACHED") ||
-      err.message?.includes("MONTHLY_LIMIT_REACHED")
+      errorMessage.includes("DAILY_LIMIT_REACHED") ||
+      errorMessage.includes("MONTHLY_LIMIT_REACHED")
     ) {
       return new Response(
-        JSON.stringify({ error: err.message, code: "LIMIT_REACHED" }),
+        JSON.stringify({ error: errorMessage, code: "LIMIT_REACHED" }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

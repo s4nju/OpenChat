@@ -17,9 +17,10 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+// import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { APP_NAME } from "@/lib/config"
 import { Info } from "@phosphor-icons/react"
+import Image from "next/image"
 import { AppInfoContent } from "./app-info-content"
 
 type AppInfoTriggerProps = {
@@ -45,10 +46,13 @@ export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
         <DrawerTrigger asChild>{trigger || defaultTrigger}</DrawerTrigger>
         <DrawerContent className="bg-background border-border">
           <DrawerHeader>
-            <img
+            <Image
               src="/banner_ocean.jpg"
               alt={`calm paint generate by ${APP_NAME}`}
               className="h-32 w-full object-cover"
+              width={400}
+              height={128}
+              priority
             />
             <DrawerTitle className="hidden">{APP_NAME}</DrawerTitle>
             <DrawerDescription className="hidden">
@@ -68,10 +72,13 @@ export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       <DialogContent className="[&>button:last-child]:bg-background gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:p-1">
         <DialogHeader className="p-0">
-          <img
+          <Image
             src="/banner_ocean.jpg"
             alt={`calm paint generate by ${APP_NAME}`}
             className="h-32 w-full object-cover"
+            width={400}
+            height={128}
+            priority
           />
           <DialogTitle className="hidden">{APP_NAME}</DialogTitle>
           <DialogDescription className="hidden">

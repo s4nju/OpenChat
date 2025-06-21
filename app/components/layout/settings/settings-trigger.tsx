@@ -15,11 +15,10 @@ interface SettingsTriggerProps {
 
 export function SettingsTrigger({ isMenuItem = false }: SettingsTriggerProps) {
   const { user } = useUser()
-
-  if (!user) return null
-
   const isMobileOrTablet = useBreakpoint(896)
   const [isOpen, setIsOpen] = useState(false)
+
+  if (!user) return null
 
   if (isMenuItem && !isMobileOrTablet) {
     return (

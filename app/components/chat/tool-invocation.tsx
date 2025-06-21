@@ -12,14 +12,14 @@ import { useEffect, useState } from "react"
 type CustomToolInvocation =
   | BaseToolInvocation
   | ({
-      state: "requested"
-      step?: number
-      toolCallId: string
-      toolName: string
-      args?: any
-    } & {
-      result?: any
-    })
+    state: "requested"
+    step?: number
+    toolCallId: string
+    toolName: string
+    args?: Record<string, unknown>
+  } & {
+    result?: unknown
+  })
 
 type CustomToolInvocationUIPart = Omit<
   ToolInvocationUIPart,
@@ -34,12 +34,27 @@ interface ToolInvocationProps {
   defaultOpen?: boolean
 }
 
+// Types for parsed results
+interface SearchResult {
+  url: string
+  title: string
+  snippet?: string
+}
+
+interface ObjectResult {
+  title?: string
+  html_url?: string
+  [key: string]: unknown
+}
+
+type ParsedResult = SearchResult[] | ObjectResult | string | unknown
+
 function hasResult(
   toolInvocation: CustomToolInvocation
-): toolInvocation is CustomToolInvocation & { result: any } {
+): toolInvocation is CustomToolInvocation & { result: unknown } {
   return (
     toolInvocation.state === "result" ||
-    (toolInvocation as any).result !== undefined
+    ('result' in toolInvocation && toolInvocation.result !== undefined)
   )
 }
 
@@ -112,7 +127,7 @@ export function ToolInvocation({
                       (item) =>
                         item.toolInvocation.toolCallId === toolId &&
                         (item.toolInvocation as CustomToolInvocation).state ===
-                          "requested"
+                        "requested"
                     )
 
                     const resultTool = toolInvocations.find(
@@ -154,6 +169,11 @@ function SingleToolView({
   defaultOpen?: boolean
   className?: string
 }) {
+  // Move all hooks to the top before any early returns
+  const [isExpanded, setIsExpanded] = useState(defaultOpen)
+  const [parsedResult, setParsedResult] = useState<ParsedResult>(null)
+  const [parseError, setParseError] = useState<string | null>(null)
+
   const resultTool = data.find((item) => item.toolInvocation.state === "result")
   const requestTool = data.find(
     (item) =>
@@ -161,18 +181,14 @@ function SingleToolView({
   )
   const toolData = resultTool || requestTool
 
-  if (!toolData) return null
+  const { toolInvocation } = toolData || { toolInvocation: null }
+  const { state, toolName, toolCallId, args } = toolInvocation
+    ? (toolInvocation as CustomToolInvocation)
+    : { state: null, toolName: '', toolCallId: '', args: null }
 
-  const [isExpanded, setIsExpanded] = useState(defaultOpen)
-  const [parsedResult, setParsedResult] = useState<any>(null)
-  const [parseError, setParseError] = useState<string | null>(null)
-
-  const { toolInvocation } = toolData
-  const { state, toolName, toolCallId, args } =
-    toolInvocation as CustomToolInvocation
   const isRequested = state === "requested"
   const isCompleted = state === "result"
-  const result = hasResult(toolInvocation) ? toolInvocation.result : undefined
+  const result = toolInvocation && hasResult(toolInvocation) ? toolInvocation.result : undefined
 
   // Parse the result JSON if available
   useEffect(() => {
@@ -194,7 +210,7 @@ function SingleToolView({
         "content" in result
       ) {
         try {
-          const content = result.content
+          const content = (result as { content: Array<{ type: string; text?: string }> }).content
           const textContent = content.find(
             (item: { type: string }) => item.type === "text"
           )
@@ -206,7 +222,7 @@ function SingleToolView({
               if (!didCancel) {
                 setParsedResult(parsed)
               }
-            } catch (e) {
+            } catch {
               // If not valid JSON, just use the text as is
               if (!didCancel) {
                 setParsedResult(textContent.text)
@@ -230,24 +246,27 @@ function SingleToolView({
     }
   }, [isCompleted, result])
 
+  // Early return after hooks
+  if (!toolData) return null
+
   // Format the arguments for display
   const formattedArgs = args
     ? Object.entries(args).map(([key, value]) => (
-        <div key={key} className="mb-1">
-          <span className="font-medium text-slate-600">{key}:</span>{" "}
-          <span className="font-mono">
-            {typeof value === "object"
-              ? value === null
-                ? "null"
-                : Array.isArray(value)
-                  ? value.length === 0
-                    ? "[]"
-                    : JSON.stringify(value)
+      <div key={key} className="mb-1">
+        <span className="font-medium text-slate-600">{key}:</span>{" "}
+        <span className="font-mono">
+          {typeof value === "object"
+            ? value === null
+              ? "null"
+              : Array.isArray(value)
+                ? value.length === 0
+                  ? "[]"
                   : JSON.stringify(value)
-              : String(value)}
-          </span>
-        </div>
-      ))
+                : JSON.stringify(value)
+            : String(value)}
+        </span>
+      </div>
+    ))
     : null
 
   // Render generic results based on their structure
@@ -265,7 +284,7 @@ function SingleToolView({
       ) {
         return (
           <div className="space-y-3">
-            {parsedResult.map((item: any, index: number) => (
+            {(parsedResult as SearchResult[]).map((item: SearchResult, index: number) => (
               <div
                 key={index}
                 className="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
@@ -305,20 +324,21 @@ function SingleToolView({
 
     // Handle object results
     if (typeof parsedResult === "object" && parsedResult !== null) {
+      const objResult = parsedResult as ObjectResult
       return (
         <div>
-          {parsedResult.title && (
-            <div className="mb-2 font-medium">{parsedResult.title}</div>
+          {objResult.title && (
+            <div className="mb-2 font-medium">{objResult.title}</div>
           )}
-          {parsedResult.html_url && (
+          {objResult.html_url && (
             <div className="mb-2">
               <a
-                href={parsedResult.html_url}
+                href={objResult.html_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary flex items-center gap-1 hover:underline"
               >
-                <span className="font-mono">{parsedResult.html_url}</span>
+                <span className="font-mono">{objResult.html_url}</span>
                 <Link className="h-3 w-3 opacity-70" />
               </a>
             </div>

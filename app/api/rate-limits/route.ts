@@ -24,10 +24,10 @@ export async function GET() {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in /api/rate-limits:", err);
 
-    const message = err?.message || "Internal server error";
+    const message = err instanceof Error ? err.message : "Internal server error";
 
     // Determine if error relates to authentication/authorization
     const authErrorPatterns = [

@@ -5,6 +5,7 @@ import { PopoverContent } from "@/components/ui/popover"
 import React, { useState } from "react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { APP_NAME } from "../../../lib/config"
+import Image from "next/image"
 
 export function PopoverContentAuth() {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,9 +19,9 @@ export function PopoverContentAuth() {
       setError(null)
 
       await signIn("google")
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error signing in with Google:", err)
-      setError(err.message || "An unexpected error occurred. Please try again.")
+      setError((err as Error)?.message || "An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -31,10 +32,12 @@ export function PopoverContentAuth() {
       side="top"
       align="start"
     >
-      <img
+      <Image
         src="/banner_forest.jpg"
         alt={`calm paint generate by ${APP_NAME}`}
         className="h-32 w-full object-cover"
+        width={300}
+        height={128}
       />
       {error && (
         <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
@@ -56,7 +59,7 @@ export function PopoverContentAuth() {
           onClick={handleSignInWithGoogle}
           disabled={isLoading}
         >
-          <img
+          <Image
             src="https://www.google.com/favicon.ico"
             alt="Google logo"
             width={20}

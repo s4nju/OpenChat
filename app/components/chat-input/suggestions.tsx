@@ -14,7 +14,7 @@ type SuggestionsProps = {
 
 export const Suggestions = memo(function Suggestions({
   onValueChange,
-  onSuggestion,
+  // onSuggestion,
   value,
 }: SuggestionsProps) {
   const MotionPromptSuggestion = motion.create(PromptSuggestion)
@@ -97,7 +97,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [handleCategoryClick]
+    [handleCategoryClick, MotionPromptSuggestion]
   )
 
   const suggestionsList = useMemo(
@@ -140,7 +140,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [handleSuggestionClick]
+    [handleSuggestionClick, MotionPromptSuggestion, activeCategoryData?.highlight, activeCategoryData?.items, activeCategoryData?.label]
   )
 
   return (

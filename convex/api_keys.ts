@@ -185,6 +185,7 @@ export const saveApiKey = mutation({
       v.literal("openrouter"),
       v.literal("openai"),
       v.literal("anthropic"),
+      v.literal("gemini"),
       v.literal("mistral"),
       v.literal("meta"),
       v.literal("Qwen")
@@ -217,6 +218,7 @@ export const deleteApiKey = mutation({
       v.literal("openrouter"),
       v.literal("openai"),
       v.literal("anthropic"),
+      v.literal("gemini"),
       v.literal("mistral"),
       v.literal("meta"),
       v.literal("Qwen")
@@ -243,6 +245,7 @@ export const updateApiKeyMode = mutation({
       v.literal("openrouter"),
       v.literal("openai"),
       v.literal("anthropic"),
+      v.literal("gemini"),
       v.literal("mistral"),
       v.literal("meta"),
       v.literal("Qwen")
@@ -269,6 +272,7 @@ export const getDecryptedKey = query({
       v.literal("openrouter"),
       v.literal("openai"),
       v.literal("anthropic"),
+      v.literal("gemini"),
       v.literal("mistral"),
       v.literal("meta"),
       v.literal("Qwen")

@@ -30,7 +30,6 @@ const Conversation = React.memo(function Conversation({
   autoScroll = true,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
-  const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   if (!messages || messages.length === 0)
@@ -42,7 +41,6 @@ const Conversation = React.memo(function Conversation({
         className="relative flex w-full flex-col items-center pt-20 pb-4"
         autoScroll={autoScroll}
         ref={containerRef}
-        scrollToRef={scrollRef}
         style={{
           scrollbarGutter: "stable both-edges",
         }}
@@ -84,7 +82,6 @@ const Conversation = React.memo(function Conversation({
       <div className="absolute bottom-0 w-full max-w-3xl">
         <ScrollButton
           className="absolute top-[-50px] right-[30px]"
-          scrollRef={scrollRef}
           containerRef={containerRef}
         />
       </div>

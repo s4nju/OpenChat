@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { GithubLogo, TwitterLogo } from "@phosphor-icons/react"
-import Image from "next/image"
+// import Image from "next/image"
 
 export function AppInfoContent() {
   return (

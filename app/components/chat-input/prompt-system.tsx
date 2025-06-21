@@ -44,7 +44,7 @@ export const PromptSystem = memo(function PromptSystem({
         },
       },
     ],
-    [isPersonaMode]
+    [isPersonaMode, onSelectSystemPrompt]
   )
 
   return (

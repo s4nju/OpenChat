@@ -42,15 +42,6 @@ function FileUpload({
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = useRef(0)
 
-  const handleFiles = (files: FileList) => {
-    const newFiles = Array.from(files)
-    if (multiple) {
-      onFilesAdded(newFiles)
-    } else {
-      onFilesAdded(newFiles.slice(0, 1))
-    }
-  }
-
   useEffect(() => {
     const handleDrag = (e: DragEvent) => {
       e.preventDefault()
@@ -101,17 +92,17 @@ function FileUpload({
       window.removeEventListener("dragover", handleDrag)
       window.removeEventListener("drop", handleDrop)
     }
-  }, [handleFiles, onFilesAdded, multiple, accept])
+  }, [onFilesAdded, multiple, accept])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const allFiles = Array.from(e.target.files)
       let selected = allFiles
       if (accept) {
-        const allowed = accept.split(",").map(s=>s.trim())
-        selected = allFiles.filter(f=> allowed.includes(f.type))
+        const allowed = accept.split(",").map(s => s.trim())
+        selected = allFiles.filter(f => allowed.includes(f.type))
       }
-      const invalid = allFiles.filter(f=> !selected.includes(f))
+      const invalid = allFiles.filter(f => !selected.includes(f))
       if (invalid.length) {
         toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
       }

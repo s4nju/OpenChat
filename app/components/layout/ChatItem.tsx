@@ -7,7 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Doc, Id } from "@/convex/_generated/dataModel"
+import { Id } from "@/convex/_generated/dataModel"
 import {
   Check,
   GitBranch,

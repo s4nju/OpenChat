@@ -15,9 +15,9 @@ export const exaSearchTool = tool({
     endPublishedDate: z.string().optional().describe("End date for published results"),
     text: z.boolean().optional().default(true).describe("Whether to include text content in results"),
   }),
-  execute: async ({ query, numResults, includeDomains, excludeDomains, startPublishedDate, endPublishedDate, text }) => {
+  execute: async ({ query, numResults, includeDomains, excludeDomains, startPublishedDate, endPublishedDate }) => {
     // console.log("Executing exaSearchTool (exa-js) with query:", query);
-    const options: Record<string, any> = {
+    const options: Record<string, unknown> = {
       numResults,
       text: {
         maxCharacters: 500

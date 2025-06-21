@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 import { Message as MessageType } from "@ai-sdk/react"
 import { Check, Copy, FilePdf, Trash } from "@phosphor-icons/react"
 import React, { useEffect, useRef, useState, memo } from "react"
+import Image from 'next/image'
 
 const getTextFromDataUrl = (dataUrl: string) => {
   const base64 = dataUrl.split(",")[1]
@@ -102,11 +103,13 @@ function MessageUserInner({
               }}
             >
               <MorphingDialogTrigger className="z-10">
-                <img
-                  className="mb-1 w-40 rounded-md"
+                <Image
+                  className="mb-1 rounded-md"
                   key={attachment.name}
                   src={attachment.url}
-                  alt={attachment.name}
+                  alt={attachment.name ?? ''}
+                  width={160}
+                  height={160}
                 />
               </MorphingDialogTrigger>
               <MorphingDialogContainer>
@@ -137,7 +140,7 @@ function MessageUserInner({
               aria-label={`Download PDF: ${attachment.name}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  ;(e.currentTarget as HTMLAnchorElement).click()
+                  ; (e.currentTarget as HTMLAnchorElement).click()
                 }
               }}
             >

@@ -104,7 +104,7 @@ export default function HistoryPage() {
       )
       toast({ title: "Selected chats deleted", status: "success" })
       setSelectedIds(new Set())
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       toast({ title: "Failed to delete some chats", status: "error" })
     }
@@ -114,7 +114,24 @@ export default function HistoryPage() {
     if (selectedIds.size === 0) return
     toast({ title: "Preparing export…", status: "info" })
     try {
-      const data: Array<{ chat: any; messages: any[] }> = []
+      type ChatData = {
+        id: Id<"chats">
+        title: string
+        model: string
+        createdAt?: number
+        updatedAt?: number
+      }
+      type MessageData = {
+        _id: Id<"messages">
+        role: string
+        content: string
+        parentMessageId?: Id<"messages">
+        reasoningText?: string
+        model?: string
+        createdAt?: number
+        updatedAt?: number
+      }
+      const data: Array<{ chat: ChatData; messages: MessageData[] }> = []
       for (const id of selectedIds) {
         const chat = chats?.find((c) => c._id === id)
         if (!chat) continue
@@ -129,7 +146,7 @@ export default function HistoryPage() {
             createdAt: chat.createdAt,
             updatedAt: chat.updatedAt,
           },
-          messages,
+          messages: messages as MessageData[],
         })
       }
       const blob = new Blob(
@@ -145,7 +162,7 @@ export default function HistoryPage() {
       a.click()
       URL.revokeObjectURL(url)
       toast({ title: "Export complete", status: "success" })
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       toast({ title: "Failed to export chats", status: "error" })
     }
@@ -180,7 +197,16 @@ export default function HistoryPage() {
 
       for (const item of dataArr) {
         const chatMeta = item.chat ?? {}
-        const messagesArr: any[] = Array.isArray(item.messages)
+        type ImportMessage = {
+          role?: string
+          content: string
+          parentMessageId?: string
+          _id?: string
+          id?: string
+          model?: string
+          reasoningText?: string
+        }
+        const messagesArr: ImportMessage[] = Array.isArray(item.messages)
           ? item.messages
           : []
         const { chatId } = await convex.mutation(api.chats.createChat, {
@@ -217,7 +243,7 @@ export default function HistoryPage() {
                   chatId,
                   role: "user",
                   content: msg.content,
-                  parentMessageId: parentNew as any,
+                  parentMessageId: parentNew as Id<"messages"> | undefined,
                   reasoningText: msg.reasoningText ?? undefined,
                   experimentalAttachments: undefined,
                   model: msg.model ?? undefined,
@@ -230,7 +256,7 @@ export default function HistoryPage() {
                   chatId,
                   role: role === "assistant" ? "assistant" : "system",
                   content: msg.content,
-                  parentMessageId: parentNew as any,
+                  parentMessageId: parentNew as Id<"messages"> | undefined,
                   reasoningText: msg.reasoningText ?? undefined,
                   experimentalAttachments: undefined,
                   model: msg.model ?? undefined,
@@ -248,9 +274,10 @@ export default function HistoryPage() {
       }
       toast({ title: "Import completed", status: "success" })
       setSelectedIds(new Set())
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      toast({ title: err.message || "Failed to import file", status: "error" })
+      const errorMessage = err instanceof Error ? err.message : "Failed to import file"
+      toast({ title: errorMessage, status: "error" })
     } finally {
       e.target.value = ""
     }
@@ -264,7 +291,7 @@ export default function HistoryPage() {
           <ClockCounterClockwise className="text-muted-foreground size-5" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          Save your history as JSON, or import someone else's. Importing will
+          Save your history as JSON, or import someone else&apos;s. Importing will
           NOT delete existing messages.
         </p>
         <div className="space-y-4">

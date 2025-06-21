@@ -7,6 +7,9 @@ import { api } from "@/convex/_generated/api"
 import { useMutation, useQuery } from "convex/react"
 import { useState, useRef, useEffect } from "react"
 
+// Define the provider type to match the mutation
+type Provider = "openrouter" | "openai" | "anthropic" | "mistral" | "meta" | "Qwen" | "gemini"
+
 // API key validation patterns
 const API_KEY_PATTERNS = {
   openai: /^sk-[a-zA-Z0-9]{20,}$/,
@@ -15,7 +18,7 @@ const API_KEY_PATTERNS = {
 } as const
 
 // Validation function
-function validateApiKey(provider: string, key: string): { isValid: boolean; error?: string } {
+function validateApiKey(provider: Provider, key: string): { isValid: boolean; error?: string } {
   if (!key.trim()) {
     return { isValid: false, error: "API key is required" }
   }
@@ -41,7 +44,13 @@ function validateApiKey(provider: string, key: string): { isValid: boolean; erro
   return { isValid: true }
 }
 
-const PROVIDERS = [
+const PROVIDERS: Array<{
+  id: Provider;
+  title: string;
+  placeholder: string;
+  docs: string;
+  models: string[];
+}> = [
   {
     id: "anthropic",
     title: "Anthropic API Key",
@@ -104,7 +113,7 @@ export default function ApiKeysPage() {
     }
   }, [])
 
-  const handleSave = async (provider: string) => {
+  const handleSave = async (provider: Provider) => {
     const inputElement = inputRefs.current[provider]
     const key = inputElement?.value || ""
 
@@ -137,14 +146,14 @@ export default function ApiKeysPage() {
     }
   }
 
-  const handleInputChange = (provider: string) => {
+  const handleInputChange = (provider: Provider) => {
     // Clear validation error when user starts typing
     if (validationErrors[provider]) {
       setValidationErrors(prev => ({ ...prev, [provider]: "" }))
     }
   }
 
-  const handleDelete = async (provider: string) => {
+  const handleDelete = async (provider: Provider) => {
     if (!confirm("Delete saved API key?")) return
     try {
       await deleteApiKey({ provider })
@@ -155,7 +164,7 @@ export default function ApiKeysPage() {
     }
   }
 
-  const handleToggle = async (provider: string, checked: boolean) => {
+  const handleToggle = async (provider: Provider, checked: boolean) => {
     try {
       await updateMode({ provider, mode: checked ? "priority" : "fallback" })
     } catch (e) {
@@ -164,13 +173,13 @@ export default function ApiKeysPage() {
     }
   }
 
-  const getMode = (provider: string) => {
+  const getMode = (provider: Provider) => {
     const apiKey = apiKeys.find((k) => k.provider === provider);
     // Default to "fallback" if mode is not set
     return (apiKey?.mode || "fallback") === "priority";
   }
 
-  const hasKey = (provider: string) => {
+  const hasKey = (provider: Provider) => {
     return apiKeys.some((k) => k.provider === provider)
   }
 
