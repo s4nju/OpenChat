@@ -160,7 +160,7 @@ export async function POST(req: Request) {
         if (keyEntry) {
           userApiKey = await fetchQuery(
             api.api_keys.getDecryptedKey,
-            { provider: selectedModel.provider },
+            { provider: selectedModel.provider as "openrouter" | "openai" | "anthropic" | "mistral" | "meta" | "Qwen" },
             { token }
           );
         }

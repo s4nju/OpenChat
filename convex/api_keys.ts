@@ -136,13 +136,17 @@ async function decrypt(payload: string, userId: string): Promise<string> {
   const iv = hexToArrayBuffer(ivHex);
   const data = hexToArrayBuffer(dataHex);
 
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    data
-  );
-
-  return arrayBufferToString(decrypted);
+  try {
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      data
+    );
+    return arrayBufferToString(decrypted);
+  } catch {
+    console.error("Failed to decrypt API key"); // Generic error log without sensitive details
+    throw new Error("Failed to decrypt API key");
+  }
 }
 
 export const getApiKeys = query({
@@ -176,7 +180,16 @@ export const getApiKeys = query({
 });
 
 export const saveApiKey = mutation({
-  args: { provider: v.string(), key: v.string(), mode: v.optional(v.union(v.literal("priority"), v.literal("fallback"))) },
+  args: {
+    provider: v.union(
+      v.literal("openrouter"),
+      v.literal("openai"),
+      v.literal("anthropic"),
+      v.literal("mistral"),
+      v.literal("meta"),
+      v.literal("Qwen")
+    ), key: v.string(), mode: v.optional(v.union(v.literal("priority"), v.literal("fallback")))
+  },
   returns: v.null(),
   handler: async (ctx, { provider, key, mode }) => {
     const userId = await getAuthUserId(ctx);
@@ -199,7 +212,16 @@ export const saveApiKey = mutation({
 });
 
 export const deleteApiKey = mutation({
-  args: { provider: v.string() },
+  args: {
+    provider: v.union(
+      v.literal("openrouter"),
+      v.literal("openai"),
+      v.literal("anthropic"),
+      v.literal("mistral"),
+      v.literal("meta"),
+      v.literal("Qwen")
+    )
+  },
   returns: v.null(),
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
@@ -216,7 +238,16 @@ export const deleteApiKey = mutation({
 });
 
 export const updateApiKeyMode = mutation({
-  args: { provider: v.string(), mode: v.union(v.literal("priority"), v.literal("fallback")) },
+  args: {
+    provider: v.union(
+      v.literal("openrouter"),
+      v.literal("openai"),
+      v.literal("anthropic"),
+      v.literal("mistral"),
+      v.literal("meta"),
+      v.literal("Qwen")
+    ), mode: v.union(v.literal("priority"), v.literal("fallback"))
+  },
   returns: v.null(),
   handler: async (ctx, { provider, mode }) => {
     const userId = await getAuthUserId(ctx);
@@ -233,7 +264,16 @@ export const updateApiKeyMode = mutation({
 });
 
 export const getDecryptedKey = query({
-  args: { provider: v.string() },
+  args: {
+    provider: v.union(
+      v.literal("openrouter"),
+      v.literal("openai"),
+      v.literal("anthropic"),
+      v.literal("mistral"),
+      v.literal("meta"),
+      v.literal("Qwen")
+    )
+  },
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");

@@ -59,6 +59,15 @@ function humaniseUploadError(err: unknown): string {
   return "Error uploading file";
 }
 
+// Helper to check if a model supports reasoning
+function supportsReasoning(modelId: string): boolean {
+  const model = MODELS.find((m) => m.id === modelId);
+  if (!model || !model.features) {
+    return false;
+  }
+  return model.features.some((f) => f.id === "reasoning" && f.enabled);
+}
+
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
@@ -383,9 +392,7 @@ export default function Chat() {
       setFiles([])
     }
 
-    const isReasoningModel = MODELS.find((m) => m.id === selectedModel)?.features?.some(
-      (f) => f.id === "reasoning" && f.enabled
-    );
+    const isReasoningModel = supportsReasoning(selectedModel);
 
     const options = {
       body: {
@@ -688,9 +695,7 @@ export default function Chat() {
           systemPrompt={personaPrompt}
           stop={stop}
           status={status}
-          isReasoningModel={MODELS.find((m) => m.id === selectedModel)?.features?.some(
-            (f) => f.id === "reasoning" && f.enabled
-          ) || false}
+          isReasoningModel={supportsReasoning(selectedModel)}
           reasoningEffort={reasoningEffort}
           onSelectReasoningEffort={setReasoningEffort}
         />
