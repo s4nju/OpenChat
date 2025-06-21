@@ -56,15 +56,23 @@ export async function POST(request: Request) {
       { token }
     );
 
-    const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!);
-    posthog.capture({
-      distinctId: user._id,
-      event: "chat_created",
-      properties: {
-        model,
-      },
-    });
-    await posthog.shutdown();
+    // Only track if PostHog is configured
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      try {
+        const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+        posthog.capture({
+          distinctId: user._id,
+          event: "chat_created",
+          properties: {
+            model,
+          },
+        });
+        await posthog.shutdown();
+      } catch (error) {
+        console.error("PostHog tracking failed:", error);
+        // Don't let tracking failures affect the API response
+      }
+    }
 
     // The client now only needs the ID to redirect to the new chat page.
     // The chat data itself will be fetched on the client via a query.
