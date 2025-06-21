@@ -8,6 +8,8 @@ import {
   appendResponseMessages,
   JSONValue,
 } from "ai";
+import { PostHog } from "posthog-node";
+import { withTracing } from "@posthog/ai";
 import { exaSearchTool } from "@/app/api/tools";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
@@ -167,6 +169,10 @@ export async function POST(req: Request) {
 
     const token = await convexAuthNextjsToken();
 
+    // Get current user for PostHog tracking
+    const user = await fetchQuery(api.users.getCurrentUser, {}, { token });
+    const userId = user?._id;
+
     // --- API Key and Model Configuration ---
     const { apiKeyUsage } = selectedModel;
     let userApiKey: string | null = null;
@@ -285,9 +291,16 @@ export async function POST(req: Request) {
           return undefined;
         };
 
+        const phClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, { host: process.env.NEXT_PUBLIC_POSTHOG_HOST });
+
         const runStream = (useUser: boolean) =>
           streamText({
-            model: selectedModel.api_sdk,
+            model: withTracing(selectedModel.api_sdk, phClient, {
+              posthogDistinctId: userId ? userId.toString() : undefined,
+              posthogProperties: {
+                conversation_id: chatId,
+              },
+            }),
             system: systemPrompt || "You are a helpful assistant.",
             messages,
             tools: enableSearch ? { exaSearch: exaSearchTool } : undefined,
@@ -344,6 +357,8 @@ export async function POST(req: Request) {
                 dataStream.writeData({ userMsgId, assistantMsgId });
               } catch (err) {
                 console.error("Error in onFinish while saving assistant messages:", err);
+              } finally {
+                await phClient.shutdown();
               }
             },
           });

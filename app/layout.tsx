@@ -9,6 +9,7 @@ import { ChatSessionProvider } from "./providers/chat-session-provider"
 import { LayoutClient } from "./layout-client"
 import { UserProvider } from "./providers/user-provider"
 import { ConvexClientProvider } from "./providers/ConvexClientProvider"
+import { CSPostHogProvider } from "./providers/posthog-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,12 +52,14 @@ export default async function RootLayout({
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
             <UserProvider>
-              <ChatSessionProvider>
-                <ThemeProvider>
-                  <Toaster position="top-center" />
-                  {children}
-                </ThemeProvider>
-              </ChatSessionProvider>
+              <CSPostHogProvider>
+                <ChatSessionProvider>
+                  <ThemeProvider>
+                    <Toaster position="top-center" />
+                    {children}
+                  </ThemeProvider>
+                </ChatSessionProvider>
+              </CSPostHogProvider>
             </UserProvider>
           </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>

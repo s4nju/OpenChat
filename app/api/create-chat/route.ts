@@ -3,6 +3,7 @@ import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
 import { buildSystemPrompt } from "@/lib/config";
 import { z } from "zod";
+import { PostHog } from "posthog-node";
 
 export async function POST(request: Request) {
   try {
@@ -54,6 +55,16 @@ export async function POST(request: Request) {
       },
       { token }
     );
+
+    const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!);
+    posthog.capture({
+      distinctId: user._id,
+      event: "chat_created",
+      properties: {
+        model,
+      },
+    });
+    await posthog.shutdown();
 
     // The client now only needs the ID to redirect to the new chat page.
     // The chat data itself will be fetched on the client via a query.

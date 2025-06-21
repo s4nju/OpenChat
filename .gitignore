@@ -41,3 +41,5 @@ docs*
 .clinerules
 .open-next
 .roo
+
+.env.local
