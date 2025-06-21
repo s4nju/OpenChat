@@ -2,7 +2,7 @@
 import posthog from "posthog-js"
 import { PostHogProvider } from "posthog-js/react"
 import { useEffect } from "react"
-import { useUser } from "./user-provider"
+import { useUser, UserProfile } from "./user-provider"
 
 export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -12,18 +12,47 @@ export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Define types for PostHog user properties
+interface PostHogUserProperties {
+  email?: string;
+  name?: string;
+  isAnonymous?: boolean;
+}
+
+// Validate user properties before accessing them
+function validateUserProperties(user: UserProfile): PostHogUserProperties {
+  return {
+    email: user.email || undefined,
+    name: user.name || user.preferredName || undefined,
+    isAnonymous: user.isAnonymous || false,
+  };
+}
+
 function PostHogAuthWrapper({ children }: { children: React.ReactNode }) {
   const userInfo = useUser()
 
   useEffect(() => {
     if (userInfo.user) {
-      posthog.identify(userInfo.user._id, {
-        email: userInfo.user.email,
-        name: userInfo.user.name,
-        isAnonymous: userInfo.user.isAnonymous,
-      })
+      try {
+        // Validate user properties before using them
+        const userProperties = validateUserProperties(userInfo.user);
+
+        // Only identify if we have a valid user ID
+        if (userInfo.user._id) {
+          posthog.identify(userInfo.user._id, userProperties);
+        } else {
+          console.warn("PostHog: User ID is missing, skipping identification");
+        }
+      } catch (error) {
+        console.error("PostHog: Failed to identify user", error);
+        // Optionally, you could report this error to your error tracking service
+      }
     } else {
-      posthog.reset()
+      try {
+        posthog.reset();
+      } catch (error) {
+        console.error("PostHog: Failed to reset user session", error);
+      }
     }
   }, [userInfo.user])
 

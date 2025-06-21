@@ -19,6 +19,18 @@ import {
 import { fetchMutation, fetchQuery } from "convex/nextjs"
 import { PostHog } from "posthog-node"
 
+// Initialize PostHog client at module level for efficiency
+let phClient: PostHog | null = null
+if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  try {
+    phClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    })
+  } catch (error) {
+    console.error("Failed to initialize PostHog client:", error)
+  }
+}
+
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 60
 
@@ -220,7 +232,7 @@ export async function POST(req: Request) {
     // Determine if we should use a user-provided API key
     const useUserKey = Boolean(
       (apiKeyUsage?.userKeyOnly && userApiKey) ||
-        (keyEntry?.mode === "priority" && userApiKey)
+      (keyEntry?.mode === "priority" && userApiKey)
     )
 
     // Reject early if model requires user key only but no user API key provided
@@ -316,26 +328,15 @@ export async function POST(req: Request) {
           return undefined
         }
 
-        let phClient: PostHog | null = null
-        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-          try {
-            phClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-              host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-            })
-          } catch (error) {
-            console.error("Failed to initialize PostHog client:", error)
-          }
-        }
-
         const runStream = (useUser: boolean) =>
           streamText({
             model: phClient
               ? withTracing(selectedModel.api_sdk, phClient, {
-                  posthogDistinctId: userId?.toString(),
-                  posthogProperties: {
-                    conversation_id: chatId,
-                  },
-                })
+                posthogDistinctId: userId?.toString(),
+                posthogProperties: {
+                  conversation_id: chatId,
+                },
+              })
               : selectedModel.api_sdk,
             system: systemPrompt || "You are a helpful assistant.",
             messages,
