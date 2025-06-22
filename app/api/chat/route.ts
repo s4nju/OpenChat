@@ -3,6 +3,12 @@ import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
 import { MODELS } from "@/lib/config"
 import { sanitizeUserInput } from "@/lib/sanitize"
+import { 
+  convertAttachmentsToFileParts, 
+  createPartsFromAIResponse,
+  buildMetadataFromResponse,
+  extractReasoningFromResponse
+} from "@/lib/ai-sdk-utils"
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic"
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google"
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai"
@@ -275,13 +281,24 @@ export async function POST(req: Request) {
         if (!reloadAssistantMessageId) {
           const userMessage = messages[messages.length - 1]
           if (userMessage && userMessage.role === "user") {
+            // Convert experimental_attachments to FileParts before saving
+            const fileParts = userMessage.experimental_attachments 
+              ? convertAttachmentsToFileParts(userMessage.experimental_attachments)
+              : []
+
+            const userParts = [
+              { type: "text" as const, text: sanitizeUserInput(userMessage.content as string) },
+              ...fileParts
+            ]
+
             const { messageId } = await fetchMutation(
               api.messages.sendUserMessageToChat,
               {
                 chatId: chatId,
                 role: "user",
                 content: sanitizeUserInput(userMessage.content as string),
-                experimentalAttachments: userMessage.experimental_attachments,
+                parts: userParts,
+                metadata: {} // Empty metadata for user messages
               },
               { token }
             )
@@ -328,6 +345,7 @@ export async function POST(req: Request) {
           return undefined
         }
 
+        const startTime = Date.now()
         const runStream = (useUser: boolean) =>
           streamText({
             model: phClient
@@ -350,7 +368,7 @@ export async function POST(req: Request) {
               chunking: "word",
             }),
             onError: (error) => console.log("Error in streamText:", error),
-            async onFinish({ response }) {
+            async onFinish({ text, finishReason, usage, response }) {
               const userMessage = messages[messages.length - 1]
               try {
                 for (const msg of response.messages) {
@@ -369,16 +387,18 @@ export async function POST(req: Request) {
                     const reasoningText = msg.content.find(
                       (p) => p.type === "reasoning"
                     )?.text
-                    const [, assistantMessage] = appendResponseMessages({
-                      messages: [userMessage],
-                      responseMessages: response.messages,
-                    })
 
                     if (!userMsgId) {
                       throw new Error(
                         "Missing parent userMsgId when saving assistant message."
                       )
                     }
+
+                    // Create parts array using our helper function
+                    const messageParts = createPartsFromAIResponse(textContent, reasoningText)
+                    
+                    // Build metadata from response
+                    const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime)
 
                     const { messageId } = await fetchMutation(
                       api.messages.saveAssistantMessage,
@@ -387,9 +407,8 @@ export async function POST(req: Request) {
                         role: "assistant",
                         content: textContent,
                         parentMessageId: userMsgId,
-                        reasoningText,
-                        model,
-                        parts: assistantMessage.parts,
+                        parts: messageParts,
+                        metadata: metadata,
                       },
                       { token }
                     )

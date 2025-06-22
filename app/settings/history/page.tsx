@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/toast"
 import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
 import { buildSystemPrompt, MESSAGE_MAX_LENGTH } from "@/lib/config"
+import { createPartsFromAIResponse } from "@/lib/ai-sdk-utils"
 import {
   ClockCounterClockwise,
   DownloadSimple,
@@ -17,7 +18,7 @@ import { useRef, useState } from "react"
 import superjson from "superjson"
 import { z } from "zod"
 
-// Schema to validate imported history files
+// Schema to validate imported history files (supports both old and new formats)
 const ImportSchema = z
   .object({
     exportedAt: z.number().optional(),
@@ -37,8 +38,19 @@ const ImportSchema = z
               parentMessageId: z.string().optional(),
               _id: z.string().optional(),
               id: z.string().optional(),
+              // Legacy fields (for backward compatibility)
               model: z.string().max(50).optional(),
               reasoningText: z.string().optional(),
+              // New schema fields
+              parts: z.array(z.any()).optional(),
+              metadata: z.object({
+                modelName: z.string().optional(),
+                modelId: z.string().optional(),
+                promptTokens: z.number().optional(),
+                completionTokens: z.number().optional(),
+                reasoningTokens: z.number().optional(),
+                serverDurationMs: z.number().optional(),
+              }).optional(),
             })
           )
           .optional(),
@@ -126,8 +138,15 @@ export default function HistoryPage() {
         role: string
         content: string
         parentMessageId?: Id<"messages">
-        reasoningText?: string
-        model?: string
+        parts?: any[]
+        metadata?: {
+          modelName?: string
+          modelId?: string
+          promptTokens?: number
+          completionTokens?: number
+          reasoningTokens?: number
+          serverDurationMs?: number
+        }
         createdAt?: number
         updatedAt?: number
       }
@@ -236,6 +255,15 @@ export default function HistoryPage() {
             : undefined
           try {
             let result
+            // Create parts array from content and legacy reasoning text
+            const messageParts = createPartsFromAIResponse(
+              msg.content, 
+              msg.reasoningText
+            )
+            const metadata = {
+              modelName: msg.model || undefined
+            }
+
             if (role === "user") {
               result = await convex.mutation(
                 api.messages.sendUserMessageToChat,
@@ -244,9 +272,8 @@ export default function HistoryPage() {
                   role: "user",
                   content: msg.content,
                   parentMessageId: parentNew as Id<"messages"> | undefined,
-                  reasoningText: msg.reasoningText ?? undefined,
-                  experimentalAttachments: undefined,
-                  model: msg.model ?? undefined,
+                  parts: messageParts,
+                  metadata: {}
                 }
               )
             } else {
@@ -257,9 +284,8 @@ export default function HistoryPage() {
                   role: role === "assistant" ? "assistant" : "system",
                   content: msg.content,
                   parentMessageId: parentNew as Id<"messages"> | undefined,
-                  reasoningText: msg.reasoningText ?? undefined,
-                  experimentalAttachments: undefined,
-                  model: msg.model ?? undefined,
+                  parts: messageParts,
+                  metadata: metadata
                 }
               )
             }

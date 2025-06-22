@@ -2,17 +2,27 @@ import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import type { Id } from "./_generated/dataModel"
 import { mutation, query } from "./_generated/server"
+import { MessagePart } from "./schema/parts"
 
 export const sendUserMessageToChat = mutation({
   args: {
     chatId: v.id("chats"),
-    role: v.string(),
+    role: v.union(
+      v.literal("user"),
+      v.literal("assistant"),
+      v.literal("system")
+    ),
     content: v.string(),
     parentMessageId: v.optional(v.id("messages")),
-    reasoningText: v.optional(v.string()),
-    experimentalAttachments: v.optional(v.any()),
-    parts: v.optional(v.any()),
-    model: v.optional(v.string()),
+    parts: v.optional(v.array(MessagePart)),
+    metadata: v.optional(v.object({
+      modelId: v.optional(v.string()),
+      modelName: v.optional(v.string()),
+      promptTokens: v.optional(v.number()),
+      completionTokens: v.optional(v.number()),
+      reasoningTokens: v.optional(v.number()),
+      serverDurationMs: v.optional(v.number())
+    })),
   },
   returns: v.object({ messageId: v.id("messages") }),
   handler: async (ctx, args) => {
@@ -31,10 +41,8 @@ export const sendUserMessageToChat = mutation({
       role: args.role,
       content: args.content,
       parentMessageId: args.parentMessageId,
-      reasoningText: args.reasoningText,
-      experimentalAttachments: args.experimentalAttachments,
       parts: args.parts,
-      model: args.model,
+      metadata: args.metadata || {},
       createdAt: Date.now(),
     })
     await ctx.db.patch(args.chatId, { updatedAt: Date.now() })
@@ -45,13 +53,22 @@ export const sendUserMessageToChat = mutation({
 export const saveAssistantMessage = mutation({
   args: {
     chatId: v.id("chats"),
-    role: v.string(),
+    role: v.union(
+      v.literal("user"),
+      v.literal("assistant"),
+      v.literal("system")
+    ),
     content: v.string(),
     parentMessageId: v.optional(v.id("messages")),
-    reasoningText: v.optional(v.string()),
-    experimentalAttachments: v.optional(v.any()),
-    parts: v.optional(v.any()),
-    model: v.optional(v.string()),
+    parts: v.optional(v.array(MessagePart)),
+    metadata: v.optional(v.object({
+      modelId: v.optional(v.string()),
+      modelName: v.optional(v.string()),
+      promptTokens: v.optional(v.number()),
+      completionTokens: v.optional(v.number()),
+      reasoningTokens: v.optional(v.number()),
+      serverDurationMs: v.optional(v.number())
+    })),
   },
   returns: v.object({ messageId: v.id("messages") }),
   handler: async (ctx, args) => {
@@ -70,10 +87,8 @@ export const saveAssistantMessage = mutation({
       role: args.role,
       content: args.content,
       parentMessageId: args.parentMessageId,
-      reasoningText: args.reasoningText,
-      experimentalAttachments: args.experimentalAttachments,
       parts: args.parts,
-      model: args.model,
+      metadata: args.metadata || {},
       createdAt: Date.now(),
     })
     await ctx.db.patch(args.chatId, { updatedAt: Date.now() })
@@ -89,14 +104,23 @@ export const getMessagesForChat = query({
       _creationTime: v.number(),
       chatId: v.id("chats"),
       userId: v.optional(v.id("users")),
-      role: v.string(),
+      role: v.union(
+        v.literal("user"),
+        v.literal("assistant"),
+        v.literal("system")
+      ),
       content: v.string(),
       createdAt: v.optional(v.number()),
-      experimentalAttachments: v.optional(v.any()),
-      parts: v.optional(v.any()),
+      parts: v.optional(v.array(MessagePart)),
       parentMessageId: v.optional(v.id("messages")),
-      reasoningText: v.optional(v.string()),
-      model: v.optional(v.string()),
+      metadata: v.object({
+        modelId: v.optional(v.string()),
+        modelName: v.optional(v.string()),
+        promptTokens: v.optional(v.number()),
+        completionTokens: v.optional(v.number()),
+        reasoningTokens: v.optional(v.number()),
+        serverDurationMs: v.optional(v.number())
+      }),
     })
   ),
   handler: async (ctx, { chatId }) => {
@@ -133,7 +157,11 @@ export const getMessageDetails = query({
     v.null(),
     v.object({
       parentMessageId: v.optional(v.id("messages")),
-      role: v.string(),
+      role: v.union(
+        v.literal("user"),
+        v.literal("assistant"),
+        v.literal("system")
+      ),
     })
   ),
   handler: async (ctx, args) => {

@@ -3,6 +3,7 @@ import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { User } from "./schema/user";
 
 // Usage Limits - ensure these are in sync with your application's limits
 const NON_AUTH_DAILY_MESSAGE_LIMIT = 5;
@@ -17,22 +18,7 @@ export const getCurrentUser = query({
     v.object({
       _id: v.id("users"),
       _creationTime: v.number(),
-      email: v.optional(v.string()),
-      name: v.optional(v.string()),
-      image: v.optional(v.string()),
-      emailVerificationTime: v.optional(v.number()),
-      isAnonymous: v.optional(v.boolean()),
-      dailyMessageCount: v.optional(v.number()),
-      dailyResetTimestamp: v.optional(v.number()),
-      monthlyMessageCount: v.optional(v.number()),
-      monthlyResetTimestamp: v.optional(v.number()),
-      totalMessageCount: v.optional(v.number()),
-      preferredModel: v.optional(v.string()),
-      isPremium: v.optional(v.boolean()),
-      preferredName: v.optional(v.string()),
-      occupation: v.optional(v.string()),
-      traits: v.optional(v.string()),
-      about: v.optional(v.string()),
+      ...User.fields
     })
   ),
   handler: async (ctx) => {

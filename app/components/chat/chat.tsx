@@ -7,6 +7,7 @@ import { useUser } from "@/app/providers/user-provider"
 import { toast } from "@/components/ui/toast"
 import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
+import { convertConvexToAISDK } from "@/lib/ai-sdk-utils"
 import {
   buildSystemPrompt,
   MESSAGE_MAX_LENGTH,
@@ -29,19 +30,8 @@ const DialogAuth = dynamic(
 )
 
 // Helper to map Convex message doc to AI SDK message type
-const mapMessage = (
-  msg: Doc<"messages">
-): Message & { reasoning_text?: string; model?: string } => ({
-  id: msg._id,
-  role: msg.role as "user" | "assistant",
-  content: msg.content,
-  createdAt: new Date(msg._creationTime),
-  experimental_attachments: msg.experimentalAttachments,
-  reasoning_text: msg.reasoningText,
-  model: msg.model,
-  parts: msg.parts,
-  // Optionally include model if stored in message doc in future
-})
+const mapMessage = (msg: Doc<"messages">): Message => 
+  convertConvexToAISDK(msg)
 
 // Map backend error codes to user-friendly messages
 function humaniseUploadError(err: unknown): string {
@@ -180,10 +170,8 @@ export default function Chat() {
             ...msg,
             id: dbMsg.id,
             experimental_attachments: dbMsg.experimental_attachments,
-            reasoning_text: dbMsg.reasoning_text,
-            model: dbMsg.model,
             parts: msg.parts ?? dbMsg.parts,
-          } as typeof msg
+          }
         }
         // Keep optimistic messages beyond the DB length untouched to avoid
         // momentary disappearance in the UI.

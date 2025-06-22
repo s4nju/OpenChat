@@ -1,1 +1,0 @@
-// (Removed unused validateUserIdentity function; it referenced stale Supabase logic and is not used in the codebase.)

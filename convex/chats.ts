@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
+import { Chat } from "./schema/chat"
 
 export const createChat = mutation({
   args: {
@@ -33,14 +34,7 @@ export const listChatsForUser = query({
     v.object({
       _id: v.id("chats"),
       _creationTime: v.number(),
-      userId: v.id("users"),
-      title: v.optional(v.string()),
-      model: v.optional(v.string()),
-      systemPrompt: v.optional(v.string()),
-      createdAt: v.optional(v.number()),
-      updatedAt: v.optional(v.number()),
-      originalChatId: v.optional(v.id("chats")),
-      isPinned: v.optional(v.boolean()),
+      ...Chat.fields
     })
   ),
   handler: async (ctx) => {
@@ -61,14 +55,7 @@ export const getChat = query({
     v.object({
       _id: v.id("chats"),
       _creationTime: v.number(),
-      userId: v.id("users"),
-      title: v.optional(v.string()),
-      model: v.optional(v.string()),
-      systemPrompt: v.optional(v.string()),
-      createdAt: v.optional(v.number()),
-      updatedAt: v.optional(v.number()),
-      originalChatId: v.optional(v.id("chats")),
-      isPinned: v.optional(v.boolean()),
+      ...Chat.fields
     })
   ),
   handler: async (ctx, { chatId }) => {
@@ -240,10 +227,9 @@ export const branchChat = mutation({
           role: message.role,
           content: message.content,
           createdAt: message.createdAt,
-          experimentalAttachments: message.experimentalAttachments,
           parentMessageId: message.parentMessageId,
-          reasoningText: message.reasoningText,
-          model: message.model,
+          parts: message.parts,
+          metadata: message.metadata,
         })
       }
 

@@ -3,6 +3,7 @@ import { action, mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
+import { ChatAttachment } from "./schema/chat_attachment";
 
 /**
  * Generates a secure URL for uploading a file to Convex storage.

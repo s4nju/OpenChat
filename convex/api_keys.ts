@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { UserApiKey } from "./schema/user_api_key";
 
 const API_KEY_SECRET = process.env.API_KEY_SECRET;
 if (!API_KEY_SECRET) {
