@@ -18,11 +18,16 @@ function formatBytes(bytes: number) {
 }
 
 export default function AttachmentsPage() {
-  const attachments =
+  const rawAttachments =
     useQuery(api.files.getAttachmentsForUser) ??
     (undefined as
       | (Doc<"chat_attachments"> & { url: string | null })[]
       | undefined)
+  
+  // Sort attachments by creation time (latest first)
+  const attachments = rawAttachments?.sort((a, b) => 
+    new Date(b._creationTime).getTime() - new Date(a._creationTime).getTime()
+  )
   const deleteAttachments = useMutation(api.files.deleteAttachments)
   const [selectedIds, setSelectedIds] = useState<Set<Id<"chat_attachments">>>(
     new Set()
