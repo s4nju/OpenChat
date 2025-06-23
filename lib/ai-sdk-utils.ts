@@ -25,6 +25,7 @@ type ConvexMessagePart = {
   data: string
   filename?: string
   mimeType?: string
+  url?: string // Generated URL for display (not persisted)
 } | {
   type: "error"
   error: {
@@ -48,6 +49,7 @@ export interface Attachment {
   name?: string
   contentType?: string
   url: string
+  storageId?: string
 }
 
 // AI SDK Message metadata type
@@ -76,28 +78,41 @@ export function convertConvexToAISDK(msg: Doc<"messages">): Message {
 
 /**
  * Extract attachment objects from FileParts for AI SDK experimental_attachments
+ * Handles both storage IDs and generated URLs from queries
  */
 export function extractAttachmentsFromParts(parts?: ConvexMessagePart[]): Attachment[] | undefined {
   if (!parts) return undefined
   
   const attachments = parts
     .filter((part): part is Extract<ConvexMessagePart, { type: "file" }> => part.type === "file")
-    .map(part => ({
-      name: part.filename,
-      contentType: part.mimeType,
-      url: part.data.startsWith('data:') ? part.data : `data:${part.mimeType};base64,${part.data}`
-    }))
+    .filter(validateFilePart) // Filter out invalid parts
+    .map(part => {
+      // Check if part has a generated URL field (added by queries)
+      const hasGeneratedUrl = (part as any).url && typeof (part as any).url === 'string'
+      
+      // Use helper function to detect storage IDs
+      const isStorageId = isConvexStorageId(part.data)
+      
+      return {
+        name: part.filename,
+        contentType: part.mimeType,
+        // Use generated URL if available, otherwise use data field (for backwards compatibility)
+        url: hasGeneratedUrl ? (part as any).url : part.data,
+        storageId: isStorageId ? part.data : undefined
+      }
+    })
   
   return attachments.length > 0 ? attachments : undefined
 }
 
 /**
  * Convert uploaded file attachments to FileParts for storage
+ * Stores storage ID instead of URL for permanent reference
  */
 export function convertAttachmentsToFileParts(attachments: Attachment[]): ConvexMessagePart[] {
   return attachments.map(att => ({
     type: "file" as const,
-    data: att.url, // Could be data URL or regular URL
+    data: att.storageId || att.url, // Use storage ID if available, fallback to URL for backwards compatibility
     mimeType: att.contentType || "application/octet-stream",
     filename: att.name
   }))
@@ -172,4 +187,22 @@ export function createPartsFromAIResponse(
   }
   
   return parts
+}
+
+/**
+ * Helper to detect if a string is a Convex storage ID
+ */
+export function isConvexStorageId(value: string): boolean {
+  // Convex storage IDs are typically 32-character hex strings
+  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:')
+}
+
+/**
+ * Helper to validate file part data
+ */
+export function validateFilePart(part: ConvexMessagePart): boolean {
+  if (part.type !== "file") return false
+  if (!part.data || typeof part.data !== "string") return false
+  if (!part.mimeType) return false
+  return true
 } 

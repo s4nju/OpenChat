@@ -22,6 +22,7 @@ export const generateUploadUrl = action({
 
 /**
  * Saves the metadata of a successfully uploaded file to the database.
+ * Returns storage ID instead of temporary URL for permanent reference.
  */
 export const saveFileAttachment = action({
   args: {
@@ -37,8 +38,8 @@ export const saveFileAttachment = action({
     if (!attachment) {
       throw new Error("Attachment not found");
     }
-    const url = await ctx.storage.getUrl(attachment.fileId);
-    return { ...attachment, url };
+    // Return storage ID instead of temporary URL - URLs will be generated on-demand
+    return { ...attachment, storageId: attachment.fileId };
   },
 });
 
@@ -134,6 +135,28 @@ export const getAttachment = query({
       throw new Error("Attachment not found or unauthorized")
     }
     return attachment
+  },
+});
+
+/**
+ * Generates a fresh URL for a storage ID
+ */
+export const getStorageUrl = query({
+  args: { storageId: v.string() },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new Error("Not authenticated")
+    }
+
+    try {
+      // Generate URL from storage ID
+      return await ctx.storage.getUrl(args.storageId as Id<"_storage">)
+    } catch (error) {
+      console.warn(`Failed to generate URL for storage ID ${args.storageId}:`, error)
+      return null
+    }
   },
 });
 

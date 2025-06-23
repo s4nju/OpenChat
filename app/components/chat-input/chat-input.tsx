@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { APP_NAME } from "@/lib/config"
 import { ArrowUp, Stop } from "@phosphor-icons/react"
-import React, { useCallback, useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { ButtonFileUpload } from "./button-file-upload"
 import { ButtonSearch } from "./button-search"
 import { FileList } from "./file-list"
@@ -20,9 +20,7 @@ import { SelectReasoningEffort } from "./select-reasoning-effort"
 type ReasoningEffort = "low" | "medium" | "high";
 
 type ChatInputProps = {
-  value: string
-  onValueChange: (value: string) => void
-  onSend: (options: { enableSearch: boolean }) => void
+  onSend: (message: string, options: { enableSearch: boolean }) => void
   isSubmitting?: boolean
   hasMessages?: boolean
   files: File[]
@@ -40,11 +38,10 @@ type ChatInputProps = {
   isReasoningModel: boolean
   reasoningEffort: ReasoningEffort
   onSelectReasoningEffort: (reasoningEffort: ReasoningEffort) => void
+  initialValue?: string
 }
 
 export function ChatInput({
-  value,
-  onValueChange,
   onSend,
   isSubmitting,
   files,
@@ -62,27 +59,44 @@ export function ChatInput({
   isReasoningModel,
   reasoningEffort,
   onSelectReasoningEffort,
+  initialValue = "",
 }: ChatInputProps) {
+  // Local state for input value to prevent parent re-renders
+  const [value, setValue] = useState(initialValue);
   const [searchEnabled, setSearchEnabled] = React.useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  
+  // Track isEmpty state to prevent PromptSystem re-renders on every keystroke
+  const [isEmpty, setIsEmpty] = useState(true)
+  
+  // Only update isEmpty when the emptiness state actually changes
+  useEffect(() => {
+    const currentEmpty = !value || value.trim() === ""
+    if (currentEmpty !== isEmpty) {
+      setIsEmpty(currentEmpty)
+    }
+  }, [value, isEmpty])
+
+  // Update local value when initialValue changes (e.g., when using suggestions)
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (isSubmitting) return
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault()
-        onSend({ enableSearch: searchEnabled });
+        onSend(value, { enableSearch: searchEnabled });
+        setValue(""); // Clear input after sending
       }
     },
-    [onSend, isSubmitting, searchEnabled]
+    [onSend, isSubmitting, searchEnabled, value]
   )
 
   const handleMainClick = () => {
-    // console.log("[ChatInput] Clicked main button");
-    // console.log("[ChatInput] status:", status);
-
     if (status === "streaming") {
-      // console.log("[ChatInput] Stopping streaming...");
       stop();
       return;
     }
@@ -92,8 +106,14 @@ export function ChatInput({
       return;
     }
 
-    onSend({ enableSearch: searchEnabled });
+    onSend(value, { enableSearch: searchEnabled });
+    setValue(""); // Clear input after sending
   }
+
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    setValue(suggestion);
+    onSuggestion(suggestion);
+  }, [onSuggestion]);
 
   const handlePaste = useCallback(
     async (e: ClipboardEvent) => {
@@ -140,9 +160,9 @@ export function ChatInput({
       {hasSuggestions && (
         <PromptSystem
           onSelectSystemPrompt={onSelectSystemPrompt}
-          onValueChange={onValueChange}
-          onSuggestion={onSuggestion}
-          value={value}
+          onValueChange={setValue}
+          onSuggestion={handleSuggestionClick}
+          isEmpty={isEmpty}
           systemPrompt={systemPrompt}
         />
       )}
@@ -151,7 +171,7 @@ export function ChatInput({
           className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
           maxHeight={200}
           value={value}
-          onValueChange={onValueChange}
+          onValueChange={setValue}
         >
           <FileList files={files} onFileRemove={onFileRemove} />
           <PromptInputTextarea

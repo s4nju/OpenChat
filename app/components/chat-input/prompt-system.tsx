@@ -10,7 +10,7 @@ type PromptSystemProps = {
   onValueChange: (value: string) => void
   onSuggestion: (suggestion: string) => void
   onSelectSystemPrompt: (systemPrompt: string) => void
-  value: string
+  isEmpty: boolean
   systemPrompt?: string
 }
 
@@ -18,7 +18,7 @@ export const PromptSystem = memo(function PromptSystem({
   onValueChange,
   onSuggestion,
   onSelectSystemPrompt,
-  value,
+  isEmpty,
   systemPrompt,
 }: PromptSystemProps) {
   const [isPersonaMode, setIsPersonaMode] = useState(false)
@@ -60,7 +60,7 @@ export const PromptSystem = memo(function PromptSystem({
             <Suggestions
               onValueChange={onValueChange}
               onSuggestion={onSuggestion}
-              value={value}
+              isEmpty={isEmpty}
             />
           )}
         </AnimatePresence>

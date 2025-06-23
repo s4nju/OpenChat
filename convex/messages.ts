@@ -4,6 +4,14 @@ import type { Id } from "./_generated/dataModel"
 import { mutation, query } from "./_generated/server"
 import { MessagePart } from "./schema/parts"
 
+/**
+ * Helper to detect if a string is a Convex storage ID
+ */
+function isConvexStorageId(value: string): boolean {
+  // Convex storage IDs are typically 32-character hex strings
+  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:')
+}
+
 export const sendUserMessageToChat = mutation({
   args: {
     chatId: v.id("chats"),
@@ -128,11 +136,40 @@ export const getMessagesForChat = query({
     if (!userId) return []
     const chat = await ctx.db.get(chatId)
     if (!chat || chat.userId !== userId) return []
-    return await ctx.db
+    
+    const messages = await ctx.db
       .query("messages")
       .withIndex("by_chat_and_created", (q) => q.eq("chatId", chatId))
       .order("asc")
       .collect()
+
+    // Generate URLs on-the-fly for file parts containing storage IDs
+    return Promise.all(
+      messages.map(async (message) => {
+        if (!message.parts) return message
+
+        const resolvedParts = await Promise.all(
+          message.parts.map(async (part) => {
+            if (part.type === "file" && part.data) {
+              // Use helper function to detect storage IDs
+              if (isConvexStorageId(part.data)) {
+                try {
+                  // Generate fresh URL from storage ID
+                  const url = await ctx.storage.getUrl(part.data)
+                  return { ...part, url: url || undefined } // Use undefined instead of null for TypeScript compatibility
+                } catch (error) {
+                  console.warn(`Failed to generate URL for storage ID ${part.data}:`, error)
+                  return part // Return part without URL if generation fails
+                }
+              }
+            }
+            return part
+          })
+        )
+
+        return { ...message, parts: resolvedParts }
+      })
+    )
   },
 })
 
@@ -193,16 +230,55 @@ export const deleteMessageAndDescendants = mutation({
     if (!chat || chat.userId !== userId) return { chatDeleted: false }
     const threshold = message.createdAt ?? message._creationTime
     const ids: Array<Id<"messages">> = []
+    const messagesToDelete: Array<typeof message> = []
+    
     for await (const m of ctx.db
       .query("messages")
       .withIndex("by_chat_and_created", (q) => q.eq("chatId", message.chatId))
       .order("asc")) {
       const created = m.createdAt ?? m._creationTime
-      if (created >= threshold) ids.push(m._id)
+      if (created >= threshold) {
+        ids.push(m._id)
+        messagesToDelete.push(m)
+      }
     }
+
+    // Extract storage IDs from message parts and clean up attachments
+    for (const msgToDelete of messagesToDelete) {
+      if (msgToDelete.parts) {
+        for (const part of msgToDelete.parts) {
+          if (part.type === "file" && part.data) {
+            // Use helper function to detect storage IDs
+            if (isConvexStorageId(part.data)) {
+              try {
+                // Find and delete corresponding chat_attachment
+                const attachment = await ctx.db
+                  .query("chat_attachments")
+                  .withIndex("by_chatId", (q) => q.eq("chatId", msgToDelete.chatId))
+                  .filter((q) => q.eq(q.field("fileId"), part.data))
+                  .first()
+
+                if (attachment && attachment.userId === userId) {
+                  // Delete from storage first
+                  await ctx.storage.delete(attachment.fileId as Id<"_storage">)
+                  // Then delete the attachment record
+                  await ctx.db.delete(attachment._id)
+                }
+              } catch (error) {
+                console.warn(`Failed to clean up attachment ${part.data}:`, error)
+                // Continue with other cleanup even if one attachment fails
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Delete messages
     for (const id of ids) {
       await ctx.db.delete(id)
     }
+    
     // update chat timestamp
     await ctx.db.patch(chat._id, { updatedAt: Date.now() })
     const remaining = await ctx.db
@@ -225,10 +301,16 @@ export const deleteMessageAndDescendants = mutation({
         })
       }
 
+      // Clean up any remaining orphaned attachments for this chat
       for await (const a of ctx.db
         .query("chat_attachments")
         .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))) {
-        await ctx.db.delete(a._id)
+        try {
+          await ctx.storage.delete(a.fileId as Id<"_storage">)
+          await ctx.db.delete(a._id)
+        } catch (error) {
+          console.warn(`Failed to clean up orphaned attachment ${a._id}:`, error)
+        }
       }
       await ctx.db.delete(chat._id)
       return { chatDeleted: true }

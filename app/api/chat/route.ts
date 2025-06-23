@@ -6,8 +6,7 @@ import { sanitizeUserInput } from "@/lib/sanitize"
 import { 
   convertAttachmentsToFileParts, 
   createPartsFromAIResponse,
-  buildMetadataFromResponse,
-  extractReasoningFromResponse
+  buildMetadataFromResponse
 } from "@/lib/ai-sdk-utils"
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic"
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google"
@@ -15,7 +14,6 @@ import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai"
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server"
 import { withTracing } from "@posthog/ai"
 import {
-  appendResponseMessages,
   createDataStreamResponse,
   JSONValue,
   Message as MessageAISDK,
@@ -306,6 +304,45 @@ export async function POST(req: Request) {
           }
         }
 
+        // Helper to convert storage IDs to fresh URLs for AI models
+        const resolveAttachmentUrls = async (messages: MessageAISDK[]): Promise<MessageAISDK[]> => {
+          return Promise.all(
+            messages.map(async (message) => {
+              if (!message.experimental_attachments) return message
+
+              const resolvedAttachments = await Promise.all(
+                message.experimental_attachments.map(async (attachment) => {
+                  // Check if URL is actually a storage ID
+                  const isStorageId = attachment.url && 
+                    !attachment.url.startsWith('http') && 
+                    !attachment.url.startsWith('data:')
+
+                  if (isStorageId) {
+                    try {
+                      // Generate fresh URL from storage ID for AI model
+                      const freshUrl = await fetchQuery(
+                        api.files.getStorageUrl,
+                        { storageId: attachment.url },
+                        { token }
+                      )
+                      return { ...attachment, url: freshUrl || attachment.url }
+                    } catch (error) {
+                      console.warn(`Failed to resolve storage URL for ${attachment.url}:`, error)
+                      return attachment // Return as-is if resolution fails
+                    }
+                  }
+                  return attachment
+                })
+              )
+
+              return { ...message, experimental_attachments: resolvedAttachments }
+            })
+          )
+        }
+
+        // Resolve storage IDs to fresh URLs for AI consumption
+        const resolvedMessages = await resolveAttachmentUrls(messages)
+
         const makeOptions = (useUser: boolean) => {
           const key = useUser ? userApiKey : undefined
 
@@ -357,7 +394,7 @@ export async function POST(req: Request) {
               })
               : selectedModel.api_sdk,
             system: systemPrompt || "You are a helpful assistant.",
-            messages,
+            messages: resolvedMessages,
             tools: enableSearch ? { exaSearch: exaSearchTool } : undefined,
             maxSteps: 5,
             providerOptions: makeOptions(useUser) as
@@ -368,8 +405,7 @@ export async function POST(req: Request) {
               chunking: "word",
             }),
             onError: (error) => console.log("Error in streamText:", error),
-            async onFinish({ text, finishReason, usage, response }) {
-              const userMessage = messages[messages.length - 1]
+            async onFinish({ usage, response }) {
               try {
                 for (const msg of response.messages) {
                   if (

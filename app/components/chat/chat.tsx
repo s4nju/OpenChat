@@ -100,14 +100,11 @@ export default function Chat() {
   // --- Vercel AI SDK useChat Hook ---
   const {
     messages,
-    input,
-    handleSubmit,
     status,
     error,
     reload,
     stop,
     setMessages,
-    setInput,
     append,
   } = useChat({
     api: API_ROUTE_CHAT,
@@ -150,7 +147,7 @@ export default function Chat() {
     if (mappedDb.length >= messages.length) {
       // DB is up-to-date or ahead – merge to ensure we keep streaming-only
       // properties (e.g. `parts`) that are not yet persisted in the DB.
-      const merged = mappedDb.map((dbMsg, idx) => {
+      const merged = mappedDb.map((dbMsg: Message, idx: number) => {
         const prev = messages[idx]
         if (prev && prev.parts && !dbMsg.parts) {
           return { ...dbMsg, parts: prev.parts }
@@ -255,11 +252,11 @@ export default function Chat() {
     }
   }
 
-  const ensureChatExists = async () => {
-    if (messages.length === 0 && input) {
+  const ensureChatExists = async (inputMessage: string) => {
+    if (messages.length === 0 && inputMessage) {
       try {
         const result = await createChat({
-          title: input.substring(0, 50), // Create a title from the first message
+          title: inputMessage.substring(0, 50), // Create a title from the first message
           model: selectedModel,
           systemPrompt: systemPrompt || buildSystemPrompt(user),
         })
@@ -329,10 +326,10 @@ export default function Chat() {
   }
 
   const submit = async (
-    _?: unknown,
+    inputMessage: string,
     opts?: { body?: { enableSearch?: boolean } }
   ) => {
-    if (!input.trim() && files.length === 0) return
+    if (!inputMessage.trim() && files.length === 0) return
     setIsSubmitting(true)
 
     if (!user?._id) {
@@ -347,13 +344,13 @@ export default function Chat() {
       return
     }
 
-    const currentChatId = await ensureChatExists()
+    const currentChatId = await ensureChatExists(inputMessage)
     if (!currentChatId) {
       setIsSubmitting(false)
       return
     }
 
-    if (input.length > MESSAGE_MAX_LENGTH) {
+    if (inputMessage.length > MESSAGE_MAX_LENGTH) {
       toast({
         title: `Message is too long (max ${MESSAGE_MAX_LENGTH} chars).`,
         status: "error",
@@ -370,11 +367,28 @@ export default function Chat() {
           currentChatId as Id<"chats">
         )
         if (newAttachment) {
-          vercelAiAttachments.push({
-            name: newAttachment.fileName,
-            contentType: newAttachment.fileType,
-            url: newAttachment.url!,
-          })
+          // Generate actual URL from storage ID for frontend display
+          try {
+            const attachmentUrl = await convex.query(api.files.getStorageUrl, {
+              storageId: newAttachment.storageId
+            })
+            
+            if (attachmentUrl) {
+              vercelAiAttachments.push({
+                name: newAttachment.fileName,
+                contentType: newAttachment.fileType,
+                url: attachmentUrl,
+                storageId: newAttachment.storageId,
+              })
+            } else {
+              console.warn(`Failed to generate URL for storage ID: ${newAttachment.storageId}`)
+              // Skip this attachment for experimental_attachments but still proceed
+              // The attachment is still saved in the database and will be available when messages are fetched
+            }
+          } catch (error) {
+            console.error(`Error generating URL for attachment ${newAttachment.fileName}:`, error)
+            // Skip this attachment for experimental_attachments but still proceed
+          }
         }
       }
       setFiles([])
@@ -397,13 +411,25 @@ export default function Chat() {
     }
 
     try {
-      handleSubmit(undefined, options)
+      // Add the user message and trigger the assistant response
+      append(
+        {
+          role: "user",
+          content: inputMessage,
+          experimental_attachments: vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
+        },
+        options
+      )
     } catch {
       toast({ title: "Failed to send message", status: "error" })
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  // Optimized callbacks using useRef to avoid dependency on messages array
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
 
   const handleBranch = useCallback(
     async (messageId: string) => {
@@ -481,7 +507,8 @@ export default function Chat() {
         return [...msgList.slice(0, idx), ...msgList.slice(endIdx)]
       }
 
-      const originalMessages = [...messages]
+      const currentMessages = messagesRef.current
+      const originalMessages = [...currentMessages]
       const filteredMessages = buildOptimisticList(originalMessages, id)
       setMessages(filteredMessages) // Optimistic update (user + assistant)
       setIsDeleting(true)
@@ -499,19 +526,20 @@ export default function Chat() {
         setIsDeleting(false)
       }
     },
-    [messages, setMessages, deleteMessage, router, setIsDeleting]
+    [deleteMessage, router, setIsDeleting, setMessages]
   )
 
   const handleEdit = useCallback(
     (id: string, newText: string) => {
       // This is a client-side only edit for now, as there's no backend mutation for it yet.
+      const currentMessages = messagesRef.current
       setMessages(
-        messages.map((message) =>
+        currentMessages.map((message) =>
           message.id === id ? { ...message, content: newText } : message
         )
       )
     },
-    [messages, setMessages]
+    [setMessages]
   )
 
   const handleReload = useCallback(
@@ -520,7 +548,8 @@ export default function Chat() {
 
       // 1. Optimistically remove all messages that come *after* the one being reloaded so
       //    they disappear from the UI immediately.
-      const originalMessages = [...messages]
+      const currentMessages = messagesRef.current
+      const originalMessages = [...currentMessages]
       const targetIdx = originalMessages.findIndex((m) => m.id === messageId)
       if (targetIdx === -1) {
         return
@@ -566,7 +595,6 @@ export default function Chat() {
     [
       user,
       chatId,
-      messages,
       setMessages,
       deleteMessage,
       selectedModel,
@@ -659,13 +687,11 @@ export default function Chat() {
         transition={{ layout: { duration: messages.length === 1 ? 0.3 : 0 } }}
       >
         <ChatInput
-          value={input}
           onSuggestion={(suggestion) =>
             append({ role: "user", content: suggestion })
           }
-          onValueChange={setInput}
-          onSend={({ enableSearch }) =>
-            submit(undefined, { body: { enableSearch } })
+          onSend={(message, { enableSearch }) =>
+            submit(message, { body: { enableSearch } })
           }
           isSubmitting={isSubmitting || status === "streaming"}
           files={files}

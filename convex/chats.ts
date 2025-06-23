@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 import { Chat } from "./schema/chat"
+import { Id } from "./_generated/dataModel"
 
 export const createChat = mutation({
   args: {
@@ -122,11 +123,22 @@ export const deleteChat = mutation({
       .withIndex("by_chat_and_created", (q) => q.eq("chatId", chatId))) {
       await ctx.db.delete(m._id)
     }
+    
+    // Delete attachments: first from storage, then from database
     for await (const a of ctx.db
       .query("chat_attachments")
       .withIndex("by_chatId", (q) => q.eq("chatId", chatId))) {
+      try {
+        // Delete the actual file from storage first
+        await ctx.storage.delete(a.fileId as Id<"_storage">)
+      } catch (error) {
+        console.warn(`Failed to delete file ${a.fileId} from storage:`, error)
+        // Continue with DB cleanup even if storage deletion fails
+      }
+      // Then delete the database record
       await ctx.db.delete(a._id)
     }
+    
     await ctx.db.delete(chatId)
     return null
   },
@@ -150,11 +162,22 @@ export const deleteAllChatsForUser = mutation({
         .withIndex("by_chat_and_created", (q) => q.eq("chatId", chat._id))) {
         await ctx.db.delete(m._id)
       }
+      
+      // Delete attachments: first from storage, then from database  
       for await (const a of ctx.db
         .query("chat_attachments")
         .withIndex("by_chatId", (q) => q.eq("chatId", chat._id))) {
+        try {
+          // Delete the actual file from storage first
+          await ctx.storage.delete(a.fileId as Id<"_storage">)
+        } catch (error) {
+          console.warn(`Failed to delete file ${a.fileId} from storage:`, error)
+          // Continue with DB cleanup even if storage deletion fails
+        }
+        // Then delete the database record
         await ctx.db.delete(a._id)
       }
+      
       await ctx.db.delete(chat._id)
     }
     return null

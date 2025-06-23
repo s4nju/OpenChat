@@ -9,15 +9,19 @@ import { SUGGESTIONS as SUGGESTIONS_CONFIG } from "../../../lib/config"
 type SuggestionsProps = {
   onValueChange: (value: string) => void
   onSuggestion: (suggestion: string) => void
-  value?: string
+  isEmpty?: boolean
 }
+
+// Create a stable motion-wrapped component once to avoid recreating
+// a new component type on every render, which caused unnecessary
+// unmounts/remounts of all suggestions.
+const MotionPromptSuggestion = motion.create(PromptSuggestion)
 
 export const Suggestions = memo(function Suggestions({
   onValueChange,
   // onSuggestion,
-  value,
+  isEmpty = true,
 }: SuggestionsProps) {
-  const MotionPromptSuggestion = motion.create(PromptSuggestion)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
 
   const activeCategoryData = SUGGESTIONS_CONFIG.find(
@@ -28,10 +32,10 @@ export const Suggestions = memo(function Suggestions({
     activeCategoryData && activeCategoryData.items.length > 0
 
   useEffect(() => {
-    if (!value) {
+    if (isEmpty) {
       setActiveCategory(null)
     }
-  }, [value])
+  }, [isEmpty])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -97,7 +101,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [handleCategoryClick, MotionPromptSuggestion]
+    [handleCategoryClick]
   )
 
   const suggestionsList = useMemo(
@@ -140,7 +144,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [handleSuggestionClick, MotionPromptSuggestion, activeCategoryData?.highlight, activeCategoryData?.items, activeCategoryData?.label]
+    [handleSuggestionClick, activeCategoryData?.highlight, activeCategoryData?.items, activeCategoryData?.label]
   )
 
   return (

@@ -30,9 +30,10 @@ export const ReasoningPart = v.object({
 
 export const FilePart = v.object({
     type: v.literal("file"),
-    data: v.string(),
+    data: v.string(), // Storage ID (persisted) or URL (backwards compatibility)
     filename: v.optional(v.string()),
-    mimeType: v.optional(v.string())
+    mimeType: v.optional(v.string()),
+    url: v.optional(v.string()) // Generated URL for display (not persisted, added by queries)
 })
 
 export const ErrorUIPart = v.object({

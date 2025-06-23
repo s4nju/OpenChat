@@ -20,7 +20,7 @@ export type MessageProps = {
   reasoning_text?: string
 }
 
-export function Message({
+function MessageComponent({
   variant,
   model,
   children,
@@ -85,3 +85,6 @@ export function Message({
 
   return null
 }
+
+export const Message = React.memo(MessageComponent)
+Message.displayName = 'Message'
