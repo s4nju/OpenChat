@@ -199,9 +199,9 @@ function MessageAssistantInner({
         hasScrollAnchor && "min-h-scroll-anchor"
       )}
     >
-      <div className={cn("flex min-w-full flex-col gap-2", isLast && "pb-8")}>
+      <div className={cn("flex w-full flex-col gap-2", isLast && "pb-8")}>
         {(reasoningParts.length > 0 || reasoning_text) && (
-          <div className="mb-2">
+          <div className="mb-2 w-full">
             {/* Reasoning Header - Updated UI */}
             {status === "streaming" ? (
               // Display when reasoning is actively streaming
@@ -243,7 +243,7 @@ function MessageAssistantInner({
               {showReasoning && (
                 <motion.div
                   key="reasoning"
-                  className="flex flex-col gap-4 border-l border-zinc-300 pl-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400" // Added border and padding like starter
+                  className="flex flex-col w-full gap-4 border-l border-zinc-300 pl-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
                   initial={{
                     opacity: 0,
                     marginTop: 0,
@@ -255,7 +255,7 @@ function MessageAssistantInner({
                     marginTop: "1rem",
                     marginBottom: 0,
                     height: "auto",
-                  }} // Adjusted margin like starter
+                  }}
                   exit={{
                     opacity: 0,
                     marginTop: 0,
@@ -263,10 +263,9 @@ function MessageAssistantInner({
                     height: 0,
                   }}
                   transition={{ duration: 0.2, ease: "easeInOut" }}
-                // layout // Removed layout prop to prevent bouncing during streaming
                 >
                   {combinedReasoningMarkdown && (
-                    <Markdown className="prose prose-sm dark:prose-invert leading-relaxed break-words">
+                    <Markdown className="prose prose-sm dark:prose-invert leading-relaxed break-words w-full max-w-none">
                       {combinedReasoningMarkdown}
                     </Markdown>
                   )}
