@@ -315,7 +315,8 @@ export async function POST(req: Request) {
                   // Check if URL is actually a storage ID
                   const isStorageId = attachment.url && 
                     !attachment.url.startsWith('http') && 
-                    !attachment.url.startsWith('data:')
+                    !attachment.url.startsWith('data:') &&
+                    !attachment.url.startsWith('blob:')
 
                   if (isStorageId) {
                     try {

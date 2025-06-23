@@ -101,8 +101,8 @@ export function ChatInput({
       return;
     }
 
-    if (isSubmitting) {
-      // Prevent double submission
+    if (isSubmitting || !value.trim()) {
+      // Prevent double submission or empty submission
       return;
     }
 
@@ -207,17 +207,17 @@ export function ChatInput({
               )}
             </div>
             <PromptInputAction
-              tooltip={(isSubmitting || status === "submitted" || status === "streaming") ? "Stop" : "Send"}
+              tooltip={status === "streaming" ? "Stop" : isSubmitting && files.length > 0 ? "Uploading..." : "Send"}
             >
               <Button
                 size="sm"
                 className="rounded-full transition-all duration-300 ease-out transform origin-right sm:scale-100 scale-90"
-                disabled={!value && status !== "streaming" && status !== "submitted" && !isSubmitting}
+                disabled={(!value.trim() && files.length === 0) && status !== "streaming"}
                 type="button"
                 onClick={handleMainClick}
                 aria-label="Send message"
               >
-                {isSubmitting || status === "submitted" || status === "streaming" ? (
+                {status === "streaming" ? (
                   <Stop className="size-4" />
                 ) : (
                   <ArrowUp className="size-4" />

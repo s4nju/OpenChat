@@ -330,23 +330,19 @@ export default function Chat() {
     opts?: { body?: { enableSearch?: boolean } }
   ) => {
     if (!inputMessage.trim() && files.length === 0) return
-    setIsSubmitting(true)
-
+    
     if (!user?._id) {
       toast({ title: "User not found. Please sign in.", status: "error" })
-      setIsSubmitting(false)
       return
     }
 
     const allowed = await checkLimitsAndNotify()
     if (!allowed) {
-      setIsSubmitting(false)
       return
     }
 
     const currentChatId = await ensureChatExists(inputMessage)
     if (!currentChatId) {
-      setIsSubmitting(false)
       return
     }
 
@@ -355,76 +351,148 @@ export default function Chat() {
         title: `Message is too long (max ${MESSAGE_MAX_LENGTH} chars).`,
         status: "error",
       })
-      setIsSubmitting(false)
       return
-    }
-
-    const vercelAiAttachments = []
-    if (files.length > 0) {
-      for (const file of files) {
-        const newAttachment = await uploadAndSaveFile(
-          file,
-          currentChatId as Id<"chats">
-        )
-        if (newAttachment) {
-          // Generate actual URL from storage ID for frontend display
-          try {
-            const attachmentUrl = await convex.query(api.files.getStorageUrl, {
-              storageId: newAttachment.storageId
-            })
-            
-            if (attachmentUrl) {
-              vercelAiAttachments.push({
-                name: newAttachment.fileName,
-                contentType: newAttachment.fileType,
-                url: attachmentUrl,
-                storageId: newAttachment.storageId,
-              })
-            } else {
-              console.warn(`Failed to generate URL for storage ID: ${newAttachment.storageId}`)
-              // Skip this attachment for experimental_attachments but still proceed
-              // The attachment is still saved in the database and will be available when messages are fetched
-            }
-          } catch (error) {
-            console.error(`Error generating URL for attachment ${newAttachment.fileName}:`, error)
-            // Skip this attachment for experimental_attachments but still proceed
-          }
-        }
-      }
-      setFiles([])
     }
 
     const isReasoningModel = supportsReasoning(selectedModel);
 
-    const options = {
-      body: {
-        chatId: currentChatId,
-        model: selectedModel,
-        systemPrompt: systemPrompt || buildSystemPrompt(user),
-        ...(opts?.body && typeof opts.body.enableSearch !== "undefined"
-          ? { enableSearch: opts.body.enableSearch }
-          : {}),
-        ...(isReasoningModel ? { reasoningEffort } : {}),
-      },
-      experimental_attachments:
-        vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
+    // Save reference to files before clearing
+    const filesToUpload = [...files]
+    
+    // Clear files immediately for better UX
+    setFiles([])
+
+    // If no files, send message immediately
+    if (filesToUpload.length === 0) {
+      setIsSubmitting(true)
+      try {
+        const options = {
+          body: {
+            chatId: currentChatId,
+            model: selectedModel,
+            systemPrompt: systemPrompt || buildSystemPrompt(user),
+            ...(opts?.body && typeof opts.body.enableSearch !== "undefined"
+              ? { enableSearch: opts.body.enableSearch }
+              : {}),
+            ...(isReasoningModel ? { reasoningEffort } : {}),
+          },
+        }
+
+        append(
+          {
+            role: "user",
+            content: inputMessage,
+          },
+          options
+        ).catch(err => {
+          console.error("append error:", err)
+          toast({ title: "Failed to send message", status: "error" })
+        })
+      } catch (error) {
+        console.error("Error sending message:", error)
+        toast({ title: "Failed to send message", status: "error" })
+      }
+      setIsSubmitting(false)
+      return
     }
 
+    /* ========= Path WITH file uploads ========= */
+
+    // Create optimistic attachments using blob URLs
+    const optimisticAttachments = filesToUpload.map((file) => ({
+      name: file.name,
+      contentType: file.type,
+      url: URL.createObjectURL(file),
+    }))
+
+    // Generate a simple placeholder ID based on timestamp
+    const placeholderId = `placeholder-${Date.now()}`
+
+    // Insert optimistic placeholder message so UI doesn't look empty
+    setMessages((cur) => [
+      ...cur,
+      {
+        id: placeholderId,
+        role: "user" as const,
+        content: inputMessage,
+        createdAt: new Date(),
+        experimental_attachments:
+          optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
+      },
+    ])
+
+    setIsSubmitting(true)
+
     try {
-      // Add the user message and trigger the assistant response
+      // Upload files in parallel
+      const uploadPromises = filesToUpload.map((file) =>
+        uploadAndSaveFile(file, currentChatId as Id<"chats">)
+      )
+      const uploadResults = await Promise.all(uploadPromises)
+
+      const vercelAiAttachments: Array<{
+        name: string
+        contentType: string
+        url: string
+        storageId: string
+      }> = []
+
+      for (const attachment of uploadResults) {
+        if (attachment) {
+          try {
+            const url = await convex.query(api.files.getStorageUrl, {
+              storageId: attachment.storageId,
+            })
+            if (url) {
+              vercelAiAttachments.push({
+                name: attachment.fileName,
+                contentType: attachment.fileType,
+                url,
+                storageId: attachment.storageId,
+              })
+            }
+          } catch (err) {
+            console.error("Failed generating URL", err)
+          }
+        }
+      }
+
+      const options = {
+        body: {
+          chatId: currentChatId,
+          model: selectedModel,
+          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          ...(opts?.body && typeof opts.body.enableSearch !== "undefined"
+            ? { enableSearch: opts.body.enableSearch }
+            : {}),
+          ...(isReasoningModel ? { reasoningEffort } : {}),
+        },
+        experimental_attachments:
+          vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
+      }
+
+      // Remove placeholder before sending real message
+      setMessages((cur) => cur.filter((m) => m.id !== placeholderId))
+
       append(
         {
           role: "user",
           content: inputMessage,
-          experimental_attachments: vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
+          experimental_attachments:
+            vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
         },
         options
-      )
-    } catch {
+      ).catch(err => {
+        console.error("append error:", err)
+        toast({ title: "Failed to send message", status: "error" })
+      })
+    } catch (error) {
+      console.error("Error in submit with files:", error)
       toast({ title: "Failed to send message", status: "error" })
-    } finally {
-      setIsSubmitting(false)
+      // Remove placeholder on error as well
+      setMessages((cur) => cur.filter((m) => m.id !== placeholderId))
     }
+    setIsSubmitting(false)
   }
 
   // Optimized callbacks using useRef to avoid dependency on messages array

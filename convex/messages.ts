@@ -9,7 +9,7 @@ import { MessagePart } from "./schema/parts"
  */
 function isConvexStorageId(value: string): boolean {
   // Convex storage IDs are typically 32-character hex strings
-  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:')
+  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:') && !value.startsWith('blob:')
 }
 
 export const sendUserMessageToChat = mutation({
