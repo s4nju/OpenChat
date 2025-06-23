@@ -138,7 +138,36 @@ export default function HistoryPage() {
         role: string
         content: string
         parentMessageId?: Id<"messages">
-        parts?: any[]
+        parts?: Array<{
+          type: "text" | "image" | "reasoning" | "file" | "error" | "tool-invocation"
+          text?: string
+          image?: string
+          mimeType?: string
+          reasoning?: string
+          signature?: string
+          duration?: number
+          details?: Array<{
+            type: "text" | "redacted"
+            text?: string
+            data?: string
+            signature?: string
+          }>
+          data?: string
+          filename?: string
+          url?: string
+          error?: {
+            code: string
+            message: string
+          }
+          toolInvocation?: {
+            state: "call" | "result" | "partial-call"
+            args?: unknown
+            result?: unknown
+            toolCallId: string
+            toolName: string
+            step?: number
+          }
+        }>
         metadata?: {
           modelName?: string
           modelId?: string

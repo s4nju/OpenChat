@@ -36,8 +36,8 @@ type ConvexMessagePart = {
   type: "tool-invocation"
   toolInvocation: {
     state: "call" | "result" | "partial-call"
-    args?: any
-    result?: any
+    args?: unknown
+    result?: unknown
     toolCallId: string
     toolName: string
     step?: number
@@ -71,7 +71,7 @@ export function convertConvexToAISDK(msg: Doc<"messages">): Message {
     role: msg.role as "user" | "assistant" | "system",
     content: msg.content, // Keep as fallback for text-only display
     createdAt: new Date(msg._creationTime),
-    parts: msg.parts as any || [{ type: "text", text: msg.content }], // Use parts or fallback to text
+    parts: (msg.parts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use parts or fallback to text
     experimental_attachments: extractAttachmentsFromParts(msg.parts),
   }
 }
@@ -88,7 +88,8 @@ export function extractAttachmentsFromParts(parts?: ConvexMessagePart[]): Attach
     .filter(validateFilePart) // Filter out invalid parts
     .map(part => {
       // Check if part has a generated URL field (added by queries)
-      const hasGeneratedUrl = (part as any).url && typeof (part as any).url === 'string'
+      const partWithUrl = part as ConvexMessagePart & { url?: string }
+      const hasGeneratedUrl = partWithUrl.url && typeof partWithUrl.url === 'string'
       
       // Use helper function to detect storage IDs
       const isStorageId = isConvexStorageId(part.data)
@@ -97,7 +98,7 @@ export function extractAttachmentsFromParts(parts?: ConvexMessagePart[]): Attach
         name: part.filename,
         contentType: part.mimeType,
         // Use generated URL if available, otherwise use data field (for backwards compatibility)
-        url: hasGeneratedUrl ? (part as any).url : part.data,
+        url: hasGeneratedUrl ? partWithUrl.url! : part.data,
         storageId: isStorageId ? part.data : undefined
       }
     })
@@ -121,7 +122,7 @@ export function convertAttachmentsToFileParts(attachments: Attachment[]): Convex
 /**
  * Extract reasoning text from AI SDK response parts
  */
-export function extractReasoningFromResponse(responseParts: any[]): string | undefined {
+export function extractReasoningFromResponse(responseParts: Array<{ type: string; reasoning?: string; text?: string }>): string | undefined {
   if (!responseParts) return undefined
   
   const reasoningText = responseParts
@@ -136,8 +137,8 @@ export function extractReasoningFromResponse(responseParts: any[]): string | und
  * Build metadata object from AI SDK usage, response and model info
  */
 export function buildMetadataFromResponse(
-  usage: any, 
-  response: any, 
+  usage: { promptTokens?: number; completionTokens?: number; reasoningTokens?: number }, 
+  response: { modelId?: string }, 
   modelId: string, 
   startTime: number
 ): MessageMetadata {
