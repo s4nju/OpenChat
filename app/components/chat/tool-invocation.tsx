@@ -8,6 +8,7 @@ import type {
 import { CaretDown, Code, Link, Nut, Spinner } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useEffect, useState } from "react"
+import { SearchResults } from "./search-result"
 
 type CustomToolInvocation =
   | BaseToolInvocation
@@ -272,6 +273,25 @@ function SingleToolView({
   // Render generic results based on their structure
   const renderResults = () => {
     if (!parsedResult) return "No result data available"
+
+    // Handle our new search tool results
+    if (toolName === "search" && typeof parsedResult === "object" && parsedResult !== null) {
+      const searchData = parsedResult as { 
+        success?: boolean; 
+        results?: Array<{ 
+          url?: string; 
+          title?: string; 
+          description?: string;
+        }>; 
+        query?: string; 
+        error?: string 
+      }
+      if (searchData.success && searchData.results) {
+        return <SearchResults results={searchData.results as Array<{ url: string; title: string; description: string; }>} />
+      } else if (searchData.error) {
+        return <SearchResults results={[]} error={searchData.error} />
+      }
+    }
 
     // Handle array of items with url, title, and snippet (like search results)
     if (Array.isArray(parsedResult) && parsedResult.length > 0) {

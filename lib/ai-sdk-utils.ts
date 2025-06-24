@@ -173,11 +173,18 @@ export function extractModelFromMetadata(metadata?: MessageMetadata): string | u
 }
 
 /**
- * Create text and reasoning parts from AI response content
+ * Create parts from AI response content including tool invocations
  */
 export function createPartsFromAIResponse(
   textContent: string, 
-  reasoningText?: string
+  reasoningText?: string,
+  toolInvocations?: Array<{
+    toolCallId: string
+    toolName: string
+    args?: unknown
+    result?: unknown
+    state: "call" | "result" | "partial-call"
+  }>
 ): ConvexMessagePart[] {
   const parts: ConvexMessagePart[] = [
     { type: "text", text: textContent }
@@ -185,6 +192,22 @@ export function createPartsFromAIResponse(
   
   if (reasoningText) {
     parts.push({ type: "reasoning", reasoning: reasoningText })
+  }
+  
+  // Add tool invocations as parts
+  if (toolInvocations && toolInvocations.length > 0) {
+    toolInvocations.forEach((invocation) => {
+      parts.push({
+        type: "tool-invocation",
+        toolInvocation: {
+          state: invocation.state,
+          args: invocation.args,
+          result: invocation.result,
+          toolCallId: invocation.toolCallId,
+          toolName: invocation.toolName
+        }
+      })
+    })
   }
   
   return parts

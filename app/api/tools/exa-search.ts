@@ -16,7 +16,6 @@ export const exaSearchTool = tool({
     text: z.boolean().optional().default(true).describe("Whether to include text content in results"),
   }),
   execute: async ({ query, numResults, includeDomains, excludeDomains, startPublishedDate, endPublishedDate }) => {
-    // console.log("Executing exaSearchTool (exa-js) with query:", query);
     const options: Record<string, unknown> = {
       numResults,
       text: {
@@ -30,7 +29,6 @@ export const exaSearchTool = tool({
     if (endPublishedDate) options.endPublishedDate = endPublishedDate;
 
     const result = await exa.search(query, options);
-    // console.log("ExaSearchTool (exa-js) result:", JSON.stringify(result, null, 2));
     return result;
   },
 });

@@ -1,7 +1,8 @@
-import { exaSearchTool } from "@/app/api/tools"
+import { searchTool } from "@/app/api/tools"
 import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
 import { MODELS } from "@/lib/config"
+import { SEARCH_PROMPT_INSTRUCTIONS } from "@/lib/config"
 import { sanitizeUserInput } from "@/lib/sanitize"
 import { 
   convertAttachmentsToFileParts, 
@@ -394,9 +395,11 @@ export async function POST(req: Request) {
                 },
               })
               : selectedModel.api_sdk,
-            system: systemPrompt || "You are a helpful assistant.",
+            system: enableSearch 
+              ? `${systemPrompt || "You are a helpful assistant."}\n\n${SEARCH_PROMPT_INSTRUCTIONS}`
+              : systemPrompt || "You are a helpful assistant.",
             messages: resolvedMessages,
-            tools: enableSearch ? { exaSearch: exaSearchTool } : undefined,
+            tools: enableSearch ? { search: searchTool } : undefined,
             maxSteps: 5,
             providerOptions: makeOptions(useUser) as
               | Record<string, Record<string, JSONValue>>
@@ -408,64 +411,153 @@ export async function POST(req: Request) {
             onError: (error) => console.log("Error in streamText:", error),
             async onFinish({ usage, response }) {
               try {
-                for (const msg of response.messages) {
-                  if (
-                    msg.role === "assistant" &&
-                    Array.isArray(msg.content) &&
-                    msg.content.every(
-                      (item) =>
-                        item.type === "reasoning" || item.type === "text"
-                    )
-                  ) {
-                    const textContent = msg.content
-                      .filter((p) => p.type === "text")
-                      .map((p) => p.text)
-                      .join("")
-                    const reasoningText = msg.content.find(
-                      (p) => p.type === "reasoning"
-                    )?.text
+                // Get the actual response data
+                const responseData = await response;
+                
+                // console.log("DEBUG: Response structure:", {
+                //   messageCount: responseData.messages.length,
+                //   messages: responseData.messages.map((msg, idx) => ({
+                //     index: idx,
+                //     role: msg.role,
+                //     contentType: Array.isArray(msg.content) ? 'array' : typeof msg.content,
+                //     contentLength: Array.isArray(msg.content) ? msg.content.length : msg.content?.length || 0,
+                //     contentTypes: Array.isArray(msg.content) ? msg.content.map(p => p.type) : [],
+                //     content: Array.isArray(msg.content) ? msg.content : msg.content
+                //   }))
+                // });
 
-                    if (!userMsgId) {
-                      throw new Error(
-                        "Missing parent userMsgId when saving assistant message."
-                      )
-                    }
+                // Combine all assistant messages and extract tool results
+                let combinedTextContent = ""
+                let combinedReasoningText: string | undefined
+                const allToolInvocations: Array<{
+                  toolCallId: string
+                  toolName: string
+                  args?: unknown
+                  result?: unknown
+                  state: "call" | "result" | "partial-call"
+                }> = []
 
-                    // Create parts array using our helper function
-                    const messageParts = createPartsFromAIResponse(textContent, reasoningText)
-                    
-                    // Build metadata from response
-                    const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime)
+                // First pass: extract tool calls from assistant messages
+                for (const msg of responseData.messages) {
+                  if (msg.role === "assistant") {
+                    if (Array.isArray(msg.content)) {
+                      // Extract text content
+                      const textParts = msg.content.filter((p) => p.type === "text")
+                      const textContent = textParts.map((p) => p.text).join("")
+                      if (textContent.trim()) {
+                        combinedTextContent += textContent
+                      }
 
-                    const { messageId } = await fetchMutation(
-                      api.messages.saveAssistantMessage,
-                      {
-                        chatId,
-                        role: "assistant",
-                        content: textContent,
-                        parentMessageId: userMsgId,
-                        parts: messageParts,
-                        metadata: metadata,
-                      },
-                      { token }
-                    )
-                    assistantMsgId = messageId
-
-                    if (useUser) {
-                      await fetchMutation(
-                        api.api_keys.incrementUserApiKeyUsage,
-                        { provider: selectedModel.provider },
-                        { token }
-                      )
-                    } else {
-                      await fetchMutation(
-                        api.users.incrementMessageCount,
-                        {},
-                        { token }
-                      )
+                      // Extract reasoning
+                      const reasoningPart = msg.content.find((p) => p.type === "reasoning")
+                      if (reasoningPart?.text && !combinedReasoningText) {
+                        combinedReasoningText = reasoningPart.text
+                      }
+                      
+                      // Extract tool calls
+                      const toolCalls = msg.content.filter((p) => p.type === "tool-call")
+                      toolCalls.forEach((call: { toolCallId: string; toolName: string; args: unknown }) => {
+                        allToolInvocations.push({
+                          toolCallId: call.toolCallId,
+                          toolName: call.toolName,
+                          args: call.args,
+                          result: undefined,
+                          state: "call"
+                        })
+                      })
+                    } else if (typeof msg.content === "string") {
+                      if (msg.content.trim()) {
+                        combinedTextContent += msg.content
+                      }
                     }
                   }
                 }
+
+                // Second pass: extract tool results from tool messages
+                for (const msg of responseData.messages) {
+                  if (msg.role === "tool" && Array.isArray(msg.content)) {
+                    msg.content.forEach((part: { type: string; toolCallId: string; toolName?: string; result: unknown }) => {
+                      if (part.type === "tool-result") {
+                        // Find the matching tool call and add the result
+                        const matchingInvocation = allToolInvocations.find(
+                          inv => inv.toolCallId === part.toolCallId
+                        )
+                        if (matchingInvocation) {
+                          matchingInvocation.result = part.result
+                          matchingInvocation.state = "result"
+                        } else {
+                          // Create new invocation if no matching call found
+                          allToolInvocations.push({
+                            toolCallId: part.toolCallId,
+                            toolName: part.toolName || "unknown",
+                            args: undefined,
+                            result: part.result,
+                            state: "result"
+                          })
+                        }
+                      }
+                    })
+                  }
+                }
+
+                // console.log("DEBUG: Combined message processing:", {
+                //   combinedTextContent: combinedTextContent.substring(0, 100) + "...",
+                //   combinedReasoningText: combinedReasoningText?.substring(0, 50) + "...",
+                //   toolInvocationsCount: allToolInvocations.length,
+                //   toolInvocations: allToolInvocations.map(inv => ({
+                //     toolName: inv.toolName,
+                //     state: inv.state,
+                //     hasResult: !!inv.result,
+                //     resultPreview: inv.result ? JSON.stringify(inv.result).substring(0, 100) + "..." : "none"
+                //   }))
+                // });
+
+                if (!userMsgId) {
+                  throw new Error(
+                    "Missing parent userMsgId when saving assistant message."
+                  )
+                }
+
+                // Create parts array including tool invocations
+                const messageParts = createPartsFromAIResponse(combinedTextContent, combinedReasoningText, allToolInvocations)
+                
+                // console.log("DEBUG: Final message parts:", {
+                //   partsCount: messageParts.length,
+                //   partTypes: messageParts.map(p => p.type),
+                //   hasToolInvocations: messageParts.some(p => p.type === "tool-invocation")
+                // });
+                
+                // Build metadata from response
+                const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime)
+
+                const { messageId } = await fetchMutation(
+                  api.messages.saveAssistantMessage,
+                  {
+                    chatId,
+                    role: "assistant",
+                    content: combinedTextContent,
+                    parentMessageId: userMsgId,
+                    parts: messageParts,
+                    metadata: metadata,
+                  },
+                  { token }
+                )
+                assistantMsgId = messageId
+
+                if (useUser) {
+                  await fetchMutation(
+                    api.api_keys.incrementUserApiKeyUsage,
+                    { provider: selectedModel.provider },
+                    { token }
+                  )
+                } else {
+                  await fetchMutation(
+                    api.users.incrementMessageCount,
+                    {},
+                    { token }
+                  )
+                }
+                
                 dataStream.writeData({ userMsgId, assistantMsgId })
               } catch (err) {
                 console.error(
@@ -488,30 +580,23 @@ export async function POST(req: Request) {
         if (apiKeyUsage?.allowUserKey) {
           const primaryIsUserKey = useUserKey
           try {
-            // console.log(`Attempting stream with ${primaryIsUserKey ? 'user' : 'internal'} key for ${selectedModel.provider}.`);
             result = runStream(primaryIsUserKey)
           } catch (primaryError) {
-            // console.warn(`Stream with ${primaryIsUserKey ? 'user' : 'internal'} key failed.`, primaryError);
-
             const fallbackIsPossible =
               primaryIsUserKey || (!primaryIsUserKey && !!userApiKey)
 
             if (fallbackIsPossible) {
               const fallbackIsUserKey = !primaryIsUserKey
-              // console.log(`Falling back to ${fallbackIsUserKey ? 'user' : 'internal'} key.`);
               try {
                 result = runStream(fallbackIsUserKey)
               } catch (fallbackError) {
-                // console.error(`Fallback with ${fallbackIsUserKey ? 'user' : 'internal'} key also failed.`, fallbackError);
                 throw fallbackError
               }
             } else {
-              // console.error('No fallback key available. Rethrowing initial error.');
               throw primaryError
             }
           }
         } else {
-          // console.log(`Model ${selectedModel.id} does not allow user key; using internal key only.`);
           result = runStream(false)
         }
 

@@ -110,7 +110,7 @@ function MessageAssistantInner({
       .map((part) => part.source as Source)
     : []
 
-  // Extract sources from tool-invocation results (handles duckDuckGo and exaSearch)
+  // Extract sources from tool-invocation results (handles search tools)
   const sourcesFromToolInvocations: Source[] = combinedParts
     ? combinedParts
       .filter(
@@ -123,7 +123,23 @@ function MessageAssistantInner({
           toolCallId?: string
           result?: unknown
         }
-        // duckDuckGo: result is array
+        
+        // New unified search tool
+        if (inv.toolName === "search" && inv.result && typeof inv.result === "object" && inv.result !== null) {
+          const searchResult = inv.result as { success?: boolean; results?: Array<{ url?: string; title?: string }> }
+          if (searchResult.success && Array.isArray(searchResult.results)) {
+            return searchResult.results
+              .filter((item) => item && item.url && item.title)
+              .map((item, idx: number) => ({
+                id: inv.toolCallId ? `${inv.toolCallId}-${idx}` : `search-${idx}`,
+                url: item.url!,
+                title: item.title!,
+                sourceType: "url" as const,
+              }))
+          }
+        }
+        
+        // Legacy duckDuckGo: result is array
         if (inv.toolName === "duckDuckGo" && Array.isArray(inv.result)) {
           return (
             inv.result as Array<{
@@ -137,10 +153,10 @@ function MessageAssistantInner({
               id: item.id ?? (inv.toolCallId ? `${inv.toolCallId}-${idx}` : `tmp-${idx}`),
               url: item.url ?? "",
               title: item.title ?? "",
-              sourceType: "url",
+              sourceType: "url" as const,
             }))
         }
-        // exaSearch: result is object with results array
+        // Legacy exaSearch: result is object with results array
         if (
           inv.toolName === "exaSearch" &&
           inv.result &&
@@ -164,7 +180,7 @@ function MessageAssistantInner({
               id: item.id ?? `${inv.toolCallId}-exa-${idx}`,
               url: item.url!,
               title: item.title!,
-              sourceType: "url",
+              sourceType: "url" as const,
             }))
         }
         return []
