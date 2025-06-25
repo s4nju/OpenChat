@@ -38,7 +38,7 @@ function AuthErrorContent() {
 
 export default function AuthErrorPage() {
   return (
-    <div className="flex h-screen flex-col bg-zinc-800 text-white">
+    <div className="flex h-dvh flex-col bg-zinc-800 text-white">
       {/* Header */}
       <header className="p-4">
         <Link

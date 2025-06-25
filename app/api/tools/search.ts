@@ -1,10 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { SearchProviderFactory } from './search-provider-factory';
-import { SearchOptions, SearchResult } from './types';
+import { SearchOptions, SearchResult, SEARCH_CONFIG } from './types';
 
 // Result processing utilities
-export const truncateContent = (content: string, maxLength: number = 500): string => {
+export const truncateContent = (content: string, maxLength: number = SEARCH_CONFIG.maxTextCharacters): string => {
   if (content.length <= maxLength) return content;
   return content.substring(0, maxLength - 3) + '...';
 };
@@ -33,8 +33,8 @@ export const searchTool = tool({
   description: "Search the web for current information and facts. Use this when you need to verify current facts, find recent events, or get real-time data.",
   parameters: z.object({
     query: z.string().describe("The search query"),
-    maxResults: z.number().optional().default(3).describe("Maximum number of results to return"),
-    scrapeContent: z.boolean().optional().default(false).describe("Whether to include scraped content from the pages"),
+    maxResults: z.number().optional().default(SEARCH_CONFIG.maxResults).describe("Maximum number of results to return"),
+    scrapeContent: z.boolean().optional().default(SEARCH_CONFIG.scrapeContent).describe("Whether to include scraped content from the pages"),
     includeDomains: z.array(z.string()).optional().describe("List of domains to include in search"),
     excludeDomains: z.array(z.string()).optional().describe("List of domains to exclude from search"),
     startPublishedDate: z.string().optional().describe("Start date for published results (YYYY-MM-DD)"),

@@ -129,7 +129,7 @@ export function DrawerHistory({
             <div className="relative">
               <Input
                 placeholder="Search..."
-                className="rounded-lg py-1.5 pl-8 text-sm"
+                className="rounded-lg py-1.5 pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

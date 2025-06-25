@@ -65,7 +65,7 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
 
   return (
     // Main flex container
-    <div className="bg-background flex h-screen overflow-hidden">
+    <div className="bg-background flex h-dvh overflow-hidden">
       {/* Sidebar */}
       <ChatSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 

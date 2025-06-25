@@ -34,4 +34,6 @@ export const PROVIDER_LIMITS = {
 export const SEARCH_CONFIG = {
   defaultProvider: (process.env.DEFAULT_SEARCH_PROVIDER || 'brave') as SearchProvider,
   maxResults: 3,
+  scrapeContent: true,
+  maxTextCharacters: 500,
 }; 

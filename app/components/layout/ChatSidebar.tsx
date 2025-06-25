@@ -177,7 +177,7 @@ export default function ChatSidebar({
       {/* The actual sidebar panel - NO LONGER FIXED or TRANSLATING */}
       <aside
         className={cn(
-          "bg-background border-muted-foreground/10 flex h-screen flex-col border-r shadow-lg",
+          "bg-background border-muted-foreground/10 flex h-dvh flex-col border-r shadow-lg",
           isOpen ? "w-64" : "hidden w-0",
           "transition-all duration-300 ease-in-out"
         )}

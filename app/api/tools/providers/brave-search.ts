@@ -1,4 +1,4 @@
-import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS } from '../types';
+import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS, SEARCH_CONFIG } from '../types';
 
 export class BraveSearchProvider implements SearchAdapter {
   readonly name = 'brave';
@@ -14,8 +14,8 @@ export class BraveSearchProvider implements SearchAdapter {
 
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
     const { 
-      maxResults = 3, 
-      scrapeContent = false,
+      maxResults = SEARCH_CONFIG.maxResults, 
+      scrapeContent = SEARCH_CONFIG.scrapeContent,
       includeDomains,
       excludeDomains 
     } = options;
@@ -91,8 +91,8 @@ export class BraveSearchProvider implements SearchAdapter {
     
     if (includeContent && (item.description || item.snippet)) {
       const content = item.description || item.snippet || '';
-      const truncatedContent = content.length > 500 
-        ? content.substring(0, 497) + '...' 
+      const truncatedContent = content.length > SEARCH_CONFIG.maxTextCharacters 
+        ? content.substring(0, SEARCH_CONFIG.maxTextCharacters - 3) + '...' 
         : content;
       markdown += `\n\n> ${truncatedContent}`;
     }

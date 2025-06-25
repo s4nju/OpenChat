@@ -147,6 +147,31 @@
   body {
     @apply bg-background text-foreground;
     overscroll-behavior: none;
+    /* iOS Safari improvements */
+    -webkit-touch-callout: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* iOS Safari specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      /* Additional iOS Safari optimizations */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Prevent iOS Safari zoom on input focus by ensuring minimum 16px font-size */
+    input[type="text"],
+    input[type="email"], 
+    input[type="password"],
+    input[type="search"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    textarea,
+    select {
+      font-size: max(16px, 1rem) !important;
+    }
   }
 }
 

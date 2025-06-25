@@ -1,4 +1,4 @@
-import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS } from '../types';
+import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS, SEARCH_CONFIG } from '../types';
 
 export class TavilySearchProvider implements SearchAdapter {
   readonly name = 'tavily';
@@ -14,8 +14,8 @@ export class TavilySearchProvider implements SearchAdapter {
 
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
     const { 
-      maxResults = 3, 
-      scrapeContent = false,
+      maxResults = SEARCH_CONFIG.maxResults, 
+      scrapeContent = SEARCH_CONFIG.scrapeContent,
       includeDomains,
       excludeDomains,
       startPublishedDate,
@@ -91,8 +91,8 @@ export class TavilySearchProvider implements SearchAdapter {
     let markdown = `### [${item.title || 'Untitled'}](${item.url || '#'})\n${item.content || ''}`;
     
     if (includeContent && item.raw_content) {
-      const truncatedContent = item.raw_content.length > 500 
-        ? item.raw_content.substring(0, 497) + '...' 
+      const truncatedContent = item.raw_content.length > SEARCH_CONFIG.maxTextCharacters 
+        ? item.raw_content.substring(0, SEARCH_CONFIG.maxTextCharacters - 3) + '...' 
         : item.raw_content;
       markdown += `\n\n> ${truncatedContent}`;
     }

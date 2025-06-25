@@ -66,7 +66,7 @@ export default function SettingsLayout({
             </DrawerHeader>
             <SettingsNav />
             <div className="flex-1 overflow-auto">
-              <div className="px-6 py-4">
+              <div className="px-6 pt-4 pb-8">
                 {children}
               </div>
             </div>

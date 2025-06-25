@@ -97,7 +97,7 @@ export function DrawerSettings({ trigger, isOpen, setIsOpen }: DrawerSettingsPro
             </ul>
           </nav>
 
-          <div className="flex-1 overflow-auto px-6 py-4">{renderContent()}</div>
+          <div className="flex-1 overflow-auto px-6 pt-4 pb-16">{renderContent()}</div>
         </div>
       </DrawerContent>
     </Drawer>
