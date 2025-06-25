@@ -259,7 +259,6 @@ export async function POST(req: Request) {
     return createDataStreamResponse({
       execute: async (dataStream) => {
         let userMsgId: Id<"messages"> | null = null
-        let assistantMsgId: Id<"messages"> | null = null
 
         // --- Reload Logic (Delete and Recreate) ---
         if (reloadAssistantMessageId) {
@@ -542,7 +541,6 @@ export async function POST(req: Request) {
                   },
                   { token }
                 )
-                assistantMsgId = messageId
 
                 if (useUser) {
                   await fetchMutation(
@@ -558,7 +556,6 @@ export async function POST(req: Request) {
                   )
                 }
                 
-                dataStream.writeData({ userMsgId, assistantMsgId })
               } catch (err) {
                 console.error(
                   "Error in onFinish while saving assistant messages:",
