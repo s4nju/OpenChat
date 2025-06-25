@@ -6,7 +6,7 @@ import type {
   ToolInvocationUIPart,
 } from "@ai-sdk/ui-utils"
 import { CaretDown, Code, Link, Nut, Spinner } from "@phosphor-icons/react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion, Transition } from "framer-motion"
 import { useEffect, useState } from "react"
 import { SearchResults } from "./search-result"
 
@@ -59,7 +59,7 @@ function hasResult(
   )
 }
 
-const TRANSITION = {
+const TRANSITION: Transition = {
   type: "spring",
   duration: 0.2,
   bounce: 0,

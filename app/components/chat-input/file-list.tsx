@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from "motion/react"
 import { FileItem } from "./file-items"
+import type { Transition } from "motion/react"
 
 type FileListProps = {
   files: File[]
   onFileRemove: (file: File) => void
 }
 
-const TRANSITION = {
+const TRANSITION: Transition = {
   type: "spring",
   duration: 0.2,
   bounce: 0,

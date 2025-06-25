@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import type { SourceUIPart } from "@ai-sdk/ui-utils"
 import { CaretDown, Link, Globe } from "@phosphor-icons/react"
 import Image from "next/image"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion, Transition } from "framer-motion"
 import { useState } from "react"
 
 type SourcesListProps = {
@@ -29,7 +29,7 @@ const addUTM = (url: string) => {
   return u.toString()
 }
 
-const TRANSITION = {
+const TRANSITION: Transition = {
   type: "spring",
   duration: 0.2,
   bounce: 0,
