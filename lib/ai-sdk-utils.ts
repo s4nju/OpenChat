@@ -66,12 +66,23 @@ export interface MessageMetadata {
  * Convert Convex message document to AI SDK format
  */
 export function convertConvexToAISDK(msg: Doc<"messages">): Message {
+  // Ensure reasoning parts have proper details field to prevent iteration errors
+  const normalizedParts = msg.parts?.map(part => {
+    if (part.type === "reasoning") {
+      return {
+        ...part,
+        details: part.details || [] // Ensure details is always an array
+      }
+    }
+    return part
+  })
+
   return {
     id: msg._id,
     role: msg.role as "user" | "assistant" | "system",
     content: msg.content, // Keep as fallback for text-only display
     createdAt: new Date(msg._creationTime),
-    parts: (msg.parts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use parts or fallback to text
+    parts: (normalizedParts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
     experimental_attachments: extractAttachmentsFromParts(msg.parts),
   }
 }
@@ -191,7 +202,11 @@ export function createPartsFromAIResponse(
   ]
   
   if (reasoningText) {
-    parts.push({ type: "reasoning", reasoning: reasoningText })
+    parts.push({ 
+      type: "reasoning", 
+      reasoning: reasoningText,
+      details: [] // Initialize details as empty array to prevent iteration errors
+    })
   }
   
   // Add tool invocations as parts
