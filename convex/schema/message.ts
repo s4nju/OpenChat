@@ -19,6 +19,8 @@ export const Message = v.object({
         promptTokens: v.optional(v.number()),
         completionTokens: v.optional(v.number()),
         reasoningTokens: v.optional(v.number()),
-        serverDurationMs: v.optional(v.number())
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string())
     })
 }) 
