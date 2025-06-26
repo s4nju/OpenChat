@@ -72,6 +72,7 @@ export type Model = {
     id: string
     enabled: boolean
     label?: string
+    supportsEffort?: boolean // For reasoning feature
   }[]
   apiKeyUsage?: {
     allowUserKey: boolean
@@ -193,6 +194,7 @@ export const MODELS_RAW = [
       {
         id: "reasoning",
         enabled: true,
+        supportsEffort: true,
         label: "Supports reasoning capabilities",
       },
     ],
@@ -216,6 +218,7 @@ export const MODELS_RAW = [
       {
         id: "reasoning",
         enabled: true,
+        supportsEffort: true,
         label: "Supports reasoning capabilities",
       },
     ],
@@ -262,6 +265,7 @@ export const MODELS_RAW = [
       {
         id: "reasoning",
         enabled: true,
+        supportsEffort: true,
         label: "Supports reasoning capabilities",
       },
     ],
@@ -289,6 +293,30 @@ export const MODELS_RAW = [
       },
     ],
     api_sdk: openai("gpt-4o-mini"),
+  },
+  {
+    id: "o4-mini",
+    name: "O4 Mini",
+    provider: "openai",
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+      {
+        id: "pdf-processing",
+        enabled: true,
+        label: "Supports PDF uploads and analysis",
+      },
+      {
+        id: "reasoning",
+        enabled: true,
+        supportsEffort: true,
+        label: "Supports reasoning capabilities",
+      },
+    ],
+    api_sdk: openai("o4-mini"),
   },
   {
     id: "gemini-2.0-flash",
@@ -336,6 +364,7 @@ export const MODELS_RAW = [
       {
         id: "reasoning",
         enabled: true,
+        supportsEffort: true,
         label: "Supports reasoning capabilities",
       },
       {
@@ -460,6 +489,7 @@ export const MODELS_RAW = [
       {
         id: "reasoning",
         enabled: true,
+        supportsEffort: false,
         label: "Supports reasoning capabilities",
       },
     ],
