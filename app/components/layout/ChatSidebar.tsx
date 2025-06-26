@@ -24,7 +24,7 @@ import {
 import { useMutation, useQuery } from "convex/react"
 import Link from "next/link"
 import { useParams, usePathname, useRouter } from "next/navigation"
-import { useCallback, useState } from "react"
+import { memo, useCallback, useMemo, useState } from "react"
 import { ChatList } from "./ChatList"
 
 // Helper function for conditional classes
@@ -37,11 +37,11 @@ interface ChatSidebarProps {
   toggleSidebar: () => void
 }
 
-export default function ChatSidebar({
+const ChatSidebar = memo(function ChatSidebar({
   isOpen,
   toggleSidebar,
 }: ChatSidebarProps) {
-  const chats = useQuery(api.chats.listChatsForUser) ?? []
+  const chatsQuery = useQuery(api.chats.listChatsForUser)
   const updateChatTitle = useMutation(api.chats.updateChatTitle)
   const deleteChat = useMutation(api.chats.deleteChat)
   const pinChatToggle = useMutation(api.chats.pinChatToggle)
@@ -53,6 +53,9 @@ export default function ChatSidebar({
 
   // State for search and edit/delete in the main sidebar list
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Memoize chats array to stabilize dependencies
+  const chats = useMemo(() => chatsQuery ?? [], [chatsQuery])
 
   // --- Handlers for main sidebar list ---
   const handleSaveEdit = useCallback(
@@ -100,17 +103,29 @@ export default function ChatSidebar({
     },
     [pinChatToggle]
   )
-  const filteredChats = chats.filter((chat) =>
-    (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
+
+  // Memoize filtered chats to avoid unnecessary re-computations
+  const filteredChats = useMemo(
+    () =>
+      chats.filter((chat) =>
+        (chat.title || "").toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [chats, searchQuery]
   )
 
-  // Separate pinned and unpinned chats
-  const pinnedChats = filteredChats.filter((chat) => chat.isPinned)
-  const unpinnedChats = filteredChats.filter((chat) => !chat.isPinned)
+  // Memoize pinned and unpinned chats
+  const { pinnedChats, unpinnedChats } = useMemo(() => {
+    const pinned = filteredChats.filter((chat) => chat.isPinned)
+    const unpinned = filteredChats.filter((chat) => !chat.isPinned)
+    return { pinnedChats: pinned, unpinnedChats: unpinned }
+  }, [filteredChats])
 
-  // Group unpinned chats by time for main sidebar
-  const groupedChats = groupChatsByTime(unpinnedChats)
-  const orderedGroupKeys = getOrderedGroupKeys()
+  // Memoize grouped chats and ordered group keys
+  const { groupedChats, orderedGroupKeys } = useMemo(() => {
+    const grouped = groupChatsByTime(unpinnedChats)
+    const ordered = getOrderedGroupKeys()
+    return { groupedChats: grouped, orderedGroupKeys: ordered }
+  }, [unpinnedChats])
 
   return (
     <div className="z-51 hidden md:block">
@@ -232,4 +247,6 @@ export default function ChatSidebar({
       </aside>
     </div>
   )
-}
+})
+
+export default ChatSidebar

@@ -73,8 +73,7 @@ export class ExaSearchProvider implements SearchAdapter {
         // console.log('[EXA] 📅 End date filter:', endPublishedDate);
       }
 
-      const apiMethod = scrapeContent ? 'searchAndContents' : 'search';
-      // console.log(`[EXA] 🚀 Using ${apiMethod} method with options:`, searchOptions);
+      // console.log(`[EXA] 🚀 Using ${scrapeContent ? 'searchAndContents' : 'search'} method with options:`, searchOptions);
 
       // Use searchAndContents when scraping is enabled, otherwise use regular search
       const result = scrapeContent 
@@ -109,7 +108,7 @@ export class ExaSearchProvider implements SearchAdapter {
     //   resultsWithText: results.filter((r: any) => r.text).length
     // });
 
-    const formattedResults = results.map((result: unknown, index: number) => {
+    const formattedResults = results.map((result: unknown) => {
       const item = result as {
         url?: string;
         title?: string;
@@ -118,7 +117,6 @@ export class ExaSearchProvider implements SearchAdapter {
       };
       
       const hasText = !!item.text;
-      const textLength = item.text?.length || 0;
       const willIncludeContent = includeContent && hasText;
       
       // console.log(`[EXA] 📝 Result ${index + 1}:`, {

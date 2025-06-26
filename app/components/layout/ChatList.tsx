@@ -5,6 +5,7 @@ import { TimeGroup } from "@/lib/chat-utils/time-grouping"
 import {
   PushPinSimpleIcon,
 } from "@phosphor-icons/react"
+import { memo } from "react"
 import { ChatItem } from "./ChatItem"
 
 // Helper function for conditional classes
@@ -22,7 +23,7 @@ interface ChatListProps {
   ) => boolean
 }
 
-export function ChatList({
+export const ChatList = memo(function ChatList({
   pinnedChats,
   groupedChats,
   orderedGroupKeys,
@@ -109,4 +110,4 @@ export function ChatList({
       )}
     </div>
   )
-}
+})
