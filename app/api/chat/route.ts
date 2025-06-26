@@ -12,7 +12,9 @@ import {
 import { 
   classifyError, 
   shouldShowInConversation,
-  createErrorPart 
+  createErrorPart,
+  createErrorResponse,
+  createStreamingError
 } from "@/lib/error-utils"
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic"
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google"
@@ -44,31 +46,7 @@ if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 60
 
-/**
- * Map error codes to error types for API responses
- */
-function getErrorType(errorCode: string): string {
-  switch (errorCode) {
-    case "USER_KEY_ERROR":
-      return "api_key_required"
-    case "RATE_LIMIT":
-      return "rate_limit"
-    case "MODEL_UNAVAILABLE":
-      return "model_unavailable"
-    case "CONTENT_FILTERED":
-      return "content_filtered"
-    case "CONTEXT_TOO_LONG":
-      return "context_too_long"
-    case "TIMEOUT":
-      return "timeout"
-    case "TOOL_ERROR":
-      return "tool_error"
-    case "GENERATION_ERROR":
-      return "generation_error"
-    default:
-      return "unknown_error"
-  }
-}
+
 
 /**
  * Helper function to save an error message as an assistant message
@@ -79,16 +57,11 @@ async function saveErrorMessage(
   error: unknown,
   token: string,
   modelId?: string,
-  modelName?: string
+  modelName?: string,
+  enableSearch?: boolean,
+  reasoningEffort?: ReasoningEffort
 ) {
-  console.log("saveErrorMessage called with:", {
-    chatId,
-    userMsgId,
-    error: error instanceof Error ? error.message : String(error),
-    hasToken: !!token,
-    modelId,
-    modelName
-  })
+
   
   try {
     if (!userMsgId) {
@@ -97,7 +70,6 @@ async function saveErrorMessage(
     }
     
     const classified = classifyError(error)
-    console.log("Error classified as:", classified)
     
     // Extract raw error message for backend debugging
     let rawErrorMessage = classified.message
@@ -114,11 +86,8 @@ async function saveErrorMessage(
     }
     
     const errorPart = createErrorPart(classified.code, classified.userFriendlyMessage, rawErrorMessage)
-    console.log("Error part created:", errorPart)
     
     const parts = [errorPart]
-    
-    console.log("Calling saveAssistantMessage...")
     const { messageId } = await fetchMutation(
       api.messages.saveAssistantMessage,
       {
@@ -130,12 +99,13 @@ async function saveErrorMessage(
         metadata: {
           modelId: modelId || "error",
           modelName: modelName || "Error",
+          includeSearch: enableSearch || false,
+          reasoningEffort: reasoningEffort || "none",
         },
       },
       { token }
     )
     
-    console.log("Error message saved with ID:", messageId)
     return messageId
   } catch (err) {
     console.error("Failed to save error message:", err)
@@ -247,7 +217,7 @@ const buildAnthropicProviderOptions = (
 
 export async function POST(req: Request) {
   req.signal.addEventListener("abort", () => {
-    console.log("Request aborted by client")
+    // Request aborted by client
   })
 
   try {
@@ -262,42 +232,25 @@ export async function POST(req: Request) {
     } = (await req.json()) as ChatRequest
 
     if (!messages || !chatId) {
-      return new Response(
-        JSON.stringify({ error: "Error, missing required information" }),
-        { status: 400 }
-      )
+      return createErrorResponse(new Error("Missing required information"))
     }
 
     // --- Enhanced Input Validation ---
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "'messages' must be a non-empty array." }),
-        { status: 400 }
-      )
+      return createErrorResponse(new Error("'messages' must be a non-empty array."))
     }
 
     if (typeof chatId !== "string" || chatId.trim() === "") {
-      return new Response(
-        JSON.stringify({ error: "'chatId' must be a non-empty string." }),
-        { status: 400 }
-      )
+      return createErrorResponse(new Error("'chatId' must be a non-empty string."))
     }
 
     const selectedModel = MODELS.find((m) => m.id === model)
     if (!selectedModel) {
-      return new Response(
-        JSON.stringify({ error: "Invalid 'model' provided." }),
-        { status: 400 }
-      )
+      return createErrorResponse(new Error("Invalid 'model' provided."))
     }
 
     if (systemPrompt && systemPrompt.length > 1000) {
-      return new Response(
-        JSON.stringify({
-          error: "'systemPrompt' must not exceed 1000 characters.",
-        }),
-        { status: 400 }
-      )
+      return createErrorResponse(new Error("'systemPrompt' must not exceed 1000 characters."))
     }
 
     const token = await convexAuthNextjsToken()
@@ -330,10 +283,7 @@ export async function POST(req: Request) {
         console.error("Failed to fetch or decrypt user API key:", e)
         // If this is a critical error (auth failure), we should return early
         if (e instanceof Error && e.message.includes("Not authenticated")) {
-          return new Response(
-            JSON.stringify({ error: "Authentication required" }),
-            { status: 401 }
-          )
+          return createErrorResponse(new Error("Not authenticated"))
         }
       }
     }
@@ -346,13 +296,7 @@ export async function POST(req: Request) {
 
     // Reject early if model requires user key only but no user API key provided
     if (apiKeyUsage?.userKeyOnly && !userApiKey) {
-      return new Response(
-        JSON.stringify({
-          error: "USER_KEY_REQUIRED",
-          message: "This model requires a user-provided API key.",
-        }),
-        { status: 401 }
-      )
+      return createErrorResponse(new Error("user_key_required"))
     }
 
     // --- Rate Limiting (only if not using user key) ---
@@ -512,31 +456,17 @@ export async function POST(req: Request) {
               chunking: "word",
             }),
             onError: async (error) => {
-              console.log("Error in streamText:", error)
-              console.log("userMsgId in onError:", userMsgId)
-              console.log("Should show in conversation:", shouldShowInConversation(error))
-              
               // Save conversation errors as messages
               if (shouldShowInConversation(error) && token) {
-                console.log("Attempting to save error message from onError...")
                 try {
-                  await saveErrorMessage(chatId, userMsgId, error, token, selectedModel.id, selectedModel.name)
-                  console.log("Error message saved from onError")
+                  await saveErrorMessage(chatId, userMsgId, error, token, selectedModel.id, selectedModel.name, enableSearch, reasoningEffort)
                 } catch (saveError) {
                   console.error("Failed to save error message:", saveError)
                 }
                 
-                // Return error response to client
-                const classified = classifyError(error)
-                const errorType = getErrorType(classified.code)
-                throw new Error(JSON.stringify({
-                  error: {
-                    type: errorType,
-                    message: classified.userFriendlyMessage
-                  }
-                }))
-              } else {
-                console.log("Not saving error - either not conversation error or no token")
+                // Create standardized streaming error for client
+                const streamingError = createStreamingError(error)
+                throw new Error(JSON.stringify(streamingError.errorPayload))
               }
             },
             async onFinish({ usage, response }) {
@@ -710,15 +640,9 @@ export async function POST(req: Request) {
           try {
             result = runStream(primaryIsUserKey)
           } catch (primaryError) {
-            console.log("Caught primary error:", primaryError)
-            console.log("userMsgId:", userMsgId)
-            console.log("Should show in conversation:", shouldShowInConversation(primaryError))
-            
             // Save conversation errors as messages
             if (shouldShowInConversation(primaryError) && token) {
-              console.log("Attempting to save error message...")
-              await saveErrorMessage(chatId, userMsgId, primaryError, token, selectedModel.id, selectedModel.name)
-              console.log("Error message saved")
+              await saveErrorMessage(chatId, userMsgId, primaryError, token, selectedModel.id, selectedModel.name, enableSearch, reasoningEffort)
             }
             
             const fallbackIsPossible =
@@ -729,10 +653,9 @@ export async function POST(req: Request) {
               try {
                 result = runStream(fallbackIsUserKey)
               } catch (fallbackError) {
-                console.log("Caught fallback error:", fallbackError)
                 // Save conversation errors as messages for fallback error too
                 if (shouldShowInConversation(fallbackError) && token) {
-                  await saveErrorMessage(chatId, userMsgId, fallbackError, token, selectedModel.id, selectedModel.name)
+                  await saveErrorMessage(chatId, userMsgId, fallbackError, token, selectedModel.id, selectedModel.name, enableSearch, reasoningEffort)
                 }
                 throw fallbackError
               }
@@ -744,15 +667,9 @@ export async function POST(req: Request) {
           try {
             result = runStream(false)
           } catch (streamError) {
-            console.log("Caught stream error:", streamError)
-            console.log("userMsgId:", userMsgId)
-            console.log("Should show in conversation:", shouldShowInConversation(streamError))
-            
             // Save conversation errors as messages
             if (shouldShowInConversation(streamError) && token) {
-              console.log("Attempting to save error message...")
-              await saveErrorMessage(chatId, userMsgId, streamError, token, selectedModel.id, selectedModel.name)
-              console.log("Error message saved")
+              await saveErrorMessage(chatId, userMsgId, streamError, token, selectedModel.id, selectedModel.name, enableSearch, reasoningEffort)
             }
             throw streamError
           }
@@ -761,50 +678,12 @@ export async function POST(req: Request) {
         result.mergeIntoDataStream(dataStream, { sendReasoning: true })
       },
       onError: (error) => {
-        // Mark structured errors for handling at higher level
         const errorMsg = error instanceof Error ? error.message : String(error)
-        try {
-          const parsedError = JSON.parse(errorMsg)
-          if (parsedError.error && parsedError.error.type && parsedError.error.message) {
-            // Tag this as a structured error
-            throw new Error(`STRUCTURED_ERROR:${errorMsg}`)
-          }
-        } catch {
-          // Not structured, continue with normal error handling
-        }
-        
         return errorMsg
       },
     })
   } catch (err: unknown) {
-    const error = err as { message?: string }
-    
-    // Handle structured conversation errors
-    if (error.message?.startsWith("STRUCTURED_ERROR:")) {
-      const structuredErrorJson = error.message.replace("STRUCTURED_ERROR:", "")
-      try {
-        const parsedError = JSON.parse(structuredErrorJson)
-        return new Response(JSON.stringify(parsedError), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        })
-      } catch {
-        // Fall through to default error handling
-      }
-    }
-    
-    if (
-      error.message?.includes("DAILY_LIMIT_REACHED") ||
-      error.message?.includes("MONTHLY_LIMIT_REACHED")
-    ) {
-      return new Response(
-        JSON.stringify({ error: error.message, code: "LIMIT_REACHED" }),
-        { status: 403 }
-      )
-    }
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500 }
-    )
+    console.error("Unhandled error in chat API:", err)
+    return createErrorResponse(err)
   }
 }

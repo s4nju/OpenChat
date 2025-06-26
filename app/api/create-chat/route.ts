@@ -2,6 +2,7 @@ import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
 import { buildSystemPrompt } from "@/lib/config";
+import { createErrorResponse } from "@/lib/error-utils";
 import { z } from "zod";
 import { PostHog } from "posthog-node";
 
@@ -19,10 +20,7 @@ export async function POST(request: Request) {
     const parseResult = schema.safeParse(body);
 
     if (!parseResult.success) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request body", details: parseResult.error.flatten() }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      return createErrorResponse(new Error("Invalid request body"));
     }
 
     const { title, model, systemPrompt } = parseResult.data;
@@ -33,10 +31,7 @@ export async function POST(request: Request) {
 
     // If the user is not authenticated or the token is invalid, short-circuit early
     if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse(new Error("Unauthorized"));
     }
 
     const composedPrompt = buildSystemPrompt(user, systemPrompt);
@@ -82,23 +77,6 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error("Error in create-chat endpoint:", err);
-
-    const errorMessage = err instanceof Error ? err.message : "Internal server error";
-
-    // Handle specific error codes from Convex if they are thrown
-    if (
-      errorMessage.includes("DAILY_LIMIT_REACHED") ||
-      errorMessage.includes("MONTHLY_LIMIT_REACHED")
-    ) {
-      return new Response(
-        JSON.stringify({ error: errorMessage, code: "LIMIT_REACHED" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createErrorResponse(err);
   }
 }

@@ -196,7 +196,7 @@ export default function Chat() {
 
   // If we're in a brand-new chat (no chatId yet) ensure local state stays empty.
   useEffect(() => {
-    if (status === "ready" && !chatId) {
+    if ((status === "ready" || status === "error") && !chatId) {
       setMessages([])
     }
   }, [status, chatId, setMessages])

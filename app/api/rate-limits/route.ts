@@ -1,6 +1,7 @@
 import { fetchQuery } from "convex/nextjs";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
+import { createErrorResponse } from "@/lib/error-utils";
 
 export async function GET() {
   try {
@@ -8,10 +9,7 @@ export async function GET() {
 
     // If no valid token, the user is not authenticated
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+      return createErrorResponse(new Error("Unauthorized"));
     }
 
     const rateLimitStatus = await fetchQuery(
@@ -26,30 +24,6 @@ export async function GET() {
     });
   } catch (err: unknown) {
     console.error("Error in /api/rate-limits:", err);
-
-    const message = err instanceof Error ? err.message : "Internal server error";
-
-    // Determine if error relates to authentication/authorization
-    const authErrorPatterns = [
-      "Unauthorized",
-      "unauthorized",
-      "invalid token",
-      "jwt",
-      "token",
-    ];
-
-    const isAuthError = authErrorPatterns.some((p) =>
-      message.toLowerCase().includes(p.toLowerCase())
-    );
-
-    const statusCode = isAuthError ? 401 : 500;
-
-    return new Response(
-      JSON.stringify({ error: message }),
-      {
-        status: statusCode,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return createErrorResponse(err);
   }
 }
