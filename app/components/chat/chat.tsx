@@ -15,6 +15,7 @@ import {
   REMAINING_QUERY_ALERT_THRESHOLD,
   MODELS,
 } from "@/lib/config"
+import { shouldShowAsToast, classifyError } from "@/lib/error-utils"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat, type Message } from "@ai-sdk/react"
@@ -155,7 +156,7 @@ export default function Chat() {
   // 3. While a delete operation is in flight (isDeleting), we skip syncing to
   //    prevent the just-deleted message from reappearing.
   useEffect(() => {
-    if (status !== "ready" || !messagesFromDB || isDeleting) return
+    if ((status !== "ready" && status !== "error") || !messagesFromDB || isDeleting) return
 
     const mappedDb = messagesFromDB.map(mapMessage)
 
@@ -226,17 +227,15 @@ export default function Chat() {
   // --- Error Handling ---
   useEffect(() => {
     if (error) {
-      let errorMsg = "Something went wrong."
-      try {
-        const parsed = JSON.parse(error.message)
-        errorMsg = parsed.error || errorMsg
-      } catch {
-        errorMsg = error.message || errorMsg
+      // Only show toast for errors that should be displayed as toasts
+      // Conversation errors will be displayed as assistant messages
+      if (shouldShowAsToast(error)) {
+        const classified = classifyError(error)
+        toast({
+          title: classified.userFriendlyMessage,
+          status: "error",
+        })
       }
-      toast({
-        title: errorMsg,
-        status: "error",
-      })
     }
   }, [error])
 

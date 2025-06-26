@@ -231,7 +231,7 @@ function MessageUserInner({
             aria-label="Copy text"
             onClick={copyToClipboard}
             type="button"
-            disabled={!!status && status !== "ready"}
+            disabled={status === "streaming"}
           >
             {copied ? (
               <Check className="size-4" />
@@ -261,7 +261,7 @@ function MessageUserInner({
             aria-label="Delete"
             onClick={handleDelete}
             type="button"
-            disabled={!!status && status !== "ready"}
+            disabled={status === "streaming"}
           >
             <Trash className="size-4" />
           </button>

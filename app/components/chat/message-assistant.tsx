@@ -15,6 +15,16 @@ import type {
   SourceUIPart,
   ToolInvocationUIPart,
 } from "@ai-sdk/ui-utils"
+
+// Error part type for rendering
+type ErrorUIPart = {
+  type: "error"
+  error: {
+    code: string
+    message: string
+    rawError?: string // Technical error for backend (not displayed)
+  }
+}
 import {
   ArrowClockwise,
   CaretDown,
@@ -123,6 +133,14 @@ function MessageAssistantInner({
   const reasoningParts: ReasoningUIPart[] = combinedParts
     ? combinedParts.filter(
       (part): part is ReasoningUIPart => part.type === "reasoning"
+    )
+    : []
+
+  // Extract error parts for display
+  const errorParts: ErrorUIPart[] = combinedParts
+    ? (combinedParts as unknown[]).filter(
+      (part: unknown): part is ErrorUIPart => 
+        typeof part === 'object' && part !== null && 'type' in part && part.type === "error"
     )
     : []
 
@@ -309,10 +327,28 @@ function MessageAssistantInner({
                     </Markdown>
                   )}
                 </motion.div>
-              )}
-            </AnimatePresence>
+                        )}
+        </AnimatePresence>
           </div>
         )}
+
+        {/* Display error messages with visual differentiation */}
+        {errorParts.length > 0 && (
+          <div className="w-full">
+            {errorParts.map((errorPart, index) => (
+              <div 
+                key={`error-${index}`}
+                className="mt-4 flex items-start gap-3 rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-900 dark:text-red-400"
+                role="alert"
+              >
+                <div className="leading-relaxed">
+                  {errorPart.error.message}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Show 'thinking...' spinner if tool call in progress */}
         {isSearching && (
           <div className="text-muted-foreground my-2 flex items-center gap-2 text-sm">

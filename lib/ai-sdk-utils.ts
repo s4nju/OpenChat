@@ -31,6 +31,7 @@ type ConvexMessagePart = {
   error: {
     code: string
     message: string
+    rawError?: string
   }
 } | {
   type: "tool-invocation"

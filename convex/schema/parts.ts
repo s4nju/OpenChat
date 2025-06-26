@@ -40,7 +40,8 @@ export const ErrorUIPart = v.object({
     type: v.literal("error"),
     error: v.object({
         code: v.string(),
-        message: v.string()
+        message: v.string(), // User-friendly message for frontend
+        rawError: v.optional(v.string()) // Technical error message for backend debugging
     })
 })
 
