@@ -60,6 +60,8 @@ export interface MessageMetadata {
   completionTokens?: number
   reasoningTokens?: number
   serverDurationMs?: number
+  includeSearch?: boolean
+  reasoningEffort?: string
 }
 
 /**
@@ -151,7 +153,9 @@ export function buildMetadataFromResponse(
   usage: { promptTokens?: number; completionTokens?: number; reasoningTokens?: number }, 
   response: { modelId?: string }, 
   modelId: string, 
-  startTime: number
+  startTime: number,
+  includeSearch?: boolean,
+  reasoningEffort?: string
 ): MessageMetadata {
   return {
     modelId,
@@ -159,7 +163,9 @@ export function buildMetadataFromResponse(
     promptTokens: usage?.promptTokens,
     completionTokens: usage?.completionTokens,
     reasoningTokens: usage?.reasoningTokens, // May not exist for all models
-    serverDurationMs: Date.now() - startTime
+    serverDurationMs: Date.now() - startTime,
+    includeSearch: includeSearch || false,
+    reasoningEffort: reasoningEffort || "none"
   }
 }
 

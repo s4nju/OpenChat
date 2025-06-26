@@ -527,7 +527,7 @@ export async function POST(req: Request) {
                 // });
                 
                 // Build metadata from response
-                const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime)
+                const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime, enableSearch, reasoningEffort)
 
                 await fetchMutation(
                   api.messages.saveAssistantMessage,
