@@ -125,6 +125,13 @@ export default function CustomizationPage() {
     }
   }
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && hasUnsavedChanges) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
   const defaultTraits = ["friendly", "witty", "concise", "curious", "empathetic", "creative", "patient"]
 
   return (
@@ -149,6 +156,7 @@ export default function CustomizationPage() {
                 setPreferredName(e.target.value)
                 setHasUnsavedChanges(true)
               }}
+              onKeyDown={handleInputKeyDown}
               placeholder="Enter your name"
               maxLength={50}
             />
@@ -168,6 +176,7 @@ export default function CustomizationPage() {
                 setOccupation(e.target.value)
                 setHasUnsavedChanges(true)
               }}
+              onKeyDown={handleInputKeyDown}
               placeholder="Engineer, student, etc."
               maxLength={100}
             />
@@ -246,6 +255,7 @@ export default function CustomizationPage() {
                 setAbout(e.target.value)
                 setHasUnsavedChanges(true)
               }}
+              onKeyDown={handleInputKeyDown}
               placeholder="Interests, values, or preferences to keep in mind"
               rows={5}
               maxLength={3000}

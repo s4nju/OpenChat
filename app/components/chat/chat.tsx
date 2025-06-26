@@ -59,6 +59,20 @@ function supportsReasoningEffort(modelId: string): boolean {
   return reasoningFeature?.enabled === true && reasoningFeature?.supportsEffort === true;
 }
 
+// Helper function to extract first name from full name
+const getFirstName = (fullName?: string): string | null => {
+  if (!fullName) return null;
+  return fullName.split(' ')[0];
+};
+
+// Get the display name - prefer preferredName over extracted first name
+const getDisplayName = (user: Doc<"users"> | null): string | null => {
+  if (user?.preferredName) {
+    return user.preferredName;
+  }
+  return getFirstName(user?.name);
+};
+
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession()
   const router = useRouter()
@@ -731,7 +745,12 @@ export default function Chat() {
             transition={{ layout: { duration: 0 } }}
           >
             <h1 className="mb-6 text-3xl font-medium tracking-tight">
-              What&apos;s on your mind?
+              {(() => {
+                const displayName = getDisplayName(user);
+                return displayName 
+                  ? `What's on your mind, ${displayName}?`
+                  : "What's on your mind?";
+              })()}
             </h1>
           </motion.div>
         ) : (

@@ -6,6 +6,18 @@ import { MessageUsageCard } from "@/app/components/layout/settings/message-usage
 import { User, Eye, EyeSlash } from "@phosphor-icons/react"
 import { Kbd } from "@/components/ui/kbd"
 import Image from "next/image"
+import { Doc } from "@/convex/_generated/dataModel"
+
+// Get the display name - prefer preferredName over full name
+const getDisplayName = (user: Doc<"users"> | null): string => {
+  if (!user) return "User";
+  
+  if (user.preferredName) {
+    return user.preferredName;
+  }
+  
+  return user.name || "User";
+};
 
 export function SettingsSidebar() {
   const { user } = useUser()
@@ -44,7 +56,7 @@ export function SettingsSidebar() {
             )}
           </div>
         </div>
-        <h2 className="text-xl font-semibold">{user?.name}</h2>
+        <h2 className="text-xl font-semibold">{getDisplayName(user)}</h2>
         <button
           type="button"
           className="text-muted-foreground text-sm flex items-center gap-1"
