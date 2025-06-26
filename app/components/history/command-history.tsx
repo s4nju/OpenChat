@@ -34,7 +34,7 @@ import {
   X,
 } from "@phosphor-icons/react"
 import { useMutation, useQuery } from "convex/react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { CommandHistoryItem } from "./CommandHistoryItem"
 
@@ -57,6 +57,7 @@ function getSnippet(text: string, query: string, length = 80): React.ReactNode {
 
 export function CommandHistory() {
   const router = useRouter()
+  const params = useParams<{ chatId?: string }>()
   const chatHistory = useQuery(api.chats.listChatsForUser)
   const deleteChat = useMutation(api.chats.deleteChat)
   const updateChatTitle = useMutation(api.chats.updateChatTitle)
@@ -201,6 +202,8 @@ export function CommandHistory() {
                   <CommandItem
                     key={msg._id}
                     onSelect={() => {
+                      // For messages, always navigate since the message ID parameter makes it a different URL
+                      // and we want to scroll to the specific message
                       router.replace(`/c/${msg.chatId}?m=${msg._id}`, {
                         scroll: false,
                       })
@@ -327,7 +330,10 @@ export function CommandHistory() {
                         key={chat._id}
                         onSelect={() => {
                           if (!editingId && !deletingId) {
-                            router.replace(`/c/${chat._id}`, { scroll: false })
+                            // Only navigate if we're not already on this chat
+                            if (params.chatId !== chat._id) {
+                              router.replace(`/c/${chat._id}`, { scroll: false })
+                            }
                             setIsOpen(false)
                           }
                         }}
@@ -347,7 +353,10 @@ export function CommandHistory() {
                                     onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
-                                      router.push(`/c/${chat.originalChatId}`)
+                                      // Only navigate if we're not already on this chat
+                                      if (params.chatId !== chat.originalChatId) {
+                                        router.push(`/c/${chat.originalChatId}`)
+                                      }
                                       setIsOpen(false)
                                     }}
                                     className="text-muted-foreground/50 hover:text-muted-foreground transition-colors mr-1"

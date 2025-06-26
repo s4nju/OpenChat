@@ -141,6 +141,11 @@ export const ChatItem = React.memo(function ChatItem({
           replace
           scroll={false}
           key={id}
+          onClick={(e) => {
+            if (params.chatId === id) {
+              e.preventDefault()
+            }
+          }}
           className={cn(
             "group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none",
             "hover:bg-accent hover:text-accent-foreground focus-visible:text-accent-foreground",

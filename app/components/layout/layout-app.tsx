@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import ChatSidebar from "./ChatSidebar"
 import { Header } from "./header"
@@ -8,6 +8,7 @@ import { Header } from "./header"
 export default function LayoutApp({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   // Load sidebar state from localStorage on initial mount
   useEffect(() => {
@@ -50,13 +51,16 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
 
       if (isMeta && e.shiftKey && key === "o") {
         e.preventDefault()
-        router.push("/")
+        // Only navigate if we're not already on the home page
+        if (pathname !== "/") {
+          router.push("/")
+        }
       } else if (isMeta && !e.shiftKey && key === "b") {
         e.preventDefault()
         toggleSidebar()
       }
     },
-    [router, toggleSidebar]
+    [router, toggleSidebar, pathname]
   )
   useEffect(() => {
     document.addEventListener("keydown", handler, true)

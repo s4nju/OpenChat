@@ -19,7 +19,7 @@ import {
   TrashSimple,
   X,
 } from "@phosphor-icons/react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import React from "react"
 
 interface CommandHistoryItemProps {
@@ -56,6 +56,7 @@ export const CommandHistoryItem = React.memo(function CommandHistoryItem({
   setEditTitle,
 }: CommandHistoryItemProps) {
   const router = useRouter()
+  const params = useParams<{ chatId?: string }>()
   return (
     <div key={chat._id} className="px-0 py-0.5">
       {editingId === chat._id ? (
@@ -154,7 +155,10 @@ export const CommandHistoryItem = React.memo(function CommandHistoryItem({
           key={chat._id}
           onSelect={() => {
             if (!editingId && !deletingId) {
-              router.replace(`/c/${chat._id}`, { scroll: false })
+              // Only navigate if we're not already on this chat
+              if (params.chatId !== chat._id) {
+                router.replace(`/c/${chat._id}`, { scroll: false })
+              }
               setIsOpen(false)
             }
           }}
@@ -174,7 +178,10 @@ export const CommandHistoryItem = React.memo(function CommandHistoryItem({
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        router.push(`/c/${chat.originalChatId}`)
+                        // Only navigate if we're not already on this chat
+                        if (params.chatId !== chat.originalChatId) {
+                          router.push(`/c/${chat.originalChatId}`)
+                        }
                         setIsOpen(false)
                       }}
                       className="text-muted-foreground/50 hover:text-muted-foreground transition-colors mr-1"

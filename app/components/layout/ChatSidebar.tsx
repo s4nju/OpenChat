@@ -209,7 +209,7 @@ const ChatSidebar = memo(function ChatSidebar({
 
         <div
           className={cn(
-            "flex flex-grow flex-col gap-3 overflow-y-auto p-2", // Changed px-4 pt-4 to p-2
+            "flex flex-grow flex-col gap-3 overflow-y-auto p-4", // Changed px-4 pt-4 to p-2
             "transition-opacity duration-300 ease-in-out",
             isOpen ? "opacity-100 delay-150" : "opacity-0"
           )}

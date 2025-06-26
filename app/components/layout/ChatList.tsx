@@ -42,7 +42,7 @@ export const ChatList = memo(function ChatList({
       )}
       {/* Pinned Chats Section */}
       {pinnedChats.length > 0 && (
-        <div className="relative flex w-full min-w-0 flex-col p-2">
+        <div className="relative flex w-full min-w-0 flex-col">
           <h3 className="text-muted-foreground focus-visible:ring-primary flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
             <PushPinSimpleIcon className="mr-1 h-3 w-3" />
             Pinned
@@ -77,9 +77,9 @@ export const ChatList = memo(function ChatList({
           hasChatsInGroup(groupedChats, groupKey) && (
             <div
               key={groupKey}
-              className="relative flex w-full min-w-0 flex-col p-2"
+              className="relative flex w-full min-w-0 flex-col"
             >
-              <h3 className="text-muted-foreground focus-visible:ring-primary flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
+              <h3 className="text-muted-foreground focus-visible:ring-primary flex pt-8 pb-2 h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium tracking-wider uppercase outline-none select-none focus-visible:ring-2">
                 {groupKey}
               </h3>
               <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
