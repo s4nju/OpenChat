@@ -526,8 +526,8 @@ export async function POST(req: Request) {
                 //   hasToolInvocations: messageParts.some(p => p.type === "tool-invocation")
                 // });
                 
-                // Build metadata from response
-                const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, startTime, enableSearch, reasoningEffort)
+                // Build metadata from response with human-readable model name
+                const metadata = buildMetadataFromResponse(usage, response, selectedModel.id, selectedModel.name, startTime, enableSearch, reasoningEffort)
 
                 await fetchMutation(
                   api.messages.saveAssistantMessage,

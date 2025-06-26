@@ -86,6 +86,8 @@ export function convertConvexToAISDK(msg: Doc<"messages">): Message {
     createdAt: new Date(msg._creationTime),
     parts: (normalizedParts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
     experimental_attachments: extractAttachmentsFromParts(msg.parts),
+    // Pass the entire metadata object for easier access to any metadata property
+    ...(msg.metadata && { metadata: msg.metadata as MessageMetadata }),
   }
 }
 
@@ -152,14 +154,15 @@ export function extractReasoningFromResponse(responseParts: Array<{ type: string
 export function buildMetadataFromResponse(
   usage: { promptTokens?: number; completionTokens?: number; reasoningTokens?: number }, 
   response: { modelId?: string }, 
-  modelId: string, 
+  modelId: string,
+  modelName: string,
   startTime: number,
   includeSearch?: boolean,
   reasoningEffort?: string
 ): MessageMetadata {
   return {
     modelId,
-    modelName: response.modelId || modelId, // Use response.modelId if available, fallback to modelId
+    modelName: modelName || response.modelId || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
     promptTokens: usage?.promptTokens,
     completionTokens: usage?.completionTokens,
     reasoningTokens: usage?.reasoningTokens, // May not exist for all models

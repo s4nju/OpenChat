@@ -8,6 +8,7 @@ import {
   MessageContent,
 } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
+import { MessageMetadata } from "@/lib/ai-sdk-utils"
 import { Message as MessageType } from "@ai-sdk/react"
 import type {
   ReasoningUIPart,
@@ -50,6 +51,7 @@ type MessageAssistantProps = {
   status?: "streaming" | "ready" | "submitted" | "error"
   reasoning_text?: string
   id: string
+  metadata?: MessageMetadata
 } 
 
 const Markdown = dynamic(
@@ -71,10 +73,31 @@ function MessageAssistantInner({
   status,
   reasoning_text,
   id,
+  metadata,
 }: MessageAssistantProps) {
   const [showReasoning, setShowReasoning] = useState(status === "streaming") // Collapsed by default, open if streaming
   const prevStatusRef = useRef(status) // Ref to track previous status
   const [isTouch, setIsTouch] = useState(false)
+
+  // Extract model from metadata or use direct model prop as fallback
+  const modelFromMetadata = metadata?.modelName || metadata?.modelId
+  const displayModel = modelFromMetadata || model
+  const reasoningEffort = metadata?.reasoningEffort
+
+  // Format the model display with reasoning effort if available
+  const formatModelDisplay = (model: string, effort?: string) => {
+    if (!effort || effort === "none") return model
+    return `${model} (${effort})`
+  }
+
+  // Add logging to debug model and metadata
+  // useEffect(() => {
+  //   console.log('MessageAssistant - Model prop:', model)
+  //   console.log('MessageAssistant - Metadata:', metadata)
+  //   console.log('MessageAssistant - Model from metadata:', modelFromMetadata)
+  //   console.log('MessageAssistant - Display model:', displayModel)
+  //   console.log('MessageAssistant - Reasoning effort:', reasoningEffort)
+  // }, [model, metadata, modelFromMetadata, displayModel, reasoningEffort])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -360,9 +383,9 @@ function MessageAssistantInner({
               <ArrowClockwise className="size-4" />
             </button>
           </MessageAction>
-          {model && (
-            <span className="text-muted-foreground ml-2 hidden text-xs md:inline-block">
-              {`Generated with ${model}`}
+          {displayModel && (
+            <span className="text-muted-foreground ml-2 text-xs inline-block">
+              {`${formatModelDisplay(displayModel, reasoningEffort)}`}
             </span>
           )}
         </MessageActions>

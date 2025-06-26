@@ -1,6 +1,7 @@
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
 import { ChatContainer } from "@/components/prompt-kit/chat-container"
 import { Loader } from "@/components/prompt-kit/loader"
+import { MessageMetadata } from "@/lib/ai-sdk-utils"
 import { Message as MessageType } from "@ai-sdk/react"
 import React, { useRef } from "react"
 import { Message } from "./message"
@@ -8,6 +9,7 @@ import { Message } from "./message"
 type MessageWithReasoning = MessageType & {
   reasoning_text?: string
   model?: string
+  metadata?: MessageMetadata
 }
 
 type ConversationProps = {
@@ -66,6 +68,7 @@ const Conversation = React.memo(function Conversation({
               status={status}
               reasoning_text={message.reasoning_text}
               model={message.model}
+              metadata={message.metadata}
             >
               {message.content}
             </Message>

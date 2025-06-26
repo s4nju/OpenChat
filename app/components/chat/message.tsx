@@ -1,5 +1,6 @@
 import { Message as MessageType } from "@ai-sdk/react"
 import React, { useState } from "react"
+import { MessageMetadata } from "@/lib/ai-sdk-utils"
 import { MessageAssistant } from "./message-assistant"
 import { MessageUser } from "./message-user"
 
@@ -18,6 +19,7 @@ export type MessageProps = {
   parts?: MessageType["parts"]
   status?: "streaming" | "ready" | "submitted" | "error" // Add status prop
   reasoning_text?: string
+  metadata?: MessageMetadata
 }
 
 function MessageComponent({
@@ -35,6 +37,7 @@ function MessageComponent({
   parts,
   status, // Receive status prop
   reasoning_text,
+  metadata,
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
 
@@ -77,6 +80,7 @@ function MessageComponent({
         attachments={attachments}
         status={status}
         reasoning_text={reasoning_text}
+        metadata={metadata}
       >
         {children}
       </MessageAssistant>
