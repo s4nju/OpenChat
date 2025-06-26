@@ -29,7 +29,9 @@ export const sendUserMessageToChat = mutation({
       promptTokens: v.optional(v.number()),
       completionTokens: v.optional(v.number()),
       reasoningTokens: v.optional(v.number()),
-      serverDurationMs: v.optional(v.number())
+      serverDurationMs: v.optional(v.number()),
+      includeSearch: v.optional(v.boolean()),
+      reasoningEffort: v.optional(v.string())
     })),
   },
   returns: v.object({ messageId: v.id("messages") }),
@@ -75,7 +77,9 @@ export const saveAssistantMessage = mutation({
       promptTokens: v.optional(v.number()),
       completionTokens: v.optional(v.number()),
       reasoningTokens: v.optional(v.number()),
-      serverDurationMs: v.optional(v.number())
+      serverDurationMs: v.optional(v.number()),
+      includeSearch: v.optional(v.boolean()),
+      reasoningEffort: v.optional(v.string())
     })),
   },
   returns: v.object({ messageId: v.id("messages") }),
@@ -127,7 +131,9 @@ export const getMessagesForChat = query({
         promptTokens: v.optional(v.number()),
         completionTokens: v.optional(v.number()),
         reasoningTokens: v.optional(v.number()),
-        serverDurationMs: v.optional(v.number())
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string())
       }),
     })
   ),
