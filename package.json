@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "bunx ultracite@latest lint",
+    "format": "bunx ultracite@latest format"
   },
   "dependencies": {
     "@agentic/duck-duck-go": "^7.6.7",
@@ -72,6 +73,7 @@
     "zod": "^3.25.57"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.0.5",
     "@eslint/eslintrc": "^3.3.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.2",
     "@next/bundle-analyzer": "^15.3.3",
@@ -83,10 +85,19 @@
     "@types/react-dom": "^19.1.6",
     "eslint": "^9.28.0",
     "eslint-config-next": "15.2.2",
+    "lefthook": "^1.11.14",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "ultracite": "5.0.25"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+      "bunx ultracite format",
+      "bunx ultracite format"
+    ]
+  }
 }
