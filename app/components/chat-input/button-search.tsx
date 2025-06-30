@@ -1,27 +1,25 @@
-import { Button } from "@/components/ui/button"
-import { useBreakpoint } from "../../hooks/use-breakpoint"
+import { Globe } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import {
   Popover,
   // PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from '@/components/ui/popover';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { Globe } from "@phosphor-icons/react"
-import React from "react"
-import { PopoverContentAuth } from "./popover-content-auth"
-
-import { MODELS_OPTIONS } from "@/lib/config"
+} from '@/components/ui/tooltip';
+import { MODELS_OPTIONS } from '@/lib/config';
+import { useBreakpoint } from '../../hooks/use-breakpoint';
+import { PopoverContentAuth } from './popover-content-auth';
 
 export type ButtonSearchProps = {
-  onSearch?: () => void
-  isUserAuthenticated: boolean
-  searchEnabled?: boolean
-  model: string
-}
+  onSearch?: () => void;
+  isUserAuthenticated: boolean;
+  searchEnabled?: boolean;
+  model: string;
+};
 
 export function ButtonSearch({
   onSearch,
@@ -33,7 +31,19 @@ export function ButtonSearch({
   const isMobile = useBreakpoint(768);
   const isWebSearchAvailable = MODELS_OPTIONS.find(
     (m) => m.id === model
-  )?.features?.find((f) => f.id === "web-search")?.enabled;
+  )?.features?.find((f) => f.id === 'web-search')?.enabled;
+
+  // Compute classes for the enabled button state without nested ternaries
+  let enabledButtonClass = '';
+  if (isMobile) {
+    enabledButtonClass = searchEnabled
+      ? 'h-9 w-auto rounded-full bg-blue-500/50 text-accent-foreground transition hover:bg-blue-600/50'
+      : 'flex h-9 w-auto items-center rounded-full border border-border bg-transparent px-3 dark:bg-secondary';
+  } else {
+    enabledButtonClass = searchEnabled
+      ? 'size-9 rounded-full bg-blue-500/50 transition hover:bg-blue-600/50'
+      : 'size-9 rounded-full border border-border bg-transparent dark:bg-secondary';
+  }
 
   if (!isWebSearchAvailable) {
     return (
@@ -41,16 +51,16 @@ export function ButtonSearch({
         <TooltipTrigger asChild>
           <span>
             <Button
-              size="sm"
-              variant="secondary"
+              aria-label="Search the internet"
               className={
                 isMobile
-                  ? "border-border dark:bg-secondary text-accent-foreground h-9 w-auto rounded-full border bg-transparent opacity-50 cursor-not-allowed"
-                  : "border-border dark:bg-secondary size-9 rounded-full border bg-transparent opacity-50 cursor-not-allowed"
+                  ? 'h-9 w-auto cursor-not-allowed rounded-full border border-border bg-transparent text-accent-foreground opacity-50 dark:bg-secondary'
+                  : 'size-9 cursor-not-allowed rounded-full border border-border bg-transparent opacity-50 dark:bg-secondary'
               }
-              type="button"
-              aria-label="Search the internet"
               disabled
+              size="sm"
+              type="button"
+              variant="secondary"
             >
               <Globe className="size-5" />
               {/* {isMobile && <span className="text-sm">Search</span>} */}
@@ -68,15 +78,15 @@ export function ButtonSearch({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                size="sm"
-                variant="secondary"
+                aria-label="Search the internet"
                 className={
                   isMobile
-                    ? "border-border dark:bg-secondary text-accent-foreground h-9 w-auto rounded-full border bg-transparent"
-                    : "border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
+                    ? 'h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground dark:bg-secondary'
+                    : 'size-9 rounded-full border border-border bg-transparent dark:bg-secondary'
                 }
+                size="sm"
                 type="button"
-                aria-label="Search the internet"
+                variant="secondary"
               >
                 <Globe className="size-4" />
                 {/* {isMobile && <span className="text-sm">Search</span>} */}
@@ -87,37 +97,27 @@ export function ButtonSearch({
         </Tooltip>
         <PopoverContentAuth />
       </Popover>
-    )
+    );
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          size="sm"
-          variant={searchEnabled ? "ghost" : "secondary"}
-          className={
-            isMobile
-              ? (
-                searchEnabled
-                  ? "transition bg-blue-500/50 hover:bg-blue-600/50 text-accent-foreground  h-9 w-auto  rounded-full"
-                  : "border-border dark:bg-secondary border bg-transparent px-3 h-9 flex items-center w-auto rounded-full"
-              )
-              : (
-                searchEnabled
-                  ? "size-9 rounded-full transition bg-blue-500/50 hover:bg-blue-600/50"
-                  : "border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-              )
-          }
-          type="button"
           aria-label="Search the internet"
+          className={enabledButtonClass}
           onClick={onSearch}
+          size="sm"
+          type="button"
+          variant={searchEnabled ? 'ghost' : 'secondary'}
         >
-          <Globe className={searchEnabled ? "size-4 text-blue-400" : "size-4"} />
+          <Globe
+            className={searchEnabled ? 'size-4 text-blue-400' : 'size-4'}
+          />
           {/* {isMobile && <span className="text-sm">Search</span>} */}
         </Button>
       </TooltipTrigger>
       <TooltipContent>Search the internet</TooltipContent>
     </Tooltip>
-  )
+  );
 }

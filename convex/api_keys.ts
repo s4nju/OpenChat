@@ -1,12 +1,16 @@
-import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
-import { UserApiKey } from "./schema/user_api_key";
+import { getAuthUserId } from '@convex-dev/auth/server';
+import { v } from 'convex/values';
+import { mutation, query } from './_generated/server';
 
 const API_KEY_SECRET = process.env.API_KEY_SECRET;
 if (!API_KEY_SECRET) {
-  throw new Error("CRITICAL SECURITY ERROR: API_KEY_SECRET environment variable is required but not set. API keys cannot be stored securely without encryption. Set API_KEY_SECRET to continue.");
+  throw new Error(
+    'CRITICAL SECURITY ERROR: API_KEY_SECRET environment variable is required but not set. API keys cannot be stored securely without encryption. Set API_KEY_SECRET to continue.'
+  );
 }
+
+// Define regex at top level for performance
+const HEX_REGEX = /^[0-9a-fA-F]+$/;
 
 // Convert string to ArrayBuffer
 function stringToArrayBuffer(str: string): ArrayBuffer {
@@ -28,7 +32,7 @@ function arrayBufferToString(buffer: ArrayBuffer): string {
 // Convert ArrayBuffer to hex string
 function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
+    .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
@@ -48,20 +52,20 @@ function hexToArrayBuffer(hex: string): ArrayBuffer {
   }
 
   // Check if string contains only valid hexadecimal characters
-  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+  if (!HEX_REGEX.test(hex)) {
     throw new Error('Input string contains invalid hexadecimal characters');
   }
 
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    bytes[i / 2] = Number.parseInt(hex.substring(i, i + 2), 16);
   }
   return bytes.buffer;
 }
 
 async function getKey(userId: string): Promise<CryptoKey> {
   if (!API_KEY_SECRET) {
-    throw new Error("API_KEY_SECRET not configured");
+    throw new Error('API_KEY_SECRET not configured');
   }
 
   const keyMaterial = await crypto.subtle.importKey(
@@ -73,15 +77,18 @@ async function getKey(userId: string): Promise<CryptoKey> {
   );
 
   // Create a unique salt per user using a hash for additional security
-  const userIdHash = await crypto.subtle.digest('SHA-256', stringToArrayBuffer(userId));
+  const userIdHash = await crypto.subtle.digest(
+    'SHA-256',
+    stringToArrayBuffer(userId)
+  );
   const userSalt = `convex-api-keys-${arrayBufferToHex(userIdHash)}`;
 
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: stringToArrayBuffer(userSalt), // User-specific salt for security
-      iterations: 100000,
-      hash: 'SHA-256'
+      iterations: 100_000,
+      hash: 'SHA-256',
     },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
@@ -92,7 +99,7 @@ async function getKey(userId: string): Promise<CryptoKey> {
 
 async function encrypt(text: string, userId: string): Promise<string> {
   if (!API_KEY_SECRET) {
-    throw new Error("Cannot encrypt API key: API_KEY_SECRET not configured");
+    throw new Error('Cannot encrypt API key: API_KEY_SECRET not configured');
   }
 
   try {
@@ -101,7 +108,7 @@ async function encrypt(text: string, userId: string): Promise<string> {
     const data = stringToArrayBuffer(text);
 
     const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: iv },
+      { name: 'AES-GCM', iv },
       key,
       data
     );
@@ -109,13 +116,13 @@ async function encrypt(text: string, userId: string): Promise<string> {
     return `${arrayBufferToHex(iv.buffer)}:${arrayBufferToHex(encrypted)}`;
   } catch {
     // Prevent sensitive information leakage by throwing a generic error
-    throw new Error("Failed to encrypt API key");
+    throw new Error('Failed to encrypt API key');
   }
 }
 
 async function decrypt(payload: string, userId: string): Promise<string> {
   if (!API_KEY_SECRET) {
-    throw new Error("Cannot decrypt API key: API_KEY_SECRET not configured");
+    throw new Error('Cannot decrypt API key: API_KEY_SECRET not configured');
   }
 
   // Validate payload format before splitting
@@ -129,7 +136,9 @@ async function decrypt(payload: string, userId: string): Promise<string> {
 
   const colonCount = (payload.match(/:/g) || []).length;
   if (colonCount !== 1) {
-    throw new Error('Invalid payload format: must contain exactly one colon separator between IV and data parts');
+    throw new Error(
+      'Invalid payload format: must contain exactly one colon separator between IV and data parts'
+    );
   }
 
   const [ivHex, dataHex] = payload.split(':');
@@ -139,14 +148,14 @@ async function decrypt(payload: string, userId: string): Promise<string> {
 
   try {
     const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: iv },
+      { name: 'AES-GCM', iv },
       key,
       data
     );
     return arrayBufferToString(decrypted);
   } catch {
-    console.error("Failed to decrypt API key"); // Generic error log without sensitive details
-    throw new Error("Failed to decrypt API key");
+    // Silently handle decryption errors to prevent sensitive information leakage
+    throw new Error('Failed to decrypt API key');
   }
 }
 
@@ -154,9 +163,9 @@ export const getApiKeys = query({
   args: {},
   returns: v.array(
     v.object({
-      _id: v.id("user_api_keys"),
+      _id: v.id('user_api_keys'),
       provider: v.string(),
-      mode: v.optional(v.union(v.literal("priority"), v.literal("fallback"))),
+      mode: v.optional(v.union(v.literal('priority'), v.literal('fallback'))),
       messageCount: v.optional(v.number()),
       createdAt: v.optional(v.number()),
       updatedAt: v.optional(v.number()),
@@ -164,50 +173,72 @@ export const getApiKeys = query({
   ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const keys = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) => q.eq('userId', userId))
       .collect();
-    return keys.map(({ _id, provider, mode, messageCount, createdAt, updatedAt }) => ({
-      _id,
-      provider,
-      mode,
-      messageCount,
-      createdAt,
-      updatedAt,
-    }));
+    return keys.map(
+      ({ _id, provider, mode, messageCount, createdAt, updatedAt }) => ({
+        _id,
+        provider,
+        mode,
+        messageCount,
+        createdAt,
+        updatedAt,
+      })
+    );
   },
 });
 
 export const saveApiKey = mutation({
   args: {
     provider: v.union(
-      v.literal("openrouter"),
-      v.literal("openai"),
-      v.literal("anthropic"),
-      v.literal("gemini"),
-      v.literal("mistral"),
-      v.literal("meta"),
-      v.literal("Qwen")
-    ), key: v.string(), mode: v.optional(v.union(v.literal("priority"), v.literal("fallback")))
+      v.literal('openrouter'),
+      v.literal('openai'),
+      v.literal('anthropic'),
+      v.literal('gemini'),
+      v.literal('mistral'),
+      v.literal('meta'),
+      v.literal('Qwen')
+    ),
+    key: v.string(),
+    mode: v.optional(v.union(v.literal('priority'), v.literal('fallback'))),
   },
   returns: v.null(),
   handler: async (ctx, { provider, key, mode }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const encrypted = await encrypt(key, userId);
     const existing = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', provider)
+      )
       .unique();
     const now = Date.now();
     // Default to "fallback" mode if not specified
-    const finalMode = mode || "fallback";
+    const finalMode = mode || 'fallback';
     if (existing) {
-      await ctx.db.patch(existing._id, { encryptedKey: encrypted, mode: finalMode, updatedAt: now });
+      await ctx.db.patch(existing._id, {
+        encryptedKey: encrypted,
+        mode: finalMode,
+        updatedAt: now,
+      });
     } else {
-      await ctx.db.insert("user_api_keys", { userId, provider, encryptedKey: encrypted, mode: finalMode, messageCount: 0, createdAt: now, updatedAt: now });
+      await ctx.db.insert('user_api_keys', {
+        userId,
+        provider,
+        encryptedKey: encrypted,
+        mode: finalMode,
+        messageCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
     return null;
   },
@@ -216,22 +247,26 @@ export const saveApiKey = mutation({
 export const deleteApiKey = mutation({
   args: {
     provider: v.union(
-      v.literal("openrouter"),
-      v.literal("openai"),
-      v.literal("anthropic"),
-      v.literal("gemini"),
-      v.literal("mistral"),
-      v.literal("meta"),
-      v.literal("Qwen")
-    )
+      v.literal('openrouter'),
+      v.literal('openai'),
+      v.literal('anthropic'),
+      v.literal('gemini'),
+      v.literal('mistral'),
+      v.literal('meta'),
+      v.literal('Qwen')
+    ),
   },
   returns: v.null(),
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const existing = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', provider)
+      )
       .unique();
     if (existing) {
       await ctx.db.delete(existing._id);
@@ -243,22 +278,27 @@ export const deleteApiKey = mutation({
 export const updateApiKeyMode = mutation({
   args: {
     provider: v.union(
-      v.literal("openrouter"),
-      v.literal("openai"),
-      v.literal("anthropic"),
-      v.literal("gemini"),
-      v.literal("mistral"),
-      v.literal("meta"),
-      v.literal("Qwen")
-    ), mode: v.union(v.literal("priority"), v.literal("fallback"))
+      v.literal('openrouter'),
+      v.literal('openai'),
+      v.literal('anthropic'),
+      v.literal('gemini'),
+      v.literal('mistral'),
+      v.literal('meta'),
+      v.literal('Qwen')
+    ),
+    mode: v.union(v.literal('priority'), v.literal('fallback')),
   },
   returns: v.null(),
   handler: async (ctx, { provider, mode }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const existing = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', provider)
+      )
       .unique();
     if (existing) {
       await ctx.db.patch(existing._id, { mode, updatedAt: Date.now() });
@@ -270,23 +310,29 @@ export const updateApiKeyMode = mutation({
 export const getDecryptedKey = query({
   args: {
     provider: v.union(
-      v.literal("openrouter"),
-      v.literal("openai"),
-      v.literal("anthropic"),
-      v.literal("gemini"),
-      v.literal("mistral"),
-      v.literal("meta"),
-      v.literal("Qwen")
-    )
+      v.literal('openrouter'),
+      v.literal('openai'),
+      v.literal('anthropic'),
+      v.literal('gemini'),
+      v.literal('mistral'),
+      v.literal('meta'),
+      v.literal('Qwen')
+    ),
   },
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const existing = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', provider)
+      )
       .unique();
-    if (!existing) return null;
+    if (!existing) {
+      return null;
+    }
     return await decryptKey(existing.encryptedKey, userId);
   },
 });
@@ -300,10 +346,14 @@ export const incrementUserApiKeyUsage = mutation({
   returns: v.null(),
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
     const existing = await ctx.db
-      .query("user_api_keys")
-      .withIndex("by_user_provider", (q) => q.eq("userId", userId).eq("provider", provider))
+      .query('user_api_keys')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', provider)
+      )
       .unique();
     if (existing) {
       const currentCount = existing.messageCount || 0;

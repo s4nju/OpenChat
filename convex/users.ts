@@ -1,79 +1,106 @@
-import { query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
-import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
-import { User } from "./schema/user";
+import { getAuthUserId } from '@convex-dev/auth/server';
+import { v } from 'convex/values';
+import { api } from './_generated/api';
+import type { Id } from './_generated/dataModel';
+import { mutation, query } from './_generated/server';
+import { User } from './schema/user';
 
 // Usage Limits - ensure these are in sync with your application's limits
 const NON_AUTH_DAILY_MESSAGE_LIMIT = 5;
 const AUTH_DAILY_MESSAGE_LIMIT = 50;
 const PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500;
 const NON_PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500; // This seems same as premium, adjust if needed
+const DAY = 24 * 60 * 60 * 1000;
+const MONTH = 30 * DAY;
+const MODEL_DEFAULT = 'gemini-2.0-flash';
 
 export const getCurrentUser = query({
   args: {},
   returns: v.union(
     v.null(),
     v.object({
-      _id: v.id("users"),
+      _id: v.id('users'),
       _creationTime: v.number(),
-      ...User.fields
+      ...User.fields,
     })
   ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
     return await ctx.db.get(userId);
   },
 });
+
+// Helper function to initialize user fields
+const initializeUserFields = (now: number) => ({
+  dailyMessageCount: 0,
+  monthlyMessageCount: 0,
+  totalMessageCount: 0,
+  dailyResetTimestamp: now + DAY,
+  monthlyResetTimestamp: now + MONTH,
+  preferredModel: MODEL_DEFAULT,
+});
+
+// Helper function to get updates for existing user
+const getExistingUserUpdates = (
+  existing: Record<string, unknown>,
+  now: number
+) => {
+  const updates: Record<string, unknown> = {};
+
+  if (existing.dailyMessageCount === undefined) {
+    updates.dailyMessageCount = 0;
+  }
+  if (existing.monthlyMessageCount === undefined) {
+    updates.monthlyMessageCount = 0;
+  }
+  if (existing.totalMessageCount === undefined) {
+    updates.totalMessageCount = 0;
+  }
+  if (existing.dailyResetTimestamp === undefined) {
+    updates.dailyResetTimestamp = now + DAY;
+  }
+  if (existing.monthlyResetTimestamp === undefined) {
+    updates.monthlyResetTimestamp = now + MONTH;
+  }
+  if (existing.preferredModel === undefined) {
+    updates.preferredModel = MODEL_DEFAULT;
+  }
+
+  return updates;
+};
 
 export const storeCurrentUser = mutation({
   args: { isAnonymous: v.optional(v.boolean()) },
   returns: v.object({ isNew: v.boolean() }),
   handler: async (ctx, { isAnonymous }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { isNew: false };
+    if (!userId) {
+      return { isNew: false };
+    }
+
     const existing = await ctx.db.get(userId);
     if (existing) {
       const wasInitialized = existing.isAnonymous !== undefined;
       const now = Date.now();
-      const updates: Record<string, unknown> = {};
+      const updates = getExistingUserUpdates(existing, now);
+
       if (existing.isAnonymous !== isAnonymous) {
         updates.isAnonymous = isAnonymous;
       }
-      if (existing.dailyMessageCount === undefined) {
-        updates.dailyMessageCount = 0;
-      }
-      if (existing.monthlyMessageCount === undefined) {
-        updates.monthlyMessageCount = 0;
-      }
-      if (existing.totalMessageCount === undefined) {
-        updates.totalMessageCount = 0;
-      }
-      if (existing.dailyResetTimestamp === undefined) {
-        updates.dailyResetTimestamp = now + DAY;
-      }
-      if (existing.monthlyResetTimestamp === undefined) {
-        updates.monthlyResetTimestamp = now + MONTH;
-      }
-      if (existing.preferredModel === undefined) {
-        updates.preferredModel = MODEL_DEFAULT;
-      }
+
       if (Object.keys(updates).length > 0) {
         await ctx.db.patch(userId, updates);
       }
       return { isNew: !wasInitialized };
     }
+
     const now = Date.now();
-    await ctx.db.insert("users", {
+    await ctx.db.insert('users', {
       isAnonymous,
-      dailyMessageCount: 0,
-      monthlyMessageCount: 0,
-      totalMessageCount: 0,
-      dailyResetTimestamp: now + DAY,
-      monthlyResetTimestamp: now + MONTH,
-      preferredModel: MODEL_DEFAULT,
+      ...initializeUserFields(now),
     });
     return { isNew: true };
   },
@@ -93,9 +120,13 @@ export const updateUserProfile = mutation({
   returns: v.null(),
   handler: async (ctx, { updates }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
     const user = await ctx.db.get(userId);
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
     await ctx.db.patch(userId, { ...updates });
     return null;
   },
@@ -106,10 +137,14 @@ export const incrementMessageCount = mutation({
   returns: v.null(),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("User not authenticated");
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
 
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     // Increment counts
     const dailyCount = (user.dailyMessageCount ?? 0) + 1;
@@ -130,18 +165,22 @@ export const assertNotOverLimit = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
 
     await ctx.runMutation(api.users.resetUsageCountersIfNeeded, {});
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     const monthlyLimit = user.isPremium
       ? PREMIUM_MONTHLY_MESSAGE_LIMIT
       : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT;
 
     if ((user.monthlyMessageCount ?? 0) >= monthlyLimit) {
-      throw new Error("MONTHLY_LIMIT_REACHED");
+      throw new Error('MONTHLY_LIMIT_REACHED');
     }
 
     if (!user.isPremium) {
@@ -149,7 +188,7 @@ export const assertNotOverLimit = mutation({
         ? NON_AUTH_DAILY_MESSAGE_LIMIT
         : AUTH_DAILY_MESSAGE_LIMIT;
       if ((user.dailyMessageCount ?? 0) >= dailyLimit) {
-        throw new Error("DAILY_LIMIT_REACHED");
+        throw new Error('DAILY_LIMIT_REACHED');
       }
     }
   },
@@ -171,10 +210,14 @@ export const getRateLimitStatus = query({
   }),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
 
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     const isPremium = user.isPremium ?? false;
     const isAnonymous = user.isAnonymous ?? false;
@@ -215,42 +258,52 @@ export const getRateLimitStatus = query({
 });
 
 export const mergeAnonymousToGoogleAccount = mutation({
-  args: { previousAnonymousUserId: v.id("users") },
+  args: { previousAnonymousUserId: v.id('users') },
   returns: v.null(),
   handler: async (ctx, { previousAnonymousUserId }) => {
     const currentId = await getAuthUserId(ctx);
-    if (!currentId) return null;
-    if (currentId === previousAnonymousUserId) return null;
+    if (!currentId) {
+      return null;
+    }
+    if (currentId === previousAnonymousUserId) {
+      return null;
+    }
     const anon = await ctx.db.get(previousAnonymousUserId);
     const user = await ctx.db.get(currentId);
-    if (!anon || !user) return null;
+    if (!(anon && user)) {
+      return null;
+    }
 
     // --- Step 1: Reassign Chats ---
     const anonChats = await ctx.db
-      .query("chats")
-      .withIndex("by_user", (q) => q.eq("userId", previousAnonymousUserId))
+      .query('chats')
+      .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
       .collect();
-    for (const chat of anonChats) {
-      await ctx.db.patch(chat._id, { userId: currentId });
-    }
+    await Promise.all(
+      anonChats.map((chat) => ctx.db.patch(chat._id, { userId: currentId }))
+    );
 
     // --- Step 2: Reassign Messages ---
     const anonMessages = await ctx.db
-      .query("messages")
-      .filter((q) => q.eq(q.field("userId"), previousAnonymousUserId))
+      .query('messages')
+      .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
       .collect();
-    for (const message of anonMessages) {
-      await ctx.db.patch(message._id, { userId: currentId });
-    }
+    await Promise.all(
+      anonMessages.map((message) =>
+        ctx.db.patch(message._id, { userId: currentId })
+      )
+    );
 
     // --- Step 3: Reassign Chat Attachments ---
     const anonAttachments = await ctx.db
-      .query("chat_attachments")
-      .filter((q) => q.eq(q.field("userId"), previousAnonymousUserId))
+      .query('chat_attachments')
+      .withIndex('by_userId', (q) => q.eq('userId', previousAnonymousUserId))
       .collect();
-    for (const attachment of anonAttachments) {
-      await ctx.db.patch(attachment._id, { userId: currentId });
-    }
+    await Promise.all(
+      anonAttachments.map((attachment) =>
+        ctx.db.patch(attachment._id, { userId: currentId })
+      )
+    );
 
     // --- Step 4: Merge usage counters & mark as non-anonymous ---
     await ctx.db.patch(currentId, {
@@ -269,81 +322,70 @@ export const mergeAnonymousToGoogleAccount = mutation({
   },
 });
 
-const DAY = 24 * 60 * 60 * 1000;
-const MONTH = 30 * DAY;
-
 // Delete account and all associated data
 export const deleteAccount = mutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx)
-    if (!userId) throw new Error("Not authenticated")
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
 
     // Delete attachments and files
     const attachments = await ctx.db
-      .query("chat_attachments")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect()
+      .query('chat_attachments')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .collect();
     await Promise.all(
       attachments.map(async (att) => {
         try {
-          await ctx.storage.delete(att.fileId as Id<"_storage">)
-        } catch (e) {
-          console.error("Error deleting file storage", e)
+          await ctx.storage.delete(att.fileId as Id<'_storage'>);
+        } catch {
+          // Silently handle storage deletion errors
         }
         try {
-          await ctx.db.delete(att._id)
-        } catch (e) {
-          console.error("Error deleting attachment db record", e)
+          await ctx.db.delete(att._id);
+        } catch {
+          // Silently handle database deletion errors
         }
-      }),
-    )
+      })
+    );
 
     // Delete messages authored by user
     const messages = await ctx.db
-      .query("messages")
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .collect()
-    for (const msg of messages) {
-      await ctx.db.delete(msg._id)
-    }
+      .query('messages')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(messages.map((msg) => ctx.db.delete(msg._id)));
 
     // Delete chats
     const chats = await ctx.db
-      .query("chats")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect()
-    for (const chat of chats) {
-      await ctx.db.delete(chat._id)
-    }
+      .query('chats')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(chats.map((chat) => ctx.db.delete(chat._id)));
 
     // Delete feedback
     const feedback = await ctx.db
-      .query("feedback")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect()
-    for (const f of feedback) {
-      await ctx.db.delete(f._id)
-    }
+      .query('feedback')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(feedback.map((f) => ctx.db.delete(f._id)));
 
     // Delete purchases
     const purchases = await ctx.db
-      .query("purchases")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect()
-    for (const p of purchases) {
-      await ctx.db.delete(p._id)
-    }
+      .query('purchases')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(purchases.map((p) => ctx.db.delete(p._id)));
 
     // Delete usage history
     const usage = await ctx.db
-      .query("usage_history")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect()
-    for (const u of usage) {
-      await ctx.db.delete(u._id)
-    }
+      .query('usage_history')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(usage.map((u) => ctx.db.delete(u._id)));
 
     // --- Delete auth-related records (accounts, sessions, verificationTokens) ---
     // These tables are provided by `@convex-dev/auth` via `authTables` in schema.ts.
@@ -352,38 +394,45 @@ export const deleteAccount = mutation({
     // will fail because the auth library will try to update a non-existent user.
 
     // Delete accounts that reference this user
+    // Use index for better performance instead of filter
+    // See: https://docs.convex.dev/database/indexes/
     const authAccounts = await ctx.db
-      .query("authAccounts")
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .collect()
-    for (const acc of authAccounts) {
-      await ctx.db.delete(acc._id as Id<"authAccounts">)
-    }
+      .query('authAccounts')
+      .withIndex('userIdAndProvider', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(
+      authAccounts.map((acc) => ctx.db.delete(acc._id as Id<'authAccounts'>))
+    );
 
     // Delete sessions associated with this user
+    // Use index for better performance instead of filter
+    // See: https://docs.convex.dev/database/indexes/
     const authSessions = await ctx.db
-      .query("authSessions")
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .collect()
-    for (const sess of authSessions) {
-      await ctx.db.delete(sess._id as Id<"authSessions">)
-    }
+      .query('authSessions')
+      .withIndex('userId', (q) => q.eq('userId', userId))
+      .collect();
+    await Promise.all(
+      authSessions.map((sess) => ctx.db.delete(sess._id as Id<'authSessions'>))
+    );
 
     // Finally delete user record
-    await ctx.db.delete(userId)
-    return null
+    await ctx.db.delete(userId);
+    return null;
   },
-})
-const MODEL_DEFAULT = "gemini-2.0-flash";
+});
 
 export const resetUsageCountersIfNeeded = mutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
     const user = await ctx.db.get(userId);
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
     const updates: Record<string, number> = {};
     const now = Date.now();
     if (!user.dailyResetTimestamp || now > user.dailyResetTimestamp) {

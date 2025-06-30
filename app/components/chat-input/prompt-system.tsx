@@ -1,51 +1,51 @@
-"use client"
+'use client';
 
-import { cn } from "@/lib/utils"
-import { AnimatePresence, motion } from "motion/react"
-import React, { memo, useMemo, useState } from "react"
-import { Personas } from "./personas"
-import { Suggestions } from "./suggestions"
+import { AnimatePresence, motion } from 'motion/react';
+import { memo, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Personas } from './personas';
+import { Suggestions } from './suggestions';
 
 type PromptSystemProps = {
-  onValueChange: (value: string) => void
-  onSuggestion: (suggestion: string) => void
-  onSelectSystemPrompt: (systemPrompt: string) => void
-  isEmpty: boolean
-  systemPrompt?: string
-}
+  onValueChange: (value: string) => void;
+  onSuggestion: (suggestion: string) => void;
+  onSelectSystemPrompt: (systemPrompt: string) => void;
+  isEmpty: boolean;
+  systemPrompt?: string;
+};
 
-export const PromptSystem = memo(function PromptSystem({
+export const PromptSystem = memo(function PromptSystemComponent({
   onValueChange,
   onSuggestion,
   onSelectSystemPrompt,
   isEmpty,
   systemPrompt,
 }: PromptSystemProps) {
-  const [isPersonaMode, setIsPersonaMode] = useState(false)
+  const [isPersonaMode, setIsPersonaMode] = useState(false);
 
   const tabs = useMemo(
     () => [
       {
-        id: "personas",
-        label: "Personas",
+        id: 'personas',
+        label: 'Personas',
         isActive: isPersonaMode,
         onClick: () => {
-          setIsPersonaMode(true)
-          onSelectSystemPrompt("")
+          setIsPersonaMode(true);
+          onSelectSystemPrompt('');
         },
       },
       {
-        id: "suggestions",
-        label: "Suggestions",
+        id: 'suggestions',
+        label: 'Suggestions',
         isActive: !isPersonaMode,
         onClick: () => {
-          setIsPersonaMode(false)
-          onSelectSystemPrompt("")
+          setIsPersonaMode(false);
+          onSelectSystemPrompt('');
         },
       },
     ],
     [isPersonaMode, onSelectSystemPrompt]
-  )
+  );
 
   return (
     <>
@@ -58,9 +58,9 @@ export const PromptSystem = memo(function PromptSystem({
             />
           ) : (
             <Suggestions
-              onValueChange={onValueChange}
-              onSuggestion={onSuggestion}
               isEmpty={isEmpty}
+              onSuggestion={onSuggestion}
+              onValueChange={onValueChange}
             />
           )}
         </AnimatePresence>
@@ -69,33 +69,33 @@ export const PromptSystem = memo(function PromptSystem({
         <div className="relative flex h-full flex-row gap-3">
           {tabs.map((tab) => (
             <button
-              key={tab.id}
               className={cn(
-                "relative z-10 flex h-full flex-1 items-center justify-center rounded-md px-2 py-1 text-xs font-medium transition-colors active:scale-[0.98]",
-                !tab.isActive ? "text-muted-foreground" : "text-foreground"
+                'relative z-10 flex h-full flex-1 items-center justify-center rounded-md px-2 py-1 font-medium text-xs transition-colors active:scale-[0.98]',
+                tab.isActive ? 'text-foreground' : 'text-muted-foreground'
               )}
+              key={tab.id}
               onClick={tab.onClick}
               type="button"
             >
               <AnimatePresence initial={false}>
                 {tab.isActive && (
                   <motion.div
-                    layoutId={`background`}
-                    className={cn("bg-muted absolute inset-0 z-10 rounded-lg")}
-                    transition={{
-                      duration: 0.25,
-                      type: "spring",
-                      bounce: 0,
-                    }}
-                    initial={{ opacity: 1 }}
                     animate={{
                       opacity: 1,
                     }}
+                    className={cn('absolute inset-0 z-10 rounded-lg bg-muted')}
                     exit={{
                       opacity: 0,
                     }}
+                    initial={{ opacity: 1 }}
+                    layoutId={'background'}
                     style={{
-                      originY: "0px",
+                      originY: '0px',
+                    }}
+                    transition={{
+                      duration: 0.25,
+                      type: 'spring',
+                      bounce: 0,
                     }}
                   />
                 )}
@@ -106,5 +106,5 @@ export const PromptSystem = memo(function PromptSystem({
         </div>
       </div>
     </>
-  )
-})
+  );
+});

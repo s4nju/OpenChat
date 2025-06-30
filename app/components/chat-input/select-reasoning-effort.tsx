@@ -1,53 +1,57 @@
-"use client"
+'use client';
 
+import { BrainIcon } from '@phosphor-icons/react';
+import React from 'react';
+import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { BrainIcon } from "@phosphor-icons/react"
-import React from "react"
+} from '@/components/ui/tooltip';
 
-type ReasoningEffort = "low" | "medium" | "high"
+type ReasoningEffort = 'low' | 'medium' | 'high';
 
 type SelectReasoningEffortProps = {
-  reasoningEffort: ReasoningEffort
-  onSelectReasoningEffort: (reasoningEffort: ReasoningEffort) => void
-}
+  reasoningEffort: ReasoningEffort;
+  onSelectReasoningEffortAction: (reasoningEffort: ReasoningEffort) => void;
+};
 
 export function SelectReasoningEffort({
   reasoningEffort,
-  onSelectReasoningEffort,
+  onSelectReasoningEffortAction,
 }: SelectReasoningEffortProps) {
-  const isMobile = useBreakpoint(768)
-  const hiddenSelectRef = React.useRef<HTMLButtonElement>(null)
+  const isMobile = useBreakpoint(768);
+  const hiddenSelectRef = React.useRef<HTMLButtonElement>(null);
   const capitalizedReasoningEffort =
-    reasoningEffort.charAt(0).toUpperCase() + reasoningEffort.slice(1)
+    reasoningEffort.charAt(0).toUpperCase() + reasoningEffort.slice(1);
 
   return (
-    <Select value={reasoningEffort} onValueChange={onSelectReasoningEffort}>
+    <Select
+      onValueChange={onSelectReasoningEffortAction}
+      value={reasoningEffort}
+    >
       <div className="relative">
         <Tooltip>
           <TooltipTrigger asChild>
             {isMobile ? (
               <button
-                className="dark:bg-secondary border-input hover:bg-accent focus-visible:border-ring focus-visible:ring-ring/50 size-9 rounded-full border bg-transparent flex items-center justify-center transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex size-9 items-center justify-center rounded-full border border-input bg-transparent outline-none transition-[color,box-shadow] hover:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-secondary"
                 onClick={() => {
-                  hiddenSelectRef.current?.click()
+                  hiddenSelectRef.current?.click();
                 }}
+                type="button"
               >
                 <BrainIcon className="size-4" />
               </button>
             ) : (
-              <SelectTrigger className="dark:bg-secondary w-auto gap-2 px-3 justify-between rounded-full">
+              <SelectTrigger className="w-auto justify-between gap-2 rounded-full px-3 dark:bg-secondary">
                 <div className="flex items-center gap-2">
                   <BrainIcon className="size-4" />
                   <SelectValue placeholder={capitalizedReasoningEffort} />
@@ -62,8 +66,8 @@ export function SelectReasoningEffort({
         {/* Hidden SelectTrigger for mobile positioned behind the visible button */}
         {isMobile && (
           <SelectTrigger
+            className="pointer-events-none absolute inset-0 size-9 rounded-full opacity-0"
             ref={hiddenSelectRef}
-            className="absolute inset-0 opacity-0 pointer-events-none size-9 rounded-full"
           >
             <SelectValue />
           </SelectTrigger>
@@ -75,5 +79,5 @@ export function SelectReasoningEffort({
         <SelectItem value="high">High</SelectItem>
       </SelectContent>
     </Select>
-  )
+  );
 }

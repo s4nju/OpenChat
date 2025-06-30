@@ -1,5 +1,10 @@
-"use client"
+'use client';
 
+import type { Message as MessageType } from '@ai-sdk/react';
+import { Check, Copy, FilePdf, Trash } from '@phosphor-icons/react';
+import Image from 'next/image';
+import type React from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import {
   MorphingDialog,
   MorphingDialogClose,
@@ -7,37 +12,128 @@ import {
   MorphingDialogContent,
   MorphingDialogImage,
   MorphingDialogTrigger,
-} from "@/components/motion-primitives/morphing-dialog"
+} from '@/components/motion-primitives/morphing-dialog';
 import {
   MessageAction,
   MessageActions,
   Message as MessageContainer,
   MessageContent,
-} from "@/components/prompt-kit/message"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { Message as MessageType } from "@ai-sdk/react"
-import { Check, Copy, FilePdf, Trash } from "@phosphor-icons/react"
-import React, { useEffect, useRef, useState, memo } from "react"
-import Image from 'next/image'
+} from '@/components/prompt-kit/message';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const getTextFromDataUrl = (dataUrl: string) => {
-  const base64 = dataUrl.split(",")[1]
-  return base64
-}
+  const base64 = dataUrl.split(',')[1];
+  return base64;
+};
+
+// Helper function to render different attachment types
+const renderAttachment = (
+  attachment: NonNullable<MessageType['experimental_attachments']>[0]
+) => {
+  if (attachment.contentType?.startsWith('image')) {
+    return (
+      <MorphingDialog
+        transition={{
+          type: 'spring',
+          stiffness: 280,
+          damping: 18,
+          mass: 0.3,
+        }}
+      >
+        <MorphingDialogTrigger className="z-10">
+          <Image
+            alt={attachment.name ?? ''}
+            className="mb-1 rounded-md"
+            height={160}
+            key={attachment.name}
+            src={attachment.url}
+            width={160}
+          />
+        </MorphingDialogTrigger>
+        <MorphingDialogContainer>
+          <MorphingDialogContent className="relative rounded-lg">
+            <MorphingDialogImage
+              alt={attachment.name || ''}
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              src={attachment.url}
+            />
+          </MorphingDialogContent>
+          <MorphingDialogClose className="text-primary" />
+        </MorphingDialogContainer>
+      </MorphingDialog>
+    );
+  }
+
+  if (attachment.contentType?.startsWith('text')) {
+    return (
+      <div className="mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-primary text-xs">
+        {getTextFromDataUrl(attachment.url)}
+      </div>
+    );
+  }
+
+  if (attachment.contentType === 'application/pdf') {
+    return (
+      <a
+        aria-label={`Download PDF: ${attachment.name}`}
+        className="mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 bg-muted px-4 py-2 shadow-sm transition-colors hover:bg-muted/80 focus:bg-muted/70 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-700"
+        download={attachment.name}
+        href={attachment.url}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            (e.currentTarget as HTMLAnchorElement).click();
+          }
+        }}
+        rel="noopener noreferrer"
+        style={{ minWidth: 0, minHeight: 64 }}
+        tabIndex={0}
+        target="_blank"
+      >
+        {/* Placeholder preview lines */}
+        <div
+          aria-hidden="true"
+          className="mt-1 mb-2 flex flex-1 flex-col gap-0.5"
+        >
+          <div className="h-2 w-4/5 rounded bg-gray-200 dark:bg-zinc-600" />
+          <div className="h-2 w-3/5 rounded bg-gray-200 dark:bg-zinc-600" />
+          <div className="h-2 w-2/5 rounded bg-gray-200 dark:bg-zinc-600" />
+        </div>
+        {/* Footer with icon and filename */}
+        <div className="flex items-center gap-2">
+          <FilePdf
+            aria-hidden="true"
+            className="shrink-0 text-gray-500 dark:text-gray-300"
+            size={20}
+            weight="duotone"
+          />
+          <span
+            className="overflow-hidden truncate whitespace-nowrap font-medium text-gray-900 text-sm dark:text-gray-100"
+            style={{ maxWidth: 'calc(100% - 28px)' }}
+            title={attachment.name}
+          >
+            {attachment.name}
+          </span>
+        </div>
+      </a>
+    );
+  }
+
+  return null;
+};
 
 export type MessageUserProps = {
-  hasScrollAnchor?: boolean
-  attachments?: MessageType["experimental_attachments"]
-  children: string
-  copied: boolean
-  copyToClipboard: () => void
-  onEdit: (id: string, newText: string) => void
-  onReload: () => void
-  onDelete: (id: string) => void
-  id: string
-  status?: "streaming" | "ready" | "submitted" | "error"
-}
+  hasScrollAnchor?: boolean;
+  attachments?: MessageType['experimental_attachments'];
+  children: string;
+  copied: boolean;
+  copyToClipboard: () => void;
+  onEdit: (id: string, newText: string) => void;
+  onReload: () => void;
+  onDelete: (id: string) => void;
+  id: string;
+  status?: 'streaming' | 'ready' | 'submitted' | 'error';
+};
 
 function MessageUserInner({
   hasScrollAnchor,
@@ -51,162 +147,85 @@ function MessageUserInner({
   id,
   status,
 }: MessageUserProps): React.ReactElement {
-  const [editInput, setEditInput] = useState(children)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isTouch, setIsTouch] = useState(false)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const displayContent = children.replace(/\n{2,}/g, "\n\n")
+  const [editInput, setEditInput] = useState(children);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const displayContent = children.replace(/\n{2,}/g, '\n\n');
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsTouch("ontouchstart" in window || navigator.maxTouchPoints > 0)
+    if (typeof window !== 'undefined') {
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     }
-  }, [])
+  }, []);
 
   const handleEditCancel = () => {
-    setIsEditing(false)
-    setEditInput(children)
-  }
+    setIsEditing(false);
+    setEditInput(children);
+  };
 
   const handleSave = () => {
     if (onEdit) {
-      onEdit(id, editInput)
+      onEdit(id, editInput);
     }
-    onReload()
-    setIsEditing(false)
-  }
+    onReload();
+    setIsEditing(false);
+  };
 
   const handleDelete = () => {
-    onDelete(id)
-  }
+    onDelete(id);
+  };
 
   return (
     <MessageContainer
-      id={id}
       className={cn(
-        "group flex w-full max-w-3xl flex-col items-end gap-2 px-6 pb-2",
-        hasScrollAnchor && "min-h-scroll-anchor"
+        'group flex w-full max-w-3xl flex-col items-end gap-2 px-6 pb-2',
+        hasScrollAnchor && 'min-h-scroll-anchor'
       )}
+      id={id}
     >
       {attachments?.map((attachment, index) => (
         <div
           className="flex flex-row gap-2"
           key={`${attachment.name}-${index}`}
         >
-          {attachment.contentType?.startsWith("image") ? (
-            <MorphingDialog
-              transition={{
-                type: "spring",
-                stiffness: 280,
-                damping: 18,
-                mass: 0.3,
-              }}
-            >
-              <MorphingDialogTrigger className="z-10">
-                <Image
-                  className="mb-1 rounded-md"
-                  key={attachment.name}
-                  src={attachment.url}
-                  alt={attachment.name ?? ''}
-                  width={160}
-                  height={160}
-                />
-              </MorphingDialogTrigger>
-              <MorphingDialogContainer>
-                <MorphingDialogContent className="relative rounded-lg">
-                  <MorphingDialogImage
-                    src={attachment.url}
-                    alt={attachment.name || ""}
-                    className="max-h-[90vh] max-w-[90vw] object-contain"
-                  />
-                </MorphingDialogContent>
-                <MorphingDialogClose className="text-primary" />
-              </MorphingDialogContainer>
-            </MorphingDialog>
-          ) : attachment.contentType?.startsWith("text") ? (
-            <div className="text-primary mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-xs">
-              {getTextFromDataUrl(attachment.url)}
-            </div>
-          ) : attachment.contentType === "application/pdf" ? (
-            <a
-              href={attachment.url}
-              download={attachment.name}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-muted hover:bg-muted/80 focus:bg-muted/70 mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 px-4 py-2 shadow-sm transition-colors focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:focus:bg-zinc-800"
-              style={{ minWidth: 0, minHeight: 64 }}
-              role="button"
-              tabIndex={0}
-              aria-label={`Download PDF: ${attachment.name}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  ; (e.currentTarget as HTMLAnchorElement).click()
-                }
-              }}
-            >
-              {/* Placeholder preview lines */}
-              <div
-                className="mt-1 mb-2 flex flex-1 flex-col gap-0.5"
-                aria-hidden="true"
-              >
-                <div className="h-2 w-4/5 rounded bg-gray-200 dark:bg-zinc-600" />
-                <div className="h-2 w-3/5 rounded bg-gray-200 dark:bg-zinc-600" />
-                <div className="h-2 w-2/5 rounded bg-gray-200 dark:bg-zinc-600" />
-              </div>
-              {/* Footer with icon and filename */}
-              <div className="flex items-center gap-2">
-                <FilePdf
-                  size={20}
-                  weight="duotone"
-                  className="shrink-0 text-gray-500 dark:text-gray-300"
-                  aria-hidden="true"
-                />
-                <span
-                  className="truncate overflow-hidden text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100"
-                  style={{ maxWidth: "calc(100% - 28px)" }}
-                  title={attachment.name}
-                >
-                  {attachment.name}
-                </span>
-              </div>
-            </a>
-          ) : null}
+          {renderAttachment(attachment)}
         </div>
       ))}
       {isEditing ? (
         <div
-          className="bg-accent relative flex min-w-[180px] flex-col gap-2 rounded-3xl px-5 py-2.5"
+          className="relative flex min-w-[180px] flex-col gap-2 rounded-3xl bg-accent px-5 py-2.5"
           style={{
             width: contentRef.current?.offsetWidth,
           }}
         >
           <textarea
+            autoFocus
             className="w-full resize-none bg-transparent outline-none"
-            value={editInput}
             onChange={(e) => setEditInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handleSave()
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSave();
               }
-              if (e.key === "Escape") {
-                handleEditCancel()
+              if (e.key === 'Escape') {
+                handleEditCancel();
               }
             }}
-            autoFocus
+            value={editInput}
           />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={handleEditCancel}>
+            <Button onClick={handleEditCancel} size="sm" variant="ghost">
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave}>
+            <Button onClick={handleSave} size="sm">
               Save
             </Button>
           </div>
         </div>
       ) : (
         <MessageContent
-          className="bg-accent relative max-w-[70%] rounded-3xl px-5 py-2.5 whitespace-pre-line"
+          className="relative max-w-[70%] whitespace-pre-line rounded-3xl bg-accent px-5 py-2.5"
           markdown={false}
           ref={contentRef}
         >
@@ -215,23 +234,23 @@ function MessageUserInner({
       )}
       <MessageActions
         className={cn(
-          "flex gap-0 transition-opacity",
+          'flex gap-0 transition-opacity',
           isTouch
-            ? "opacity-100"
-            : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+            ? 'opacity-100'
+            : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
         )}
       >
         <MessageAction
-          tooltip={copied ? "Copied!" : "Copy text"}
-          side="bottom"
           delayDuration={0}
+          side="bottom"
+          tooltip={copied ? 'Copied!' : 'Copy text'}
         >
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Copy text"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={status === 'streaming'}
             onClick={copyToClipboard}
             type="button"
-            disabled={status === "streaming"}
           >
             {copied ? (
               <Check className="size-4" />
@@ -255,20 +274,20 @@ function MessageUserInner({
             <PencilSimple className="size-4" />
           </button>
         </MessageAction> */}
-        <MessageAction tooltip="Delete" side="bottom" delayDuration={0}>
+        <MessageAction delayDuration={0} side="bottom" tooltip="Delete">
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Delete"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={status === 'streaming'}
             onClick={handleDelete}
             type="button"
-            disabled={status === "streaming"}
           >
             <Trash className="size-4" />
           </button>
         </MessageAction>
       </MessageActions>
     </MessageContainer>
-  )
+  );
 }
 
-export const MessageUser = memo(MessageUserInner)
+export const MessageUser = memo(MessageUserInner);

@@ -27,13 +27,14 @@ export type SearchProvider = 'exa' | 'tavily' | 'brave';
 export const PROVIDER_LIMITS = {
   exa: { maxResults: 10, maxChunks: 3 },
   tavily: { maxResults: 20, maxChunks: 8 },
-  brave: { maxResults: 20, maxChunks: 3 }
+  brave: { maxResults: 20, maxChunks: 3 },
 } as const;
 
 // Search configuration
 export const SEARCH_CONFIG = {
-  defaultProvider: (process.env.DEFAULT_SEARCH_PROVIDER || 'brave') as SearchProvider,
+  defaultProvider: (process.env.DEFAULT_SEARCH_PROVIDER ||
+    'brave') as SearchProvider,
   maxResults: 3,
   scrapeContent: true,
   maxTextCharacters: 500,
-}; 
+};

@@ -1,6 +1,8 @@
-"use client"
+'use client';
 
-import { useBreakpoint } from "@/app/hooks/use-breakpoint"
+import { Info } from '@phosphor-icons/react';
+import Image from 'next/image';
+import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 import {
   Drawer,
   DrawerContent,
@@ -16,43 +18,41 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer"
+} from '@/components/ui/drawer';
 // import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { APP_NAME } from "@/lib/config"
-import { Info } from "@phosphor-icons/react"
-import Image from "next/image"
-import { AppInfoContent } from "./app-info-content"
+import { APP_NAME } from '@/lib/config';
+import { AppInfoContent } from './app-info-content';
 
 type AppInfoTriggerProps = {
-  trigger?: React.ReactNode
-}
+  trigger?: React.ReactNode;
+};
 
 export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
-  const isMobile = useBreakpoint(768)
+  const isMobile = useBreakpoint(768);
 
   const defaultTrigger = (
     <button
+      className="flex w-full cursor-pointer select-none items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
       type="button"
-      className="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
     >
       <Info className="size-4" />
-      About {APP_NAME}
+      <span className="flex-1 text-left">About {APP_NAME}</span>
     </button>
-  )
+  );
 
   if (isMobile) {
     return (
       <Drawer>
         <DrawerTrigger asChild>{trigger || defaultTrigger}</DrawerTrigger>
-        <DrawerContent className="bg-background border-border">
+        <DrawerContent className="border-border bg-background">
           <DrawerHeader>
             <Image
-              src="/banner_ocean.jpg"
               alt={`calm paint generate by ${APP_NAME}`}
               className="h-32 w-full object-cover"
-              width={400}
               height={128}
               priority
+              src="/banner_ocean.jpg"
+              width={400}
             />
             <DrawerTitle className="hidden">{APP_NAME}</DrawerTitle>
             <DrawerDescription className="hidden">
@@ -64,21 +64,21 @@ export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
           </div>
         </DrawerContent>
       </Drawer>
-    )
+    );
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      <DialogContent className="[&>button:last-child]:bg-background gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:p-1">
+      <DialogContent className="gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:bg-background [&>button:last-child]:p-1">
         <DialogHeader className="p-0">
           <Image
-            src="/banner_ocean.jpg"
             alt={`calm paint generate by ${APP_NAME}`}
             className="h-32 w-full object-cover"
-            width={400}
             height={128}
             priority
+            src="/banner_ocean.jpg"
+            width={400}
           />
           <DialogTitle className="hidden">{APP_NAME}</DialogTitle>
           <DialogDescription className="hidden">
@@ -90,5 +90,5 @@ export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

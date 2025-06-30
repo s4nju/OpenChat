@@ -1,4 +1,10 @@
-import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS, SEARCH_CONFIG } from '../types';
+import {
+  PROVIDER_LIMITS,
+  SEARCH_CONFIG,
+  type SearchAdapter,
+  type SearchOptions,
+  type SearchResult,
+} from '../types';
 
 export class BraveSearchProvider implements SearchAdapter {
   readonly name = 'brave';
@@ -12,12 +18,15 @@ export class BraveSearchProvider implements SearchAdapter {
     this.apiKey = apiKey;
   }
 
-  async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-    const { 
-      maxResults = SEARCH_CONFIG.maxResults, 
+  async search(
+    query: string,
+    options: SearchOptions = {}
+  ): Promise<SearchResult[]> {
+    const {
+      maxResults = SEARCH_CONFIG.maxResults,
       scrapeContent = SEARCH_CONFIG.scrapeContent,
       includeDomains,
-      excludeDomains 
+      excludeDomains,
     } = options;
 
     const limit = Math.min(maxResults, PROVIDER_LIMITS.brave.maxResults);
@@ -41,17 +50,19 @@ export class BraveSearchProvider implements SearchAdapter {
 
       const response = await fetch(`${this.baseUrl}?${params}`, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'X-Subscription-Token': this.apiKey,
         },
       });
 
       if (!response.ok) {
-        throw new Error(`Brave Search failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Brave Search failed: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
-      
+
       return this.formatResults(data.web?.results || [], scrapeContent);
     } catch (error) {
       throw new Error(
@@ -60,7 +71,10 @@ export class BraveSearchProvider implements SearchAdapter {
     }
   }
 
-  private formatResults(results: unknown[], includeContent: boolean): SearchResult[] {
+  private formatResults(
+    results: unknown[],
+    includeContent: boolean
+  ): SearchResult[] {
     return results.map((result: unknown) => {
       const item = result as {
         url?: string;
@@ -68,7 +82,7 @@ export class BraveSearchProvider implements SearchAdapter {
         description?: string;
         snippet?: string;
       };
-      
+
       return {
         url: item.url || '',
         title: item.title || '',
@@ -86,17 +100,18 @@ export class BraveSearchProvider implements SearchAdapter {
       description?: string;
       snippet?: string;
     };
-    
+
     let markdown = `### [${item.title || 'Untitled'}](${item.url || '#'})\n${item.description || item.snippet || ''}`;
-    
+
     if (includeContent && (item.description || item.snippet)) {
       const content = item.description || item.snippet || '';
-      const truncatedContent = content.length > SEARCH_CONFIG.maxTextCharacters 
-        ? content.substring(0, SEARCH_CONFIG.maxTextCharacters - 3) + '...' 
-        : content;
+      const truncatedContent =
+        content.length > SEARCH_CONFIG.maxTextCharacters
+          ? `${content.substring(0, SEARCH_CONFIG.maxTextCharacters - 3)}...`
+          : content;
       markdown += `\n\n> ${truncatedContent}`;
     }
-    
+
     return markdown;
   }
-} 
+}

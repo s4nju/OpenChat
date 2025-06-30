@@ -1,81 +1,81 @@
-"use client"
+'use client';
 
+import { ArrowUp, Stop } from '@phosphor-icons/react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PromptInput,
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
-} from "@/components/prompt-kit/prompt-input"
-import { Button } from "@/components/ui/button"
-import { APP_NAME } from "@/lib/config"
-import { ArrowUp, Stop } from "@phosphor-icons/react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
-import { ButtonFileUpload } from "./button-file-upload"
-import { ButtonSearch } from "./button-search"
-import { FileList } from "./file-list"
-import { PromptSystem } from "./prompt-system"
-import { SelectModel } from "./select-model"
-import { SelectReasoningEffort } from "./select-reasoning-effort"
+} from '@/components/prompt-kit/prompt-input';
+import { Button } from '@/components/ui/button';
+import { APP_NAME } from '@/lib/config';
+import { ButtonFileUpload } from './button-file-upload';
+import { ButtonSearch } from './button-search';
+import { FileList } from './file-list';
+import { PromptSystem } from './prompt-system';
+import { SelectModel } from './select-model';
+import { SelectReasoningEffort } from './select-reasoning-effort';
 
-type ReasoningEffort = "low" | "medium" | "high";
+type ReasoningEffort = 'low' | 'medium' | 'high';
 
 type ChatInputProps = {
-  onSend: (message: string, options: { enableSearch: boolean }) => void
-  isSubmitting?: boolean
-  hasMessages?: boolean
-  files: File[]
-  onFileUpload: (files: File[]) => void
-  onFileRemove: (file: File) => void
-  onSuggestion: (suggestion: string) => void
-  hasSuggestions?: boolean
-  onSelectModel: (model: string) => void
-  selectedModel: string
-  isUserAuthenticated: boolean
-  onSelectSystemPrompt: (systemPrompt: string) => void
-  systemPrompt?: string
-  stop: () => void
-  status?: "submitted" | "streaming" | "ready" | "error"
-  isReasoningModel: boolean
-  reasoningEffort: ReasoningEffort
-  onSelectReasoningEffort: (reasoningEffort: ReasoningEffort) => void
-  initialValue?: string
-}
+  onSendAction: (message: string, options: { enableSearch: boolean }) => void;
+  isSubmitting?: boolean;
+  hasMessages?: boolean;
+  files: File[];
+  onFileUploadAction: (files: File[]) => void;
+  onFileRemoveAction: (file: File) => void;
+  onSuggestionAction: (suggestion: string) => void;
+  hasSuggestions?: boolean;
+  onSelectModelAction: (model: string) => void;
+  selectedModel: string;
+  isUserAuthenticated: boolean;
+  onSelectSystemPromptAction: (systemPrompt: string) => void;
+  systemPrompt?: string;
+  stopAction: () => void;
+  status?: 'submitted' | 'streaming' | 'ready' | 'error';
+  isReasoningModel: boolean;
+  reasoningEffort: ReasoningEffort;
+  onSelectReasoningEffortAction: (reasoningEffort: ReasoningEffort) => void;
+  initialValue?: string;
+};
 
 export function ChatInput({
-  onSend,
+  onSendAction,
   isSubmitting,
   files,
-  onFileUpload,
-  onFileRemove,
-  onSuggestion,
+  onFileUploadAction,
+  onFileRemoveAction,
+  onSuggestionAction,
   hasSuggestions,
-  onSelectModel,
+  onSelectModelAction,
   selectedModel,
   isUserAuthenticated,
-  onSelectSystemPrompt,
+  onSelectSystemPromptAction,
   systemPrompt,
-  stop,
+  stopAction,
   status,
   isReasoningModel,
   reasoningEffort,
-  onSelectReasoningEffort,
-  initialValue = "",
+  onSelectReasoningEffortAction,
+  initialValue = '',
 }: ChatInputProps) {
   // Local state for input value to prevent parent re-renders
   const [value, setValue] = useState(initialValue);
   const [searchEnabled, setSearchEnabled] = React.useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   // Track isEmpty state to prevent PromptSystem re-renders on every keystroke
-  const [isEmpty, setIsEmpty] = useState(true)
-  
+  const [isEmpty, setIsEmpty] = useState(true);
+
   // Only update isEmpty when the emptiness state actually changes
   useEffect(() => {
-    const currentEmpty = !value || value.trim() === ""
+    const currentEmpty = !value || value.trim() === '';
     if (currentEmpty !== isEmpty) {
-      setIsEmpty(currentEmpty)
+      setIsEmpty(currentEmpty);
     }
-  }, [value, isEmpty])
+  }, [value, isEmpty]);
 
   // Update local value when initialValue changes (e.g., when using suggestions)
   useEffect(() => {
@@ -84,20 +84,22 @@ export function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (isSubmitting) return
+      if (isSubmitting) {
+        return;
+      }
 
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        onSend(value, { enableSearch: searchEnabled });
-        setValue(""); // Clear input after sending
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        onSendAction(value, { enableSearch: searchEnabled });
+        setValue(''); // Clear input after sending
       }
     },
-    [onSend, isSubmitting, searchEnabled, value]
-  )
+    [onSendAction, isSubmitting, searchEnabled, value]
+  );
 
   const handleMainClick = () => {
-    if (status === "streaming") {
-      stop();
+    if (status === 'streaming') {
+      stopAction();
       return;
     }
 
@@ -106,87 +108,102 @@ export function ChatInput({
       return;
     }
 
-    onSend(value, { enableSearch: searchEnabled });
-    setValue(""); // Clear input after sending
-  }
+    onSendAction(value, { enableSearch: searchEnabled });
+    setValue(''); // Clear input after sending
+  };
 
-  const handleSuggestionClick = useCallback((suggestion: string) => {
-    setValue(suggestion);
-    onSuggestion(suggestion);
-  }, [onSuggestion]);
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      setValue(suggestion);
+      onSuggestionAction(suggestion);
+    },
+    [onSuggestionAction]
+  );
 
   const handlePaste = useCallback(
-    async (e: ClipboardEvent) => {
+    (e: ClipboardEvent) => {
       if (!isUserAuthenticated) {
-        e.preventDefault()
-        return
+        e.preventDefault();
+        return;
       }
 
-      const items = e.clipboardData?.items
-      if (!items) return
+      const items = e.clipboardData?.items;
+      if (!items) {
+        return;
+      }
 
-      const imageFiles: File[] = []
+      const imageFiles: File[] = [];
 
       for (const item of Array.from(items)) {
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile()
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
           if (file) {
             const newFile = new File(
               [file],
-              `pasted-image-${Date.now()}.${file.type.split("/")[1]}`,
+              `pasted-image-${Date.now()}.${file.type.split('/')[1]}`,
               { type: file.type }
-            )
-            imageFiles.push(newFile)
+            );
+            imageFiles.push(newFile);
           }
         }
       }
 
       if (imageFiles.length > 0) {
-        onFileUpload(imageFiles)
+        onFileUploadAction(imageFiles);
       }
     },
-    [isUserAuthenticated, onFileUpload]
-  )
+    [isUserAuthenticated, onFileUploadAction]
+  );
 
   useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.addEventListener("paste", handlePaste)
-    return () => el.removeEventListener("paste", handlePaste)
-  }, [handlePaste])
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.addEventListener('paste', handlePaste);
+    return () => el.removeEventListener('paste', handlePaste);
+  }, [handlePaste]);
+
+  // Compute tooltip text without nested ternary expressions
+  let tooltipText = 'Send';
+  if (status === 'streaming') {
+    tooltipText = 'Stop';
+  } else if (isSubmitting && files.length > 0) {
+    tooltipText = 'Uploading...';
+  }
 
   return (
     <div className="relative flex w-full flex-col gap-4">
       {hasSuggestions && (
         <PromptSystem
-          onSelectSystemPrompt={onSelectSystemPrompt}
-          onValueChange={setValue}
-          onSuggestion={handleSuggestionClick}
           isEmpty={isEmpty}
+          onSelectSystemPrompt={onSelectSystemPromptAction}
+          onSuggestion={handleSuggestionClick}
+          onValueChange={setValue}
           systemPrompt={systemPrompt}
         />
       )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
         <PromptInput
-          className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
+          className="relative z-10 overflow-hidden border border-input bg-popover p-0 pb-2 shadow-xs backdrop-blur-xl"
           maxHeight={200}
-          value={value}
           onValueChange={setValue}
+          value={value}
         >
-          <FileList files={files} onFileRemove={onFileRemove} />
+          <FileList files={files} onFileRemoveAction={onFileRemoveAction} />
           <PromptInputTextarea
-            placeholder={`Ask ${APP_NAME}`}
-            onKeyDown={handleKeyDown}
             className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base"
-            ref={textareaRef}
             disabled={isSubmitting}
+            onKeyDown={handleKeyDown}
+            placeholder={`Ask ${APP_NAME}`}
+            ref={textareaRef}
           />
-          <PromptInputActions className="mt-5 w-full justify-between sm:px-2 px-2">
-            <div className="flex sm:gap-2 gap-1 transform origin-left sm:scale-100 scale-90">
+          <PromptInputActions className="mt-5 w-full justify-between px-2 sm:px-2">
+            <div className="flex origin-left scale-90 transform gap-1 sm:scale-100 sm:gap-2">
               <ButtonFileUpload
-                onFileUpload={onFileUpload}
                 isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
+                onFileUpload={onFileUploadAction}
               />
               <ButtonSearch
                 isUserAuthenticated={isUserAuthenticated}
@@ -195,29 +212,29 @@ export function ChatInput({
                 searchEnabled={searchEnabled}
               />
               <SelectModel
-                selectedModel={selectedModel}
-                onSelectModel={onSelectModel}
                 isUserAuthenticated={isUserAuthenticated}
+                onSelectModel={onSelectModelAction}
+                selectedModel={selectedModel}
               />
               {isReasoningModel && (
                 <SelectReasoningEffort
+                  onSelectReasoningEffortAction={onSelectReasoningEffortAction}
                   reasoningEffort={reasoningEffort}
-                  onSelectReasoningEffort={onSelectReasoningEffort}
                 />
               )}
             </div>
-            <PromptInputAction
-              tooltip={status === "streaming" ? "Stop" : isSubmitting && files.length > 0 ? "Uploading..." : "Send"}
-            >
+            <PromptInputAction tooltip={tooltipText}>
               <Button
-                size="sm"
-                className="rounded-full transition-all duration-300 ease-out transform origin-right sm:scale-100 scale-90"
-                disabled={(!value.trim() && files.length === 0) && status !== "streaming"}
-                type="button"
-                onClick={handleMainClick}
                 aria-label="Send message"
+                className="origin-right scale-90 transform rounded-full transition-all duration-300 ease-out sm:scale-100"
+                disabled={
+                  !value.trim() && files.length === 0 && status !== 'streaming'
+                }
+                onClick={handleMainClick}
+                size="sm"
+                type="button"
               >
-                {status === "streaming" ? (
+                {status === 'streaming' ? (
                   <Stop className="size-4" />
                 ) : (
                   <ArrowUp className="size-4" />
@@ -228,5 +245,5 @@ export function ChatInput({
         </PromptInput>
       </div>
     </div>
-  )
+  );
 }

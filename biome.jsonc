@@ -7,7 +7,19 @@
       "!components/**",
       "!lib/**",
       "!hooks/**",
-      "!node_modules/**"
+      "!node_modules/**",
+      "!convex/_generated/**",
+      "!app/globals.css"
     ]
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useFilenamingConvention": "off"
+      }
+    },
+    "domains": {
+      "next": "recommended"
+    }
   }
 }

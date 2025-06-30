@@ -1,26 +1,26 @@
-import { Message as MessageType } from "@ai-sdk/react"
-import React, { useState } from "react"
-import { MessageMetadata } from "@/lib/ai-sdk-utils"
-import { MessageAssistant } from "./message-assistant"
-import { MessageUser } from "./message-user"
+import type { Message as MessageType } from '@ai-sdk/react';
+import React, { useState } from 'react';
+import type { MessageMetadata } from '@/lib/ai-sdk-utils';
+import { MessageAssistant } from './message-assistant';
+import { MessageUser } from './message-user';
 
 export type MessageProps = {
-  variant: MessageType["role"]
-  model?: string
-  children: string
-  id: string
-  attachments?: MessageType["experimental_attachments"]
-  isLast?: boolean
-  onDelete: (id: string) => void
-  onEdit: (id: string, newText: string) => void
-  onReload: () => void
-  onBranch: () => void
-  hasScrollAnchor?: boolean
-  parts?: MessageType["parts"]
-  status?: "streaming" | "ready" | "submitted" | "error" // Add status prop
-  reasoning_text?: string
-  metadata?: MessageMetadata
-}
+  variant: MessageType['role'];
+  model?: string;
+  children: string;
+  id: string;
+  attachments?: MessageType['experimental_attachments'];
+  isLast?: boolean;
+  onDelete: (id: string) => void;
+  onEdit: (id: string, newText: string) => void;
+  onReload: () => void;
+  onBranch: () => void;
+  hasScrollAnchor?: boolean;
+  parts?: MessageType['parts'];
+  status?: 'streaming' | 'ready' | 'submitted' | 'error'; // Add status prop
+  reasoning_text?: string;
+  metadata?: MessageMetadata;
+};
 
 function MessageComponent({
   variant,
@@ -39,56 +39,56 @@ function MessageComponent({
   reasoning_text,
   metadata,
 }: MessageProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(children)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 500)
-  }
+    navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 500);
+  };
 
-  if (variant === "user") {
+  if (variant === 'user') {
     return (
       <MessageUser
+        attachments={attachments}
         copied={copied}
         copyToClipboard={copyToClipboard}
-        onReload={onReload}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        id={id}
         hasScrollAnchor={hasScrollAnchor}
-        attachments={attachments}
+        id={id}
+        onDelete={onDelete}
+        onEdit={onEdit}
+        onReload={onReload}
         status={status}
       >
         {children}
       </MessageUser>
-    )
+    );
   }
 
-  if (variant === "assistant") {
+  if (variant === 'assistant') {
     return (
       <MessageAssistant
-        id={id}
-        model={model}
+        attachments={attachments}
         copied={copied}
         copyToClipboard={copyToClipboard}
-        onReload={onReload}
-        onBranch={onBranch}
-        isLast={isLast}
         hasScrollAnchor={hasScrollAnchor}
-        parts={parts}
-        attachments={attachments}
-        status={status}
-        reasoning_text={reasoning_text}
+        id={id}
+        isLast={isLast}
         metadata={metadata}
+        model={model}
+        onBranch={onBranch}
+        onReload={onReload}
+        parts={parts}
+        reasoning_text={reasoning_text}
+        status={status}
       >
         {children}
       </MessageAssistant>
-    )
+    );
   }
 
-  return null
+  return null;
 }
 
-export const Message = React.memo(MessageComponent)
-Message.displayName = 'Message'
+export const Message = React.memo(MessageComponent);
+Message.displayName = 'Message';

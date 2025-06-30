@@ -164,9 +164,9 @@ export function buildMetadataFromResponse(
   return {
     modelId,
     modelName: modelName || response.modelId || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
-    promptTokens: usage?.promptTokens,
-    completionTokens: usage?.completionTokens,
-    reasoningTokens: usage?.reasoningTokens, // May not exist for all models
+    promptTokens: usage?.promptTokens || 0,
+    completionTokens: usage?.completionTokens || 0,
+    reasoningTokens: usage?.reasoningTokens || 0, // Default to 0 instead of undefined/NaN
     serverDurationMs: Date.now() - startTime,
     includeSearch: includeSearch || false,
     reasoningEffort: reasoningEffort || "none"

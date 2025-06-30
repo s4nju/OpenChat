@@ -1,22 +1,20 @@
-"use client"
+'use client';
 
-import { useUser } from "@/app/providers/user-provider"
-import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/toast"
-import { api } from "@/convex/_generated/api"
-import { Doc, Id } from "@/convex/_generated/dataModel"
-import { buildSystemPrompt, MESSAGE_MAX_LENGTH } from "@/lib/config"
-import { createPartsFromAIResponse } from "@/lib/ai-sdk-utils"
 import {
   ClockCounterClockwise,
   DownloadSimple,
   Trash,
   UploadSimple,
-} from "@phosphor-icons/react"
-import { useConvex, useMutation, useQuery } from "convex/react"
-import { useRef, useState } from "react"
-import superjson from "superjson"
-import { z } from "zod"
+} from '@phosphor-icons/react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { useRef, useState } from 'react';
+import superjson from 'superjson';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
+import { api } from '@/convex/_generated/api';
+import type { Doc, Id } from '@/convex/_generated/dataModel';
+import { MESSAGE_MAX_LENGTH } from '@/lib/config';
 
 // Schema to validate imported history files (supports both old and new formats)
 const ImportSchema = z
@@ -33,7 +31,7 @@ const ImportSchema = z
         messages: z
           .array(
             z.object({
-              role: z.enum(["user", "assistant", "system"]).optional(),
+              role: z.enum(['user', 'assistant', 'system']).optional(),
               content: z.string().min(1).max(MESSAGE_MAX_LENGTH),
               parentMessageId: z.string().optional(),
               _id: z.string().optional(),
@@ -43,320 +41,261 @@ const ImportSchema = z
               reasoningText: z.string().optional(),
               // New schema fields
               parts: z.array(z.any()).optional(),
-              metadata: z.object({
-                modelName: z.string().optional(),
-                modelId: z.string().optional(),
-                promptTokens: z.number().optional(),
-                completionTokens: z.number().optional(),
-                reasoningTokens: z.number().optional(),
-                serverDurationMs: z.number().optional(),
-              }).optional(),
+              createdAt: z.number().optional(),
+              metadata: z
+                .object({
+                  modelName: z.string().optional(),
+                  modelId: z.string().optional(),
+                  promptTokens: z.union([z.number(), z.nan()]).optional(),
+                  completionTokens: z.union([z.number(), z.nan()]).optional(),
+                  reasoningTokens: z.union([z.number(), z.nan()]).optional(),
+                  serverDurationMs: z.number().optional(),
+                })
+                .optional(),
             })
           )
           .optional(),
       })
     ),
   })
-  .strict()
+  .strict();
 
 function formatDateLines(timestamp?: number | null) {
-  if (!timestamp) return { dateTime: "Unknown", ampm: "" }
+  if (!timestamp) {
+    return { dateTime: 'Unknown', ampm: '' };
+  }
   try {
-    const d = new Date(timestamp)
-    const dateStr = d.toLocaleDateString("en-US", {
-      month: "numeric",
-      day: "numeric",
-      year: "2-digit",
-    })
-    const timeStr = d.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+    const d = new Date(timestamp);
+    const dateStr = d.toLocaleDateString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+    });
+    const timeStr = d.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: true,
-    })
-    const [time, ampm] = timeStr.split(" ")
-    return { dateTime: `${dateStr} ${time}`, ampm }
+    });
+    const [time, ampm] = timeStr.split(' ');
+    return { dateTime: `${dateStr} ${time}`, ampm };
   } catch {
-    return { dateTime: "Invalid", ampm: "" }
+    return { dateTime: 'Invalid', ampm: '' };
   }
 }
 
 export default function HistoryPage() {
   const chats =
     useQuery(api.chats.listChatsForUser) ??
-    (undefined as Doc<"chats">[] | undefined)
-  const deleteChat = useMutation(api.chats.deleteChat)
-  const deleteAllChats = useMutation(api.chats.deleteAllChatsForUser)
-  const convex = useConvex()
-  const { user } = useUser()
+    (undefined as Doc<'chats'>[] | undefined);
+  const deleteChat = useMutation(api.chats.deleteChat);
+  const deleteBulkChats = useMutation(api.chats.deleteBulkChats);
+  const deleteAllChats = useMutation(api.chats.deleteAllChatsForUser);
+  const convex = useConvex();
 
-  const [selectedIds, setSelectedIds] = useState<Set<Id<"chats">>>(new Set())
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<Id<'chats'>>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isSelected = (id: Id<"chats">) => selectedIds.has(id)
-  const toggleSelect = (id: Id<"chats">) => {
+  const isSelected = (id: Id<'chats'>) => selectedIds.has(id);
+  const toggleSelect = (id: Id<'chats'>) => {
     setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
   const selectAll = () => {
-    if (!chats) return
-    setSelectedIds(new Set(chats.map((c) => c._id as Id<"chats">)))
-  }
-  const clearSelection = () => setSelectedIds(new Set())
+    if (!chats) {
+      return;
+    }
+    setSelectedIds(new Set(chats.map((c) => c._id as Id<'chats'>)));
+  };
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
 
   const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) return
-    if (!confirm(`Delete ${selectedIds.size} selected chat(s)?`)) return
-    try {
-      await Promise.all(
-        Array.from(selectedIds).map((id) => deleteChat({ chatId: id }))
-      )
-      toast({ title: "Selected chats deleted", status: "success" })
-      setSelectedIds(new Set())
-    } catch (e: unknown) {
-      console.error(e)
-      toast({ title: "Failed to delete some chats", status: "error" })
+    if (selectedIds.size === 0) {
+      return;
     }
-  }
+    if (!confirm(`Delete ${selectedIds.size} selected chat(s)?`)) {
+      return;
+    }
+    try {
+      // Use bulk delete for better performance when deleting multiple chats
+      if (selectedIds.size === 1) {
+        // Single chat - use the existing single delete mutation
+        const chatId = Array.from(selectedIds)[0];
+        await deleteChat({ chatId });
+      } else {
+        // Multiple chats - use the new bulk delete mutation
+        await deleteBulkChats({ chatIds: Array.from(selectedIds) });
+      }
+      toast({ title: 'Selected chats deleted', status: 'success' });
+      setSelectedIds(new Set());
+    } catch {
+      toast({ title: 'Failed to delete some chats', status: 'error' });
+    }
+  };
 
   const handleExport = async () => {
-    if (selectedIds.size === 0) return
-    toast({ title: "Preparing export…", status: "info" })
+    if (selectedIds.size === 0) {
+      return;
+    }
+    toast({ title: 'Preparing export…', status: 'info' });
     try {
-      type ChatData = {
-        id: Id<"chats">
-        title: string
-        model: string
-        createdAt?: number
-        updatedAt?: number
-      }
-      type MessageData = {
-        _id: Id<"messages">
-        role: string
-        content: string
-        parentMessageId?: Id<"messages">
-        parts?: Array<{
-          type: "text" | "image" | "reasoning" | "file" | "error" | "tool-invocation"
-          text?: string
-          image?: string
-          mimeType?: string
-          reasoning?: string
-          signature?: string
-          duration?: number
-          details?: Array<{
-            type: "text" | "redacted"
-            text?: string
-            data?: string
-            signature?: string
-          }>
-          data?: string
-          filename?: string
-          url?: string
-          error?: {
-            code: string
-            message: string
+      // Use proper Convex types
+      const data: Array<{
+        chat: Pick<
+          Doc<'chats'>,
+          '_id' | 'title' | 'model' | 'createdAt' | 'updatedAt'
+        >;
+        messages: Doc<'messages'>[];
+      }> = [];
+
+      await Promise.all(
+        Array.from(selectedIds).map(async (id) => {
+          const chat = chats?.find((c) => c._id === id);
+          if (!chat) {
+            return;
           }
-          toolInvocation?: {
-            state: "call" | "result" | "partial-call"
-            args?: unknown
-            result?: unknown
-            toolCallId: string
-            toolName: string
-            step?: number
-          }
-        }>
-        metadata?: {
-          modelName?: string
-          modelId?: string
-          promptTokens?: number
-          completionTokens?: number
-          reasoningTokens?: number
-          serverDurationMs?: number
-        }
-        createdAt?: number
-        updatedAt?: number
-      }
-      const data: Array<{ chat: ChatData; messages: MessageData[] }> = []
-      for (const id of selectedIds) {
-        const chat = chats?.find((c) => c._id === id)
-        if (!chat) continue
-        const messages = await convex.query(api.messages.getMessagesForChat, {
-          chatId: id,
+          const messages = await convex.query(api.messages.getMessagesForChat, {
+            chatId: id,
+          });
+          data.push({
+            chat: {
+              _id: chat._id,
+              title: chat.title ?? '',
+              model: chat.model ?? '',
+              createdAt: chat.createdAt,
+              updatedAt: chat.updatedAt,
+            },
+            messages,
+          });
         })
-        data.push({
-          chat: {
-            id: chat._id,
-            title: chat.title ?? "",
-            model: chat.model ?? "",
-            createdAt: chat.createdAt,
-            updatedAt: chat.updatedAt,
-          },
-          messages: messages as MessageData[],
-        })
-      }
+      );
       const blob = new Blob(
         [superjson.stringify({ exportedAt: Date.now(), data })],
         {
-          type: "application/json",
+          type: 'application/json',
         }
-      )
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `openchat-history-${Date.now()}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-      toast({ title: "Export complete", status: "success" })
-    } catch (e: unknown) {
-      console.error(e)
-      toast({ title: "Failed to export chats", status: "error" })
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `openchat-history-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Export complete', status: 'success' });
+    } catch {
+      toast({ title: 'Failed to export chats', status: 'error' });
     }
-  }
+  };
 
   const handleImportClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
-  const MAX_IMPORT_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
+  const MAX_IMPORT_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
   // removed chat count limit
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function processImportFile(file: File) {
     if (file.size > MAX_IMPORT_SIZE_BYTES) {
-      toast({ title: "Import file too large (max 2 MB)", status: "error" })
-      e.target.value = ""
-      return
+      toast({ title: 'Import file too large (max 2 MB)', status: 'error' });
+      return;
     }
-    try {
-      const text = await file.text()
-      const raw = superjson.parse(text)
-      const parsed = ImportSchema.safeParse(raw)
-      if (!parsed.success) throw new Error("Invalid file format")
-      const dataArr = parsed.data.data
-      const chatCount = dataArr.length
 
-      if (chatCount === 0) throw new Error("No chats found in file")
-      if (!confirm(`Import ${chatCount} chat(s) into your account?`)) return
-      toast({ title: `Importing ${chatCount} chat(s)…`, status: "info" })
+    const text = await file.text();
+    const data = superjson.parse(text);
+    const parsed = ImportSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error('Invalid file format');
+    }
 
-      for (const item of dataArr) {
-        const chatMeta = item.chat ?? {}
-        type ImportMessage = {
-          role?: string
-          content: string
-          parentMessageId?: string
-          _id?: string
-          id?: string
-          model?: string
-          reasoningText?: string
-        }
-        const messagesArr: ImportMessage[] = Array.isArray(item.messages)
-          ? item.messages
-          : []
-        const { chatId } = await convex.mutation(api.chats.createChat, {
-          title:
-            typeof chatMeta.title === "string" && chatMeta.title.length <= 100
-              ? chatMeta.title
-              : "Imported Chat",
-          model:
-            typeof chatMeta.model === "string" && chatMeta.model.length <= 50
-              ? chatMeta.model
-              : undefined,
-          systemPrompt: buildSystemPrompt(user),
-        })
-        // Map original message IDs to new IDs to preserve threading
-        const idMap = new Map<string, string>()
-        for (const msg of messagesArr) {
-          if (
-            !msg ||
-            typeof msg.content !== "string" ||
-            msg.content.length === 0
+    const dataArr = parsed.data.data;
+    const chatCount = dataArr.length;
+
+    if (chatCount === 0) {
+      throw new Error('No chats found in file');
+    }
+    if (!confirm(`Import ${chatCount} chat(s) into your account?`)) {
+      return;
+    }
+    toast({ title: `Importing ${chatCount} chat(s)…`, status: 'info' });
+
+    // Use the new bulk import mutation
+    await Promise.all(
+      dataArr.map(async (item) => {
+        const chatMeta = item.chat ?? {};
+        const messages = (item.messages ?? [])
+          .filter(
+            (msg) =>
+              msg && typeof msg.content === 'string' && msg.content.length > 0
           )
-            continue
-          const role: string = msg.role || "assistant"
-          const parentOriginal: string | undefined = msg.parentMessageId
-          const parentNew = parentOriginal
-            ? idMap.get(parentOriginal)
-            : undefined
-          try {
-            let result
-            // Create parts array from content and legacy reasoning text
-            const messageParts = createPartsFromAIResponse(
-              msg.content, 
-              msg.reasoningText
-            )
-            const metadata = {
-              modelName: msg.model || undefined
-            }
+          .map((msg) => ({
+            role: (msg.role || 'assistant') as 'user' | 'assistant' | 'system',
+            content: msg.content,
+            parts: msg.parts,
+            metadata:
+              msg.metadata ??
+              (msg.model ? { modelName: msg.model } : undefined),
+            originalId: msg._id || msg.id,
+            parentOriginalId: msg.parentMessageId,
+            createdAt:
+              typeof msg.createdAt === 'number' ? msg.createdAt : undefined,
+          }));
 
-            if (role === "user") {
-              result = await convex.mutation(
-                api.messages.sendUserMessageToChat,
-                {
-                  chatId,
-                  role: "user",
-                  content: msg.content,
-                  parentMessageId: parentNew as Id<"messages"> | undefined,
-                  parts: messageParts,
-                  metadata: {}
-                }
-              )
-            } else {
-              result = await convex.mutation(
-                api.messages.saveAssistantMessage,
-                {
-                  chatId,
-                  role: role === "assistant" ? "assistant" : "system",
-                  content: msg.content,
-                  parentMessageId: parentNew as Id<"messages"> | undefined,
-                  parts: messageParts,
-                  metadata: metadata
-                }
-              )
-            }
-            const originalId = msg._id ?? msg.id
-            if (originalId) {
-              idMap.set(originalId, result.messageId)
-            }
-          } catch (innerErr) {
-            console.error("Error importing message", innerErr)
-          }
+        if (messages.length === 0) {
+          return;
         }
-      }
-      toast({ title: "Import completed", status: "success" })
-      setSelectedIds(new Set())
-    } catch (err: unknown) {
-      console.error(err)
-      const errorMessage = err instanceof Error ? err.message : "Failed to import file"
-      toast({ title: errorMessage, status: "error" })
-    } finally {
-      e.target.value = ""
-    }
+
+        await convex.mutation(api.import_export.bulkImportChat, {
+          chat: {
+            title:
+              typeof chatMeta.title === 'string' && chatMeta.title.length <= 100
+                ? chatMeta.title
+                : undefined,
+            model:
+              typeof chatMeta.model === 'string' && chatMeta.model.length <= 50
+                ? chatMeta.model
+                : undefined,
+          },
+          messages,
+        });
+      })
+    );
+
+    toast({ title: 'Import completed', status: 'success' });
+    setSelectedIds(new Set());
   }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    await processImportFile(file);
+  };
 
   return (
     <div className="w-full">
       <div className="space-y-6">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          Message History{" "}
-          <ClockCounterClockwise className="text-muted-foreground size-5" />
+        <h1 className="flex items-center gap-2 font-bold text-2xl">
+          Message History{' '}
+          <ClockCounterClockwise className="size-5 text-muted-foreground" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          Save your history as JSON, or import someone else&apos;s. Importing will
-          NOT delete existing messages.
+          Save your history as JSON, or import someone else&apos;s. Importing
+          will NOT delete existing messages.
         </p>
         <div className="space-y-4">
           {/* Selection Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button
-                type="button"
-                variant="secondary"
-                size="sm"
                 className="flex items-center gap-2 px-4"
                 disabled={!chats}
                 onClick={() => {
@@ -365,15 +304,16 @@ export default function HistoryPage() {
                     chats.length > 0 &&
                     selectedIds.size === chats.length
                   ) {
-                    clearSelection()
+                    clearSelection();
                   } else {
-                    selectAll()
+                    selectAll();
                   }
                 }}
+                size="sm"
+                type="button"
+                variant="secondary"
               >
                 <input
-                  type="checkbox"
-                  className="accent-primary size-4"
                   checked={
                     !!(
                       chats &&
@@ -381,151 +321,158 @@ export default function HistoryPage() {
                       selectedIds.size === chats.length
                     )
                   }
+                  className="size-4 accent-primary"
                   readOnly
+                  type="checkbox"
                 />
                 <span className="hidden text-sm sm:inline">Select All</span>
               </Button>
               {selectedIds.size > 0 && (
                 <Button
+                  onClick={clearSelection}
+                  size="sm"
                   type="button"
                   variant="secondary"
-                  size="sm"
-                  onClick={clearSelection}
                 >
-                  Clear{" "}
+                  Clear{' '}
                   <span className="hidden text-sm sm:inline">Selection</span>
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="secondary"
-                size="sm"
                 className="flex items-center gap-2"
                 disabled={!chats || selectedIds.size === 0}
                 onClick={handleExport}
+                size="sm"
+                variant="secondary"
               >
-                <DownloadSimple className="size-4" />{" "}
+                <DownloadSimple className="size-4" />{' '}
                 <span className="hidden sm:inline">Export</span>
                 {selectedIds.size > 0 && ` (${selectedIds.size})`}
               </Button>
               <Button
-                variant="destructive"
-                size="sm"
                 className="flex items-center gap-2"
                 disabled={!chats || selectedIds.size === 0}
                 onClick={handleDeleteSelected}
+                size="sm"
+                variant="destructive"
               >
-                <Trash className="size-4" />{" "}
+                <Trash className="size-4" />{' '}
                 <span className="hidden sm:inline">Delete</span>
                 {selectedIds.size > 0 && ` (${selectedIds.size})`}
               </Button>
               <Button
-                variant="secondary"
-                size="sm"
                 className="flex items-center gap-2"
                 onClick={handleImportClick}
+                size="sm"
+                variant="secondary"
               >
-                <UploadSimple className="size-4" />{" "}
+                <UploadSimple className="size-4" />{' '}
                 <span className="hidden sm:inline">Import</span>
               </Button>
               <input
-                type="file"
                 accept="application/json"
-                ref={fileInputRef}
-                onChange={handleImport}
                 className="hidden"
+                onChange={handleImport}
+                ref={fileInputRef}
+                type="file"
               />
             </div>
           </div>
           {/* Chats List */}
-          {!chats ? (
-            <div className="max-h-21.4vh] divide-y overflow-y-auto rounded-lg border">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-4 py-1 text-sm"
-                >
-                  <div className="bg-muted h-4 w-4 animate-pulse rounded"></div>
-                  <div className="bg-muted h-4 flex-1 animate-pulse rounded"></div>
-                  <div className="ml-auto flex w-24 shrink-0 flex-col items-end gap-1 px-1">
-                    <div className="bg-muted h-3 w-16 animate-pulse rounded"></div>
-                    <div className="bg-muted h-3 w-8 animate-pulse rounded"></div>
+          {chats ? (
+            chats.length === 0 ? (
+              <p className="text-muted-foreground">No chats found.</p>
+            ) : (
+              <div className="max-h-[21.4vh] divide-y overflow-y-auto rounded-lg border">
+                {chats.map((chat) => (
+                  <div
+                    className={`flex items-center gap-4 px-4 py-1 text-sm ${isSelected(chat._id as Id<'chats'>) ? 'bg-muted/50' : ''}`}
+                    key={chat._id}
+                  >
+                    <input
+                      checked={isSelected(chat._id as Id<'chats'>)}
+                      className="size-4 accent-primary"
+                      onChange={() => toggleSelect(chat._id as Id<'chats'>)}
+                      type="checkbox"
+                    />
+                    <span className="flex-1 truncate font-medium">
+                      {chat.title || 'Untitled Chat'}
+                    </span>
+                    {(() => {
+                      const { dateTime, ampm } = formatDateLines(
+                        chat.updatedAt ?? chat.createdAt
+                      );
+                      return (
+                        <div className="ml-auto flex w-24 shrink-0 flex-col items-end px-1">
+                          <span className="text-xs">{dateTime}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {ampm}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : chats.length === 0 ? (
-            <p className="text-muted-foreground">No chats found.</p>
+                ))}
+              </div>
+            )
           ) : (
-            <div className="max-h-[21.4vh] divide-y overflow-y-auto rounded-lg border">
-              {chats.map((chat) => (
-                <div
-                  key={chat._id}
-                  className={`flex items-center gap-4 px-4 py-1 text-sm ${isSelected(chat._id as Id<"chats">) ? "bg-muted/50" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    className="accent-primary size-4"
-                    checked={isSelected(chat._id as Id<"chats">)}
-                    onChange={() => toggleSelect(chat._id as Id<"chats">)}
-                  />
-                  <span className="flex-1 truncate font-medium">
-                    {chat.title || "Untitled Chat"}
-                  </span>
-                  {(() => {
-                    const { dateTime, ampm } = formatDateLines(
-                      chat.updatedAt ?? chat.createdAt
-                    )
-                    return (
-                      <div className="ml-auto flex w-24 shrink-0 flex-col items-end px-1">
-                        <span className="text-xs">{dateTime}</span>
-                        <span className="text-muted-foreground text-[10px]">
-                          {ampm}
-                        </span>
-                      </div>
-                    )
-                  })()}
-                </div>
-              ))}
+            <div className="max-h-21.4vh] divide-y overflow-y-auto rounded-lg border">
+              {Array.from({ length: 6 }).map((_, i) => {
+                const key = `skeleton-${i}`;
+                return (
+                  <div
+                    className="flex items-center gap-2 px-4 py-1 text-sm"
+                    key={key}
+                  >
+                    <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                    <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+                    <div className="ml-auto flex w-24 shrink-0 flex-col items-end gap-1 px-1">
+                      <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+                      <div className="h-3 w-8 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
         {/* Danger Zone */}
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="text-destructive mb-4 font-semibold">Danger Zone</h3>
-          <p className="text-muted-foreground mb-4 text-sm">
+        <div className="rounded-lg border bg-card p-4">
+          <h3 className="mb-4 font-semibold text-destructive">Danger Zone</h3>
+          <p className="mb-4 text-muted-foreground text-sm">
             Permanently delete all of your chat history. This action cannot be
             undone.
           </p>
           <Button
-            variant="destructive"
-            size="sm"
             onClick={async () => {
               if (
                 !confirm(
-                  "This will permanently delete all chat history. Are you sure?"
+                  'This will permanently delete all chat history. Are you sure?'
                 )
-              )
-                return
+              ) {
+                return;
+              }
               try {
-                await deleteAllChats({})
-                toast({ title: "All chats deleted", status: "success" })
-              } catch (error) {
-                console.error(error)
-                toast({ title: "Failed to delete chats", status: "error" })
+                await deleteAllChats({});
+                toast({ title: 'All chats deleted', status: 'success' });
+              } catch {
+                toast({ title: 'Failed to delete chats', status: 'error' });
               }
             }}
+            size="sm"
+            variant="destructive"
           >
             <Trash className="mr-2 size-4" /> Delete All Chats
           </Button>
         </div>
 
         {/* Retention policy note */}
-        <p className="text-muted-foreground text-xs italic mt-6">
+        <p className="mt-6 text-muted-foreground text-xs italic">
           *The retention policies of our LLM hosting partners may vary.
         </p>
       </div>
     </div>
-  )
+  );
 }

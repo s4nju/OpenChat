@@ -1,78 +1,86 @@
-"use client"
+'use client';
 
-import { useUser } from "@/app/providers/user-provider"
-import React from "react"
-import { MessageUsageCard } from "@/app/components/layout/settings/message-usage-card"
-import { User, Eye, EyeSlash } from "@phosphor-icons/react"
-import { Kbd } from "@/components/ui/kbd"
-import Image from "next/image"
-import { Doc } from "@/convex/_generated/dataModel"
+import { Eye, EyeSlash, User } from '@phosphor-icons/react';
+import Image from 'next/image';
+import React from 'react';
+import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
+import { useUser } from '@/app/providers/user-provider';
+import { Kbd } from '@/components/ui/kbd';
+import type { Doc } from '@/convex/_generated/dataModel';
 
 // Get the display name - prefer preferredName over full name
-const getDisplayName = (user: Doc<"users"> | null): string => {
-  if (!user) return "User";
-  
+const getDisplayName = (user: Doc<'users'> | null): string => {
+  if (!user) {
+    return 'User';
+  }
+
   if (user.preferredName) {
     return user.preferredName;
   }
-  
-  return user.name || "User";
+
+  return user.name || 'User';
 };
 
 export function SettingsSidebar() {
-  const { user } = useUser()
+  const { user } = useUser();
 
   const [showEmail, setShowEmail] = React.useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("showEmail") === "true"
-  })
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return localStorage.getItem('showEmail') === 'true';
+  });
 
   const maskEmail = (email?: string) => {
-    if (!email) return ""
-    const [local, domain] = email.split("@")
-    const tld = domain.substring(domain.lastIndexOf("."))
-    const prefix = local.slice(0, 2)
-    return `${prefix}*****${tld}`
-  }
+    if (!email) {
+      return '';
+    }
+    const [local, domain] = email.split('@');
+    const tld = domain.substring(domain.lastIndexOf('.'));
+    const prefix = local.slice(0, 2);
+    return `${prefix}*****${tld}`;
+  };
 
-  if (!user) return null
+  if (!user) {
+    return null;
+  }
 
   return (
     <aside className="w-full space-y-6">
       {/* User Info */}
       <div className="flex flex-col items-center text-center">
         <div className="relative mb-4">
-          <div className="bg-muted flex h-24 w-24 items-center justify-center overflow-hidden rounded-full">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-muted">
             {user?.image ? (
               <Image
-                src={user.image}
                 alt="Profile"
-                width={96}
-                height={96}
                 className="h-full w-full object-cover"
+                height={96}
+                src={user.image}
+                width={96}
               />
             ) : (
-              <User className="text-muted-foreground size-12" />
+              <User className="size-12 text-muted-foreground" />
             )}
           </div>
         </div>
-        <h2 className="text-xl font-semibold">{getDisplayName(user)}</h2>
+        <h2 className="font-semibold text-xl">{getDisplayName(user)}</h2>
         <button
-          type="button"
-          className="text-muted-foreground text-sm flex items-center gap-1"
+          className="flex items-center gap-1 text-muted-foreground text-sm"
           onClick={() => {
-            setShowEmail(prev => {
-              localStorage.setItem("showEmail", (!prev).toString())
-              return !prev
-            })
+            setShowEmail((prev) => {
+              localStorage.setItem('showEmail', (!prev).toString());
+              return !prev;
+            });
           }}
+          type="button"
         >
           <span>{showEmail ? user.email : maskEmail(user.email)}</span>
           {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
         </button>
         {user?.isPremium && (
           <div className="mt-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <span className="rounded-full bg-primary/10 px-3 py-1 font-bold text-primary text-xs">
               Pro Plan
             </span>
           </div>
@@ -111,5 +119,5 @@ export function SettingsSidebar() {
         </div>
       </div>
     </aside>
-  )
+  );
 }

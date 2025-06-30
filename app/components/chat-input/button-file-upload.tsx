@@ -1,30 +1,29 @@
+import { FileArrowUp, Paperclip } from '@phosphor-icons/react';
 import {
   FileUpload,
   FileUploadContent,
   FileUploadTrigger,
-} from "@/components/prompt-kit/file-upload"
-import { Button } from "@/components/ui/button"
+} from '@/components/prompt-kit/file-upload';
+import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from '@/components/ui/popover';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { MODELS_OPTIONS } from "@/lib/config"
-import { cn } from "@/lib/utils"
-import { FileArrowUp, Paperclip } from "@phosphor-icons/react"
-import React from "react"
-import { PopoverContentAuth } from "./popover-content-auth"
+} from '@/components/ui/tooltip';
+import { MODELS_OPTIONS } from '@/lib/config';
+import { cn } from '@/lib/utils';
+import { PopoverContentAuth } from './popover-content-auth';
 
 type ButtonFileUploadProps = {
-  onFileUpload: (files: File[]) => void
-  isUserAuthenticated: boolean
-  model: string
-}
+  onFileUpload: (files: File[]) => void;
+  isUserAuthenticated: boolean;
+  model: string;
+};
 
 export function ButtonFileUpload({
   onFileUpload,
@@ -33,7 +32,7 @@ export function ButtonFileUpload({
 }: ButtonFileUploadProps) {
   const isFileUploadAvailable = MODELS_OPTIONS.find(
     (m) => m.id === model
-  )?.features?.find((f) => f.id === "file-upload")?.enabled
+  )?.features?.find((f) => f.id === 'file-upload')?.enabled;
 
   if (!isFileUploadAvailable) {
     return (
@@ -42,11 +41,11 @@ export function ButtonFileUpload({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                size="sm"
-                variant="secondary"
-                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-                type="button"
                 aria-label="Add files"
+                className="size-9 rounded-full border border-border bg-transparent dark:bg-secondary"
+                size="sm"
+                type="button"
+                variant="secondary"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -62,7 +61,7 @@ export function ButtonFileUpload({
           </div>
         </PopoverContent>
       </Popover>
-    )
+    );
   }
 
   if (!isUserAuthenticated) {
@@ -72,11 +71,11 @@ export function ButtonFileUpload({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                size="sm"
-                variant="secondary"
-                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
-                type="button"
                 aria-label="Add files"
+                className="size-9 rounded-full border border-border bg-transparent dark:bg-secondary"
+                size="sm"
+                type="button"
+                variant="secondary"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -86,29 +85,29 @@ export function ButtonFileUpload({
         </Tooltip>
         <PopoverContentAuth />
       </Popover>
-    )
+    );
   }
 
   return (
     <FileUpload
-      onFilesAdded={onFileUpload}
-      multiple
-      disabled={!isUserAuthenticated}
       accept="image/jpeg,image/png,image/webp,image/svg,image/heic,image/heif,application/pdf"
+      disabled={!isUserAuthenticated}
+      multiple
+      onFilesAdded={onFileUpload}
     >
       <Tooltip>
         <TooltipTrigger asChild>
           <FileUploadTrigger asChild>
             <Button
-              size="sm"
-              variant="secondary"
-              className={cn(
-                "border-border dark:bg-secondary size-9 rounded-full border bg-transparent",
-                !isUserAuthenticated && "opacity-50"
-              )}
-              type="button"
-              disabled={!isUserAuthenticated}
               aria-label="Add files"
+              className={cn(
+                'size-9 rounded-full border border-border bg-transparent dark:bg-secondary',
+                !isUserAuthenticated && 'opacity-50'
+              )}
+              disabled={!isUserAuthenticated}
+              size="sm"
+              type="button"
+              variant="secondary"
             >
               <Paperclip className="size-4" />
             </Button>
@@ -117,14 +116,14 @@ export function ButtonFileUpload({
         <TooltipContent>Add files</TooltipContent>
       </Tooltip>
       <FileUploadContent>
-        <div className="border-input bg-background flex flex-col items-center rounded-lg border border-dashed p-8">
-          <FileArrowUp className="text-muted-foreground size-8" />
-          <span className="mt-4 mb-1 text-lg font-medium">Drop files here</span>
+        <div className="flex flex-col items-center rounded-lg border border-input border-dashed bg-background p-8">
+          <FileArrowUp className="size-8 text-muted-foreground" />
+          <span className="mt-4 mb-1 font-medium text-lg">Drop files here</span>
           <span className="text-muted-foreground text-sm">
             Drop any files here to add it to the conversation
           </span>
         </div>
       </FileUploadContent>
     </FileUpload>
-  )
+  );
 }

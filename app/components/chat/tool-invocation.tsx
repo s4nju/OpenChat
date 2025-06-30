@@ -1,112 +1,316 @@
-"use client"
+'use client';
 
-import { cn } from "@/lib/utils"
 import type {
   ToolInvocation as BaseToolInvocation,
   ToolInvocationUIPart,
-} from "@ai-sdk/ui-utils"
-import { CaretDown, Code, Link, Nut, Spinner } from "@phosphor-icons/react"
-import { AnimatePresence, motion, Transition } from "framer-motion"
-import { useEffect, useState } from "react"
-import { SearchResults } from "./search-result"
+} from '@ai-sdk/ui-utils';
+import { CaretDown, Code, Link, Nut, Spinner } from '@phosphor-icons/react';
+import { AnimatePresence, motion, type Transition } from 'framer-motion';
+import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { SearchResults } from './search-result';
 
 type CustomToolInvocation =
   | BaseToolInvocation
   | ({
-    state: "requested"
-    step?: number
-    toolCallId: string
-    toolName: string
-    args?: Record<string, unknown>
-  } & {
-    result?: unknown
-  })
+      state: 'requested';
+      step?: number;
+      toolCallId: string;
+      toolName: string;
+      args?: Record<string, unknown>;
+    } & {
+      result?: unknown;
+    });
 
 type CustomToolInvocationUIPart = Omit<
   ToolInvocationUIPart,
-  "toolInvocation"
+  'toolInvocation'
 > & {
-  toolInvocation: CustomToolInvocation
-}
+  toolInvocation: CustomToolInvocation;
+};
 
 interface ToolInvocationProps {
-  data: CustomToolInvocationUIPart | CustomToolInvocationUIPart[]
-  className?: string
-  defaultOpen?: boolean
+  data: CustomToolInvocationUIPart | CustomToolInvocationUIPart[];
+  className?: string;
+  defaultOpen?: boolean;
 }
 
 // Types for parsed results
 interface SearchResult {
-  url: string
-  title: string
-  snippet?: string
+  url: string;
+  title: string;
+  snippet?: string;
 }
 
 interface ObjectResult {
-  title?: string
-  html_url?: string
-  [key: string]: unknown
+  title?: string;
+  html_url?: string;
+  [key: string]: unknown;
 }
 
-type ParsedResult = SearchResult[] | ObjectResult | string | unknown
+type ParsedResult = SearchResult[] | ObjectResult | string | unknown;
 
 function hasResult(
   toolInvocation: CustomToolInvocation
 ): toolInvocation is CustomToolInvocation & { result: unknown } {
   return (
-    toolInvocation.state === "result" ||
+    toolInvocation.state === 'result' ||
     ('result' in toolInvocation && toolInvocation.result !== undefined)
-  )
+  );
 }
 
 const TRANSITION: Transition = {
-  type: "spring",
+  type: 'spring',
   duration: 0.2,
   bounce: 0,
+};
+
+// Helper to format argument values for display without deep nested ternaries
+function formatArgValue(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0 ? '[]' : JSON.stringify(value);
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+// Helper to safely extract text content from AI SDK result objects
+function extractTextFromResultObject(obj: unknown): string | null {
+  if (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'content' in obj &&
+    Array.isArray((obj as { content: unknown }).content)
+  ) {
+    const contentArr = (
+      obj as { content: Array<{ type: string; text?: string }> }
+    ).content;
+    const textPart = contentArr.find((item) => item.type === 'text');
+    return textPart?.text ?? null;
+  }
+  return null;
+}
+
+// Parse result data coming back from the tool invocation.
+function parseResultData(result: unknown): {
+  parsed: ParsedResult | null;
+  error: string | null;
+} {
+  if (!result) {
+    return { parsed: null, error: null };
+  }
+
+  // If the result is already an array (e.g., search results)
+  if (Array.isArray(result)) {
+    return { parsed: result as ParsedResult, error: null };
+  }
+
+  // Attempt to pull out a text field from a structured response
+  const possibleText = extractTextFromResultObject(result);
+  if (possibleText) {
+    try {
+      // Try to interpret it as JSON first
+      return { parsed: JSON.parse(possibleText) as ParsedResult, error: null };
+    } catch {
+      // Fallback to raw text
+      return { parsed: possibleText, error: null };
+    }
+  }
+
+  // Fallback – return raw object stringified for display
+  return { parsed: JSON.stringify(result), error: null };
+}
+
+// Helper renderers split to keep individual functions simple
+function renderSearchToolResults(parsedResult: ParsedResult | null): ReactNode {
+  if (
+    typeof parsedResult === 'object' &&
+    parsedResult !== null &&
+    !Array.isArray(parsedResult)
+  ) {
+    const searchData = parsedResult as {
+      success?: boolean;
+      results?: Array<{ url?: string; title?: string; description?: string }>;
+      error?: string;
+    };
+    if (searchData.success && searchData.results) {
+      return (
+        <SearchResults
+          results={
+            searchData.results as Array<{
+              url: string;
+              title: string;
+              description: string;
+            }>
+          }
+        />
+      );
+    }
+    if (searchData.error) {
+      return <SearchResults error={searchData.error} results={[]} />;
+    }
+  }
+  return null;
+}
+
+function renderArrayResults(parsedResult: ParsedResult): ReactNode {
+  if (!Array.isArray(parsedResult) || parsedResult.length === 0) {
+    return null;
+  }
+
+  const firstItem = parsedResult[0];
+  if (
+    typeof firstItem === 'object' &&
+    firstItem !== null &&
+    'url' in firstItem &&
+    'title' in firstItem
+  ) {
+    return (
+      <div className="space-y-3">
+        {(parsedResult as SearchResult[]).map((item) => (
+          <div
+            className="border-gray-100 border-b pb-3 last:border-0 last:pb-0"
+            key={item.url}
+          >
+            <a
+              className="group flex items-center gap-1 font-medium text-primary hover:underline"
+              href={item.url}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {item.title}
+              <Link className="h-3 w-3 opacity-70 transition-opacity group-hover:opacity-100" />
+            </a>
+            <div className="mt-1 font-mono text-muted-foreground text-xs">
+              {item.url}
+            </div>
+            {item.snippet && (
+              <div className="mt-1 line-clamp-2 text-sm">{item.snippet}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <pre className="whitespace-pre-wrap font-mono text-xs">
+      {JSON.stringify(parsedResult, null, 2)}
+    </pre>
+  );
+}
+
+function renderObjectResults(parsedResult: ParsedResult): ReactNode {
+  if (
+    typeof parsedResult !== 'object' ||
+    parsedResult === null ||
+    Array.isArray(parsedResult)
+  ) {
+    return null;
+  }
+  const obj = parsedResult as ObjectResult;
+  return (
+    <div>
+      {obj.title && <div className="mb-2 font-medium">{obj.title}</div>}
+      {obj.html_url && (
+        <div className="mb-2">
+          <a
+            className="flex items-center gap-1 text-primary hover:underline"
+            href={obj.html_url}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span className="font-mono">{obj.html_url}</span>
+            <Link className="h-3 w-3 opacity-70" />
+          </a>
+        </div>
+      )}
+      <pre className="whitespace-pre-wrap font-mono text-xs">
+        {JSON.stringify(obj, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
+// Render parsed results orchestrator
+function renderParsedResults(
+  toolName: string,
+  parsedResult: ParsedResult | null
+): ReactNode {
+  if (!parsedResult) {
+    return 'No result data available';
+  }
+
+  if (toolName === 'search') {
+    const searchRendered = renderSearchToolResults(parsedResult);
+    if (searchRendered) {
+      return searchRendered;
+    }
+  }
+
+  if (Array.isArray(parsedResult)) {
+    return renderArrayResults(parsedResult);
+  }
+
+  if (typeof parsedResult === 'object' && parsedResult !== null) {
+    return renderObjectResults(parsedResult);
+  }
+
+  if (typeof parsedResult === 'string') {
+    return <div className="whitespace-pre-wrap">{parsedResult}</div>;
+  }
+
+  return 'No result data available';
 }
 
 export function ToolInvocation({
   data,
   defaultOpen = false,
 }: ToolInvocationProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultOpen)
+  const [isExpanded, setIsExpanded] = useState(defaultOpen);
 
-  const toolInvocations = Array.isArray(data) ? data : [data]
+  const toolInvocations = Array.isArray(data) ? data : [data];
 
   const uniqueToolIds = new Set(
     toolInvocations.map((item) => item.toolInvocation.toolCallId)
-  )
-  const isSingleTool = uniqueToolIds.size === 1
+  );
+  const isSingleTool = uniqueToolIds.size === 1;
 
   if (isSingleTool) {
     return (
       <SingleToolView
+        className="mb-10"
         data={toolInvocations}
         defaultOpen={defaultOpen}
-        className="mb-10"
       />
-    )
+    );
   }
 
   return (
     <div className="mb-10">
-      <div className="border-border flex flex-col gap-0 overflow-hidden rounded-md border">
+      <div className="flex flex-col gap-0 overflow-hidden rounded-md border border-border">
         <button
+          className="flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors hover:bg-accent"
           onClick={() => setIsExpanded(!isExpanded)}
           type="button"
-          className="hover:bg-accent flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors"
         >
           <div className="flex flex-1 flex-row items-center gap-2 text-left text-base">
-            <Nut className="text-muted-foreground size-4" />
+            <Nut className="size-4 text-muted-foreground" />
             <span className="text-sm">Tools executed</span>
-            <div className="bg-secondary rounded-full px-1.5 py-0.5 font-mono text-xs text-slate-700">
+            <div className="rounded-full bg-secondary px-1.5 py-0.5 font-mono text-slate-700 text-xs">
               {uniqueToolIds.size}
             </div>
           </div>
           <CaretDown
             className={cn(
-              "h-4 w-4 transition-transform",
-              isExpanded ? "rotate-180 transform" : ""
+              'h-4 w-4 transition-transform',
+              isExpanded ? 'rotate-180 transform' : ''
             )}
           />
         </button>
@@ -114,11 +318,11 @@ export function ToolInvocation({
         <AnimatePresence initial={false}>
           {isExpanded && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={TRANSITION}
+              animate={{ height: 'auto', opacity: 1 }}
               className="overflow-hidden"
+              exit={{ height: 0, opacity: 0 }}
+              initial={{ height: 0, opacity: 0 }}
+              transition={TRANSITION}
             >
               <div className="px-3 pt-3 pb-3">
                 <div className="space-y-4">
@@ -128,28 +332,30 @@ export function ToolInvocation({
                       (item) =>
                         item.toolInvocation.toolCallId === toolId &&
                         (item.toolInvocation as CustomToolInvocation).state ===
-                        "requested"
-                    )
+                          'requested'
+                    );
 
                     const resultTool = toolInvocations.find(
                       (item) =>
                         item.toolInvocation.toolCallId === toolId &&
-                        item.toolInvocation.state === "result"
-                    )
+                        item.toolInvocation.state === 'result'
+                    );
 
                     // Show the result tool if available, otherwise show the request
-                    const toolToShow = resultTool || requestTool
+                    const toolToShow = resultTool || requestTool;
 
-                    if (!toolToShow) return null
+                    if (!toolToShow) {
+                      return null;
+                    }
 
                     return (
                       <div
+                        className="border-gray-100 border-b pb-4 last:border-0 last:pb-0"
                         key={toolId}
-                        className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
                       >
                         <SingleToolView data={[toolToShow]} />
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -158,7 +364,7 @@ export function ToolInvocation({
         </AnimatePresence>
       </div>
     </div>
-  )
+  );
 }
 
 function SingleToolView({
@@ -166,241 +372,81 @@ function SingleToolView({
   defaultOpen = false,
   className,
 }: {
-  data: CustomToolInvocationUIPart[]
-  defaultOpen?: boolean
-  className?: string
+  data: CustomToolInvocationUIPart[];
+  defaultOpen?: boolean;
+  className?: string;
 }) {
   // Move all hooks to the top before any early returns
-  const [isExpanded, setIsExpanded] = useState(defaultOpen)
-  const [parsedResult, setParsedResult] = useState<ParsedResult>(null)
-  const [parseError, setParseError] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(defaultOpen);
+  const [parsedResult, setParsedResult] = useState<ParsedResult>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
 
-  const resultTool = data.find((item) => item.toolInvocation.state === "result")
+  const resultTool = data.find(
+    (item) => item.toolInvocation.state === 'result'
+  );
   const requestTool = data.find(
     (item) =>
-      (item.toolInvocation as CustomToolInvocation).state === "requested"
-  )
-  const toolData = resultTool || requestTool
+      (item.toolInvocation as CustomToolInvocation).state === 'requested'
+  );
+  const toolData = resultTool || requestTool;
 
-  const { toolInvocation } = toolData || { toolInvocation: null }
+  const { toolInvocation } = toolData || { toolInvocation: null };
   const { state, toolName, toolCallId, args } = toolInvocation
     ? (toolInvocation as CustomToolInvocation)
-    : { state: null, toolName: '', toolCallId: '', args: null }
+    : { state: null, toolName: '', toolCallId: '', args: null };
 
-  const isRequested = state === "requested"
-  const isCompleted = state === "result"
-  const result = toolInvocation && hasResult(toolInvocation) ? toolInvocation.result : undefined
+  const isRequested = state === 'requested';
+  const isCompleted = state === 'result';
+  const result =
+    toolInvocation && hasResult(toolInvocation)
+      ? toolInvocation.result
+      : undefined;
 
-  // Parse the result JSON if available
+  // Parse the result JSON if available (delegated to helper to reduce complexity)
   useEffect(() => {
-    let didCancel = false
-
     if (isCompleted && result) {
-      // Handle array results (like search results)
-      if (Array.isArray(result)) {
-        if (!didCancel) {
-          setParsedResult(result)
-        }
-        return
-      }
-
-      // Handle object results with content property
-      if (
-        typeof result === "object" &&
-        result !== null &&
-        "content" in result
-      ) {
-        try {
-          const content = (result as { content: Array<{ type: string; text?: string }> }).content
-          const textContent = content.find(
-            (item: { type: string }) => item.type === "text"
-          )
-
-          if (textContent && textContent.text) {
-            try {
-              // Try to parse as JSON first
-              const parsed = JSON.parse(textContent.text)
-              if (!didCancel) {
-                setParsedResult(parsed)
-              }
-            } catch {
-              // If not valid JSON, just use the text as is
-              if (!didCancel) {
-                setParsedResult(textContent.text)
-              }
-            }
-            if (!didCancel) {
-              setParseError(null)
-            }
-          }
-        } catch (error) {
-          if (!didCancel) {
-            setParseError("Failed to parse result")
-          }
-          console.error("Failed to parse result:", error)
-        }
-      }
+      const { parsed, error } = parseResultData(result);
+      setParsedResult(parsed);
+      setParseError(error);
     }
-
-    return () => {
-      didCancel = true
-    }
-  }, [isCompleted, result])
+  }, [isCompleted, result]);
 
   // Early return after hooks
-  if (!toolData) return null
+  if (!toolData) {
+    return null;
+  }
 
-  // Format the arguments for display
   const formattedArgs = args
     ? Object.entries(args).map(([key, value]) => (
-      <div key={key} className="mb-1">
-        <span className="font-medium text-slate-600">{key}:</span>{" "}
-        <span className="font-mono">
-          {typeof value === "object"
-            ? value === null
-              ? "null"
-              : Array.isArray(value)
-                ? value.length === 0
-                  ? "[]"
-                  : JSON.stringify(value)
-                : JSON.stringify(value)
-            : String(value)}
-        </span>
-      </div>
-    ))
-    : null
-
-  // Render generic results based on their structure
-  const renderResults = () => {
-    if (!parsedResult) return "No result data available"
-
-    // Handle our new search tool results
-    if (toolName === "search" && typeof parsedResult === "object" && parsedResult !== null) {
-      const searchData = parsedResult as { 
-        success?: boolean; 
-        results?: Array<{ 
-          url?: string; 
-          title?: string; 
-          description?: string;
-        }>; 
-        query?: string; 
-        error?: string 
-      }
-      if (searchData.success && searchData.results) {
-        return <SearchResults results={searchData.results as Array<{ url: string; title: string; description: string; }>} />
-      } else if (searchData.error) {
-        return <SearchResults results={[]} error={searchData.error} />
-      }
-    }
-
-    // Handle array of items with url, title, and snippet (like search results)
-    if (Array.isArray(parsedResult) && parsedResult.length > 0) {
-      // Check if items look like search results
-      if (
-        parsedResult[0] &&
-        typeof parsedResult[0] === "object" &&
-        "url" in parsedResult[0] &&
-        "title" in parsedResult[0]
-      ) {
-        return (
-          <div className="space-y-3">
-            {(parsedResult as SearchResult[]).map((item: SearchResult, index: number) => (
-              <div
-                key={index}
-                className="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
-              >
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary group flex items-center gap-1 font-medium hover:underline"
-                >
-                  {item.title}
-                  <Link className="h-3 w-3 opacity-70 transition-opacity group-hover:opacity-100" />
-                </a>
-                <div className="text-muted-foreground mt-1 font-mono text-xs">
-                  {item.url}
-                </div>
-                {item.snippet && (
-                  <div className="mt-1 line-clamp-2 text-sm">
-                    {item.snippet}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )
-      }
-
-      // Generic array display
-      return (
-        <div className="font-mono text-xs">
-          <pre className="whitespace-pre-wrap">
-            {JSON.stringify(parsedResult, null, 2)}
-          </pre>
+        <div className="mb-1" key={key}>
+          <span className="font-medium text-slate-600">{key}:</span>{' '}
+          <span className="font-mono">{formatArgValue(value)}</span>
         </div>
-      )
-    }
+      ))
+    : null;
 
-    // Handle object results
-    if (typeof parsedResult === "object" && parsedResult !== null) {
-      const objResult = parsedResult as ObjectResult
-      return (
-        <div>
-          {objResult.title && (
-            <div className="mb-2 font-medium">{objResult.title}</div>
-          )}
-          {objResult.html_url && (
-            <div className="mb-2">
-              <a
-                href={objResult.html_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary flex items-center gap-1 hover:underline"
-              >
-                <span className="font-mono">{objResult.html_url}</span>
-                <Link className="h-3 w-3 opacity-70" />
-              </a>
-            </div>
-          )}
-          <div className="font-mono text-xs">
-            <pre className="whitespace-pre-wrap">
-              {JSON.stringify(parsedResult, null, 2)}
-            </pre>
-          </div>
-        </div>
-      )
-    }
-
-    // Handle string results
-    if (typeof parsedResult === "string") {
-      return <div className="whitespace-pre-wrap">{parsedResult}</div>
-    }
-
-    // Fallback
-    return "No result data available"
-  }
+  const renderedResults = renderParsedResults(toolName, parsedResult);
 
   return (
     <div
       className={cn(
-        "border-border flex flex-col gap-0 overflow-hidden rounded-md border",
+        'flex flex-col gap-0 overflow-hidden rounded-md border border-border',
         className
       )}
     >
       <button
+        className="flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors hover:bg-accent"
         onClick={() => setIsExpanded(!isExpanded)}
         type="button"
-        className="hover:bg-accent flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors"
       >
         <div className="flex flex-1 flex-row items-center gap-2 text-left text-base">
           <span className="font-mono text-sm">{toolName}</span>
           <div
             className={cn(
-              "rounded-full px-1.5 py-0.5 text-xs",
+              'rounded-full px-1.5 py-0.5 text-xs',
               isRequested
-                ? "border border-blue-200 bg-blue-50 text-blue-700"
-                : "border border-green-200 bg-green-50 text-green-700"
+                ? 'border border-blue-200 bg-blue-50 text-blue-700'
+                : 'border border-green-200 bg-green-50 text-green-700'
             )}
           >
             {isRequested ? (
@@ -409,14 +455,14 @@ function SingleToolView({
                 Running
               </div>
             ) : (
-              "Completed"
+              'Completed'
             )}
           </div>
         </div>
         <CaretDown
           className={cn(
-            "h-4 w-4 transition-transform",
-            isExpanded ? "rotate-180 transform" : ""
+            'h-4 w-4 transition-transform',
+            isExpanded ? 'rotate-180 transform' : ''
           )}
         />
       </button>
@@ -424,17 +470,17 @@ function SingleToolView({
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={TRANSITION}
+            animate={{ height: 'auto', opacity: 1 }}
             className="overflow-hidden"
+            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            transition={TRANSITION}
           >
             <div className="space-y-3 px-3 pt-3 pb-3">
               {/* Arguments section */}
               {args && Object.keys(args).length > 0 && (
                 <div>
-                  <div className="text-muted-foreground mb-1 text-xs font-medium">
+                  <div className="mb-1 font-medium text-muted-foreground text-xs">
                     Arguments
                   </div>
                   <div className="rounded border bg-slate-50 p-2 text-sm">
@@ -446,24 +492,24 @@ function SingleToolView({
               {/* Result section */}
               {isCompleted && (
                 <div>
-                  <div className="text-muted-foreground mb-1 text-xs font-medium">
+                  <div className="mb-1 font-medium text-muted-foreground text-xs">
                     Result
                   </div>
                   <div className="max-h-60 overflow-auto rounded border bg-slate-50 p-2 text-sm">
                     {parseError ? (
                       <div className="text-red-500">{parseError}</div>
                     ) : (
-                      renderResults()
+                      renderedResults
                     )}
                   </div>
                 </div>
               )}
 
               {/* Tool call ID */}
-              <div className="text-muted-foreground flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-muted-foreground text-xs">
                 <div className="flex items-center">
                   <Code className="mr-1 inline h-3 w-3" />
-                  Tool Call ID:{" "}
+                  Tool Call ID:{' '}
                   <span className="ml-1 font-mono">{toolCallId}</span>
                 </div>
               </div>
@@ -472,5 +518,5 @@ function SingleToolView({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

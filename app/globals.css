@@ -11,7 +11,6 @@
   --spacing-input-area: 134px;
 
   @keyframes loading-dots {
-
     0%,
     100% {
       opacity: 0;
@@ -63,9 +62,16 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --spacing-scroll-area: calc(-1 * (var(--spacing-input-area) + var(--spacing-app-header)));
+  --spacing-scroll-area: calc(
+    -1 *
+    (var(--spacing-input-area) + var(--spacing-app-header))
+  );
   --spacing-scroll-anchor-offset: 140px;
-  --spacing-scroll-anchor: calc(var(--spacing-scroll-area) - var(--spacing-scroll-anchor-offset) + 100dvh);
+  --spacing-scroll-anchor: calc(
+    var(--spacing-scroll-area) -
+    var(--spacing-scroll-anchor-offset) +
+    100dvh
+  );
 }
 
 :root {
@@ -162,7 +168,7 @@
 
     /* Prevent iOS Safari zoom on input focus by ensuring minimum 16px font-size */
     input[type="text"],
-    input[type="email"], 
+    input[type="email"],
     input[type="password"],
     input[type="search"],
     input[type="number"],
@@ -182,16 +188,16 @@ code {
 }
 
 /* sonner toast */
-[data-sonner-toaster]>li {
+[data-sonner-toaster] > li {
   width: 100%;
 }
 
 /* Scrollbar hide utility */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none; /* Safari and Chrome */
 }

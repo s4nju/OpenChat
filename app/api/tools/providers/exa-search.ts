@@ -1,5 +1,11 @@
-import { SearchAdapter, SearchOptions, SearchResult, PROVIDER_LIMITS, SEARCH_CONFIG } from '../types';
-import Exa from "exa-js";
+import Exa from 'exa-js';
+import {
+  PROVIDER_LIMITS,
+  SEARCH_CONFIG,
+  type SearchAdapter,
+  type SearchOptions,
+  type SearchResult,
+} from '../types';
 
 export class ExaSearchProvider implements SearchAdapter {
   readonly name = 'exa';
@@ -12,14 +18,17 @@ export class ExaSearchProvider implements SearchAdapter {
     this.client = new Exa(apiKey);
   }
 
-  async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-    const { 
-      maxResults = SEARCH_CONFIG.maxResults, 
+  async search(
+    query: string,
+    options: SearchOptions = {}
+  ): Promise<SearchResult[]> {
+    const {
+      maxResults = SEARCH_CONFIG.maxResults,
       scrapeContent = SEARCH_CONFIG.scrapeContent,
       includeDomains,
       excludeDomains,
       startPublishedDate,
-      endPublishedDate
+      endPublishedDate,
     } = options;
 
     const limit = Math.min(maxResults, PROVIDER_LIMITS.exa.maxResults);
@@ -40,13 +49,13 @@ export class ExaSearchProvider implements SearchAdapter {
     try {
       const searchOptions: Record<string, unknown> = {
         numResults: limit,
-        type: "auto",
+        type: 'auto',
       };
 
       // Add text content options ONLY when scraping is enabled
       if (scrapeContent) {
         searchOptions.text = {
-          maxCharacters: SEARCH_CONFIG.maxTextCharacters
+          maxCharacters: SEARCH_CONFIG.maxTextCharacters,
         };
         // console.log('[EXA] 📄 Scrape content ENABLED - requesting text content with max chars:', SEARCH_CONFIG.maxTextCharacters);
       } else {
@@ -76,10 +85,10 @@ export class ExaSearchProvider implements SearchAdapter {
       // console.log(`[EXA] 🚀 Using ${scrapeContent ? 'searchAndContents' : 'search'} method with options:`, searchOptions);
 
       // Use searchAndContents when scraping is enabled, otherwise use regular search
-      const result = scrapeContent 
+      const result = scrapeContent
         ? await this.client.searchAndContents(query, searchOptions)
         : await this.client.search(query, searchOptions);
-      
+
       // console.log('[EXA] 📦 Received response from Exa API:', {
       //   totalResults: result.results?.length || 0,
       //   resultsWithText: result.results?.filter((r: any) => r.text).length || 0,
@@ -91,7 +100,7 @@ export class ExaSearchProvider implements SearchAdapter {
       //     snippet: ((result.results[0] as any).snippet)?.substring(0, 100) + '...' || 'No snippet'
       //   } : null
       // });
-      
+
       return this.formatResults(result.results || [], scrapeContent);
     } catch (error) {
       // console.error('[EXA] ❌ Search failed:', error);
@@ -101,7 +110,10 @@ export class ExaSearchProvider implements SearchAdapter {
     }
   }
 
-  private formatResults(results: unknown[], includeContent: boolean): SearchResult[] {
+  private formatResults(
+    results: unknown[],
+    includeContent: boolean
+  ): SearchResult[] {
     // console.log('[EXA] 🔧 Formatting results:', {
     //   totalResults: results.length,
     //   includeContent,
@@ -115,10 +127,10 @@ export class ExaSearchProvider implements SearchAdapter {
         snippet?: string;
         text?: string;
       };
-      
+
       const hasText = !!item.text;
       const willIncludeContent = includeContent && hasText;
-      
+
       // console.log(`[EXA] 📝 Result ${index + 1}:`, {
       //   url: item.url,
       //   title: item.title?.substring(0, 50) + '...',
@@ -127,7 +139,7 @@ export class ExaSearchProvider implements SearchAdapter {
       //   willIncludeContent,
       //   snippetLength: item.snippet?.length || 0
       // });
-      
+
       return {
         url: item.url || '',
         title: item.title || '',
@@ -153,29 +165,29 @@ export class ExaSearchProvider implements SearchAdapter {
       snippet?: string;
       text?: string;
     };
-    
+
     let markdown = `### [${item.title || 'Untitled'}](${item.url || '#'})\n${item.snippet || ''}`;
-    
+
     if (includeContent && item.text) {
       // Truncate content if too long
       const originalLength = item.text.length;
       const needsTruncation = originalLength > SEARCH_CONFIG.maxTextCharacters;
       const truncatedContent = needsTruncation
-        ? item.text.substring(0, SEARCH_CONFIG.maxTextCharacters - 3) + '...' 
+        ? `${item.text.substring(0, SEARCH_CONFIG.maxTextCharacters - 3)}...`
         : item.text;
-      
+
       // console.log('[EXA] 📄 Adding content to markdown:', {
       //   originalLength,
       //   maxAllowed: SEARCH_CONFIG.maxTextCharacters,
       //   needsTruncation,
       //   finalLength: truncatedContent.length
       // });
-      
+
       markdown += `\n\n> ${truncatedContent}`;
     } else if (includeContent && !item.text) {
       // console.log('[EXA] ⚠️  Content requested but no text available for result:', item.url);
     }
-    
+
     return markdown;
   }
-} 
+}

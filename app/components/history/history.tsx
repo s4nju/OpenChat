@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { HistoryTrigger } from "@/app/components/history/history-trigger"
+import { HistoryTrigger } from '@/app/components/history/history-trigger';
 
 export function History() {
-  return <HistoryTrigger />
+  return <HistoryTrigger />;
 }

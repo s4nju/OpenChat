@@ -1,93 +1,93 @@
-"use client"
+'use client';
 
-import { Button } from "@/components/ui/button"
-import { APP_NAME } from "@/lib/config"
-import { useAuthActions } from "@convex-dev/auth/react"
-import Link from "next/link"
-import Image from "next/image"
-import { useState } from "react"
-import { HeaderGoBack } from "../components/header-go-back"
+import { useAuthActions } from '@convex-dev/auth/react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { APP_NAME } from '@/lib/config';
+import { HeaderGoBack } from '../components/header-go-back';
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { signIn } = useAuthActions()
+  const { signIn } = useAuthActions();
 
   async function handleSignInWithGoogle() {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
-      await signIn("google")
+      await signIn('google');
     } catch (err: unknown) {
-      console.error("Error signing in with Google:", err)
+      // console.error('Error signing in with Google:', err);
       if (err instanceof Error) {
-        setError(err.message)
+        setError(err.message);
       } else {
-        setError("An unexpected error occurred. Please try again.")
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="bg-background flex h-dvh flex-col">
+    <div className="flex h-dvh flex-col bg-background">
       <HeaderGoBack href="/" showControls={false} />
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h1 className="text-foreground text-3xl font-medium tracking-tight sm:text-4xl">
+            <h1 className="font-medium text-3xl text-foreground tracking-tight sm:text-4xl">
               Welcome to {APP_NAME}
             </h1>
-            <p className="text-muted-foreground mt-3">
+            <p className="mt-3 text-muted-foreground">
               Sign in below to increase your message limits.
             </p>
           </div>
           {error && (
-            <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
+            <div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
               {error}
             </div>
           )}
           <div className="mt-8">
             <Button
-              variant="secondary"
               className="w-full text-base sm:text-base"
-              size="lg"
-              onClick={handleSignInWithGoogle}
               disabled={isLoading}
+              onClick={handleSignInWithGoogle}
+              size="lg"
+              variant="secondary"
             >
               <Image
-                src="https://www.google.com/favicon.ico"
                 alt="Google logo"
-                width={20}
-                height={20}
                 className="mr-2 size-4"
+                height={20}
+                src="https://www.google.com/favicon.ico"
                 unoptimized
+                width={20}
               />
               <span>
-                {isLoading ? "Connecting..." : "Continue with Google"}
+                {isLoading ? 'Connecting...' : 'Continue with Google'}
               </span>
             </Button>
           </div>
         </div>
       </main>
 
-      <footer className="text-muted-foreground py-6 text-center text-sm">
+      <footer className="py-6 text-center text-muted-foreground text-sm">
         {/* @todo */}
         <p>
-          By continuing, you agree to our{" "}
-          <Link href="/" className="text-foreground hover:underline">
+          By continuing, you agree to our{' '}
+          <Link className="text-foreground hover:underline" href="/">
             Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/" className="text-foreground hover:underline">
+          </Link>{' '}
+          and{' '}
+          <Link className="text-foreground hover:underline" href="/">
             Privacy Policy
           </Link>
         </p>
       </footer>
     </div>
-  )
+  );
 }

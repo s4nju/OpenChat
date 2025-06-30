@@ -1,26 +1,22 @@
-import { v } from "convex/values"
-import { MessagePart } from "./parts"
+import { v } from 'convex/values';
+import { MessagePart } from './parts';
 
 export const Message = v.object({
-    chatId: v.id("chats"), 
-    userId: v.optional(v.id("users")),
-    role: v.union(
-        v.literal("user"), 
-        v.literal("assistant"), 
-        v.literal("system")
-    ),
-    content: v.string(), // Keeping content for search compatibility
-    parts: v.optional(v.array(MessagePart)), // New parts system
-    createdAt: v.optional(v.number()),
-    parentMessageId: v.optional(v.id("messages")), // Keeping for threading
-    metadata: v.object({
-        modelId: v.optional(v.string()),
-        modelName: v.optional(v.string()),
-        promptTokens: v.optional(v.number()),
-        completionTokens: v.optional(v.number()),
-        reasoningTokens: v.optional(v.number()),
-        serverDurationMs: v.optional(v.number()),
-        includeSearch: v.optional(v.boolean()),
-        reasoningEffort: v.optional(v.string())
-    })
-}) 
+  chatId: v.id('chats'),
+  userId: v.optional(v.id('users')),
+  role: v.union(v.literal('user'), v.literal('assistant'), v.literal('system')),
+  content: v.string(), // Keeping content for search compatibility
+  parts: v.optional(v.array(MessagePart)), // New parts system
+  createdAt: v.optional(v.number()),
+  parentMessageId: v.optional(v.id('messages')), // Keeping for threading
+  metadata: v.object({
+    modelId: v.optional(v.string()),
+    modelName: v.optional(v.string()),
+    promptTokens: v.optional(v.number()),
+    completionTokens: v.optional(v.number()),
+    reasoningTokens: v.optional(v.number()),
+    serverDurationMs: v.optional(v.number()),
+    includeSearch: v.optional(v.boolean()),
+    reasoningEffort: v.optional(v.string()),
+  }),
+});

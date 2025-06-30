@@ -1,15 +1,15 @@
-"use client"
-import posthog from "posthog-js"
-import { PostHogProvider } from "posthog-js/react"
-import { useEffect } from "react"
-import { useUser, UserProfile } from "./user-provider"
+'use client';
+import posthog from 'posthog-js';
+import { PostHogProvider } from 'posthog-js/react';
+import { useEffect } from 'react';
+import { type UserProfile, useUser } from './user-provider';
 
 export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
   return (
     <PostHogProvider client={posthog}>
       <PostHogAuthWrapper>{children}</PostHogAuthWrapper>
     </PostHogProvider>
-  )
+  );
 }
 
 // Define types for PostHog user properties
@@ -24,12 +24,12 @@ function validateUserProperties(user: UserProfile): PostHogUserProperties {
   return {
     email: user.email || undefined,
     name: user.name || user.preferredName || undefined,
-    isAnonymous: user.isAnonymous || false,
+    isAnonymous: user.isAnonymous,
   };
 }
 
 function PostHogAuthWrapper({ children }: { children: React.ReactNode }) {
-  const userInfo = useUser()
+  const userInfo = useUser();
 
   useEffect(() => {
     if (userInfo.user) {
@@ -41,20 +41,20 @@ function PostHogAuthWrapper({ children }: { children: React.ReactNode }) {
         if (userInfo.user._id) {
           posthog.identify(userInfo.user._id, userProperties);
         } else {
-          console.warn("PostHog: User ID is missing, skipping identification");
+          // console.warn('PostHog: User ID is missing, skipping identification');
         }
-      } catch (error) {
-        console.error("PostHog: Failed to identify user", error);
+      } catch (_error) {
+        // console.error('PostHog: Failed to identify user', error);
         // Optionally, you could report this error to your error tracking service
       }
     } else {
       try {
         posthog.reset();
-      } catch (error) {
-        console.error("PostHog: Failed to reset user session", error);
+      } catch (_error) {
+        // console.error('PostHog: Failed to reset user session', error);
       }
     }
-  }, [userInfo.user])
+  }, [userInfo.user]);
 
-  return children
+  return children;
 }

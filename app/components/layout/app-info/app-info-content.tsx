@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
-import { GithubLogo, TwitterLogo } from "@phosphor-icons/react"
+import { GithubLogo, TwitterLogo } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 // import Image from "next/image"
 
 export function AppInfoContent() {
@@ -14,38 +14,38 @@ export function AppInfoContent() {
         className="rounded-lg"
       />
       */}
-      <p className="text-foreground mt-4 text-center text-sm font-medium">
+      <p className="mt-4 text-center font-medium text-foreground text-sm">
         OpenChat
       </p>
-      <p className="text-muted-foreground mb-4 text-center text-sm">
+      <p className="mb-4 text-center text-muted-foreground text-sm">
         AI chat application built with Vercel SDK, RSC, and Shadcn UI
       </p>
       <div className="flex w-full flex-col gap-2">
         <Button
-          variant="outline"
-          size="sm"
           asChild
           className="w-full rounded-lg"
+          size="sm"
+          variant="outline"
         >
           <a
             href="https://github.com/ajanraj/openchat"
-            target="_blank"
             rel="noopener noreferrer"
+            target="_blank"
           >
             <GithubLogo className="mr-2 size-4" />
             Repository
           </a>
         </Button>
         <Button
-          variant="outline"
-          size="sm"
           asChild
           className="w-full rounded-lg"
+          size="sm"
+          variant="outline"
         >
           <a
             href="https://twitter.com/ajanraj25"
-            target="_blank"
             rel="noopener noreferrer"
+            target="_blank"
           >
             <TwitterLogo className="mr-2 size-4" />
             Twitter
@@ -53,5 +53,5 @@ export function AppInfoContent() {
         </Button>
       </div>
     </div>
-  )
-} 
+  );
+}
