@@ -1,9 +1,15 @@
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
+import { checkBotId } from 'botid/server';
 import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/convex/_generated/api';
 import { createErrorResponse } from '@/lib/error-utils';
 
 export async function GET() {
+  const { isBot } = await checkBotId();
+  if (isBot) {
+    return new Response('Access denied', { status: 403 });
+  }
+
   try {
     const token = await convexAuthNextjsToken();
 

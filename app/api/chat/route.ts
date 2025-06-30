@@ -11,6 +11,7 @@ import {
   smoothStream,
   streamText,
 } from 'ai';
+import { checkBotId } from 'botid/server';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { PostHog } from 'posthog-node';
 import { searchTool } from '@/app/api/tools';
@@ -224,6 +225,12 @@ const buildAnthropicProviderOptions = (
 };
 
 export async function POST(req: Request) {
+  // Verify the request using Vercel BotID. If identified as a bot, block early.
+  const { isBot } = await checkBotId();
+  if (isBot) {
+    return new Response('Access denied', { status: 403 });
+  }
+
   req.signal.addEventListener('abort', () => {
     // Request aborted by client
   });

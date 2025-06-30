@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { BotIdClient } from 'botid/client';
 import Script from 'next/script';
 import { Toaster } from '@/components/ui/sonner';
 import { APP_BASE_URL, APP_DESCRIPTION, APP_NAME } from '@/lib/config';
@@ -29,6 +30,13 @@ export const metadata: Metadata = {
 
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 
+// Define the paths and HTTP methods that require BotID protection
+const protectedRoutes = [
+  { path: '/api/chat', method: 'POST' },
+  { path: '/api/create-chat', method: 'POST' },
+  { path: '/api/rate-limits', method: 'GET' },
+];
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +46,10 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Mount BotID to protect critical routes from sophisticated bots */}
+        <BotIdClient protect={protectedRoutes} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

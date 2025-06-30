@@ -1,4 +1,5 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
+import { withBotId } from 'botid/next/config';
 import type { NextConfig } from 'next';
 
 // Extract hostname from CONVEX_URL for image configuration
@@ -75,6 +76,8 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
 };
 
+const configWithBotId = withBotId(nextConfig);
+
 export default withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
-})(nextConfig);
+})(configWithBotId);
