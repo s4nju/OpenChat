@@ -137,11 +137,14 @@ export function SourcesList({ sources, className }: SourcesListProps) {
                               ) : (
                                 <Image
                                   alt={`Preview for ${source.title}`}
+                                  blurDataURL="data:image/jpeg;base64,..."
                                   className="scale-110 object-cover transition-transform hover:scale-115"
                                   fill
+                                  loading="lazy"
                                   onError={() => handleImageError(source.id)}
+                                  placeholder="blur"
                                   src={getOpenGraphImage(source.url)}
-                                  unoptimized
+                                  // Remove unoptimized to enable Next.js optimization
                                 />
                               )}
                               {/* Favicon overlay */}

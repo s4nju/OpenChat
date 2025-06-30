@@ -2,7 +2,7 @@
 
 import { X } from '@phosphor-icons/react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   HoverCard,
   HoverCardContent,
@@ -22,6 +22,13 @@ type FileItemProps = {
 export function FileItem({ file, onRemoveAction }: FileItemProps) {
   const [isRemoving, setIsRemoving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [objectUrl] = useState(() => URL.createObjectURL(file));
+
+  useEffect(() => {
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
 
   const handleRemove = () => {
     setIsRemoving(true);
@@ -42,7 +49,7 @@ export function FileItem({ file, onRemoveAction }: FileItemProps) {
                   alt={file.name}
                   className="h-full w-full object-cover"
                   height={40}
-                  src={URL.createObjectURL(file)}
+                  src={objectUrl}
                   width={40}
                 />
               ) : (
@@ -64,7 +71,7 @@ export function FileItem({ file, onRemoveAction }: FileItemProps) {
             alt={file.name}
             className="h-full w-full object-cover"
             height={200}
-            src={URL.createObjectURL(file)}
+            src={objectUrl}
             width={200}
           />
         </HoverCardContent>

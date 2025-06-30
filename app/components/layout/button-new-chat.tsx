@@ -1,6 +1,6 @@
 'use client';
 
-import { NotePencil } from '@phosphor-icons/react/dist/ssr';
+import { NotePencil } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {

@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    domains: ['www.google.com'],
     remotePatterns: [
       {
         protocol: 'https',

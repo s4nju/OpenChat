@@ -19,12 +19,10 @@ export function PopoverContentAuth() {
       setError(null);
 
       await signIn('google');
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       // console.error('Error signing in with Google:', err);
-      setError(
-        (err as Error)?.message ||
-          'An unexpected error occurred. Please try again.'
-      );
+      setError('Unable to sign in at the moment. Please try again later.');
+      // TODO: send `err` to Sentry / console for diagnostics
     } finally {
       setIsLoading(false);
     }

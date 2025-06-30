@@ -1,7 +1,7 @@
 'use client';
 
 import { PushPinSimpleIcon } from '@phosphor-icons/react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Doc, Id } from '@/convex/_generated/dataModel';
 import type { TimeGroup } from '@/lib/chat-utils/time-grouping';
 import { ChatItem } from './chat-item';
@@ -30,6 +30,34 @@ export const ChatList = memo(function ChatListComponent({
   handleTogglePin,
   hasChatsInGroup,
 }: ChatListProps) {
+  // Pre-compute chat lookup map for O(1) access instead of O(n) searches
+  const chatLookupMap = useMemo(() => {
+    const map = new Map<Id<'chats'>, string>();
+
+    // Add pinned chats to the map
+    for (const chat of pinnedChats) {
+      if (chat.title) {
+        map.set(chat._id, chat.title);
+      }
+    }
+
+    // Add grouped chats to the map
+    for (const chat of Object.values(groupedChats).flat()) {
+      if (chat.title) {
+        map.set(chat._id, chat.title);
+      }
+    }
+
+    return map;
+  }, [pinnedChats, groupedChats]);
+
+  // Helper function to get parent chat title for reuse across both sections
+  const getParentChatTitle = (
+    originalChatId: Id<'chats'> | undefined
+  ): string | undefined => {
+    return originalChatId ? chatLookupMap.get(originalChatId) : undefined;
+  };
+
   return (
     <div className="flex flex-col pt-2 pb-8">
       {pinnedChats.length === 0 && Object.keys(groupedChats).length === 0 && (
@@ -54,15 +82,7 @@ export const ChatList = memo(function ChatListComponent({
                 isPinned={true}
                 key={chat._id}
                 originalChatId={chat.originalChatId}
-                parentChatTitle={
-                  chat.originalChatId
-                    ? (pinnedChats.find((c) => c._id === chat.originalChatId)
-                        ?.title ??
-                      Object.values(groupedChats)
-                        .flat()
-                        .find((c) => c._id === chat.originalChatId)?.title)
-                    : undefined
-                }
+                parentChatTitle={getParentChatTitle(chat.originalChatId)}
                 title={chat.title}
               />
             ))}
@@ -89,16 +109,7 @@ export const ChatList = memo(function ChatListComponent({
                     isPinned={false}
                     key={chat._id}
                     originalChatId={chat.originalChatId}
-                    parentChatTitle={
-                      chat.originalChatId
-                        ? (pinnedChats.find(
-                            (c) => c._id === chat.originalChatId
-                          )?.title ??
-                          Object.values(groupedChats)
-                            .flat()
-                            .find((c) => c._id === chat.originalChatId)?.title)
-                        : undefined
-                    }
+                    parentChatTitle={getParentChatTitle(chat.originalChatId)}
                     title={chat.title}
                   />
                 ))}

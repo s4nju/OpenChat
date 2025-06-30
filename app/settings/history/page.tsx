@@ -233,7 +233,10 @@ export default function HistoryPage() {
         const messages = (item.messages ?? [])
           .filter(
             (msg) =>
-              msg && typeof msg.content === 'string' && msg.content.length > 0
+              msg &&
+              typeof msg.content === 'string' &&
+              msg.content.length > 0 &&
+              msg.content.length <= MESSAGE_MAX_LENGTH
           )
           .map((msg) => ({
             role: (msg.role || 'assistant') as 'user' | 'assistant' | 'system',

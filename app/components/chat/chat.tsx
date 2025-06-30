@@ -91,7 +91,7 @@ const processBranchError = (branchError: unknown): string => {
     return 'Message not found or chat unavailable';
   }
   if (errorMsg.includes('unauthorized')) {
-    return 'You don&apos;t have permission to branch this chat';
+    return "You don't have permission to branch this chat";
   }
   return 'Failed to branch chat';
 };
