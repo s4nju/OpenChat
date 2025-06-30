@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['www.google.com'],
+    domains: [],
     remotePatterns: [
       {
         protocol: 'https',
@@ -41,6 +41,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'www.google.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.microlink.io',
       },
       // Add Convex hostname dynamically
       ...(() => {
