@@ -54,11 +54,7 @@ const nim = createOpenAICompatible({
   },
 })
 
-export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
-export const AUTH_DAILY_MESSAGE_LIMIT = 50
-export const PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500
 export const PREMIUM_CREDITS = 100
-export const NON_PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 5
 

@@ -1,17 +1,15 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import {
+  calculateRateLimit,
+  type RateLimitConfig,
+} from '@convex-dev/rate-limiter';
 import { v } from 'convex/values';
-import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
+import { RATE_LIMITS } from './lib/rateLimitConstants';
+import { rateLimiter } from './rateLimiter';
 import { User } from './schema/user';
 
-// Usage Limits - ensure these are in sync with your application's limits
-const NON_AUTH_DAILY_MESSAGE_LIMIT = 5;
-const AUTH_DAILY_MESSAGE_LIMIT = 50;
-const PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500;
-const NON_PREMIUM_MONTHLY_MESSAGE_LIMIT = 1500; // This seems same as premium, adjust if needed
-const DAY = 24 * 60 * 60 * 1000;
-const MONTH = 30 * DAY;
 const MODEL_DEFAULT = 'gemini-2.0-flash';
 
 export const getCurrentUser = query({
@@ -34,37 +32,14 @@ export const getCurrentUser = query({
 });
 
 // Helper function to initialize user fields
-const initializeUserFields = (now: number) => ({
-  dailyMessageCount: 0,
-  monthlyMessageCount: 0,
-  totalMessageCount: 0,
-  dailyResetTimestamp: now + DAY,
-  monthlyResetTimestamp: now + MONTH,
+const initializeUserFields = () => ({
   preferredModel: MODEL_DEFAULT,
 });
 
 // Helper function to get updates for existing user
-const getExistingUserUpdates = (
-  existing: Record<string, unknown>,
-  now: number
-) => {
+const getExistingUserUpdates = (existing: Record<string, unknown>) => {
   const updates: Record<string, unknown> = {};
 
-  if (existing.dailyMessageCount === undefined) {
-    updates.dailyMessageCount = 0;
-  }
-  if (existing.monthlyMessageCount === undefined) {
-    updates.monthlyMessageCount = 0;
-  }
-  if (existing.totalMessageCount === undefined) {
-    updates.totalMessageCount = 0;
-  }
-  if (existing.dailyResetTimestamp === undefined) {
-    updates.dailyResetTimestamp = now + DAY;
-  }
-  if (existing.monthlyResetTimestamp === undefined) {
-    updates.monthlyResetTimestamp = now + MONTH;
-  }
   if (existing.preferredModel === undefined) {
     updates.preferredModel = MODEL_DEFAULT;
   }
@@ -84,8 +59,7 @@ export const storeCurrentUser = mutation({
     const existing = await ctx.db.get(userId);
     if (existing) {
       const wasInitialized = existing.isAnonymous !== undefined;
-      const now = Date.now();
-      const updates = getExistingUserUpdates(existing, now);
+      const updates = getExistingUserUpdates(existing);
 
       if (existing.isAnonymous !== isAnonymous) {
         updates.isAnonymous = isAnonymous;
@@ -94,14 +68,56 @@ export const storeCurrentUser = mutation({
       if (Object.keys(updates).length > 0) {
         await ctx.db.patch(userId, updates);
       }
+
+      // Initialize rate limits for existing users who weren't previously initialized
+      if (!wasInitialized) {
+        try {
+          const userIsPremium = existing.isPremium ?? false;
+          const userIsAnonymous = isAnonymous ?? existing.isAnonymous ?? false;
+
+          // Initialize daily limits for non-premium users
+          if (!userIsPremium) {
+            const dailyLimitName = userIsAnonymous
+              ? 'anonymousDaily'
+              : 'authenticatedDaily';
+            await rateLimiter.reset(ctx, dailyLimitName, { key: userId });
+          }
+
+          // Initialize monthly limits for all users
+          await rateLimiter.reset(ctx, 'standardMonthly', { key: userId });
+        } catch {
+          // Don't fail user updates if rate limit initialization fails
+        }
+      }
+
       return { isNew: !wasInitialized };
     }
 
-    const now = Date.now();
-    await ctx.db.insert('users', {
+    const newUserId = await ctx.db.insert('users', {
       isAnonymous,
-      ...initializeUserFields(now),
+      ...initializeUserFields(),
     });
+
+    // Initialize rate limits immediately when account is created
+    // This starts the rate limit windows at account creation time, not first usage
+    try {
+      const isPremium = false; // New users are not premium by default
+
+      // Initialize daily limits for non-premium users
+      if (!isPremium) {
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        await rateLimiter.reset(ctx, dailyLimitName, { key: newUserId });
+      }
+
+      // Initialize monthly limits for all users
+      await rateLimiter.reset(ctx, 'standardMonthly', { key: newUserId });
+    } catch {
+      // Don't fail user creation if rate limit initialization fails
+      // This is an optimization, not critical functionality
+    }
+
     return { isNew: true };
   },
 });
@@ -127,7 +143,28 @@ export const updateUserProfile = mutation({
     if (!user) {
       return null;
     }
+
+    // Check if premium status is changing
+    const wasPremium = user.isPremium ?? false;
+    const willBePremium = updates.isPremium ?? wasPremium;
+
+    // Apply the updates
     await ctx.db.patch(userId, { ...updates });
+
+    // Reset daily limits if premium status changed
+    if (wasPremium !== willBePremium && updates.isPremium !== undefined) {
+      try {
+        const isAnonymous = user.isAnonymous ?? false;
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        await rateLimiter.reset(ctx, dailyLimitName, { key: userId });
+      } catch {
+        // Don't fail the entire operation if rate limit reset fails
+        // This is an optimization, not critical functionality
+      }
+    }
+
     return null;
   },
 });
@@ -146,15 +183,24 @@ export const incrementMessageCount = mutation({
       throw new Error('User not found');
     }
 
-    // Increment counts
-    const dailyCount = (user.dailyMessageCount ?? 0) + 1;
-    const monthlyCount = (user.monthlyMessageCount ?? 0) + 1;
-    const totalCount = (user.totalMessageCount ?? 0) + 1;
+    const isPremium = user.isPremium ?? false;
+    const isAnonymous = user.isAnonymous ?? false;
 
-    await ctx.db.patch(userId, {
-      dailyMessageCount: dailyCount,
-      monthlyMessageCount: monthlyCount,
-      totalMessageCount: totalCount,
+    // CONSUME daily limits for non-premium users
+    if (!isPremium) {
+      const dailyLimitName = isAnonymous
+        ? 'anonymousDaily'
+        : 'authenticatedDaily';
+      await rateLimiter.limit(ctx, dailyLimitName, {
+        key: userId,
+        throws: true,
+      });
+    }
+
+    // CONSUME monthly limits for all users
+    await rateLimiter.limit(ctx, 'standardMonthly', {
+      key: userId,
+      throws: true,
     });
 
     return null;
@@ -169,27 +215,33 @@ export const assertNotOverLimit = mutation({
       throw new Error('Not authenticated');
     }
 
-    await ctx.runMutation(api.users.resetUsageCountersIfNeeded, {});
     const user = await ctx.db.get(userId);
     if (!user) {
       throw new Error('User not found');
     }
 
-    const monthlyLimit = user.isPremium
-      ? PREMIUM_MONTHLY_MESSAGE_LIMIT
-      : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT;
+    const isPremium = user.isPremium ?? false;
+    const isAnonymous = user.isAnonymous ?? false;
 
-    if ((user.monthlyMessageCount ?? 0) >= monthlyLimit) {
-      throw new Error('MONTHLY_LIMIT_REACHED');
-    }
-
-    if (!user.isPremium) {
-      const dailyLimit = user.isAnonymous
-        ? NON_AUTH_DAILY_MESSAGE_LIMIT
-        : AUTH_DAILY_MESSAGE_LIMIT;
-      if ((user.dailyMessageCount ?? 0) >= dailyLimit) {
+    // CHECK daily limits for non-premium users (don't consume yet)
+    if (!isPremium) {
+      const dailyLimitName = isAnonymous
+        ? 'anonymousDaily'
+        : 'authenticatedDaily';
+      const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
+        key: userId,
+      });
+      if (!dailyStatus.ok) {
         throw new Error('DAILY_LIMIT_REACHED');
       }
+    }
+
+    // CHECK monthly limits for all users (don't consume yet)
+    const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
+      key: userId,
+    });
+    if (!monthlyStatus.ok) {
+      throw new Error('MONTHLY_LIMIT_REACHED');
     }
   },
 });
@@ -221,23 +273,74 @@ export const getRateLimitStatus = query({
 
     const isPremium = user.isPremium ?? false;
     const isAnonymous = user.isAnonymous ?? false;
+    const now = Date.now();
 
-    // Get monthly limits
-    const monthlyLimit = isPremium
-      ? PREMIUM_MONTHLY_MESSAGE_LIMIT
-      : NON_PREMIUM_MONTHLY_MESSAGE_LIMIT;
-    const monthlyCount = user.monthlyMessageCount ?? 0;
-    const monthlyRemaining = monthlyLimit - monthlyCount;
+    // Get daily limits and current values
+    let dailyLimit = 0;
+    let dailyCount = 0;
+    let dailyRemaining = 0;
+    let dailyReset: number | undefined;
 
-    // Get daily limits
-    const dailyLimit = isAnonymous
-      ? NON_AUTH_DAILY_MESSAGE_LIMIT
-      : AUTH_DAILY_MESSAGE_LIMIT;
-    const dailyCount = user.dailyMessageCount ?? 0;
-    const dailyRemaining = dailyLimit - dailyCount;
+    if (!isPremium) {
+      const dailyLimitName = isAnonymous
+        ? 'anonymousDaily'
+        : 'authenticatedDaily';
+      const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
+        key: userId,
+      });
+      const dailyConfig = await rateLimiter.getValue(ctx, dailyLimitName, {
+        key: userId,
+      });
 
-    // For premium users, only the monthly limit matters
-    // For non-premium users, both daily and monthly limits apply
+      dailyLimit = isAnonymous
+        ? RATE_LIMITS.ANONYMOUS_DAILY
+        : RATE_LIMITS.AUTHENTICATED_DAILY;
+      dailyCount = dailyLimit - (dailyStatus.ok ? dailyConfig.value : 0);
+      dailyRemaining = dailyStatus.ok ? dailyConfig.value : 0;
+
+      // Use the rate limiter component's own logic for accurate reset time
+      const dailyRateLimit = calculateRateLimit(
+        { value: dailyConfig.value, ts: dailyConfig.ts },
+        dailyConfig.config,
+        now,
+        0 // Don't consume tokens, just calculate
+      );
+
+      // For fixed windows, the next reset is the end of the current window
+      if (dailyRateLimit.windowStart !== undefined) {
+        const config = dailyConfig.config as RateLimitConfig;
+        dailyReset = dailyRateLimit.windowStart + config.period;
+      }
+    }
+
+    // Get monthly limits (standard for all users)
+    const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
+      key: userId,
+    });
+    const monthlyConfig = await rateLimiter.getValue(ctx, 'standardMonthly', {
+      key: userId,
+    });
+
+    const monthlyLimit = RATE_LIMITS.STANDARD_MONTHLY;
+    const monthlyCount =
+      monthlyLimit - (monthlyStatus.ok ? monthlyConfig.value : 0);
+    const monthlyRemaining = monthlyStatus.ok ? monthlyConfig.value : 0;
+
+    // Use the rate limiter component's own logic for accurate reset time
+    const monthlyRateLimit = calculateRateLimit(
+      { value: monthlyConfig.value, ts: monthlyConfig.ts },
+      monthlyConfig.config,
+      now,
+      0 // Don't consume tokens, just calculate
+    );
+
+    // For fixed windows, the next reset is the end of the current window
+    let monthlyReset: number | undefined;
+    if (monthlyRateLimit.windowStart !== undefined) {
+      const config = monthlyConfig.config as RateLimitConfig;
+      monthlyReset = monthlyRateLimit.windowStart + config.period;
+    }
+
     const effectiveRemaining = isPremium
       ? monthlyRemaining
       : Math.min(dailyRemaining, monthlyRemaining);
@@ -251,8 +354,8 @@ export const getRateLimitStatus = query({
       monthlyLimit,
       monthlyRemaining,
       effectiveRemaining,
-      dailyReset: user.dailyResetTimestamp,
-      monthlyReset: user.monthlyResetTimestamp,
+      dailyReset,
+      monthlyReset,
     };
   },
 });
@@ -305,15 +408,9 @@ export const mergeAnonymousToGoogleAccount = mutation({
       )
     );
 
-    // --- Step 4: Merge usage counters & mark as non-anonymous ---
+    // --- Step 4: Mark as non-anonymous (rate limits are managed automatically) ---
     await ctx.db.patch(currentId, {
       isAnonymous: false,
-      dailyMessageCount:
-        (user.dailyMessageCount ?? 0) + (anon.dailyMessageCount ?? 0),
-      monthlyMessageCount:
-        (user.monthlyMessageCount ?? 0) + (anon.monthlyMessageCount ?? 0),
-      totalMessageCount:
-        (user.totalMessageCount ?? 0) + (anon.totalMessageCount ?? 0),
     });
 
     // --- Step 5: Delete anonymous user record ---
@@ -421,31 +518,14 @@ export const deleteAccount = mutation({
   },
 });
 
-export const resetUsageCountersIfNeeded = mutation({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null;
+// React hook API functions for rate limiting
+export const { getRateLimit: getRateLimitHook, getServerTime } =
+  rateLimiter.hookAPI(
+    'authenticatedDaily', // Default rate limit
+    {
+      key: async (ctx) => {
+        const userId = await getAuthUserId(ctx);
+        return userId || 'anonymous';
+      },
     }
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      return null;
-    }
-    const updates: Record<string, number> = {};
-    const now = Date.now();
-    if (!user.dailyResetTimestamp || now > user.dailyResetTimestamp) {
-      updates.dailyMessageCount = 0;
-      updates.dailyResetTimestamp = now + DAY;
-    }
-    if (!user.monthlyResetTimestamp || now > user.monthlyResetTimestamp) {
-      updates.monthlyMessageCount = 0;
-      updates.monthlyResetTimestamp = now + MONTH;
-    }
-    if (Object.keys(updates).length > 0) {
-      await ctx.db.patch(userId, updates);
-    }
-    return null;
-  },
-});
+  );

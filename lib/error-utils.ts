@@ -81,6 +81,23 @@ function getResponseTypeForErrorCode(code: string): string {
  * Classify an error and determine how it should be displayed
  */
 export function classifyError(error: unknown): ClassifiedError {
+  // Handle Convex rate limiter errors
+  if (error && typeof error === 'object' && 'data' in error && 
+      error.data && typeof error.data === 'object' && 'kind' in error.data && 
+      error.data.kind === 'RateLimitError') {
+    const errorData = error.data as { kind: 'RateLimitError'; name?: string };
+    const code = "RATE_LIMIT";
+    return {
+      displayType: "conversation",
+      code,
+      message: `Rate limit exceeded. ${errorData.name || 'Unknown limit'}`,
+      userFriendlyMessage: `You've reached your usage limit. Please try again in a moment.`,
+      httpStatus: getHttpStatusForErrorCode(code),
+      responseType: getResponseTypeForErrorCode(code),
+      originalError: error
+    };
+  }
+
   // Handle nested error structures like { error: Error, cause: ... }
   let errorMsg: string
   if (error && typeof error === 'object' && 'error' in error && error.error instanceof Error) {

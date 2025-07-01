@@ -8,11 +8,6 @@
  * @module
  */
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
 import type * as api_keys from "../api_keys.js";
 import type * as auth from "../auth.js";
 import type * as chats from "../chats.js";
@@ -22,7 +17,9 @@ import type * as http from "../http.js";
 import type * as import_export from "../import_export.js";
 import type * as lib_auth_helper from "../lib/auth_helper.js";
 import type * as lib_cleanup_helper from "../lib/cleanup_helper.js";
+import type * as lib_rateLimitConstants from "../lib/rateLimitConstants.js";
 import type * as messages from "../messages.js";
+import type * as rateLimiter from "../rateLimiter.js";
 import type * as schema_chat from "../schema/chat.js";
 import type * as schema_chat_attachment from "../schema/chat_attachment.js";
 import type * as schema_feedback from "../schema/feedback.js";
@@ -36,6 +33,12 @@ import type * as schema_usage_history from "../schema/usage_history.js";
 import type * as schema_user from "../schema/user.js";
 import type * as schema_user_api_key from "../schema/user_api_key.js";
 import type * as users from "../users.js";
+
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -55,7 +58,9 @@ declare const fullApi: ApiFromModules<{
   import_export: typeof import_export;
   "lib/auth_helper": typeof lib_auth_helper;
   "lib/cleanup_helper": typeof lib_cleanup_helper;
+  "lib/rateLimitConstants": typeof lib_rateLimitConstants;
   messages: typeof messages;
+  rateLimiter: typeof rateLimiter;
   "schema/chat": typeof schema_chat;
   "schema/chat_attachment": typeof schema_chat_attachment;
   "schema/feedback": typeof schema_feedback;
@@ -70,11 +75,150 @@ declare const fullApi: ApiFromModules<{
   "schema/user_api_key": typeof schema_user_api_key;
   users: typeof users;
 }>;
+declare const fullApiWithMounts: typeof fullApi;
+
 export declare const api: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {
+  rateLimiter: {
+    lib: {
+      checkRateLimit: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      clearAll: FunctionReference<
+        "mutation",
+        "internal",
+        { before?: number },
+        null
+      >;
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+      getValue: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          key?: string;
+          name: string;
+          sampleShards?: number;
+        },
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          shard: number;
+          ts: number;
+          value: number;
+        }
+      >;
+      rateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      resetRateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        { key?: string; name: string },
+        null
+      >;
+    };
+    time: {
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+    };
+  };
+};

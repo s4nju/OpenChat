@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   // Disable React Strict Mode to prevent double-invoking effects
   reactStrictMode: false,
   experimental: {
+    useCache: true,
     optimizePackageImports: ['@phosphor-icons/react', '@lobehub/icons'],
     reactCompiler: true,
     // nodeMiddleware: true,

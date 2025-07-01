@@ -1,6 +1,7 @@
 'use client';
 
 import { Info } from '@phosphor-icons/react';
+import { useQuery } from 'convex/react';
 import { useUser } from '@/app/providers/user-provider';
 import {
   Tooltip,
@@ -8,21 +9,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  AUTH_DAILY_MESSAGE_LIMIT,
-  NON_AUTH_DAILY_MESSAGE_LIMIT,
-  PREMIUM_CREDITS,
-  PREMIUM_MONTHLY_MESSAGE_LIMIT,
-} from '@/lib/config';
+import { api } from '@/convex/_generated/api';
+import { PREMIUM_CREDITS } from '@/lib/config';
 
 export function MessageUsageCard() {
   const { user } = useUser();
+  const rateLimitStatus = useQuery(
+    api.users.getRateLimitStatus,
+    user ? {} : 'skip'
+  );
 
-  if (!user) {
+  if (!(user && rateLimitStatus)) {
     return null;
   }
 
-  const formatResetDate = (timestamp: number | null) => {
+  const formatResetDate = (timestamp: number | null | undefined) => {
     if (!timestamp) {
       return 'Not available';
     }
@@ -38,22 +39,22 @@ export function MessageUsageCard() {
     }
   };
 
-  const nextMonthlyResetDateStr = formatResetDate(
-    user?.monthlyResetTimestamp ?? null
-  );
+  // Use the appropriate reset timestamp based on premium status
+  const resetTimestamp = rateLimitStatus.isPremium
+    ? rateLimitStatus.monthlyReset
+    : rateLimitStatus.dailyReset;
+  const nextResetDateStr = formatResetDate(resetTimestamp);
 
-  let standardLimit: number;
-  if (user.isPremium) {
-    standardLimit = PREMIUM_MONTHLY_MESSAGE_LIMIT;
-  } else if (user.isAnonymous) {
-    standardLimit = NON_AUTH_DAILY_MESSAGE_LIMIT;
-  } else {
-    standardLimit = AUTH_DAILY_MESSAGE_LIMIT;
-  }
-  const standardCount = user.isPremium
-    ? user.monthlyMessageCount || 0
-    : user.dailyMessageCount || 0;
-  const standardRemaining = standardLimit - standardCount;
+  // Use rate limit status data
+  const standardLimit = rateLimitStatus.isPremium
+    ? rateLimitStatus.monthlyLimit
+    : rateLimitStatus.dailyLimit;
+  const standardCount = rateLimitStatus.isPremium
+    ? rateLimitStatus.monthlyCount
+    : rateLimitStatus.dailyCount;
+  const standardRemaining = rateLimitStatus.isPremium
+    ? rateLimitStatus.monthlyRemaining
+    : rateLimitStatus.dailyRemaining;
 
   const premiumLimit = PREMIUM_CREDITS;
   const premiumCount = user.premiumCredits || 0;
@@ -64,7 +65,7 @@ export function MessageUsageCard() {
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-semibold">Message Usage</h3>
         <p className="text-muted-foreground text-sm">
-          Resets {nextMonthlyResetDateStr}
+          Resets {nextResetDateStr}
         </p>
       </div>
       <div className="space-y-4">

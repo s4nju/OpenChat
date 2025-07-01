@@ -321,8 +321,79 @@ export async function POST(req: Request) {
     }
 
     // --- Rate Limiting (only if not using user key) ---
+    let rateLimitError: Error | null = null;
+
     if (!useUserKey) {
-      await fetchMutation(api.users.assertNotOverLimit, {}, { token });
+      try {
+        await fetchMutation(api.users.assertNotOverLimit, {}, { token });
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('DAILY_LIMIT_REACHED') ||
+            error.message.includes('MONTHLY_LIMIT_REACHED'))
+        ) {
+          rateLimitError = error;
+          // Don't throw yet - let user message save first
+        } else {
+          throw error; // Re-throw non-rate-limit errors
+        }
+      }
+    }
+
+    // --- Handle Rate Limit Error Early (but save messages first) ---
+    if (rateLimitError) {
+      let userMsgId: Id<'messages'> | null = null;
+
+      // Save user message first (even though rate limited)
+      if (!reloadAssistantMessageId) {
+        const userMessage = messages.at(-1);
+        if (userMessage && userMessage.role === 'user') {
+          // Convert experimental_attachments to FileParts before saving
+          const fileParts = userMessage.experimental_attachments
+            ? convertAttachmentsToFileParts(
+                userMessage.experimental_attachments
+              )
+            : [];
+
+          const userParts = [
+            {
+              type: 'text' as const,
+              text: sanitizeUserInput(userMessage.content as string),
+            },
+            ...fileParts,
+          ];
+
+          const { messageId } = await fetchMutation(
+            api.messages.sendUserMessageToChat,
+            {
+              chatId,
+              role: 'user',
+              content: sanitizeUserInput(userMessage.content as string),
+              parts: userParts,
+              metadata: {}, // Empty metadata for user messages
+            },
+            { token }
+          );
+          userMsgId = messageId;
+        }
+      }
+
+      // Save error message to conversation
+      if (token) {
+        await saveErrorMessage(
+          chatId,
+          userMsgId,
+          rateLimitError,
+          token,
+          selectedModel.id,
+          selectedModel.name,
+          enableSearch,
+          reasoningEffort
+        );
+      }
+
+      // Return proper HTTP error response (not 200)
+      return createErrorResponse(rateLimitError);
     }
 
     return createDataStreamResponse({

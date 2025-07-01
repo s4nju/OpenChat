@@ -16,6 +16,9 @@
     "rules": {
       "style": {
         "useFilenamingConvention": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off"
       }
     },
     "domains": {
