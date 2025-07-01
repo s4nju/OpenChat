@@ -47,78 +47,100 @@ const getExistingUserUpdates = (existing: Record<string, unknown>) => {
   return updates;
 };
 
+/**
+ * Ensure the authenticated user has a fully-initialised `users` document.
+ *
+ * Behaviour overview:
+ * 1. If the user is returning (including converting an anonymous session into
+ *    an authenticated one) we *patch* the existing document with any new
+ *    default fields and update the `isAnonymous` flag when provided.
+ * 2. If this is the first time we have seen this `userId`, insert a fresh
+ *    record with sensible defaults.
+ * 3. In both cases we *pre-seed* the relevant rate-limit windows (daily &
+ *    monthly) so that the first real user action can be counted immediately
+ *    without the overhead of on-the-fly initialisation.
+ *
+ * The function returns `{ isNew }` where `isNew === true` indicates that a
+ * brand-new document was created (i.e. the user never existed before).
+ */
 export const storeCurrentUser = mutation({
   args: { isAnonymous: v.optional(v.boolean()) },
   returns: v.object({ isNew: v.boolean() }),
   handler: async (ctx, { isAnonymous }) => {
+    // ---------------------------------------------------------------------
+    // Step 1: Retrieve the authenticated Convex user ID.
+    // If we cannot resolve an ID, exit early (nothing to store).
+    // ---------------------------------------------------------------------
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       return { isNew: false };
     }
 
+    // ---------------------------------------------------------------------
+    // Step 2: Upsert the user document.
+    // We keep track of whether this results in a *new* document so we can
+    // report it back to the caller.
+    // ---------------------------------------------------------------------
+    let targetUserId: Id<'users'> | null = null;
+    let isNew = false;
+
     const existing = await ctx.db.get(userId);
     if (existing) {
-      const wasInitialized = existing.isAnonymous !== undefined;
-      const updates = getExistingUserUpdates(existing);
+      // ---- Existing user: build and apply a minimal patch when needed ----
+      const patch = {
+        ...getExistingUserUpdates(existing),
+        // Only add `isAnonymous` when the caller explicitly provided it and
+        // it differs from the stored value.
+        ...(isAnonymous !== undefined && isAnonymous !== existing.isAnonymous
+          ? { isAnonymous }
+          : {}),
+      } as Record<string, unknown>;
 
-      if (existing.isAnonymous !== isAnonymous) {
-        updates.isAnonymous = isAnonymous;
+      if (Object.keys(patch).length) {
+        await ctx.db.patch(userId, patch);
       }
 
-      if (Object.keys(updates).length > 0) {
-        await ctx.db.patch(userId, updates);
-      }
-
-      // Initialize rate limits for existing users who weren't previously initialized
-      if (!wasInitialized) {
-        try {
-          const userIsPremium = existing.isPremium ?? false;
-          const userIsAnonymous = isAnonymous ?? existing.isAnonymous ?? false;
-
-          // Initialize daily limits for non-premium users
-          if (!userIsPremium) {
-            const dailyLimitName = userIsAnonymous
-              ? 'anonymousDaily'
-              : 'authenticatedDaily';
-            await rateLimiter.reset(ctx, dailyLimitName, { key: userId });
-          }
-
-          // Initialize monthly limits for all users
-          await rateLimiter.reset(ctx, 'standardMonthly', { key: userId });
-        } catch {
-          // Don't fail user updates if rate limit initialization fails
-        }
-      }
-
-      return { isNew: !wasInitialized };
+      targetUserId = userId as Id<'users'>;
+      // If the record did *not* previously have `isAnonymous` set at all we
+      // treat this as a first-time initialisation from the application's
+      // perspective (e.g. an auto-created anonymous account).
+      isNew = existing.isAnonymous === undefined;
+    } else {
+      // ---- New user: insert with defaults ----
+      targetUserId = await ctx.db.insert('users', {
+        isAnonymous,
+        ...initializeUserFields(),
+      });
+      isNew = true;
     }
 
-    const newUserId = await ctx.db.insert('users', {
-      isAnonymous,
-      ...initializeUserFields(),
-    });
-
-    // Initialize rate limits immediately when account is created
-    // This starts the rate limit windows at account creation time, not first usage
+    // ---------------------------------------------------------------------
+    // Step 3: Pro-actively seed rate-limit counters so that subsequent calls
+    // to the rate-limiter do not incur the initialisation overhead.
+    // ---------------------------------------------------------------------
     try {
-      const isPremium = false; // New users are not premium by default
+      const isPremium = false; // Newly-created users are non-premium by default
 
-      // Initialize daily limits for non-premium users
       if (!isPremium) {
         const dailyLimitName = isAnonymous
           ? 'anonymousDaily'
           : 'authenticatedDaily';
-        await rateLimiter.reset(ctx, dailyLimitName, { key: newUserId });
+        await rateLimiter.limit(ctx, dailyLimitName, {
+          key: targetUserId,
+          count: 0,
+        });
       }
 
-      // Initialize monthly limits for all users
-      await rateLimiter.reset(ctx, 'standardMonthly', { key: newUserId });
+      await rateLimiter.limit(ctx, 'standardMonthly', {
+        key: targetUserId,
+        count: 0,
+      });
     } catch {
-      // Don't fail user creation if rate limit initialization fails
-      // This is an optimization, not critical functionality
+      // Non-fatal: rate-limit initialisation failure should never block the
+      // user flow. The rate-limiter will lazily create windows on first use.
     }
 
-    return { isNew: true };
+    return { isNew };
   },
 });
 
