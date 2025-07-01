@@ -132,6 +132,48 @@ type SupportedProvider =
   | 'Qwen';
 
 /**
+ * Helper function to save user message to chat if not in reload mode
+ */
+async function saveUserMessage(
+  messages: MessageAISDK[],
+  chatId: Id<'chats'>,
+  token: string | undefined,
+  reloadAssistantMessageId?: Id<'messages'>
+): Promise<Id<'messages'> | null> {
+  if (!reloadAssistantMessageId && token) {
+    const userMessage = messages.at(-1);
+    if (userMessage && userMessage.role === 'user') {
+      // Convert experimental_attachments to FileParts before saving
+      const fileParts = userMessage.experimental_attachments
+        ? convertAttachmentsToFileParts(userMessage.experimental_attachments)
+        : [];
+
+      const userParts = [
+        {
+          type: 'text' as const,
+          text: sanitizeUserInput(userMessage.content as string),
+        },
+        ...fileParts,
+      ];
+
+      const { messageId } = await fetchMutation(
+        api.messages.sendUserMessageToChat,
+        {
+          chatId,
+          role: 'user',
+          content: sanitizeUserInput(userMessage.content as string),
+          parts: userParts,
+          metadata: {}, // Empty metadata for user messages
+        },
+        { token }
+      );
+      return messageId;
+    }
+  }
+  return null;
+}
+
+/**
  * Token budget configuration for reasoning models
  * - low: For quick responses with minimal reasoning depth
  * - medium: Balanced reasoning depth for most use cases
@@ -342,41 +384,13 @@ export async function POST(req: Request) {
 
     // --- Handle Rate Limit Error Early (but save messages first) ---
     if (rateLimitError) {
-      let userMsgId: Id<'messages'> | null = null;
-
       // Save user message first (even though rate limited)
-      if (!reloadAssistantMessageId) {
-        const userMessage = messages.at(-1);
-        if (userMessage && userMessage.role === 'user') {
-          // Convert experimental_attachments to FileParts before saving
-          const fileParts = userMessage.experimental_attachments
-            ? convertAttachmentsToFileParts(
-                userMessage.experimental_attachments
-              )
-            : [];
-
-          const userParts = [
-            {
-              type: 'text' as const,
-              text: sanitizeUserInput(userMessage.content as string),
-            },
-            ...fileParts,
-          ];
-
-          const { messageId } = await fetchMutation(
-            api.messages.sendUserMessageToChat,
-            {
-              chatId,
-              role: 'user',
-              content: sanitizeUserInput(userMessage.content as string),
-              parts: userParts,
-              metadata: {}, // Empty metadata for user messages
-            },
-            { token }
-          );
-          userMsgId = messageId;
-        }
-      }
+      const userMsgId = await saveUserMessage(
+        messages,
+        chatId,
+        token,
+        reloadAssistantMessageId
+      );
 
       // Save error message to conversation
       if (token) {
@@ -416,38 +430,12 @@ export async function POST(req: Request) {
         }
 
         // --- Insert User Message (if not a reload) ---
-        if (!reloadAssistantMessageId) {
-          const userMessage = messages.at(-1);
-          if (userMessage && userMessage.role === 'user') {
-            // Convert experimental_attachments to FileParts before saving
-            const fileParts = userMessage.experimental_attachments
-              ? convertAttachmentsToFileParts(
-                  userMessage.experimental_attachments
-                )
-              : [];
-
-            const userParts = [
-              {
-                type: 'text' as const,
-                text: sanitizeUserInput(userMessage.content as string),
-              },
-              ...fileParts,
-            ];
-
-            const { messageId } = await fetchMutation(
-              api.messages.sendUserMessageToChat,
-              {
-                chatId,
-                role: 'user',
-                content: sanitizeUserInput(userMessage.content as string),
-                parts: userParts,
-                metadata: {}, // Empty metadata for user messages
-              },
-              { token }
-            );
-            userMsgId = messageId;
-          }
-        }
+        userMsgId = await saveUserMessage(
+          messages,
+          chatId,
+          token,
+          reloadAssistantMessageId
+        );
 
         // Helper to convert storage IDs to fresh URLs for AI models
         const resolveAttachmentUrls = async (

@@ -2,7 +2,28 @@
  * Error classification and handling utilities
  */
 
+import { z } from 'zod'
+
 export type ErrorDisplayType = "conversation" | "toast" | "both"
+
+/**
+ * Zod schema for Convex rate limit errors
+ */
+const ConvexRateLimitErrorSchema = z.object({
+  data: z.object({
+    kind: z.literal('RateLimitError'),
+    name: z.string().optional()
+  })
+})
+
+type ConvexRateLimitError = z.infer<typeof ConvexRateLimitErrorSchema>
+
+/**
+ * Type guard to check if an error is a Convex RateLimitError using Zod
+ */
+function isConvexRateLimitError(error: unknown): error is ConvexRateLimitError {
+  return ConvexRateLimitErrorSchema.safeParse(error).success
+}
 
 export interface ClassifiedError {
   displayType: ErrorDisplayType
@@ -82,15 +103,14 @@ function getResponseTypeForErrorCode(code: string): string {
  */
 export function classifyError(error: unknown): ClassifiedError {
   // Handle Convex rate limiter errors
-  if (error && typeof error === 'object' && 'data' in error && 
-      error.data && typeof error.data === 'object' && 'kind' in error.data && 
-      error.data.kind === 'RateLimitError') {
-    const errorData = error.data as { kind: 'RateLimitError'; name?: string };
+  const rateLimitParseResult = ConvexRateLimitErrorSchema.safeParse(error);
+  if (rateLimitParseResult.success) {
+    const { data: { name } } = rateLimitParseResult.data;
     const code = "RATE_LIMIT";
     return {
       displayType: "conversation",
       code,
-      message: `Rate limit exceeded. ${errorData.name || 'Unknown limit'}`,
+      message: `Rate limit exceeded. ${name || 'Unknown limit'}`,
       userFriendlyMessage: `You've reached your usage limit. Please try again in a moment.`,
       httpStatus: getHttpStatusForErrorCode(code),
       responseType: getResponseTypeForErrorCode(code),
