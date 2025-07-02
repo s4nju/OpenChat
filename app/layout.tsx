@@ -26,6 +26,28 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: APP_DESCRIPTION,
   metadataBase: new URL(APP_BASE_URL),
+  openGraph: {
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    url: APP_BASE_URL,
+    siteName: APP_NAME,
+    images: [
+      {
+        url: '/opengraph-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: APP_DESCRIPTION,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    images: ['/opengraph-image.jpg'],
+  },
 };
 
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
