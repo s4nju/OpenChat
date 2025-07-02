@@ -7,8 +7,6 @@ export const User = v.object({
   emailVerificationTime: v.optional(v.number()),
   isAnonymous: v.optional(v.boolean()),
   preferredModel: v.optional(v.string()),
-  isPremium: v.optional(v.boolean()),
-  premiumCredits: v.optional(v.number()),
   preferredName: v.optional(v.string()),
   occupation: v.optional(v.string()),
   traits: v.optional(v.string()),

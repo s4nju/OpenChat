@@ -1,11 +1,13 @@
 'use client';
 
 import { Eye, EyeSlash, User } from '@phosphor-icons/react';
+import { useQuery } from 'convex/react';
 import Image from 'next/image';
 import React from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
 import { useUser } from '@/app/providers/user-provider';
 import { Kbd } from '@/components/ui/kbd';
+import { api } from '@/convex/_generated/api';
 import type { Doc } from '@/convex/_generated/dataModel';
 
 // Get the display name - prefer preferredName over full name
@@ -23,6 +25,7 @@ const getDisplayName = (user: Doc<'users'> | null): string => {
 
 export function SettingsSidebar() {
   const { user } = useUser();
+  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : 'skip');
 
   const [showEmail, setShowEmail] = React.useState<boolean>(() => {
     if (typeof window === 'undefined') {
@@ -78,7 +81,7 @@ export function SettingsSidebar() {
           <span>{showEmail ? user.email : maskEmail(user.email)}</span>
           {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
         </button>
-        {user?.isPremium && (
+        {hasPremium && (
           <div className="mt-2">
             <span className="rounded-full bg-primary/10 px-3 py-1 font-bold text-primary text-xs">
               Pro Plan

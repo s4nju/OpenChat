@@ -7,6 +7,7 @@ import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { RATE_LIMITS } from './lib/rateLimitConstants';
+import { polar } from './polar';
 import { rateLimiter } from './rateLimiter';
 import { User } from './schema/user';
 
@@ -28,6 +29,24 @@ export const getCurrentUser = query({
       return null;
     }
     return await ctx.db.get(userId);
+  },
+});
+
+export const userHasPremium = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return false;
+    }
+
+    try {
+      const subscription = await polar.getCurrentSubscription(ctx, { userId });
+      return subscription?.status === 'active';
+    } catch {
+      return false;
+    }
   },
 });
 
@@ -148,7 +167,6 @@ export const updateUserProfile = mutation({
   args: {
     updates: v.object({
       preferredModel: v.optional(v.string()),
-      isPremium: v.optional(v.boolean()),
       preferredName: v.optional(v.string()),
       occupation: v.optional(v.string()),
       traits: v.optional(v.string()),
@@ -166,26 +184,8 @@ export const updateUserProfile = mutation({
       return null;
     }
 
-    // Check if premium status is changing
-    const wasPremium = user.isPremium ?? false;
-    const willBePremium = updates.isPremium ?? wasPremium;
-
     // Apply the updates
     await ctx.db.patch(userId, { ...updates });
-
-    // Reset daily limits if premium status changed
-    if (wasPremium !== willBePremium && updates.isPremium !== undefined) {
-      try {
-        const isAnonymous = user.isAnonymous ?? false;
-        const dailyLimitName = isAnonymous
-          ? 'anonymousDaily'
-          : 'authenticatedDaily';
-        await rateLimiter.reset(ctx, dailyLimitName, { key: userId });
-      } catch {
-        // Don't fail the entire operation if rate limit reset fails
-        // This is an optimization, not critical functionality
-      }
-    }
 
     return null;
   },
@@ -205,7 +205,10 @@ export const incrementMessageCount = mutation({
       throw new Error('User not found');
     }
 
-    const isPremium = user.isPremium ?? false;
+    const subscription = await polar.getCurrentSubscription(ctx, {
+      userId: user._id,
+    });
+    const isPremium = subscription?.status === 'active';
     const isAnonymous = user.isAnonymous ?? false;
 
     // CONSUME daily limits for non-premium users
@@ -242,7 +245,10 @@ export const assertNotOverLimit = mutation({
       throw new Error('User not found');
     }
 
-    const isPremium = user.isPremium ?? false;
+    const subscription = await polar.getCurrentSubscription(ctx, {
+      userId: user._id,
+    });
+    const isPremium = subscription?.status === 'active';
     const isAnonymous = user.isAnonymous ?? false;
 
     // CHECK daily limits for non-premium users (don't consume yet)
@@ -293,7 +299,10 @@ export const getRateLimitStatus = query({
       throw new Error('User not found');
     }
 
-    const isPremium = user.isPremium ?? false;
+    const subscription = await polar.getCurrentSubscription(ctx, {
+      userId: user._id,
+    });
+    const isPremium = subscription?.status === 'active';
     const isAnonymous = user.isAnonymous ?? false;
     const now = Date.now();
 
@@ -491,13 +500,6 @@ export const deleteAccount = mutation({
       .withIndex('by_user', (q) => q.eq('userId', userId))
       .collect();
     await Promise.all(feedback.map((f) => ctx.db.delete(f._id)));
-
-    // Delete purchases
-    const purchases = await ctx.db
-      .query('purchases')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(purchases.map((p) => ctx.db.delete(p._id)));
 
     // Delete usage history
     const usage = await ctx.db

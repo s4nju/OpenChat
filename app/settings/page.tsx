@@ -1,7 +1,8 @@
 'use client';
 
+import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { CircleNotch, Headset, Rocket, Sparkle } from '@phosphor-icons/react';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
@@ -15,6 +16,43 @@ export default function AccountSettingsPage() {
   const deleteAccount = useMutation(api.users.deleteAccount);
   const { signOut } = useUser();
   const router = useRouter();
+  const hasPremium = useQuery(api.users.userHasPremium, {});
+  const products = useQuery(api.polar.getConfiguredProducts, {});
+
+  // Get product IDs with fallback
+  const productIds = products?.premium?.id ? [products.premium.id] : [];
+
+  // Render the subscription button
+  const renderSubscriptionButton = () => {
+    if (hasPremium) {
+      return (
+        <CustomerPortalLink polarApi={api.polar}>
+          <Button className="w-full md:w-64">Manage Subscription</Button>
+        </CustomerPortalLink>
+      );
+    }
+
+    if (productIds.length > 0) {
+      return (
+        <CheckoutLink
+          embed={false}
+          polarApi={api.polar}
+          productIds={productIds}
+        >
+          <Button className="w-full md:w-64">
+            Upgrade to Premium - $15/month
+          </Button>
+        </CheckoutLink>
+      );
+    }
+
+    return (
+      <Button className="w-full md:w-64" disabled variant="secondary">
+        Loading products...
+      </Button>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-12">
@@ -33,7 +71,7 @@ export default function AccountSettingsPage() {
               </div>
               <p className="text-muted-foreground/80 text-sm">
                 Get access to our full suite of models including Claude,
-                o3-mini-high, and more!
+                o4-mini-high, and more!
               </p>
             </div>
             <div className="flex flex-col items-start rounded-lg border border-secondary/40 bg-card/30 px-6 py-4">
@@ -67,7 +105,7 @@ export default function AccountSettingsPage() {
             </div>
           </div>
           <div className="flex flex-col gap-4 pt-4 pb-4 md:flex-row">
-            <Button className="w-full md:w-64">Manage Subscription</Button>
+            {renderSubscriptionButton()}
           </div>
           <p className="text-muted-foreground/60 text-sm">
             <span className="mx-0.5 font-medium text-base">*</span>Premium

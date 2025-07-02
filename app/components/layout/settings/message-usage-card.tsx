@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { Info } from '@phosphor-icons/react';
 import { useQuery } from 'convex/react';
 import { useUser } from '@/app/providers/user-provider';
@@ -16,6 +17,11 @@ export function MessageUsageCard() {
   const { user } = useUser();
   const rateLimitStatus = useQuery(
     api.users.getRateLimitStatus,
+    user ? {} : 'skip'
+  );
+  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : 'skip');
+  const products = useQuery(
+    api.polar.getConfiguredProducts,
     user ? {} : 'skip'
   );
 
@@ -40,25 +46,72 @@ export function MessageUsageCard() {
   };
 
   // Use the appropriate reset timestamp based on premium status
-  const resetTimestamp = rateLimitStatus.isPremium
+  const resetTimestamp = hasPremium
     ? rateLimitStatus.monthlyReset
     : rateLimitStatus.dailyReset;
   const nextResetDateStr = formatResetDate(resetTimestamp);
 
   // Use rate limit status data
-  const standardLimit = rateLimitStatus.isPremium
+  const standardLimit = hasPremium
     ? rateLimitStatus.monthlyLimit
     : rateLimitStatus.dailyLimit;
-  const standardCount = rateLimitStatus.isPremium
+  const standardCount = hasPremium
     ? rateLimitStatus.monthlyCount
     : rateLimitStatus.dailyCount;
-  const standardRemaining = rateLimitStatus.isPremium
+  const standardRemaining = hasPremium
     ? rateLimitStatus.monthlyRemaining
     : rateLimitStatus.dailyRemaining;
 
   const premiumLimit = PREMIUM_CREDITS;
-  const premiumCount = user.premiumCredits || 0;
+  // TODO: Implement proper premium credits tracking with Polar
+  const premiumCount = 0;
   const premiumRemaining = premiumLimit - premiumCount;
+
+  // Get product IDs with fallback
+  const productIds = products?.premium?.id ? [products.premium.id] : [];
+
+  // Render the subscription button
+  const renderSubscriptionButton = () => {
+    if (hasPremium) {
+      return (
+        <CustomerPortalLink polarApi={api.polar}>
+          <button
+            className="mt-4 w-full rounded-md bg-primary py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
+            type="button"
+          >
+            Manage Subscription →
+          </button>
+        </CustomerPortalLink>
+      );
+    }
+
+    if (productIds.length > 0) {
+      return (
+        <CheckoutLink
+          embed={false}
+          polarApi={api.polar}
+          productIds={productIds}
+        >
+          <button
+            className="mt-4 w-full rounded-md bg-primary py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
+            type="button"
+          >
+            Subscribe to Premium →
+          </button>
+        </CheckoutLink>
+      );
+    }
+
+    return (
+      <button
+        className="mt-4 w-full cursor-not-allowed rounded-md bg-muted py-2 font-medium text-muted-foreground text-sm"
+        disabled
+        type="button"
+      >
+        Loading products...
+      </button>
+    );
+  };
 
   return (
     <div className="rounded-lg border bg-card p-4">
@@ -88,7 +141,7 @@ export function MessageUsageCard() {
             {standardRemaining} messages remaining
           </p>
         </div>
-        {user?.isPremium && (
+        {hasPremium && (
           <div>
             <div className="mb-1 flex justify-between text-sm">
               <span className="flex items-center gap-1">
@@ -120,19 +173,13 @@ export function MessageUsageCard() {
               />
             </div>
             <p className="mt-1 text-muted-foreground text-xs">
-              {premiumRemaining} messages remaining
+              {premiumRemaining} messages remaining{' '}
+              {/* TODO: Update with actual remaining count */}
             </p>
           </div>
         )}
       </div>
-      <button
-        className="mt-4 w-full rounded-md bg-primary py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
-        type="button"
-      >
-        {user.isPremium
-          ? 'Buy more premium credits →'
-          : 'Subscribe to Premium →'}
-      </button>
+      {renderSubscriptionButton()}
     </div>
   );
 }
