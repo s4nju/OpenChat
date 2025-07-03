@@ -5,6 +5,7 @@ export const RATE_LIMITS = {
   ANONYMOUS_DAILY: 5,
   AUTHENTICATED_DAILY: 50,
   STANDARD_MONTHLY: 1500,
+  PREMIUM_MONTHLY: 100, // Premium credits for premium users
   MONTHLY_PERIOD_DAYS: 30,
 } as const;
 

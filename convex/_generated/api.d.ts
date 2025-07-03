@@ -30,6 +30,7 @@ import type * as schema_parts from "../schema/parts.js";
 import type * as schema_usage_history from "../schema/usage_history.js";
 import type * as schema_user from "../schema/user.js";
 import type * as schema_user_api_key from "../schema/user_api_key.js";
+import type * as subscription from "../subscription.js";
 import type * as users from "../users.js";
 
 import type {
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   "schema/usage_history": typeof schema_usage_history;
   "schema/user": typeof schema_user;
   "schema/user_api_key": typeof schema_user_api_key;
+  subscription: typeof subscription;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

@@ -2,7 +2,8 @@
 
 import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { Info } from '@phosphor-icons/react';
-import { useQuery } from 'convex/react';
+import React, { useCallback } from 'react';
+import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import {
   Tooltip,
@@ -13,65 +14,37 @@ import {
 import { api } from '@/convex/_generated/api';
 import { PREMIUM_CREDITS } from '@/lib/config';
 
-export function MessageUsageCard() {
+function MessageUsageCardComponent() {
   const { user } = useUser();
-  const rateLimitStatus = useQuery(
-    api.users.getRateLimitStatus,
-    user ? {} : 'skip'
+  const { rateLimitStatus, hasPremium, products } = useSettings();
+
+  // Memoize the format date function
+  const formatResetDate = useCallback(
+    (timestamp: number | null | undefined) => {
+      if (!timestamp) {
+        return 'Not available';
+      }
+      try {
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      } catch {
+        return 'Error calculating reset time';
+      }
+    },
+    []
   );
-  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : 'skip');
-  const products = useQuery(
-    api.polar.getConfiguredProducts,
-    user ? {} : 'skip'
-  );
 
-  if (!(user && rateLimitStatus)) {
-    return null;
-  }
+  // Memoize product IDs calculation
+  const productIds = React.useMemo(() => {
+    return products?.premium?.id ? [products.premium.id] : [];
+  }, [products?.premium?.id]);
 
-  const formatResetDate = (timestamp: number | null | undefined) => {
-    if (!timestamp) {
-      return 'Not available';
-    }
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleDateString('en-US', {
-        month: 'numeric',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return 'Error calculating reset time';
-    }
-  };
-
-  // Use the appropriate reset timestamp based on premium status
-  const resetTimestamp = hasPremium
-    ? rateLimitStatus.monthlyReset
-    : rateLimitStatus.dailyReset;
-  const nextResetDateStr = formatResetDate(resetTimestamp);
-
-  // Use rate limit status data
-  const standardLimit = hasPremium
-    ? rateLimitStatus.monthlyLimit
-    : rateLimitStatus.dailyLimit;
-  const standardCount = hasPremium
-    ? rateLimitStatus.monthlyCount
-    : rateLimitStatus.dailyCount;
-  const standardRemaining = hasPremium
-    ? rateLimitStatus.monthlyRemaining
-    : rateLimitStatus.dailyRemaining;
-
-  const premiumLimit = PREMIUM_CREDITS;
-  // TODO: Implement proper premium credits tracking with Polar
-  const premiumCount = 0;
-  const premiumRemaining = premiumLimit - premiumCount;
-
-  // Get product IDs with fallback
-  const productIds = products?.premium?.id ? [products.premium.id] : [];
-
-  // Render the subscription button
-  const renderSubscriptionButton = () => {
+  // Memoize the subscription button renderer
+  const renderSubscriptionButton = useCallback(() => {
     if (hasPremium) {
       return (
         <CustomerPortalLink polarApi={api.polar}>
@@ -111,13 +84,39 @@ export function MessageUsageCard() {
         Loading products...
       </button>
     );
-  };
+  }, [hasPremium, productIds]);
+
+  if (!(user && rateLimitStatus)) {
+    return null;
+  }
+
+  // Use the appropriate reset timestamp based on premium status
+  const resetTimestamp = hasPremium
+    ? rateLimitStatus.monthlyReset
+    : rateLimitStatus.dailyReset;
+  const nextResetDateStr = formatResetDate(resetTimestamp);
+
+  // Use rate limit status data
+  const standardLimit = hasPremium
+    ? rateLimitStatus.monthlyLimit
+    : rateLimitStatus.dailyLimit;
+  const standardCount = hasPremium
+    ? rateLimitStatus.monthlyCount
+    : rateLimitStatus.dailyCount;
+  const standardRemaining = hasPremium
+    ? rateLimitStatus.monthlyRemaining
+    : rateLimitStatus.dailyRemaining;
+
+  const premiumLimit = PREMIUM_CREDITS;
+  // Use actual premium credits from rate limit status
+  const premiumCount = rateLimitStatus.premiumCount || 0;
+  const premiumRemaining = rateLimitStatus.premiumRemaining || premiumLimit;
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-0.5">
         <h3 className="font-semibold">Message Usage</h3>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-xs">
           Resets {nextResetDateStr}
         </p>
       </div>
@@ -153,8 +152,7 @@ export function MessageUsageCard() {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Premium credits are used for GPT Image Gen, Claude
-                        Sonnet, and Grok 3.
+                        Premium credits are used for Claude 4 Sonnet and Grok 3.
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -173,8 +171,7 @@ export function MessageUsageCard() {
               />
             </div>
             <p className="mt-1 text-muted-foreground text-xs">
-              {premiumRemaining} messages remaining{' '}
-              {/* TODO: Update with actual remaining count */}
+              {premiumRemaining} messages remaining
             </p>
           </div>
         )}
@@ -183,3 +180,6 @@ export function MessageUsageCard() {
     </div>
   );
 }
+
+// Export memoized component to prevent unnecessary re-renders
+export const MessageUsageCard = React.memo(MessageUsageCardComponent);

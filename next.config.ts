@@ -20,7 +20,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   experimental: {
     useCache: true,
-    optimizePackageImports: ['@phosphor-icons/react', '@lobehub/icons'],
+    optimizePackageImports: [
+      '@phosphor-icons/react',
+      '@lobehub/icons',
+      'lucide-react',
+    ],
     reactCompiler: true,
     // nodeMiddleware: true,
   },

@@ -1,13 +1,12 @@
 'use client';
 
 import { Eye, EyeSlash, User } from '@phosphor-icons/react';
-import { useQuery } from 'convex/react';
 import Image from 'next/image';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
+import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Kbd } from '@/components/ui/kbd';
-import { api } from '@/convex/_generated/api';
 import type { Doc } from '@/convex/_generated/dataModel';
 
 // Get the display name - prefer preferredName over full name
@@ -23,9 +22,9 @@ const getDisplayName = (user: Doc<'users'> | null): string => {
   return user.name || 'User';
 };
 
-export function SettingsSidebar() {
+function SettingsSidebarComponent() {
   const { user } = useUser();
-  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : 'skip');
+  const { hasPremium } = useSettings();
 
   const [showEmail, setShowEmail] = React.useState<boolean>(() => {
     if (typeof window === 'undefined') {
@@ -34,7 +33,8 @@ export function SettingsSidebar() {
     return localStorage.getItem('showEmail') === 'true';
   });
 
-  const maskEmail = (email?: string) => {
+  // Memoize the email masking function
+  const maskEmail = useCallback((email?: string) => {
     if (!email) {
       return '';
     }
@@ -42,7 +42,15 @@ export function SettingsSidebar() {
     const tld = domain.substring(domain.lastIndexOf('.'));
     const prefix = local.slice(0, 2);
     return `${prefix}*****${tld}`;
-  };
+  }, []);
+
+  // Memoize the email toggle handler
+  const toggleEmailVisibility = useCallback(() => {
+    setShowEmail((prev) => {
+      localStorage.setItem('showEmail', (!prev).toString());
+      return !prev;
+    });
+  }, []);
 
   if (!user) {
     return null;
@@ -70,12 +78,7 @@ export function SettingsSidebar() {
         <h2 className="font-semibold text-xl">{getDisplayName(user)}</h2>
         <button
           className="flex items-center gap-1 text-muted-foreground text-sm"
-          onClick={() => {
-            setShowEmail((prev) => {
-              localStorage.setItem('showEmail', (!prev).toString());
-              return !prev;
-            });
-          }}
+          onClick={toggleEmailVisibility}
           type="button"
         >
           <span>{showEmail ? user.email : maskEmail(user.email)}</span>
@@ -124,3 +127,6 @@ export function SettingsSidebar() {
     </aside>
   );
 }
+
+// Export memoized component to prevent unnecessary re-renders
+export const SettingsSidebar = React.memo(SettingsSidebarComponent);

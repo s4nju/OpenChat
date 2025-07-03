@@ -29,4 +29,13 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     capacity: RATE_LIMITS.STANDARD_MONTHLY,
     start: Date.now(),
   },
+
+  // Premium monthly limit for premium credit for premium users
+  premiumMonthly: {
+    kind: 'fixed window',
+    rate: RATE_LIMITS.PREMIUM_MONTHLY,
+    period: PERIODS.MONTHLY,
+    capacity: RATE_LIMITS.PREMIUM_MONTHLY,
+    start: Date.now(),
+  },
 });

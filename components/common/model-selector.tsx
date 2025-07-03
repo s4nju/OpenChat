@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { CheckoutLink } from "@convex-dev/polar/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,8 +18,19 @@ import {
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
+import { useUser } from "@/app/providers/user-provider"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
-import { CaretDown, Eye, FilePdf, Brain, Globe } from "@phosphor-icons/react" // Swapped MagnifyingGlass for Globe for web search feature
+import {
+  CaretDown,
+  Eye,
+  FilePdf,
+  Brain,
+  Globe,
+  SketchLogo,
+} from "@phosphor-icons/react"
+import { Key } from "lucide-react"
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -32,69 +44,88 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   const { apiKeys } = useApiKeys()
+  const { user } = useUser()
+  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : "skip")
+  const products = useQuery(
+    api.polar.getConfiguredProducts,
+    user ? {} : "skip"
+  )
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
+
+  // Get product IDs with fallback
+  const productIds = products?.premium?.id ? [products.premium.id] : []
 
   // Transform API keys array to object format expected by getAvailableModels
   const apiKeysObject = React.useMemo(() => {
-    return apiKeys.reduce((acc, key) => {
-      acc[key.provider] = 'available' // We just need to know if the key exists
-      return acc
-    }, {} as { [key: string]: string })
+    return apiKeys.reduce(
+      (acc, key) => {
+        acc[key.provider] = "available" // We just need to know if the key exists
+        return acc
+      },
+      {} as { [key: string]: string }
+    )
   }, [apiKeys])
 
   const availableModels = React.useMemo(() => {
-    return MODELS_OPTIONS.map(model => {
-      const userHasKey = !!apiKeysObject[model.provider];
-      const isAvailable = model.available !== false && (!model.apiKeyUsage?.userKeyOnly || userHasKey);
-
+    const modelsWithAvailability = MODELS_OPTIONS.map(model => {
+      const userHasKey = !!apiKeysObject[model.provider]
+      const requiresKey = model.apiKeyUsage.userKeyOnly
+      const canUseWithKey = !requiresKey || userHasKey
+      const requiresPremium = model.premium
+      const canUseAsPremium = !requiresPremium || hasPremium || userHasKey
+      const isAvailable = canUseWithKey && canUseAsPremium
       return {
         ...model,
         available: isAvailable,
-      };
-    });
-  }, [apiKeysObject])
+      }
+    })
+
+    // Sort models to show available ones first
+    return modelsWithAvailability.sort((a, b) => {
+      return b.available === a.available ? 0 : b.available ? 1 : -1
+    })
+  }, [apiKeysObject, hasPremium])
 
   const model = React.useMemo(
-    () => availableModels.find((model) => model.id === selectedModelId),
+    () => availableModels.find(model => model.id === selectedModelId),
     [selectedModelId, availableModels]
   )
   const provider = React.useMemo(
-    () => PROVIDERS_OPTIONS.find((provider) => provider.id === model?.provider),
+    () => PROVIDERS_OPTIONS.find(provider => provider.id === model?.provider),
     [model]
   )
 
-  // Function to render a single model option
   // Helper function to parse model name and extract reasoning info
   const parseModelName = (name: string) => {
     const reasoningMatch = name.match(/^(.+?)\s*\(reasoning\)$/i)
     if (reasoningMatch) {
       return {
         baseName: reasoningMatch[1].trim(),
-        hasReasoningInName: true
+        hasReasoningInName: true,
       }
     }
     return {
       baseName: name,
-      hasReasoningInName: false
+      hasReasoningInName: false,
     }
   }
 
   const renderModelOption = (modelOption: (typeof availableModels)[number]) => {
     const providerOption = PROVIDERS_OPTIONS.find(
-      (p) => p.id === modelOption.provider
+      p => p.id === modelOption.provider
     )
     // Feature Flags
     const hasFileUpload = modelOption.features?.find(
-      (feature) => feature.id === "file-upload"
+      feature => feature.id === "file-upload"
     )?.enabled
     const hasPdfProcessing = modelOption.features?.find(
-      (feature) => feature.id === "pdf-processing"
+      feature => feature.id === "pdf-processing"
     )?.enabled
     const hasReasoning = modelOption.features?.find(
-      (feature) => feature.id === "reasoning"
+      feature => feature.id === "reasoning"
     )?.enabled
     const hasWebSearch = modelOption.features?.find(
-      (feature) => feature.id === "web-search"
+      feature => feature.id === "web-search"
     )?.enabled
 
     // --- Style Definitions based on the provided HTML ---
@@ -115,17 +146,50 @@ export function ModelSelector({
         key={modelOption.id}
         className={cn(
           "flex items-center justify-between px-3 py-2",
-          !modelOption.available && "cursor-not-allowed opacity-60",
+          !modelOption.available &&
+            "cursor-not-allowed opacity-50 focus:bg-transparent",
           selectedModelId === modelOption.id && "bg-accent"
         )}
-        disabled={!modelOption.available}
-        onClick={() => modelOption.available && setSelectedModelId(modelOption.id)}
+        onClick={() =>
+          modelOption.available && setSelectedModelId(modelOption.id)
+        }
       >
         <div className="flex items-center gap-3">
           {providerOption?.icon && <providerOption.icon className="size-5" />}
-          <span className="text-base">{modelOption.name}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-medium">{modelOption.name}</span>
+            {modelOption.usesPremiumCredits && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
+                    <SketchLogo
+                      weight="regular"
+                      className="size-3 text-muted-foreground"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Premium Model</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {modelOption.apiKeyUsage.userKeyOnly && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
+                    <Key className="size-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Requires API Key</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2"> {/* Gap between icons */}
+        <div className="flex items-center gap-2">
+          {" "}
+          {/* Gap between icons */}
           {hasFileUpload && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -134,7 +198,10 @@ export function ModelSelector({
                   {/* Overlay takes color via bg-current */}
                   <div className={iconOverlayClasses}></div>
                   {/* Icon is placed on top, inherits text color */}
-                  <Eye className={cn(iconSizeClasses, "relative")} /> {/* Added relative to ensure it's above overlay */}
+                  <Eye
+                    className={cn(iconSizeClasses, "relative")}
+                  />{" "}
+                  {/* Added relative to ensure it's above overlay */}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -158,7 +225,9 @@ export function ModelSelector({
           {hasReasoning && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className={cn(iconWrapperBaseClasses, reasoningColorClasses)}>
+                <div
+                  className={cn(iconWrapperBaseClasses, reasoningColorClasses)}
+                >
                   <div className={iconOverlayClasses}></div>
                   <Brain className={cn(iconSizeClasses, "relative")} />
                 </div>
@@ -202,9 +271,13 @@ export function ModelSelector({
               {provider?.icon && <provider.icon className="size-5" />}
               {isMobile ? (
                 <div className="flex flex-col items-start">
-                  <span className="text-sm leading-tight">{parseModelName(model?.name ?? "Select Model").baseName}</span>
+                  <span className="text-sm leading-tight">
+                    {parseModelName(model?.name ?? "Select Model").baseName}
+                  </span>
                   {model && parseModelName(model.name).hasReasoningInName && (
-                    <span className="text-xs text-muted-foreground leading-tight">Reasoning</span>
+                    <span className="text-xs text-muted-foreground leading-tight">
+                      Reasoning
+                    </span>
                   )}
                 </div>
               ) : (
@@ -219,28 +292,35 @@ export function ModelSelector({
           align="start"
           sideOffset={4}
         >
-          {/* Available Models Section */}
-          {availableModels.filter(model => model.available).length > 0 && (
+          {!hasPremium && productIds.length > 0 && (
             <>
-              <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
-                Available Models
+              <div className="p-3">
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="mb-2 text-lg font-semibold">
+                    Unlock all models + higher limits
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold">
+                      $15
+                      <span className="text-muted-foreground text-sm font-normal">
+                        /month
+                      </span>
+                    </div>
+                    <CheckoutLink
+                      embed={false}
+                      polarApi={api.polar}
+                      productIds={productIds}
+                    >
+                      <Button size="sm" className="cursor-pointer">Upgrade now</Button>
+                    </CheckoutLink>
+                  </div>
+                </div>
               </div>
-              {availableModels.filter(model => model.available).map(renderModelOption)}
+              <div className="mx-2 my-1 border-t border-border" />
             </>
           )}
 
-          {/* API Key Required Section */}
-          {availableModels.filter(model => !model.available).length > 0 && (
-            <>
-              {availableModels.filter(model => model.available).length > 0 && (
-                <div className="mx-2 my-1 border-t border-border" />
-              )}
-              <div className="text-muted-foreground px-3 py-1.5 text-sm font-semibold">
-                API Key Required
-              </div>
-              {availableModels.filter(model => !model.available).map(renderModelOption)}
-            </>
-          )}
+          {availableModels.map(modelOption => renderModelOption(modelOption))}
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>

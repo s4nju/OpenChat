@@ -154,6 +154,12 @@ export const storeCurrentUser = mutation({
         key: targetUserId,
         count: 0,
       });
+
+      // // Initialize premium credits counter for all users (will only be used by premium users)
+      // await rateLimiter.limit(ctx, 'premiumMonthly', {
+      //   key: targetUserId,
+      //   count: 0,
+      // });
     } catch {
       // Non-fatal: rate-limit initialisation failure should never block the
       // user flow. The rate-limiter will lazily create windows on first use.
@@ -192,9 +198,11 @@ export const updateUserProfile = mutation({
 });
 
 export const incrementMessageCount = mutation({
-  args: {},
+  args: {
+    usesPremiumCredits: v.optional(v.boolean()),
+  },
   returns: v.null(),
-  handler: async (ctx) => {
+  handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error('User not authenticated');
@@ -211,30 +219,42 @@ export const incrementMessageCount = mutation({
     const isPremium = subscription?.status === 'active';
     const isAnonymous = user.isAnonymous ?? false;
 
-    // CONSUME daily limits for non-premium users
-    if (!isPremium) {
-      const dailyLimitName = isAnonymous
-        ? 'anonymousDaily'
-        : 'authenticatedDaily';
-      await rateLimiter.limit(ctx, dailyLimitName, {
+    // For premium users using premium models, deduct from premium credits
+    if (isPremium && usesPremiumCredits) {
+      await rateLimiter.limit(ctx, 'premiumMonthly', {
+        key: userId,
+        throws: true,
+      });
+    } else {
+      // For non-premium models or non-premium users, use standard credits
+
+      // CONSUME daily limits for non-premium users
+      if (!isPremium) {
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        await rateLimiter.limit(ctx, dailyLimitName, {
+          key: userId,
+          throws: true,
+        });
+      }
+
+      // CONSUME monthly limits for all users
+      await rateLimiter.limit(ctx, 'standardMonthly', {
         key: userId,
         throws: true,
       });
     }
-
-    // CONSUME monthly limits for all users
-    await rateLimiter.limit(ctx, 'standardMonthly', {
-      key: userId,
-      throws: true,
-    });
 
     return null;
   },
 });
 
 export const assertNotOverLimit = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    usesPremiumCredits: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error('Not authenticated');
@@ -251,25 +271,37 @@ export const assertNotOverLimit = mutation({
     const isPremium = subscription?.status === 'active';
     const isAnonymous = user.isAnonymous ?? false;
 
-    // CHECK daily limits for non-premium users (don't consume yet)
-    if (!isPremium) {
-      const dailyLimitName = isAnonymous
-        ? 'anonymousDaily'
-        : 'authenticatedDaily';
-      const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
+    // For premium users using premium models, check premium credits
+    if (isPremium && usesPremiumCredits) {
+      const premiumStatus = await rateLimiter.check(ctx, 'premiumMonthly', {
         key: userId,
       });
-      if (!dailyStatus.ok) {
-        throw new Error('DAILY_LIMIT_REACHED');
+      if (!premiumStatus.ok) {
+        throw new Error('PREMIUM_LIMIT_REACHED');
       }
-    }
+    } else {
+      // For non-premium models or non-premium users, check standard credits
 
-    // CHECK monthly limits for all users (don't consume yet)
-    const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
-      key: userId,
-    });
-    if (!monthlyStatus.ok) {
-      throw new Error('MONTHLY_LIMIT_REACHED');
+      // CHECK daily limits for non-premium users (don't consume yet)
+      if (!isPremium) {
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
+          key: userId,
+        });
+        if (!dailyStatus.ok) {
+          throw new Error('DAILY_LIMIT_REACHED');
+        }
+      }
+
+      // CHECK monthly limits for all users (don't consume yet)
+      const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
+        key: userId,
+      });
+      if (!monthlyStatus.ok) {
+        throw new Error('MONTHLY_LIMIT_REACHED');
+      }
     }
   },
 });
@@ -284,9 +316,13 @@ export const getRateLimitStatus = query({
     monthlyCount: v.number(),
     monthlyLimit: v.number(),
     monthlyRemaining: v.number(),
+    premiumCount: v.number(),
+    premiumLimit: v.number(),
+    premiumRemaining: v.number(),
     effectiveRemaining: v.number(),
     dailyReset: v.optional(v.number()),
     monthlyReset: v.optional(v.number()),
+    premiumReset: v.optional(v.number()),
   }),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
@@ -372,6 +408,40 @@ export const getRateLimitStatus = query({
       monthlyReset = monthlyRateLimit.windowStart + config.period;
     }
 
+    // Get premium credits (for premium users)
+    let premiumLimit = 0;
+    let premiumCount = 0;
+    let premiumRemaining = 0;
+    let premiumReset: number | undefined;
+
+    if (isPremium) {
+      const premiumStatus = await rateLimiter.check(ctx, 'premiumMonthly', {
+        key: userId,
+      });
+      const premiumConfig = await rateLimiter.getValue(ctx, 'premiumMonthly', {
+        key: userId,
+      });
+
+      premiumLimit = RATE_LIMITS.PREMIUM_MONTHLY;
+      premiumCount =
+        premiumLimit - (premiumStatus.ok ? premiumConfig.value : 0);
+      premiumRemaining = premiumStatus.ok ? premiumConfig.value : 0;
+
+      // Use the rate limiter component's own logic for accurate reset time
+      const premiumRateLimit = calculateRateLimit(
+        { value: premiumConfig.value, ts: premiumConfig.ts },
+        premiumConfig.config,
+        now,
+        0 // Don't consume tokens, just calculate
+      );
+
+      // For fixed windows, the next reset is the end of the current window
+      if (premiumRateLimit.windowStart !== undefined) {
+        const config = premiumConfig.config as RateLimitConfig;
+        premiumReset = premiumRateLimit.windowStart + config.period;
+      }
+    }
+
     const effectiveRemaining = isPremium
       ? monthlyRemaining
       : Math.min(dailyRemaining, monthlyRemaining);
@@ -384,9 +454,13 @@ export const getRateLimitStatus = query({
       monthlyCount,
       monthlyLimit,
       monthlyRemaining,
+      premiumCount,
+      premiumLimit,
+      premiumRemaining,
       effectiveRemaining,
       dailyReset,
       monthlyReset,
+      premiumReset,
     };
   },
 });

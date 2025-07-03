@@ -362,17 +362,64 @@ export async function POST(req: Request) {
       return createErrorResponse(new Error('user_key_required'));
     }
 
+    // --- Premium Model Access Check ---
+    // Only applies if user is NOT using their own API key
+    if (selectedModel.premium && !useUserKey) {
+      // Check if user is premium when trying to use premium models
+      const isUserPremium = token
+        ? await fetchQuery(api.users.userHasPremium, {}, { token })
+        : false;
+
+      if (!isUserPremium) {
+        // Save user message first
+        const userMsgId = await saveUserMessage(
+          messages,
+          chatId,
+          token,
+          reloadAssistantMessageId
+        );
+
+        // Create premium access error
+        const premiumError = new Error('PREMIUM_MODEL_ACCESS_DENIED');
+
+        // Save error message to conversation
+        if (token) {
+          await saveErrorMessage(
+            chatId,
+            userMsgId,
+            premiumError,
+            token,
+            selectedModel.id,
+            selectedModel.name,
+            enableSearch,
+            reasoningEffort
+          );
+        }
+
+        // Return proper HTTP error response
+        return createErrorResponse(premiumError);
+      }
+    }
+
     // --- Rate Limiting (only if not using user key) ---
     let rateLimitError: Error | null = null;
 
     if (!useUserKey) {
       try {
-        await fetchMutation(api.users.assertNotOverLimit, {}, { token });
+        // Check if the selected model uses premium credits
+        const usesPremiumCredits = selectedModel.usesPremiumCredits === true;
+
+        await fetchMutation(
+          api.users.assertNotOverLimit,
+          { usesPremiumCredits },
+          { token }
+        );
       } catch (error) {
         if (
           error instanceof Error &&
           (error.message.includes('DAILY_LIMIT_REACHED') ||
-            error.message.includes('MONTHLY_LIMIT_REACHED'))
+            error.message.includes('MONTHLY_LIMIT_REACHED') ||
+            error.message.includes('PREMIUM_LIMIT_REACHED'))
         ) {
           rateLimitError = error;
           // Don't throw yet - let user message save first
@@ -743,9 +790,13 @@ export async function POST(req: Request) {
                     { token }
                   );
                 } else {
+                  // Check if the selected model uses premium credits
+                  const usesPremiumCredits =
+                    selectedModel.usesPremiumCredits === true;
+
                   await fetchMutation(
                     api.users.incrementMessageCount,
-                    {},
+                    { usesPremiumCredits },
                     { token }
                   );
                 }

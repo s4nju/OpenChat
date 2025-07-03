@@ -31,6 +31,7 @@ import {
   SparkleIcon,
 } from "@phosphor-icons/react/dist/ssr"
 import { extractReasoningMiddleware, wrapLanguageModel } from "ai"
+import { z } from "zod"
 
 const reasoningMiddleware = extractReasoningMiddleware({ tagName: "think" })
 
@@ -58,94 +59,184 @@ export const PREMIUM_CREDITS = 100
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 5
 
-export type Model = {
-  id: string
-  name: string
-  provider: string
-  available?: boolean
-  api_sdk?: any // eslint-disable-line @typescript-eslint/no-explicit-any
-  features?: {
-    id: string
-    enabled: boolean
-    label?: string
-    supportsEffort?: boolean // For reasoning feature
-  }[]
-  apiKeyUsage?: {
-    allowUserKey: boolean
-    userKeyOnly: boolean
-  }
-}
+const ModelFeatureSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  label: z.string().optional(),
+  supportsEffort: z.boolean().optional(),
+})
 
-export const MODELS_NOT_AVAILABLE = [
+const ApiKeyUsageSchema = z.object({
+  allowUserKey: z.boolean(),
+  userKeyOnly: z.boolean(),
+})
+
+const ModelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.string(),
+  api_sdk: z.any().optional(),
+  premium: z.boolean(),
+  usesPremiumCredits: z.boolean(),
+  features: z.array(ModelFeatureSchema).default([]),
+  apiKeyUsage: ApiKeyUsageSchema.default({
+    allowUserKey: false,
+    userKeyOnly: false,
+  }),
+})
+
+export type Model = z.infer<typeof ModelSchema>
+
+// User-facing model definitions.
+// To-do: Review each model to ensure all configurations (premium, features, etc.) are correct.
+export const MODELS_DATA = [
   {
     id: "grok-3",
     name: "Grok 3",
     provider: "grok",
-    available: false,
-    api_sdk: false,
+    premium: true,
+    usesPremiumCredits: true,
+    api_sdk: groq("grok-3-latest"),
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
   },
   {
     id: "gpt-4o",
     name: "GPT-4o",
     provider: "openai",
-    available: false,
+    premium: true,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: openai("gpt-4o"),
   },
-] as Model[]
-
-export const MODELS_RAW = [
+    {
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "openai",
+    premium: false,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("gpt-4o-mini"),
+  },
+  {
+    id: "o4-mini",
+    name: "o4 Mini",
+    provider: "openai",
+    premium: true,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("o4-mini"),
+  },
+    {
+    id: "o3",
+    name: "o3",
+    provider: "openai",
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("o3"),
+  },
+  {
+    id: "o3-pro",
+    name: "o3 Pro",
+    provider: "openai",
+    premium: false,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("o3-pro"),
+  },
+    {
+    id: "gpt-4.1",
+    name: "GPT-4.1",
+    provider: "openai",
+    premium: true,
+    usesPremiumCredits: false,
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("gpt-4.1"),
+  },
+    {
+    id: "gpt-4.1-mini",
+    name: "GPT-4.1 Mini",
+    provider: "openai",
+    premium: false,
+    usesPremiumCredits: false,
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("gpt-4.1-mini"),
+  },
+    {
+    id: "gpt-4.1-nano",
+    name: "GPT-4.1 Nano",
+    provider: "openai",
+    premium: false,
+    usesPremiumCredits: false,
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("gpt-4.1-nano"),
+  },
+    {
+    id: "gpt-4.5",
+    name: "GPT-4.5",
+    provider: "openai",
+    premium: false,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openai("gpt-4.5"),
+  },
   {
     id: "claude-3-5-sonnet-20241022",
     name: "Claude 3.5 Sonnet",
     provider: "anthropic",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-3-5-sonnet-20241022"),
   },
@@ -153,22 +244,13 @@ export const MODELS_RAW = [
     id: "claude-3-7-sonnet-20250219",
     name: "Claude 3.7 Sonnet",
     provider: "anthropic",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
@@ -176,23 +258,13 @@ export const MODELS_RAW = [
     id: "claude-3-7-sonnet-reasoning",
     name: "Claude 3.7 Sonnet (Reasoning)",
     provider: "anthropic",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: true,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
@@ -200,23 +272,13 @@ export const MODELS_RAW = [
     id: "claude-4-opus",
     name: "Claude 4 Opus",
     provider: "anthropic",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: true,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-opus-4-20250514"),
   },
@@ -224,22 +286,13 @@ export const MODELS_RAW = [
     id: "claude-4-sonnet",
     name: "Claude 4 Sonnet",
     provider: "anthropic",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-sonnet-4-20250514"),
   },
@@ -247,173 +300,71 @@ export const MODELS_RAW = [
     id: "claude-4-sonnet-reasoning",
     name: "Claude 4 Sonnet (Reasoning)",
     provider: "anthropic",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
+    premium: true,
+    usesPremiumCredits: true,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: true,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
     ],
     api_sdk: anthropic("claude-sonnet-4-20250514"),
-  },
-  {
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    provider: "openai",
-    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-    api_sdk: openai("gpt-4o-mini"),
-  },
-  {
-    id: "o4-mini",
-    name: "O4 Mini",
-    provider: "openai",
-    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: true,
-        label: "Supports reasoning capabilities",
-      },
-    ],
-    api_sdk: openai("o4-mini"),
   },
   {
     id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
     provider: "gemini",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.0-flash"),
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
-      {
-        id: "web-search",
-        enabled: true,
-        label: "Supports web search",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
+      { id: "web-search", enabled: true, label: "Supports web search" },
     ],
   },
   {
     id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "gemini",
+    premium: true,
+    usesPremiumCredits: true,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: true,
-        label: "Supports reasoning capabilities",
-      },
-      {
-        id: "web-search",
-        enabled: true,
-        label: "Supports web search",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
+      { id: "web-search", enabled: true, label: "Supports web search" },
     ],
     api_sdk: google("gemini-2.5-pro"),
   },
   {
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
-    name: "Llama 4 Maverick 17B",
+    name: "Llama 4 Maverick",
     provider: "meta",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: false,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
   },
   {
     id: "Llama-4-Scout-17B-16E-Instruct",
-    name: "Llama 4 Scout 17B",
+    name: "Llama 4 Scout",
     provider: "meta",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: false,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
   },
@@ -421,22 +372,13 @@ export const MODELS_RAW = [
     id: "pixtral-large-latest",
     name: "Pixtral Large",
     provider: "mistral",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    premium: false,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-      {
-        id: "pdf-processing",
-        enabled: true,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: mistral("pixtral-large-latest"),
     icon: Mistral,
@@ -445,12 +387,11 @@ export const MODELS_RAW = [
     id: "mistral-large-latest",
     name: "Mistral Large",
     provider: "mistral",
-    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    premium: false,
+    usesPremiumCredits: false,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: false,
-      },
+      { id: "file-upload", enabled: false },
     ],
     api_sdk: mistral("mistral-large-latest"),
   },
@@ -458,36 +399,25 @@ export const MODELS_RAW = [
     id: "deepseek-ai/DeepSeek-V3-0324",
     name: "DeepSeek V3 0324",
     provider: "deepseek",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: chutes("deepseek-ai/DeepSeek-V3-0324"),
     features: [
-      {
-        id: "file-upload",
-        enabled: false,
-      },
+      { id: "file-upload", enabled: false },
     ],
   },
   {
     id: "deepseek-r1-0528",
     name: "DeepSeek R1 (0528)",
     provider: "deepseek",
+    premium: false,
+    usesPremiumCredits: false,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      {
-        id: "file-upload",
-        enabled: false,
-      },
-      {
-        id: "pdf-processing",
-        enabled: false,
-        label: "Supports PDF uploads and analysis",
-      },
-      {
-        id: "reasoning",
-        enabled: true,
-        supportsEffort: false,
-        label: "Supports reasoning capabilities",
-      },
+      { id: "file-upload", enabled: false },
+      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
@@ -504,7 +434,8 @@ export const MODELS_RAW = [
   //   ],
   //   api_sdk: openrouter("qwen/qwq-32b:free"),
   // },
-] as Model[]
+]
+export const MODELS_RAW = z.array(ModelSchema).parse(MODELS_DATA)
 
 export const MODELS = MODELS_RAW.map((m) => ({
   ...m,
@@ -513,43 +444,30 @@ export const MODELS = MODELS_RAW.map((m) => ({
     : m.api_sdk,
 }))
 
-export const MODELS_OPTIONS = [
-  ...MODELS.map((model) => ({
-    ...model,
-    available: true,
-  })),
-  ...MODELS_NOT_AVAILABLE,
-] as Model[]
+export const MODELS_OPTIONS = MODELS
 
 export type Provider = {
   id: string
   name: string
-  available: boolean
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
 }
 
-const PROVIDERS_NOT_AVAILABLE = [
+export const PROVIDERS = [
   {
     id: "deepseek",
     name: "DeepSeek",
-    available: false,
     icon: DeepSeek,
   },
   {
     id: "gemini",
     name: "Gemini",
     icon: Gemini,
-    available: false,
   },
   {
     id: "grok",
     name: "Grok",
-    available: false,
     icon: Grok,
   },
-] as Provider[]
-
-export const PROVIDERS = [
   {
     id: "openrouter",
     name: "OpenRouter",
@@ -582,13 +500,7 @@ export const PROVIDERS = [
   },
 ] as Provider[]
 
-export const PROVIDERS_OPTIONS = [
-  ...PROVIDERS.map((provider) => ({
-    ...provider,
-    available: true,
-  })),
-  ...PROVIDERS_NOT_AVAILABLE,
-] as Provider[]
+export const PROVIDERS_OPTIONS = PROVIDERS
 
 export const MODEL_DEFAULT = "gemini-2.0-flash"
 

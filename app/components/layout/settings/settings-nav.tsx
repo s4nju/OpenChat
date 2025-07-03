@@ -42,4 +42,5 @@ function SettingsNavComponent() {
   );
 }
 
+// Export memoized component to prevent unnecessary re-renders
 export const SettingsNav = React.memo(SettingsNavComponent);

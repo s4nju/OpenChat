@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from 'convex/react';
+import { AlertCircle, Check, Key, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,83 +112,19 @@ const PROVIDERS: Array<{
   },
 ] as const;
 
-// Helper component for API key icons
-function ApiKeyIcon() {
-  return (
-    <svg
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <title>API Key</title>
-      <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-2.1 2.1a1 1 0 0 0 0 1.4Z" />
-      <path d="m21 2-9.6 9.6" />
-      <circle cx="7.5" cy="15.5" r="5.5" />
-    </svg>
-  );
-}
-
 // Helper component for delete icon
 function DeleteIcon() {
-  return (
-    <svg
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <title>Delete</title>
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
-  );
+  return <Trash2 className="size-4" />;
 }
 
 // Helper component for success checkmark
 function CheckIcon() {
-  return (
-    <svg
-      className="size-4 text-green-500"
-      fill="currentColor"
-      strokeWidth="2.5"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <title>Success</title>
-      <path
-        clipRule="evenodd"
-        d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
-        fillRule="evenodd"
-      />
-    </svg>
-  );
+  return <Check className="size-4 text-green-500" />;
 }
 
 // Helper component for error icon
 function ErrorIcon() {
-  return (
-    <svg
-      className="size-3"
-      fill="currentColor"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <title>Error</title>
-      <path
-        clipRule="evenodd"
-        d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-        fillRule="evenodd"
-      />
-    </svg>
-  );
+  return <AlertCircle className="size-3" />;
 }
 
 // Helper component for toggle switch
@@ -252,6 +189,17 @@ function ApiKeyInputForm({
   onInputChange: () => void;
   inputRef: (el: HTMLInputElement | null) => void;
 }) {
+  // Handle Enter key press to save
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !isValidating) {
+        e.preventDefault();
+        onSave();
+      }
+    },
+    [onSave, isValidating]
+  );
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -259,6 +207,7 @@ function ApiKeyInputForm({
           <Input
             className={validationError ? 'border-red-500' : ''}
             onChange={onInputChange}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
             ref={inputRef}
             type="password"
@@ -324,7 +273,7 @@ function ProviderCard({
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
-            <ApiKeyIcon />
+            <Key className="size-4" />
             {providerConfig.title}
           </h3>
           {hasKey && (

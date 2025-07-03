@@ -44,6 +44,8 @@ function getHttpStatusForErrorCode(code: string): number {
       return 401
     case "USER_KEY_ERROR":
       return 401
+    case "PREMIUM_ACCESS_DENIED":
+      return 403
     case "RATE_LIMIT":
       return 429
     case "USAGE_LIMIT":
@@ -73,6 +75,8 @@ function getResponseTypeForErrorCode(code: string): string {
   switch (code) {
     case "USER_KEY_ERROR":
       return "api_key_required"
+    case "PREMIUM_ACCESS_DENIED":
+      return "premium_access_denied"
     case "RATE_LIMIT":
       return "rate_limit"
     case "MODEL_UNAVAILABLE":
@@ -243,6 +247,35 @@ export function classifyError(error: unknown): ClassifiedError {
       httpStatus: getHttpStatusForErrorCode(code),
       responseType: getResponseTypeForErrorCode(code),
       originalError: error
+    }
+  }
+  
+  // Premium model access errors - should be in conversation
+  if (normalizedMsg.includes("premium_model_access_denied")) {
+    const code = "PREMIUM_ACCESS_DENIED"
+    return {
+      displayType: "conversation",
+      code,
+      message: errorMsg,
+      userFriendlyMessage: "This model requires a premium subscription. Please upgrade to access premium models like Claude 4 Sonnet and Grok 3.",
+      httpStatus: getHttpStatusForErrorCode(code),
+      responseType: getResponseTypeForErrorCode(code),
+      originalError: error
+    }
+  }
+  
+  // Premium credit limit error
+  if (normalizedMsg.includes("premium_limit_reached")) {
+    const code = "USAGE_LIMIT"
+    return {
+      displayType: "conversation",
+      code,
+      message: errorMsg,
+      userFriendlyMessage:
+        "You have used all of your premium credits for this month. Your premium credits will reset with your subscription.",
+      httpStatus: getHttpStatusForErrorCode(code),
+      responseType: getResponseTypeForErrorCode(code),
+      originalError: error,
     }
   }
   

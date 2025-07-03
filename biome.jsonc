@@ -20,6 +20,9 @@
       "complexity": {
         "noExcessiveCognitiveComplexity": "off"
       }
+      // "suspicious": {
+      //   "noConsole": "off"
+      // }
     },
     "domains": {
       "next": "recommended"

@@ -2,10 +2,11 @@
 
 import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { CircleNotch, Headset, Rocket, Sparkle } from '@phosphor-icons/react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
+import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
@@ -16,14 +17,40 @@ export default function AccountSettingsPage() {
   const deleteAccount = useMutation(api.users.deleteAccount);
   const { signOut } = useUser();
   const router = useRouter();
-  const hasPremium = useQuery(api.users.userHasPremium, {});
-  const products = useQuery(api.polar.getConfiguredProducts, {});
+  const { hasPremium, products } = useSettings();
 
-  // Get product IDs with fallback
-  const productIds = products?.premium?.id ? [products.premium.id] : [];
+  // Get product IDs with fallback - memoize to prevent unnecessary re-calculations
+  const productIds = React.useMemo(() => {
+    return products?.premium?.id ? [products.premium.id] : [];
+  }, [products?.premium?.id]);
 
-  // Render the subscription button
-  const renderSubscriptionButton = () => {
+  // Memoize the delete account handler
+  const handleDeleteAccount = useCallback(async () => {
+    if (
+      !confirm(
+        'This will permanently delete your account and all associated data. This action cannot be undone. Continue?'
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteAccount({});
+      await signOut();
+      toast({ title: 'Account deleted', status: 'success' });
+      router.push('/');
+    } catch {
+      toast({
+        title: 'Failed to delete account',
+        status: 'error',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteAccount, signOut, router]);
+
+  // Render the subscription button - memoize to prevent unnecessary re-renders
+  const renderSubscriptionButton = useCallback(() => {
     if (hasPremium) {
       return (
         <CustomerPortalLink polarApi={api.polar}>
@@ -51,7 +78,7 @@ export default function AccountSettingsPage() {
         Loading products...
       </Button>
     );
-  };
+  }, [hasPremium, productIds]);
 
   return (
     <div className="w-full">
@@ -126,29 +153,7 @@ export default function AccountSettingsPage() {
             </p>
             <Button
               disabled={isDeleting}
-              onClick={async () => {
-                if (
-                  !confirm(
-                    'This will permanently delete your account and all associated data. This action cannot be undone. Continue?'
-                  )
-                ) {
-                  return;
-                }
-                setIsDeleting(true);
-                try {
-                  await deleteAccount({});
-                  await signOut();
-                  toast({ title: 'Account deleted', status: 'success' });
-                  router.push('/');
-                } catch {
-                  toast({
-                    title: 'Failed to delete account',
-                    status: 'error',
-                  });
-                } finally {
-                  setIsDeleting(false);
-                }
-              }}
+              onClick={handleDeleteAccount}
               size="sm"
               variant="destructive"
             >
