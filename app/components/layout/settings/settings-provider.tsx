@@ -47,10 +47,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     user ? {} : 'skip'
   );
 
-  const isLoading =
-    hasPremium === undefined ||
-    products === undefined ||
-    rateLimitStatus === undefined;
+  const isLoading = user
+    ? hasPremium === undefined ||
+      products === undefined ||
+      rateLimitStatus === undefined
+    : false;
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(

@@ -155,11 +155,11 @@ export const storeCurrentUser = mutation({
         count: 0,
       });
 
-      // // Initialize premium credits counter for all users (will only be used by premium users)
-      // await rateLimiter.limit(ctx, 'premiumMonthly', {
-      //   key: targetUserId,
-      //   count: 0,
-      // });
+      // Initialize premium credits counter for all users (will only be used by premium users)
+      await rateLimiter.limit(ctx, 'premiumMonthly', {
+        key: targetUserId,
+        count: 0,
+      });
     } catch {
       // Non-fatal: rate-limit initialisation failure should never block the
       // user flow. The rate-limiter will lazily create windows on first use.
