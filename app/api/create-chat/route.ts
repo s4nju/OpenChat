@@ -68,7 +68,10 @@ export async function POST(request: Request) {
             model,
           },
         });
-        posthog.shutdown();
+        posthog.shutdown().catch((_error) => {
+          // console.error('PostHog shutdown failed:', _error);
+          // PostHog shutdown failures are non-critical for user experience
+        });
       } catch (_error) {
         // console.error('PostHog tracking failed:', error);
         // Don't let tracking failures affect the API response
