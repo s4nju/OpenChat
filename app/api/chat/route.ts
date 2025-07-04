@@ -45,7 +45,7 @@ if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
 }
 
 // Maximum allowed duration for streaming (in seconds)
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Helper function to save an error message as an assistant message
