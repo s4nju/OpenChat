@@ -318,8 +318,21 @@ export async function POST(req: Request) {
 
     const token = await convexAuthNextjsToken();
 
-    // Get current user for PostHog tracking
-    const user = await fetchQuery(api.users.getCurrentUser, {}, { token });
+    // --- Optimized Parallel Database Queries ---
+    // Run independent queries in parallel to reduce latency
+    const [user, userKeys, isUserPremiumForPremiumModels] = await Promise.all([
+      // Get current user for PostHog tracking and auth
+      fetchQuery(api.users.getCurrentUser, {}, { token }),
+      // Get user API keys if model allows user keys
+      selectedModel.apiKeyUsage?.allowUserKey
+        ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
+        : Promise.resolve([]),
+      // Check premium status for premium models (only if needed)
+      selectedModel.premium
+        ? fetchQuery(api.users.userHasPremium, {}, { token }).catch(() => false)
+        : Promise.resolve(false),
+    ]);
+
     const userId = user?._id;
 
     // --- API Key and Model Configuration ---
@@ -327,13 +340,8 @@ export async function POST(req: Request) {
     let userApiKey: string | null = null;
     let keyEntry: { provider: string; mode?: string } | undefined;
 
-    if (apiKeyUsage?.allowUserKey) {
+    if (apiKeyUsage?.allowUserKey && Array.isArray(userKeys)) {
       try {
-        const userKeys = await fetchQuery(
-          api.api_keys.getApiKeys,
-          {},
-          { token }
-        );
         keyEntry = userKeys.find((k) => k.provider === selectedModel.provider);
         if (keyEntry) {
           userApiKey = await fetchQuery(
@@ -343,7 +351,7 @@ export async function POST(req: Request) {
           );
         }
       } catch (e) {
-        // console.error('Failed to fetch or decrypt user API key:', e);
+        // console.error('Failed to decrypt user API key:', e);
         // If this is a critical error (auth failure), we should return early
         if (e instanceof Error && e.message.includes('Not authenticated')) {
           return createErrorResponse(new Error('Not authenticated'));
@@ -364,41 +372,38 @@ export async function POST(req: Request) {
 
     // --- Premium Model Access Check ---
     // Only applies if user is NOT using their own API key
-    if (selectedModel.premium && !useUserKey) {
-      // Check if user is premium when trying to use premium models
-      const isUserPremium = token
-        ? await fetchQuery(api.users.userHasPremium, {}, { token })
-        : false;
+    if (
+      selectedModel.premium &&
+      !useUserKey &&
+      !isUserPremiumForPremiumModels
+    ) {
+      // Save user message first
+      const userMsgId = await saveUserMessage(
+        messages,
+        chatId,
+        token,
+        reloadAssistantMessageId
+      );
 
-      if (!isUserPremium) {
-        // Save user message first
-        const userMsgId = await saveUserMessage(
-          messages,
+      // Create premium access error
+      const premiumError = new Error('PREMIUM_MODEL_ACCESS_DENIED');
+
+      // Save error message to conversation
+      if (token) {
+        await saveErrorMessage(
           chatId,
+          userMsgId,
+          premiumError,
           token,
-          reloadAssistantMessageId
+          selectedModel.id,
+          selectedModel.name,
+          enableSearch,
+          reasoningEffort
         );
-
-        // Create premium access error
-        const premiumError = new Error('PREMIUM_MODEL_ACCESS_DENIED');
-
-        // Save error message to conversation
-        if (token) {
-          await saveErrorMessage(
-            chatId,
-            userMsgId,
-            premiumError,
-            token,
-            selectedModel.id,
-            selectedModel.name,
-            enableSearch,
-            reasoningEffort
-          );
-        }
-
-        // Return proper HTTP error response
-        return createErrorResponse(premiumError);
       }
+
+      // Return proper HTTP error response
+      return createErrorResponse(premiumError);
     }
 
     // --- Rate Limiting (only if not using user key) ---
@@ -595,7 +600,7 @@ export async function POST(req: Request) {
               | Record<string, Record<string, JSONValue>>
               | undefined,
             experimental_transform: smoothStream({
-              delayInMs: 20,
+              delayInMs: 10,
               chunking: 'word',
             }),
             onError: async (error) => {
@@ -806,12 +811,12 @@ export async function POST(req: Request) {
                 //   err
                 // );
               } finally {
+                // Fire-and-forget PostHog shutdown to avoid blocking response completion
                 if (phClient) {
-                  try {
-                    await phClient.shutdown();
-                  } catch (_error) {
+                  phClient.shutdown().catch((_error) => {
                     // console.error('PostHog shutdown failed:', error);
-                  }
+                    // PostHog shutdown failures are non-critical for user experience
+                  });
                 }
               }
             },
