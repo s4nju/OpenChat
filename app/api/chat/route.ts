@@ -22,7 +22,7 @@ import {
   convertAttachmentsToFileParts,
   createPartsFromAIResponse,
 } from '@/lib/ai-sdk-utils';
-import { MODELS, SEARCH_PROMPT_INSTRUCTIONS } from '@/lib/config';
+import { MODELS_MAP } from '@/lib/config';
 import {
   classifyError,
   createErrorPart,
@@ -30,6 +30,7 @@ import {
   createStreamingError,
   shouldShowInConversation,
 } from '@/lib/error-utils';
+import { buildSystemPrompt, PERSONAS_MAP } from '@/lib/prompt_config';
 import { sanitizeUserInput } from '@/lib/sanitize';
 
 // Initialize PostHog client at module level for efficiency
@@ -202,10 +203,11 @@ type ChatRequest = {
   messages: MessageAISDK[];
   chatId: Id<'chats'>;
   model: string;
-  systemPrompt: string;
+  personaId?: string;
   reloadAssistantMessageId?: Id<'messages'>;
   enableSearch?: boolean;
   reasoningEffort?: ReasoningEffort;
+  userInfo?: { timezone?: string };
 };
 
 const buildGoogleProviderOptions = (
@@ -282,10 +284,11 @@ export async function POST(req: Request) {
       messages,
       chatId,
       model,
-      systemPrompt,
+      personaId,
       reloadAssistantMessageId,
       enableSearch,
       reasoningEffort,
+      userInfo,
     } = (await req.json()) as ChatRequest;
 
     if (!(messages && chatId)) {
@@ -305,15 +308,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const selectedModel = MODELS.find((m) => m.id === model);
+    const selectedModel = MODELS_MAP[model];
     if (!selectedModel) {
       return createErrorResponse(new Error("Invalid 'model' provided."));
-    }
-
-    if (systemPrompt && systemPrompt.length > 1000) {
-      return createErrorResponse(
-        new Error("'systemPrompt' must not exceed 1000 characters.")
-      );
     }
 
     const token = await convexAuthNextjsToken();
@@ -462,6 +459,16 @@ export async function POST(req: Request) {
       return createErrorResponse(rateLimitError);
     }
 
+    const basePrompt = personaId ? PERSONAS_MAP[personaId]?.prompt : undefined;
+    const finalSystemPrompt = buildSystemPrompt(
+      user,
+      basePrompt,
+      enableSearch,
+      userInfo?.timezone
+    );
+
+    // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
+
     return createDataStreamResponse({
       execute: async (dataStream) => {
         let userMsgId: Id<'messages'> | null = null;
@@ -590,9 +597,7 @@ export async function POST(req: Request) {
                   },
                 })
               : selectedModel.api_sdk,
-            system: enableSearch
-              ? `${systemPrompt || 'You are a helpful assistant.'}\n\n${SEARCH_PROMPT_INSTRUCTIONS}`
-              : systemPrompt || 'You are a helpful assistant.',
+            system: finalSystemPrompt,
             messages: resolvedMessages,
             tools: enableSearch ? { search: searchTool } : undefined,
             maxSteps: 5,

@@ -9,9 +9,9 @@ import { Suggestions } from './suggestions';
 type PromptSystemProps = {
   onValueChange: (value: string) => void;
   onSuggestion: (suggestion: string) => void;
-  onSelectSystemPrompt: (systemPrompt: string) => void;
+  onSelectSystemPrompt: (personaId: string) => void;
   isEmpty: boolean;
-  systemPrompt?: string;
+  selectedPersonaId?: string;
 };
 
 export const PromptSystem = memo(function PromptSystemComponent({
@@ -19,7 +19,7 @@ export const PromptSystem = memo(function PromptSystemComponent({
   onSuggestion,
   onSelectSystemPrompt,
   isEmpty,
-  systemPrompt,
+  selectedPersonaId,
 }: PromptSystemProps) {
   const [isPersonaMode, setIsPersonaMode] = useState(false);
 
@@ -54,7 +54,7 @@ export const PromptSystem = memo(function PromptSystemComponent({
           {isPersonaMode ? (
             <Personas
               onSelectSystemPrompt={onSelectSystemPrompt}
-              systemPrompt={systemPrompt}
+              selectedPersonaId={selectedPersonaId}
             />
           ) : (
             <Suggestions

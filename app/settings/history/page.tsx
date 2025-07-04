@@ -151,7 +151,7 @@ export default function HistoryPage() {
       const data: Array<{
         chat: Pick<
           Doc<'chats'>,
-          '_id' | 'title' | 'model' | 'createdAt' | 'updatedAt'
+          '_id' | 'title' | 'model' | 'createdAt' | 'updatedAt' | 'personaId'
         >;
         messages: Doc<'messages'>[];
       }> = [];
@@ -170,6 +170,7 @@ export default function HistoryPage() {
               _id: chat._id,
               title: chat.title ?? '',
               model: chat.model ?? '',
+              personaId: chat.personaId,
               createdAt: chat.createdAt,
               updatedAt: chat.updatedAt,
             },

@@ -15,7 +15,6 @@ import { api } from '@/convex/_generated/api';
 import type { Doc, Id } from '@/convex/_generated/dataModel';
 import { convertConvexToAISDK } from '@/lib/ai-sdk-utils';
 import {
-  buildSystemPrompt,
   MESSAGE_MAX_LENGTH,
   MODEL_DEFAULT,
   MODELS,
@@ -130,10 +129,7 @@ export default function Chat() {
   const [reasoningEffort, setReasoningEffort] = useState<
     'low' | 'medium' | 'high'
   >('low');
-  const [personaPrompt, setPersonaPrompt] = useState<string | undefined>();
-  const [systemPrompt, setSystemPrompt] = useState(() =>
-    buildSystemPrompt(user)
-  );
+  const [personaId, setPersonaId] = useState<string | undefined>();
 
   const isAuthenticated = !!user && !user.isAnonymous;
 
@@ -221,6 +217,7 @@ export default function Chat() {
   useEffect(() => {
     if ((status === 'ready' || status === 'error') && !chatId) {
       setMessages([]);
+      setPersonaId(undefined);
     }
   }, [status, chatId, setMessages]);
 
@@ -228,24 +225,9 @@ export default function Chat() {
   useEffect(() => {
     if (currentChat) {
       setSelectedModel(currentChat.model || MODEL_DEFAULT);
-      setSystemPrompt(currentChat.systemPrompt || buildSystemPrompt(user));
-      setPersonaPrompt(undefined);
+      setPersonaId(currentChat.personaId);
     }
-  }, [currentChat, user]);
-
-  useEffect(() => {
-    if (!chatId) {
-      setSystemPrompt(buildSystemPrompt(user, personaPrompt));
-    }
-  }, [
-    chatId,
-    user,
-    user?.preferredName,
-    user?.occupation,
-    user?.traits,
-    user?.about,
-    personaPrompt,
-  ]);
+  }, [currentChat]);
 
   // --- Error Handling ---
   useEffect(() => {
@@ -291,7 +273,7 @@ export default function Chat() {
         const result = await createChat({
           title: inputMessage.substring(0, 50), // Create a title from the first message
           model: selectedModel,
-          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          personaId,
         });
         const newChatId = result.chatId;
         window.history.pushState(null, '', `/c/${newChatId}`);
@@ -325,14 +307,9 @@ export default function Chat() {
     [chatId, selectedModel, user, updateChatModel]
   );
 
-  const handlePersonaSelect = useCallback(
-    (prompt: string) => {
-      const base = prompt || undefined;
-      setPersonaPrompt(base);
-      setSystemPrompt(buildSystemPrompt(user, base));
-    },
-    [user]
-  );
+  const handlePersonaSelect = useCallback((id: string) => {
+    setPersonaId(id);
+  }, []);
 
   const uploadAndSaveFile = async (
     file: File,
@@ -392,15 +369,17 @@ export default function Chat() {
     setIsSubmitting(true);
 
     try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const options = {
         body: {
           chatId: currentChatId,
           model: selectedModel,
-          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          personaId,
           ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
             ? { enableSearch: opts.body.enableSearch }
             : {}),
           ...(isReasoningModel ? { reasoningEffort } : {}),
+          ...(timezone ? { userInfo: { timezone } } : {}),
         },
       };
 
@@ -517,7 +496,7 @@ export default function Chat() {
         body: {
           chatId: currentChatId,
           model: selectedModel,
-          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          personaId,
           ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
             ? { enableSearch: opts.body.enableSearch }
             : {}),
@@ -731,7 +710,7 @@ export default function Chat() {
         body: {
           chatId,
           model: selectedModel,
-          systemPrompt: systemPrompt || buildSystemPrompt(user),
+          personaId,
           reloadAssistantMessageId: messageId,
           ...(opts && typeof opts.enableSearch !== 'undefined'
             ? { enableSearch: opts.enableSearch }
@@ -746,7 +725,7 @@ export default function Chat() {
       setMessages,
       deleteMessage,
       selectedModel,
-      systemPrompt,
+      personaId,
       reload,
       setIsDeleting,
     ]
@@ -864,9 +843,9 @@ export default function Chat() {
           }
           reasoningEffort={reasoningEffort}
           selectedModel={selectedModel}
+          selectedPersonaId={personaId}
           status={status}
           stopAction={stop}
-          systemPrompt={personaPrompt}
         />
       </motion.div>
     </div>

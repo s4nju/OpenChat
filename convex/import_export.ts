@@ -9,7 +9,7 @@ export const bulkImportChat = mutation({
     chat: v.object({
       title: v.optional(v.string()),
       model: v.optional(v.string()),
-      systemPrompt: v.optional(v.string()),
+      personaId: v.optional(v.string()),
     }),
     messages: v.array(
       v.object({
@@ -55,7 +55,7 @@ export const bulkImportChat = mutation({
       userId,
       title: args.chat.title ?? 'Imported Chat',
       model: args.chat.model,
-      systemPrompt: args.chat.systemPrompt,
+      personaId: args.chat.personaId,
       createdAt: now,
       updatedAt: now,
     });

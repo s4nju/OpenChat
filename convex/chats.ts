@@ -19,7 +19,7 @@ export const createChat = mutation({
   args: {
     title: v.optional(v.string()),
     model: v.optional(v.string()),
-    systemPrompt: v.optional(v.string()),
+    personaId: v.optional(v.string()),
   },
   returns: v.object({ chatId: v.id('chats') }),
   handler: async (ctx, args) => {
@@ -29,7 +29,7 @@ export const createChat = mutation({
       userId,
       title: args.title ?? 'New Chat',
       model: args.model,
-      systemPrompt: args.systemPrompt,
+      personaId: args.personaId,
       createdAt: now,
       updatedAt: now,
     });
@@ -189,7 +189,7 @@ export const branchChat = mutation({
       userId,
       title: originalChat.title || 'New Chat',
       model: originalChat.model,
-      systemPrompt: originalChat.systemPrompt,
+      personaId: originalChat.personaId,
       originalChatId: args.originalChatId,
       createdAt: now,
       updatedAt: now,

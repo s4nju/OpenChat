@@ -3,26 +3,26 @@
 import { motion } from 'motion/react';
 import { memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PERSONAS } from '@/lib/config';
 import { TRANSITION_SUGGESTIONS } from '@/lib/motion';
+import { PERSONAS } from '@/lib/prompt_config';
 import { cn } from '@/lib/utils';
 
 type ButtonPersonaProps = {
+  id: string;
   label: string;
-  prompt: string;
-  onSelectSystemPrompt: (systemPrompt: string) => void;
-  systemPrompt?: string;
+  onSelectSystemPrompt: (personaId: string) => void;
+  selectedPersonaId?: string;
   icon: React.ElementType;
 };
 
 const ButtonPersona = memo(function ButtonPersonaComponent({
+  id,
   label,
-  prompt,
   onSelectSystemPrompt,
-  systemPrompt,
+  selectedPersonaId,
   icon,
 }: ButtonPersonaProps) {
-  const isActive = systemPrompt === prompt;
+  const isActive = selectedPersonaId === id;
   const Icon = icon;
 
   return (
@@ -34,7 +34,7 @@ const ButtonPersona = memo(function ButtonPersonaComponent({
       )}
       key={label}
       onClick={() =>
-        isActive ? onSelectSystemPrompt('') : onSelectSystemPrompt(prompt)
+        isActive ? onSelectSystemPrompt('') : onSelectSystemPrompt(id)
       }
       size="lg"
       type="button"
@@ -47,13 +47,13 @@ const ButtonPersona = memo(function ButtonPersonaComponent({
 });
 
 type PersonasProps = {
-  onSelectSystemPrompt: (systemPrompt: string) => void;
-  systemPrompt?: string;
+  onSelectSystemPrompt: (personaId: string) => void;
+  selectedPersonaId?: string;
 };
 
 export const Personas = memo(function PersonasComponent({
   onSelectSystemPrompt,
-  systemPrompt,
+  selectedPersonaId,
 }: PersonasProps) {
   return (
     <motion.div
@@ -71,7 +71,7 @@ export const Personas = memo(function PersonasComponent({
         exit: { opacity: 0, y: -10, filter: 'blur(4px)' },
       }}
     >
-      {PERSONAS.map((persona, index) => (
+      {PERSONAS.map((persona: (typeof PERSONAS)[0], index: number) => (
         <motion.div
           animate={{ opacity: 1, scale: 1 }}
           initial={{ opacity: 0, scale: 0.8 }}
@@ -83,11 +83,11 @@ export const Personas = memo(function PersonasComponent({
         >
           <ButtonPersona
             icon={persona.icon}
+            id={persona.id}
             key={persona.label}
             label={persona.label}
             onSelectSystemPrompt={onSelectSystemPrompt}
-            prompt={persona.prompt}
-            systemPrompt={systemPrompt}
+            selectedPersonaId={selectedPersonaId}
           />
         </motion.div>
       ))}

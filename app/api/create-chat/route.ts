@@ -4,7 +4,6 @@ import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { PostHog } from 'posthog-node';
 import { z } from 'zod';
 import { api } from '@/convex/_generated/api';
-import { buildSystemPrompt } from '@/lib/config';
 import { createErrorResponse } from '@/lib/error-utils';
 
 export async function POST(request: Request) {
@@ -20,7 +19,8 @@ export async function POST(request: Request) {
     const schema = z.object({
       title: z.string().min(1, 'Title is required'),
       model: z.string().min(1, 'Model is required'),
-      systemPrompt: z.string().optional(),
+      personaId: z.string().optional(),
+      timezone: z.string().optional(),
     });
 
     const parseResult = schema.safeParse(body);
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return createErrorResponse(new Error('Invalid request body'));
     }
 
-    const { title, model, systemPrompt } = parseResult.data;
+    const { title, model, personaId } = parseResult.data;
 
     const token = await convexAuthNextjsToken();
 
@@ -39,8 +39,6 @@ export async function POST(request: Request) {
     if (!user) {
       return createErrorResponse(new Error('Unauthorized'));
     }
-
-    const composedPrompt = buildSystemPrompt(user, systemPrompt);
 
     // Check usage limits before creating the chat. This mutation will throw
     // an error if the user is over their limit, which will be caught below.
@@ -52,7 +50,7 @@ export async function POST(request: Request) {
       {
         title,
         model,
-        systemPrompt: composedPrompt,
+        personaId,
       },
       { token }
     );

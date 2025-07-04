@@ -31,8 +31,8 @@ type ChatInputProps = {
   onSelectModelAction: (model: string) => void;
   selectedModel: string;
   isUserAuthenticated: boolean;
-  onSelectSystemPromptAction: (systemPrompt: string) => void;
-  systemPrompt?: string;
+  onSelectSystemPromptAction: (personaId: string) => void;
+  selectedPersonaId?: string;
   stopAction: () => void;
   status?: 'submitted' | 'streaming' | 'ready' | 'error';
   isReasoningModel: boolean;
@@ -53,7 +53,7 @@ export function ChatInput({
   selectedModel,
   isUserAuthenticated,
   onSelectSystemPromptAction,
-  systemPrompt,
+  selectedPersonaId,
   stopAction,
   status,
   isReasoningModel,
@@ -180,7 +180,7 @@ export function ChatInput({
           onSelectSystemPrompt={onSelectSystemPromptAction}
           onSuggestion={handleSuggestionClick}
           onValueChange={setValue}
-          systemPrompt={systemPrompt}
+          selectedPersonaId={selectedPersonaId}
         />
       )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
