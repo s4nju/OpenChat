@@ -1,7 +1,12 @@
 'use client';
 
-import { EyeIcon, FilePdfIcon, GlobeIcon } from '@phosphor-icons/react';
-import { Link as LinkIcon, Wrench } from 'lucide-react';
+import {
+  BrainIcon,
+  EyeIcon,
+  FilePdfIcon,
+  GlobeIcon,
+} from '@phosphor-icons/react';
+import { Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useUser } from '@/app/providers/user-provider';
@@ -19,11 +24,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from '@/lib/config';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  APP_BASE_URL,
+  MODEL_DEFAULT,
+  MODELS_OPTIONS,
+  PROVIDERS_OPTIONS,
+} from '@/lib/config';
 import { cn } from '@/lib/utils';
 
 type FeatureInfo = {
@@ -47,8 +59,8 @@ const FEATURE_INFO: Record<string, FeatureInfo> = {
     colorDark: 'hsl(237 75% 77%)',
   },
   reasoning: {
-    label: 'Tool Calling',
-    icon: Wrench,
+    label: 'Reasoning',
+    icon: BrainIcon,
     color: 'hsl(10 54% 54%)',
     colorDark: 'hsl(10 74% 74%)',
   },
@@ -105,6 +117,8 @@ export default function ModelsPage() {
     () => user?.enabledModels ?? [MODEL_DEFAULT]
   );
   const [filters, setFilters] = useState<Set<string>>(new Set());
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
@@ -126,12 +140,15 @@ export default function ModelsPage() {
   }, []);
 
   const filteredModels = useMemo(() => {
-    return MODELS_OPTIONS.filter((m) =>
-      Array.from(filters).every((f) =>
+    return MODELS_OPTIONS.filter((m) => {
+      if (freeOnly && m.premium) {
+        return false;
+      }
+      return Array.from(filters).every((f) =>
         m.features.some((feat) => feat.id === f && feat.enabled)
-      )
-    );
-  }, [filters]);
+      );
+    });
+  }, [filters, freeOnly]);
 
   const handleToggle = async (id: string) => {
     let next = enabled.includes(id)
@@ -172,6 +189,10 @@ export default function ModelsPage() {
     });
   };
 
+  const toggleFree = () => {
+    setFreeOnly((prev) => !prev);
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -182,32 +203,111 @@ export default function ModelsPage() {
         </p>
 
         <div className="flex items-center justify-between gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary">
-                Filter by features
+                {`Filter by features${filters.size ? ` (${filters.size})` : ''}`}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="space-y-2">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
               {allFeatures.map((fid) => {
                 const info = FEATURE_INFO[fid];
                 if (!info) {
                   return null;
                 }
+                const Icon = info.icon;
+                const checked = filters.has(fid);
                 return (
-                  <label className="flex items-center gap-2 text-sm" key={fid}>
-                    <input
-                      checked={filters.has(fid)}
-                      className="size-4 accent-primary"
-                      onChange={() => toggleFilter(fid)}
-                      type="checkbox"
-                    />
-                    {info.label}
-                  </label>
+                  <DropdownMenuItem
+                    aria-checked={checked}
+                    className="flex items-center justify-between"
+                    data-state={checked ? 'checked' : 'unchecked'}
+                    key={fid}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      toggleFilter(fid);
+                    }}
+                    role="menuitemcheckbox"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md text-[--color] dark:text-[--color-dark]"
+                        style={
+                          {
+                            '--color': info.color,
+                            '--color-dark': info.colorDark,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <span>{info.label}</span>
+                    </div>
+                    <span className="flex h-3.5 w-3.5 items-center justify-center">
+                      {checked && (
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <title>Selected</title>
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      )}
+                    </span>
+                  </DropdownMenuItem>
                 );
               })}
-            </PopoverContent>
-          </Popover>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                aria-checked={freeOnly}
+                className="flex items-center justify-between"
+                data-state={freeOnly ? 'checked' : 'unchecked'}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  toggleFree();
+                }}
+                role="menuitemcheckbox"
+              >
+                <span>Only show free plan models</span>
+                <span className="flex h-3.5 w-3.5 items-center justify-center">
+                  {freeOnly && (
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <title>Selected</title>
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {(filters.size > 0 || freeOnly) && (
+            <button
+              className="text-muted-foreground text-sm hover:underline"
+              onClick={() => {
+                setFilters(new Set());
+                setFreeOnly(false);
+              }}
+              type="button"
+            >
+              Clear
+            </button>
+          )}
 
           <div className="flex items-center gap-2">
             <Button onClick={handleRecommended} size="sm">
@@ -238,6 +338,41 @@ export default function ModelsPage() {
         </div>
 
         <div className="space-y-4">
+          {filteredModels.length === 0 && (
+            <div className="h-full space-y-4 overflow-y-auto py-16">
+              <div className="flex h-full flex-col items-center justify-center gap-6 py-12 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-muted-foreground/30 border-dashed bg-muted/20">
+                    <svg
+                      className="h-8 w-8 text-muted-foreground/60"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <title>Filter empty</title>
+                      <path d="M13.013 3H2l8 9.46V19l4 2v-8.54l.9-1.055" />
+                      <path d="m22 3-5 5" />
+                      <path d="m17 3 5 5" />
+                    </svg>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-lg text-muted-foreground">
+                      No models found
+                    </h3>
+                    <p className="text-muted-foreground/80 text-sm">
+                      No models match your current filters. Try adjusting your
+                      filter criteria or clear all filters to see all available
+                      models.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {filteredModels.map((model) => {
             const provider = PROVIDERS_OPTIONS.find(
               (p) => p.id === model.provider
@@ -251,7 +386,7 @@ export default function ModelsPage() {
                   <div className="relative h-8 w-8 flex-shrink-0 sm:h-10 sm:w-10">
                     {provider && (
                       <ProviderIcon
-                        className="h-full w-full"
+                        className="h-full w-full text-muted-foreground grayscale"
                         provider={provider}
                       />
                     )}
@@ -260,11 +395,41 @@ export default function ModelsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap items-center gap-1">
                         <h3 className="font-medium">{model.name}</h3>
+                        {model.premium && (
+                          <svg
+                            className="h-3 w-3 text-muted-foreground"
+                            fill="currentColor"
+                            viewBox="0 0 256 256"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <title>Premium model</title>
+                            <path d="M128 24l34 68 75 11-54 53 13 74-68-35-68 35 13-74-54-53 75-11z" />
+                          </svg>
+                        )}
                       </div>
                       <ToggleSwitch
                         checked={enabled.includes(model.id)}
                         onChange={() => handleToggle(model.id)}
                       />
+                    </div>
+                    <div className="relative">
+                      <p className="mr-12 whitespace-pre-line text-xs sm:text-sm">
+                        {expanded[model.id]
+                          ? model.description
+                          : model.description.split('\n')[0]}
+                      </p>
+                      <button
+                        className="mt-1 text-xs"
+                        onClick={() =>
+                          setExpanded((prev) => ({
+                            ...prev,
+                            [model.id]: !prev[model.id],
+                          }))
+                        }
+                        type="button"
+                      >
+                        {expanded[model.id] ? 'Show less' : 'Show more'}
+                      </button>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-1 sm:mt-2 sm:gap-2">
                       <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -289,8 +454,8 @@ export default function ModelsPage() {
                               }
                             >
                               <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
-                              <Icon className="h-2.5 w-2.5 brightness-75 sm:h-3 sm:w-3 dark:filter-none" />
-                              <span className="whitespace-nowrap brightness-75 dark:filter-none">
+                              <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                              <span className="whitespace-nowrap">
                                 {info.label}
                               </span>
                             </Badge>
@@ -299,9 +464,7 @@ export default function ModelsPage() {
                       </div>
                       <a
                         className="hidden h-8 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                        href={`https://www.google.com/search?q=${encodeURIComponent(
-                          model.name
-                        )}`}
+                        href={`${APP_BASE_URL}?model=${model.id}&q=`}
                         rel="noopener noreferrer"
                         target="_blank"
                       >

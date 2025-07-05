@@ -66,6 +66,7 @@ const ModelSchema = z.object({
   api_sdk: z.any().optional(),
   premium: z.boolean(),
   usesPremiumCredits: z.boolean(),
+  description: z.string(),
   features: z.array(ModelFeatureSchema).default([]),
   apiKeyUsage: ApiKeyUsageSchema.default({
     allowUserKey: false,
@@ -84,6 +85,7 @@ export const MODELS_DATA = [
     provider: "grok",
     premium: true,
     usesPremiumCredits: true,
+    description: `High-performance model for fast responses.\nUseful for a wide range of tasks.`,
     api_sdk: groq("grok-3-latest"),
     features: [
       { id: "file-upload", enabled: true },
@@ -97,6 +99,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
+    description: `Flagship model with balanced performance.\nGreat for everyday conversations.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -111,6 +114,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
+    description: `Lightweight variant offering fast responses.\nIdeal for quick questions and mobile use.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -125,6 +129,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
+    description: `Compact model optimized for reasoning tasks.\nProvides good accuracy with lower costs.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -139,6 +144,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: true,
+    description: `Advanced model for more complex reasoning.\nBest suited for in-depth conversations.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -153,6 +159,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
+    description: `Enhanced version with additional capabilities.\nIdeal for professional use.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       { id: "file-upload", enabled: true },
@@ -167,6 +174,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
+    description: `Updated architecture with improved efficiency.\nProvides consistent results for complex prompts.`,
     features: [
       { id: "file-upload", enabled: true },
       { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
@@ -180,6 +188,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
+    description: `Scaled-down model for quick chats.\nBalances speed and quality for everyday use.`,
     features: [
       { id: "file-upload", enabled: true },
       { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
@@ -193,6 +202,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
+    description: `Ultra-light model for minimal latency.\nGreat when resources are limited.`,
     features: [
       { id: "file-upload", enabled: true },
       { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
@@ -206,6 +216,7 @@ export const MODELS_DATA = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
+    description: `Stepping stone between major versions.\nOffers incremental improvements over 4.1.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       { id: "file-upload", enabled: true },
@@ -220,6 +231,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
+    description: `Powerful language model from Anthropic.\nExcels at creative writing and summaries.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -234,6 +246,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
+    description: `Latest generation model with improved context handling.\nProvides reliable results across domains.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -248,6 +261,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
+    description: `Reasoning-optimized variant of Claude 3.7.\nDesigned for analytical tasks and tool use.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -262,6 +276,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: false,
     usesPremiumCredits: false,
+    description: `Entry point to the Claude 4 family.\nOffers solid performance at a lower cost.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       { id: "file-upload", enabled: true },
@@ -276,6 +291,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
+    description: `Middle tier of the Claude 4 lineup.\nProvides strong performance for most tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -290,6 +306,7 @@ export const MODELS_DATA = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
+    description: `Enhanced Sonnet model with dedicated reasoning mode.\nBest for tool use and problem solving.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -304,6 +321,7 @@ export const MODELS_DATA = [
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
+    description: `Baseline Gemini model with fast inference.\nGreat for general tasks and web search.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.0-flash"),
     features: [
@@ -319,6 +337,7 @@ export const MODELS_DATA = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: true,
+    description: `Premium Gemini model with enhanced reasoning.\nIdeal when you need the best quality responses.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -334,6 +353,7 @@ export const MODELS_DATA = [
     provider: "meta",
     premium: false,
     usesPremiumCredits: false,
+    description: `Meta's efficient open model for experimentation.\nProvides image support with good speed.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -348,6 +368,7 @@ export const MODELS_DATA = [
     provider: "meta",
     premium: false,
     usesPremiumCredits: false,
+    description: `Optimized for lower resource usage.\nA good fit for cost-effective deployments.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -362,6 +383,7 @@ export const MODELS_DATA = [
     provider: "mistral",
     premium: false,
     usesPremiumCredits: false,
+    description: `Image-focused model with strong creative abilities.\nSupports vision and PDF understanding.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: true },
@@ -376,6 +398,7 @@ export const MODELS_DATA = [
     provider: "mistral",
     premium: false,
     usesPremiumCredits: false,
+    description: `General-purpose model from Mistral.\nOffers reliable quality for text generation.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },
@@ -388,6 +411,7 @@ export const MODELS_DATA = [
     provider: "deepseek",
     premium: false,
     usesPremiumCredits: false,
+    description: `Early DeepSeek release for experimentation.\nFocuses on research-friendly output.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: chutes("deepseek-ai/DeepSeek-V3-0324"),
     features: [
@@ -400,6 +424,7 @@ export const MODELS_DATA = [
     provider: "deepseek",
     premium: false,
     usesPremiumCredits: false,
+    description: `Stable release with reasoning enabled.\nRecommended for developers exploring new features.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },
