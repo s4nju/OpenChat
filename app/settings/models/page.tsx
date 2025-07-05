@@ -110,7 +110,7 @@ function ToggleSwitch({
     >
       <span
         className={cn(
-          'pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform',
+          'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform dark:bg-white',
           checked ? 'translate-x-4' : 'translate-x-0'
         )}
         data-state={checked ? 'checked' : 'unchecked'}
@@ -457,25 +457,25 @@ export default function ModelsPage() {
                       />
                     </div>
                     <div className="relative">
-                      <p className="mr-12 whitespace-pre-line text-xs sm:text-sm">
+                      <p className="mr-12 text-xs sm:text-sm">
                         {expanded[model.id]
-                          ? model.description
+                          ? model.description.replace(/\n/g, ' ')
                           : model.description.split('\n')[0]}
-                        {model.description.split('\n').length > 1 && (
-                          <button
-                            className="ml-1 text-xs underline"
-                            onClick={() =>
-                              setExpanded((prev) => ({
-                                ...prev,
-                                [model.id]: !prev[model.id],
-                              }))
-                            }
-                            type="button"
-                          >
-                            {expanded[model.id] ? 'Show less' : 'Show more'}
-                          </button>
-                        )}
                       </p>
+                      {model.description.split('\n').length > 1 && (
+                        <button
+                          className="mt-1 text-xs underline"
+                          onClick={() =>
+                            setExpanded((prev) => ({
+                              ...prev,
+                              [model.id]: !prev[model.id],
+                            }))
+                          }
+                          type="button"
+                        >
+                          {expanded[model.id] ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-1 sm:mt-2 sm:gap-2">
                       <div className="flex flex-wrap gap-1 sm:gap-2">
