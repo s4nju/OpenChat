@@ -110,7 +110,7 @@ function ToggleSwitch({
     >
       <span
         className={cn(
-          'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform dark:bg-white',
+          'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform dark:bg-background',
           checked ? 'translate-x-4' : 'translate-x-0'
         )}
         data-state={checked ? 'checked' : 'unchecked'}
@@ -464,7 +464,7 @@ export default function ModelsPage() {
                       </p>
                       {model.description.split('\n').length > 1 && (
                         <button
-                          className="mt-1 text-xs underline"
+                          className="mt-1 text-xs"
                           onClick={() =>
                             setExpanded((prev) => ({
                               ...prev,
@@ -516,12 +516,12 @@ export default function ModelsPage() {
                         {copied === model.id ? (
                           <>
                             <Check className="mr-1.5 h-2 w-2" />
-                            Copied
+                            <span>Copied</span>
                           </>
                         ) : (
                           <>
                             <LinkIcon className="mr-1.5 h-2 w-2" />
-                            Search URL
+                            <span>Search URL</span>
                           </>
                         )}
                       </button>
