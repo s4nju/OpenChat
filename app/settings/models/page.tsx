@@ -464,7 +464,7 @@ export default function ModelsPage() {
                       </p>
                       {model.description.split('\n').length > 1 && (
                         <button
-                          className="mt-1 text-xs"
+                          className="mt-1 cursor-pointer text-xs"
                           onClick={() =>
                             setExpanded((prev) => ({
                               ...prev,
@@ -509,21 +509,23 @@ export default function ModelsPage() {
                         })}
                       </div>
                       <button
-                        className="hidden h-8 w-24 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        className="hidden h-8 w-30 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                         onClick={() => handleCopy(model.id)}
                         type="button"
                       >
-                        {copied === model.id ? (
-                          <>
-                            <Check className="mr-1.5 h-2 w-2" />
-                            <span>Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <LinkIcon className="mr-1.5 h-2 w-2" />
-                            <span>Search URL</span>
-                          </>
-                        )}
+                        <span className="flex w-full items-center justify-center">
+                          {copied === model.id ? (
+                            <>
+                              <Check className="mr-1.5 h-2 w-2" />
+                              <span>Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <LinkIcon className="mr-1.5 h-2 w-2" />
+                              <span>Search URL</span>
+                            </>
+                          )}
+                        </span>
                       </button>
                     </div>
                   </div>
