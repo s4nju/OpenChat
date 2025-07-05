@@ -120,6 +120,7 @@ export default function ModelsPage() {
   const [filters, setFilters] = useState<Set<string>>(new Set());
   const [freeOnly, setFreeOnly] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [copied, setCopied] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
@@ -192,6 +193,18 @@ export default function ModelsPage() {
 
   const toggleFree = () => {
     setFreeOnly((prev) => !prev);
+  };
+
+  const handleCopy = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(`${APP_BASE_URL}?model=${id}&q=`);
+      setCopied(id);
+      setTimeout(() => {
+        setCopied((prev) => (prev === id ? null : prev));
+      }, 1000);
+    } catch {
+      /* empty */
+    }
   };
 
   return (
@@ -458,14 +471,14 @@ export default function ModelsPage() {
                           );
                         })}
                       </div>
-                      <a
+                      <button
                         className="hidden h-8 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                        href={`${APP_BASE_URL}?model=${model.id}&q=`}
-                        rel="noopener noreferrer"
-                        target="_blank"
+                        onClick={() => handleCopy(model.id)}
+                        type="button"
                       >
-                        <LinkIcon className="mr-1.5 h-2 w-2" /> Search URL
-                      </a>
+                        <LinkIcon className="mr-1.5 h-2 w-2" />
+                        {copied === model.id ? 'Copied' : 'Search URL'}
+                      </button>
                     </div>
                   </div>
                 </div>
