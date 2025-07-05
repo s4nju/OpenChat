@@ -19,6 +19,7 @@ interface ChatListProps {
     groupedChats: Record<string, Doc<'chats'>[]>,
     groupKey: TimeGroup
   ) => boolean;
+  activeChatId?: string | null;
 }
 
 export const ChatList = memo(function ChatListComponent({
@@ -29,6 +30,7 @@ export const ChatList = memo(function ChatListComponent({
   handleConfirmDelete,
   handleTogglePin,
   hasChatsInGroup,
+  activeChatId,
 }: ChatListProps) {
   // Pre-compute chat lookup map for O(1) access instead of O(n) searches
   const chatLookupMap = useMemo(() => {
@@ -75,6 +77,7 @@ export const ChatList = memo(function ChatListComponent({
           <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
             {pinnedChats.map((chat) => (
               <ChatItem
+                activeChatId={activeChatId}
                 handleConfirmDelete={handleConfirmDelete}
                 handleSaveEdit={handleSaveEdit}
                 handleTogglePin={handleTogglePin}
@@ -102,6 +105,7 @@ export const ChatList = memo(function ChatListComponent({
               <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
                 {groupedChats[groupKey].map((chat) => (
                   <ChatItem
+                    activeChatId={activeChatId}
                     handleConfirmDelete={handleConfirmDelete}
                     handleSaveEdit={handleSaveEdit}
                     handleTogglePin={handleTogglePin}

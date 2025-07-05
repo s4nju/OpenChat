@@ -41,7 +41,8 @@ const ChatSidebar = memo(function SidebarComponent({
   const updateChatTitle = useMutation(api.chats.updateChatTitle);
   const deleteChat = useMutation(api.chats.deleteChat);
   const pinChatToggle = useMutation(api.chats.pinChatToggle);
-  const { setIsDeleting: setChatIsDeleting } = useChatSession();
+  const { setIsDeleting: setChatIsDeleting, chatId: activeChatId } =
+    useChatSession();
 
   const params = useParams<{ chatId?: string }>();
   const router = useRouter();
@@ -232,6 +233,7 @@ const ChatSidebar = memo(function SidebarComponent({
           </div>
 
           <ChatList
+            activeChatId={activeChatId}
             groupedChats={groupedChats}
             handleConfirmDelete={handleConfirmDelete}
             handleSaveEdit={handleSaveEdit}

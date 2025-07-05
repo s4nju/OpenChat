@@ -10,7 +10,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ interface ChatItemProps {
   handleConfirmDelete: (id: Id<'chats'>) => void;
   handleTogglePin: (id: Id<'chats'>) => void;
   isPinned: boolean;
+  activeChatId?: string | null;
 }
 
 export const ChatItem = React.memo(function ChatItemComponent({
@@ -45,8 +46,8 @@ export const ChatItem = React.memo(function ChatItemComponent({
   handleConfirmDelete,
   handleTogglePin,
   isPinned,
+  activeChatId,
 }: ChatItemProps): React.ReactElement {
-  const params = useParams<{ chatId?: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title || '');
@@ -147,12 +148,12 @@ export const ChatItem = React.memo(function ChatItemComponent({
           'group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none',
           'hover:bg-accent hover:text-accent-foreground focus-visible:text-accent-foreground',
           'focus-visible:ring-2 focus-visible:ring-primary',
-          params.chatId === id && 'bg-accent text-accent-foreground'
+          activeChatId === id && 'bg-accent text-accent-foreground'
         )}
         href={`/c/${id}`}
         key={id}
         onClick={(e) => {
-          if (params.chatId === id) {
+          if (activeChatId === id) {
             e.preventDefault();
           }
         }}
