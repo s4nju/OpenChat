@@ -12,6 +12,32 @@ import { rateLimiter } from './rateLimiter';
 import { User } from './schema/user';
 
 const MODEL_DEFAULT = 'gemini-2.0-flash';
+const ALL_MODEL_IDS = [
+  'grok-3',
+  'gpt-4o',
+  'gpt-4o-mini',
+  'o4-mini',
+  'o3',
+  'o3-pro',
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano',
+  'gpt-4.5',
+  'claude-3-5-sonnet-20241022',
+  'claude-3-7-sonnet-20250219',
+  'claude-3-7-sonnet-reasoning',
+  'claude-4-opus',
+  'claude-4-sonnet',
+  'claude-4-sonnet-reasoning',
+  'gemini-2.0-flash',
+  'gemini-2.5-pro',
+  'Llama-4-Maverick-17B-128E-Instruct-FP8',
+  'Llama-4-Scout-17B-16E-Instruct',
+  'pixtral-large-latest',
+  'mistral-large-latest',
+  'deepseek-ai/DeepSeek-V3-0324',
+  'deepseek-r1-0528',
+];
 
 export const getCurrentUser = query({
   args: {},
@@ -53,7 +79,7 @@ export const userHasPremium = query({
 // Helper function to initialize user fields
 const initializeUserFields = () => ({
   preferredModel: MODEL_DEFAULT,
-  enabledModels: [MODEL_DEFAULT],
+  enabledModels: [...ALL_MODEL_IDS],
 });
 
 // Helper function to get updates for existing user
@@ -65,7 +91,7 @@ const getExistingUserUpdates = (existing: Record<string, unknown>) => {
   }
 
   if (existing.enabledModels === undefined) {
-    updates.enabledModels = [MODEL_DEFAULT];
+    updates.enabledModels = [...ALL_MODEL_IDS];
   }
 
   return updates;

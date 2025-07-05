@@ -7,7 +7,7 @@ import {
   GlobeIcon,
   SketchLogoIcon,
 } from '@phosphor-icons/react';
-import { Link as LinkIcon } from 'lucide-react';
+import { Check, Key, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useUser } from '@/app/providers/user-provider';
@@ -31,6 +31,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   APP_BASE_URL,
   MODEL_DEFAULT,
@@ -218,112 +223,115 @@ export default function ModelsPage() {
           existing conversations.
         </p>
 
-        <div className="flex items-center justify-between gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="secondary">
-                {`Filter by features${filters.size ? ` (${filters.size})` : ''}`}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {allFeatures.map((fid) => {
-                const info = FEATURE_INFO[fid];
-                if (!info) {
-                  return null;
-                }
-                const Icon = info.icon;
-                const checked = filters.has(fid);
-                return (
-                  <DropdownMenuItem
-                    aria-checked={checked}
-                    className="flex items-center justify-between"
-                    data-state={checked ? 'checked' : 'unchecked'}
-                    key={fid}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      toggleFilter(fid);
-                    }}
-                    role="menuitemcheckbox"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md text-[--color] dark:text-[--color-dark]"
-                        style={
-                          {
-                            '--color': info.color,
-                            '--color-dark': info.colorDark,
-                          } as React.CSSProperties
-                        }
-                      >
-                        <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <span>{info.label}</span>
-                    </div>
-                    <span className="flex h-3.5 w-3.5 items-center justify-center">
-                      {checked && (
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <title>Selected</title>
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      )}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                aria-checked={freeOnly}
-                className="flex items-center justify-between"
-                data-state={freeOnly ? 'checked' : 'unchecked'}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  toggleFree();
-                }}
-                role="menuitemcheckbox"
-              >
-                <span>Only show free plan models</span>
-                <span className="flex h-3.5 w-3.5 items-center justify-center">
-                  {freeOnly && (
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="secondary">
+                  {`Filter by features${filters.size ? ` (${filters.size})` : ''}`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {allFeatures.map((fid) => {
+                  const info = FEATURE_INFO[fid];
+                  if (!info) {
+                    return null;
+                  }
+                  const Icon = info.icon;
+                  const checked = filters.has(fid);
+                  return (
+                    <DropdownMenuItem
+                      aria-checked={checked}
+                      className="flex items-center justify-between"
+                      data-state={checked ? 'checked' : 'unchecked'}
+                      key={fid}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        toggleFilter(fid);
+                      }}
+                      role="menuitemcheckbox"
                     >
-                      <title>Selected</title>
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                </span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {(filters.size > 0 || freeOnly) && (
-            <button
-              className="text-muted-foreground text-sm hover:underline"
-              onClick={() => {
-                setFilters(new Set());
-                setFreeOnly(false);
-              }}
-              type="button"
-            >
-              Clear
-            </button>
-          )}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md text-[--color] dark:text-[--color-dark]"
+                          style={
+                            {
+                              '--color': info.color,
+                              '--color-dark': info.colorDark,
+                            } as React.CSSProperties
+                          }
+                        >
+                          <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span>{info.label}</span>
+                      </div>
+                      <span className="flex h-3.5 w-3.5 items-center justify-center">
+                        {checked && (
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <title>Selected</title>
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        )}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  aria-checked={freeOnly}
+                  className="flex items-center justify-between"
+                  data-state={freeOnly ? 'checked' : 'unchecked'}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    toggleFree();
+                  }}
+                  role="menuitemcheckbox"
+                >
+                  <span>Only show free plan models</span>
+                  <span className="flex h-3.5 w-3.5 items-center justify-center">
+                    {freeOnly && (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <title>Selected</title>
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    )}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {(filters.size > 0 || freeOnly) && (
+              <Button
+                className="h-8 px-3"
+                onClick={() => {
+                  setFilters(new Set());
+                  setFreeOnly(false);
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             <Button
@@ -416,10 +424,31 @@ export default function ModelsPage() {
                       <div className="flex flex-wrap items-center gap-1">
                         <h3 className="font-medium">{model.name}</h3>
                         {model.usesPremiumCredits && (
-                          <SketchLogoIcon
-                            className="h-3 w-3 text-muted-foreground"
-                            weight="regular"
-                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center">
+                                <SketchLogoIcon
+                                  className="h-3 w-3 text-muted-foreground"
+                                  weight="regular"
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Premium Model</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {model.apiKeyUsage.userKeyOnly && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center">
+                                <Key className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Requires API Key</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                       <ToggleSwitch
@@ -432,19 +461,21 @@ export default function ModelsPage() {
                         {expanded[model.id]
                           ? model.description
                           : model.description.split('\n')[0]}
+                        {model.description.split('\n').length > 1 && (
+                          <button
+                            className="ml-1 text-xs underline"
+                            onClick={() =>
+                              setExpanded((prev) => ({
+                                ...prev,
+                                [model.id]: !prev[model.id],
+                              }))
+                            }
+                            type="button"
+                          >
+                            {expanded[model.id] ? 'Show less' : 'Show more'}
+                          </button>
+                        )}
                       </p>
-                      <button
-                        className="mt-1 text-xs"
-                        onClick={() =>
-                          setExpanded((prev) => ({
-                            ...prev,
-                            [model.id]: !prev[model.id],
-                          }))
-                        }
-                        type="button"
-                      >
-                        {expanded[model.id] ? 'Show less' : 'Show more'}
-                      </button>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-1 sm:mt-2 sm:gap-2">
                       <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -478,12 +509,21 @@ export default function ModelsPage() {
                         })}
                       </div>
                       <button
-                        className="hidden h-8 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        className="hidden h-8 w-24 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 font-medium text-muted-foreground text-xs transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:flex [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                         onClick={() => handleCopy(model.id)}
                         type="button"
                       >
-                        <LinkIcon className="mr-1.5 h-2 w-2" />
-                        {copied === model.id ? 'Copied' : 'Search URL'}
+                        {copied === model.id ? (
+                          <>
+                            <Check className="mr-1.5 h-2 w-2" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <LinkIcon className="mr-1.5 h-2 w-2" />
+                            Search URL
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
