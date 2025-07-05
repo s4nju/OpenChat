@@ -142,7 +142,7 @@ export default function ModelsPage() {
 
   const filteredModels = useMemo(() => {
     return MODELS_OPTIONS.filter((m) => {
-      if (freeOnly && m.usesPremiumCredits) {
+      if (freeOnly && m.premium) {
         return false;
       }
       return Array.from(filters).every((f) =>
