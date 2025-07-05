@@ -7,7 +7,7 @@
 - Only terminate your turn when you are sure that the problem is solved. Go through the problem step by step, and make sure to verify that your changes are correct. NEVER end your turn without having solved the problem, and when you say you are going to make a tool call, make sure you ACTUALLY make the tool call, instead of ending your turn.
 - Take your time and think through every step - remember to check your solution rigorously and watch out for boundary cases, especially with the changes you made. Your solution must be perfect. If not, continue working on it. At the end, you must test your code rigorously using the tools provided, and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect. Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks; make sure you handle all edge cases, and run existing tests if they are provided.
 - Do not assume anything. Use the docs.
-- If there is a lint error, fix it before moving on.
+- If there is a lint error (bun run lint), fix it before moving on.
 - Always refer docs about Vercel AI SDK
 
 # **Project Details**
@@ -15,14 +15,15 @@
 - Tailwind CSS for styling
 - TypeScript for type safety
 - Sonner for toast notifications
-- Phosphor Icons for icons
+- Phosphor Icons, Lucide React for icons
 - Shadcn UI and Prompt-kit for components
 - Vercel AI SDK for AI
 - Next.js 15 and React 19 for the framework
-- Convex for authentication and serverless functions
+- Convex for authenticatio, Database and serverless functions
 
 
 - Update the Project Details whenever the stack changes.
 
-# **Other Files**
-- Read convex.md for convex guidelines.
+# **Files to read**
+- Read convex_rules.md for convex guidelines.
+- Read ultracite.md for general code rule (Always read this to avoid lint error)
