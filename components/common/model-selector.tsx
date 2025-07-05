@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
@@ -67,8 +67,14 @@ export function ModelSelector({
     )
   }, [apiKeys])
 
+  const enabledList = React.useMemo(
+    () => user?.enabledModels ?? [MODEL_DEFAULT],
+    [user]
+  )
+
   const availableModels = React.useMemo(() => {
-    const modelsWithAvailability = MODELS_OPTIONS.map(model => {
+    const modelsToShow = MODELS_OPTIONS.filter(m => enabledList.includes(m.id))
+    const modelsWithAvailability = modelsToShow.map(model => {
       const userHasKey = !!apiKeysObject[model.provider]
       const requiresKey = model.apiKeyUsage.userKeyOnly
       const canUseWithKey = !requiresKey || userHasKey
@@ -85,7 +91,13 @@ export function ModelSelector({
     return modelsWithAvailability.sort((a, b) => {
       return b.available === a.available ? 0 : b.available ? 1 : -1
     })
-  }, [apiKeysObject, hasPremium])
+  }, [apiKeysObject, hasPremium, enabledList])
+
+  React.useEffect(() => {
+    if (!enabledList.includes(selectedModelId)) {
+      setSelectedModelId(MODEL_DEFAULT)
+    }
+  }, [enabledList, selectedModelId, setSelectedModelId])
 
   const model = React.useMemo(
     () => availableModels.find(model => model.id === selectedModelId),

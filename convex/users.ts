@@ -53,6 +53,7 @@ export const userHasPremium = query({
 // Helper function to initialize user fields
 const initializeUserFields = () => ({
   preferredModel: MODEL_DEFAULT,
+  enabledModels: [MODEL_DEFAULT],
 });
 
 // Helper function to get updates for existing user
@@ -61,6 +62,10 @@ const getExistingUserUpdates = (existing: Record<string, unknown>) => {
 
   if (existing.preferredModel === undefined) {
     updates.preferredModel = MODEL_DEFAULT;
+  }
+
+  if (existing.enabledModels === undefined) {
+    updates.enabledModels = [MODEL_DEFAULT];
   }
 
   return updates;
@@ -177,6 +182,7 @@ export const updateUserProfile = mutation({
       occupation: v.optional(v.string()),
       traits: v.optional(v.string()),
       about: v.optional(v.string()),
+      enabledModels: v.optional(v.array(v.string())),
     }),
   },
   returns: v.null(),
