@@ -5,6 +5,7 @@ import {
   EyeIcon,
   FilePdfIcon,
   GlobeIcon,
+  SketchLogoIcon,
 } from '@phosphor-icons/react';
 import { Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -141,7 +142,7 @@ export default function ModelsPage() {
 
   const filteredModels = useMemo(() => {
     return MODELS_OPTIONS.filter((m) => {
-      if (freeOnly && m.premium) {
+      if (freeOnly && m.usesPremiumCredits) {
         return false;
       }
       return Array.from(filters).every((f) =>
@@ -395,16 +396,11 @@ export default function ModelsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap items-center gap-1">
                         <h3 className="font-medium">{model.name}</h3>
-                        {model.premium && (
-                          <svg
+                        {model.usesPremiumCredits && (
+                          <SketchLogoIcon
                             className="h-3 w-3 text-muted-foreground"
-                            fill="currentColor"
-                            viewBox="0 0 256 256"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <title>Premium model</title>
-                            <path d="M128 24l34 68 75 11-54 53 13 74-68-35-68 35 13-74-54-53 75-11z" />
-                          </svg>
+                            weight="regular"
+                          />
                         )}
                       </div>
                       <ToggleSwitch
