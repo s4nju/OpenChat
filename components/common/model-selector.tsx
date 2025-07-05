@@ -23,14 +23,15 @@ import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import {
-  CaretDown,
-  Eye,
-  FilePdf,
-  Brain,
-  Globe,
-  SketchLogo,
+  CaretDownIcon,
+  EyeIcon,
+  FilePdfIcon,
+  BrainIcon,
+  GlobeIcon,
+  SketchLogoIcon,
 } from "@phosphor-icons/react"
 import { Key } from "lucide-react"
+import { ProviderIcon } from "@/app/components/common/provider-icon"
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -155,14 +156,16 @@ export function ModelSelector({
         }
       >
         <div className="flex items-center gap-3">
-          {providerOption?.icon && <providerOption.icon className="size-5" />}
+          {providerOption && (
+            <ProviderIcon provider={providerOption} className="size-5" />
+          )}
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-medium">{modelOption.name}</span>
             {modelOption.usesPremiumCredits && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center">
-                    <SketchLogo
+                    <SketchLogoIcon
                       weight="regular"
                       className="size-3 text-muted-foreground"
                     />
@@ -198,7 +201,7 @@ export function ModelSelector({
                   {/* Overlay takes color via bg-current */}
                   <div className={iconOverlayClasses}></div>
                   {/* Icon is placed on top, inherits text color */}
-                  <Eye
+                  <EyeIcon
                     className={cn(iconSizeClasses, "relative")}
                   />{" "}
                   {/* Added relative to ensure it's above overlay */}
@@ -214,7 +217,7 @@ export function ModelSelector({
               <TooltipTrigger asChild>
                 <div className={cn(iconWrapperBaseClasses, pdfColorClasses)}>
                   <div className={iconOverlayClasses}></div>
-                  <FilePdf className={cn(iconSizeClasses, "relative")} />
+                  <FilePdfIcon className={cn(iconSizeClasses, "relative")} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -229,7 +232,7 @@ export function ModelSelector({
                   className={cn(iconWrapperBaseClasses, reasoningColorClasses)}
                 >
                   <div className={iconOverlayClasses}></div>
-                  <Brain className={cn(iconSizeClasses, "relative")} />
+                  <BrainIcon className={cn(iconSizeClasses, "relative")} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -242,7 +245,7 @@ export function ModelSelector({
               <TooltipTrigger asChild>
                 <div className={cn(iconWrapperBaseClasses, webSearchColorClasses)}>
                   <div className={iconOverlayClasses}></div>
-                  <Globe className={cn(iconSizeClasses, "relative")} />
+                  <GlobeIcon className={cn(iconSizeClasses, "relative")} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -264,14 +267,14 @@ export function ModelSelector({
             className={cn(
               "dark:bg-secondary justify-between",
               isMobile && "py-3",
-              className
-            )}
-          >
-            <div className="flex items-center gap-2">
-              {provider?.icon && <provider.icon className="size-5" />}
-              {isMobile ? (
-                <div className="flex flex-col items-start">
-                  <span className="text-sm leading-tight">
+            className
+          )}
+        >
+          <div className="flex items-center gap-2">
+            {provider && <ProviderIcon provider={provider} className="size-5" />}
+            {isMobile ? (
+              <div className="flex flex-col items-start">
+                <span className="text-sm leading-tight">
                     {parseModelName(model?.name ?? "Select Model").baseName}
                   </span>
                   {model && parseModelName(model.name).hasReasoningInName && (
@@ -284,7 +287,7 @@ export function ModelSelector({
                 <span>{model?.name ?? "Select Model"}</span>
               )}
             </div>
-            <CaretDown className="size-4 opacity-50" />
+            <CaretDownIcon className="size-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

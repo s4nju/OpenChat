@@ -1,9 +1,3 @@
-import Claude from "@/components/icons/claude"
-import DeepSeek from "@/components/icons/deepseek"
-import Gemini from "@/components/icons/gemini"
-import Grok from "@/components/icons/grok"
-import Mistral from "@/components/icons/mistral"
-import OpenAI from "@/components/icons/openai"
 import type { Doc } from "@/convex/_generated/dataModel"
 import { google } from "@ai-sdk/google"
 import { groq } from "@ai-sdk/groq"
@@ -13,21 +7,15 @@ import { anthropic } from "@ai-sdk/anthropic"
 import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { togetherai } from "@ai-sdk/togetherai"
-import { Meta, Qwen } from "@lobehub/icons"
+import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
 import {
   BookOpenTextIcon,
   BrainIcon,
-  ChalkboardTeacherIcon,
-  ChatTeardropTextIcon,
   CodeIcon,
-  CookingPotIcon,
   DetectiveIcon,
-  HeartbeatIcon,
   LightbulbIcon,
-  MagnifyingGlassIcon,
   NotepadIcon,
   PaintBrushIcon,
-  PenNibIcon,
   SparkleIcon,
 } from "@phosphor-icons/react/dist/ssr"
 import { extractReasoningMiddleware, wrapLanguageModel } from "ai"
@@ -381,7 +369,7 @@ export const MODELS_DATA = [
       { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: mistral("pixtral-large-latest"),
-    icon: Mistral,
+    icon: MistralAI,
   },
   {
     id: "mistral-large-latest",
@@ -455,6 +443,7 @@ export type Provider = {
   id: string
   name: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  icon_light?: React.ComponentType<React.SVGProps<SVGSVGElement>>
 }
 
 export const PROVIDERS = [
@@ -471,7 +460,8 @@ export const PROVIDERS = [
   {
     id: "grok",
     name: "Grok",
-    icon: Grok,
+    icon: GrokDark,
+    icon_light: GrokLight,
   },
   {
     id: "openrouter",
@@ -481,27 +471,29 @@ export const PROVIDERS = [
   {
     id: "openai",
     name: "OpenAI",
-    icon: OpenAI,
+    icon: OpenAIDark,
+    icon_light: OpenAILight,
   },
   {
     id: "anthropic",
     name: "Claude",
-    icon: Claude,
+    icon: AnthropicDark,
+    icon_light: AnthropicLight,
   },
   {
     id: "mistral",
     name: "Mistral",
-    icon: Mistral,
+    icon: MistralAI,
   },
   {
     id: "meta",
     name: "Meta",
-    icon: Meta.Color,
+    icon: Meta,
   },
   {
     id: "Qwen",
     name: "Qwen",
-    icon: Qwen.Color,
+    icon: QwenLight,
   },
 ] as Provider[]
 

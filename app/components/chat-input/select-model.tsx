@@ -1,4 +1,5 @@
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDownIcon } from '@phosphor-icons/react';
+import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { ModelSelector } from '@/components/common/model-selector';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
@@ -38,11 +39,11 @@ export function SelectModelComponent({
                 type="button"
                 variant="secondary"
               >
-                {providerOption?.icon && (
-                  <providerOption.icon className="size-5" />
+                {providerOption && (
+                  <ProviderIcon className="size-5" provider={providerOption} />
                 )}
                 {modelOption?.name}
-                <CaretDown className="size-4" />
+                <CaretDownIcon className="size-4" />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
