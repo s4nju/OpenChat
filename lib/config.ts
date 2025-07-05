@@ -369,7 +369,6 @@ export const MODELS_DATA = [
       { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: mistral("pixtral-large-latest"),
-    icon: MistralAI,
   },
   {
     id: "mistral-large-latest",
