@@ -124,7 +124,8 @@ export default function Chat() {
   const [hasDialogAuth, setHasDialogAuth] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [selectedModel, setSelectedModel] = useState(() => {
-    const enabled = user?.enabledModels ?? [MODEL_DEFAULT];
+    const disabledSet = new Set(user?.disabledModels ?? []);
+      const enabled = MODELS.map((m)=>m.id).filter(id=>!disabledSet.has(id));
     const pref = user?.preferredModel ?? MODEL_DEFAULT;
     return enabled.includes(pref) ? pref : MODEL_DEFAULT;
   });
@@ -226,7 +227,8 @@ export default function Chat() {
   // Sync chat settings from DB to local state
   useEffect(() => {
     if (currentChat) {
-      const enabled = user?.enabledModels ?? [MODEL_DEFAULT];
+      const disabledSet = new Set(user?.disabledModels ?? []);
+      const enabled = MODELS.map((m)=>m.id).filter(id=>!disabledSet.has(id));
       const chatModel = currentChat.model || MODEL_DEFAULT;
       setSelectedModel(enabled.includes(chatModel) ? chatModel : MODEL_DEFAULT);
       setPersonaId(currentChat.personaId);
@@ -235,7 +237,8 @@ export default function Chat() {
 
   // Ensure selected model stays valid when user settings change
   useEffect(() => {
-    const enabled = user?.enabledModels ?? [MODEL_DEFAULT];
+    const disabledSet = new Set(user?.disabledModels ?? []);
+      const enabled = MODELS.map((m)=>m.id).filter(id=>!disabledSet.has(id));
     if (!enabled.includes(selectedModel)) {
       setSelectedModel(MODEL_DEFAULT);
     }
@@ -754,7 +757,8 @@ export default function Chat() {
   // Use user's preferred model when starting a brand-new chat
   useEffect(() => {
     if (!chatId && user) {
-      const enabled = user.enabledModels ?? [MODEL_DEFAULT];
+      const disabledSet = new Set(user.disabledModels ?? []);
+      const enabled = MODELS.map((m)=>m.id).filter(id=>!disabledSet.has(id));
       const pref = user.preferredModel ?? MODEL_DEFAULT;
       setSelectedModel(enabled.includes(pref) ? pref : MODEL_DEFAULT);
     }

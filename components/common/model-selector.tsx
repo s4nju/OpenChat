@@ -67,10 +67,11 @@ export function ModelSelector({
     )
   }, [apiKeys])
 
-  const enabledList = React.useMemo(
-    () => user?.enabledModels ?? [MODEL_DEFAULT],
-    [user]
-  )
+  const disabledSet = React.useMemo(() => new Set(user?.disabledModels ?? []), [user]);
+
+  const enabledList = React.useMemo(() => {
+    return MODELS_OPTIONS.map(m=>m.id).filter(id=>!disabledSet.has(id));
+  }, [disabledSet]);
 
   const availableModels = React.useMemo(() => {
     const modelsToShow = MODELS_OPTIONS.filter(m => enabledList.includes(m.id))

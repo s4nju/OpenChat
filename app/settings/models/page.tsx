@@ -121,8 +121,8 @@ function ToggleSwitch({
 
 export default function ModelsPage() {
   const { user, updateUser } = useUser();
-  const [enabled, setEnabled] = useState<string[]>(
-    () => user?.enabledModels ?? [MODEL_DEFAULT]
+  const [disabled, setDisabled] = useState<Set<string>>(
+    () => new Set(user?.disabledModels ?? [])
   );
   const [filters, setFilters] = useState<Set<string>>(new Set());
   const [freeOnly, setFreeOnly] = useState(false);
@@ -132,7 +132,7 @@ export default function ModelsPage() {
 
   useEffect(() => {
     if (user) {
-      setEnabled(user.enabledModels ?? [MODEL_DEFAULT]);
+      setDisabled(new Set(user.disabledModels ?? []));
     }
   }, [user]);
 
@@ -148,6 +148,8 @@ export default function ModelsPage() {
     return Array.from(f);
   }, []);
 
+  const isModelEnabled = (id: string) => !disabled.has(id);
+
   const filteredModels = useMemo(() => {
     return MODELS_OPTIONS.filter((m) => {
       if (freeOnly && m.premium) {
@@ -160,29 +162,32 @@ export default function ModelsPage() {
   }, [filters, freeOnly]);
 
   const handleToggle = async (id: string) => {
-    let next = enabled.includes(id)
-      ? enabled.filter((m) => m !== id)
-      : [...enabled, id];
-    if (!next.includes(MODEL_DEFAULT)) {
-      next = [...next, MODEL_DEFAULT];
+    const next = new Set(disabled);
+    if (next.has(id)) {
+      next.delete(id);
+    } else if (id !== MODEL_DEFAULT) {
+      next.add(id);
     }
-    setEnabled(next);
-    await updateUser({ enabledModels: next });
+    setDisabled(next);
+    await updateUser({ disabledModels: Array.from(next) });
   };
 
   const handleRecommended = async () => {
-    const rec = [...RECOMMENDED_MODELS];
-    if (!rec.includes(MODEL_DEFAULT)) {
-      rec.push(MODEL_DEFAULT);
+    // Recommended: disable all not in rec
+    const recSet = new Set<string>();
+    for (const id of MODELS_OPTIONS.map((m) => m.id)) {
+      if (!RECOMMENDED_MODELS.includes(id) && id !== MODEL_DEFAULT) {
+        recSet.add(id);
+      }
     }
-    setEnabled(rec);
-    await updateUser({ enabledModels: rec });
+    setDisabled(recSet);
+    await updateUser({ disabledModels: Array.from(recSet) });
   };
 
   const handleUnselectAll = async () => {
-    const next = [MODEL_DEFAULT];
-    setEnabled(next);
-    await updateUser({ enabledModels: next });
+    const next = new Set<string>(); // no disabled models
+    setDisabled(next);
+    await updateUser({ disabledModels: [] });
     setShowConfirm(false);
   };
 
@@ -452,7 +457,7 @@ export default function ModelsPage() {
                         )}
                       </div>
                       <ToggleSwitch
-                        checked={enabled.includes(model.id)}
+                        checked={isModelEnabled(model.id)}
                         onChange={() => handleToggle(model.id)}
                       />
                     </div>
