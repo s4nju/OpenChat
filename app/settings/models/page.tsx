@@ -209,7 +209,15 @@ export default function ModelsPage() {
 
   const handleCopy = async (id: string) => {
     try {
-      await navigator.clipboard.writeText(`${APP_BASE_URL}?model=${id}&q=`);
+      const base =
+        process.env.NODE_ENV === 'development'
+          ? 'http://localhost:3000'
+          : APP_BASE_URL;
+      const u = new URL(base);
+      u.searchParams.set('model', id); // encodes automatically
+      u.searchParams.set('q', '%s'); // encodes to %25s
+      const searchUrl = u.toString().replace('%25s', '%s');
+      await navigator.clipboard.writeText(searchUrl);
       setCopied(id);
       setTimeout(() => {
         setCopied((prev) => (prev === id ? null : prev));
