@@ -6,8 +6,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 import { Conversation } from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
+import { useApiKeys } from '@/app/hooks/use-api-keys';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { toast } from '@/components/ui/toast';
@@ -18,11 +20,27 @@ import {
   MESSAGE_MAX_LENGTH,
   MODEL_DEFAULT,
   MODELS,
+  MODELS_MAP,
   REMAINING_QUERY_ALERT_THRESHOLD,
 } from '@/lib/config';
 import { classifyError, shouldShowAsToast } from '@/lib/error-utils';
 import { API_ROUTE_CHAT } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+
+const ChatBodySchema = z.object({
+  chatId: z.string(),
+  model: z.string(),
+  personaId: z.string().optional(),
+  enableSearch: z.boolean().optional(),
+  reasoningEffort: z.enum(['low', 'medium', 'high']).optional(),
+  userInfo: z
+    .object({
+      timezone: z.string().optional(),
+    })
+    .optional(),
+});
+
+type ChatBody = z.infer<typeof ChatBodySchema>;
 
 const DialogAuth = dynamic(
   () => import('./dialog-auth').then((mod) => mod.DialogAuth),
@@ -95,13 +113,57 @@ const processBranchError = (branchError: unknown): string => {
   return 'Failed to branch chat';
 };
 
+// Helper function to send a message without files. This is extracted to be
+// reusable by both the main `submit` handler and the search URL handler.
+const sendInitialMessageHelper = (
+  messageContent: string,
+  chatId: string,
+  model: string,
+  persona: string | undefined,
+  reasoning: 'low' | 'medium' | 'high',
+  appendFn: (
+    message: Message,
+    options?: { body?: ChatBody }
+  ) => Promise<string | null | undefined>,
+  opts?: { body?: { enableSearch?: boolean } }
+) => {
+  const isReasoningModel = supportsReasoningEffort(model);
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const body: ChatBody = {
+      chatId,
+      model,
+      personaId: persona,
+      ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
+        ? { enableSearch: opts.body.enableSearch }
+        : {}),
+      ...(isReasoningModel ? { reasoningEffort: reasoning } : {}),
+      ...(timezone ? { userInfo: { timezone } } : {}),
+    };
+
+    appendFn(
+      {
+        id: `temp-${Date.now()}`,
+        role: 'user',
+        content: messageContent,
+      },
+      { body }
+    ).catch(() => {
+      toast({ title: 'Failed to send message', status: 'error' });
+    });
+  } catch {
+    toast({ title: 'Failed to send message', status: 'error' });
+  }
+};
+
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isUserLoading } = useUser();
-
-  // --- Convex Data Hooks ---
+  const { hasApiKey, isLoading: isApiKeysLoading } = useApiKeys();
+  const isPremium = useQuery(api.users.userHasPremium) ?? false;
+  const processedUrl = useRef(false);
   const messagesFromDB = useQuery(
     api.messages.getMessagesForChat,
     chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
@@ -123,9 +185,24 @@ export default function Chat() {
   const [isBranching, setIsBranching] = useState(false);
   const [hasDialogAuth, setHasDialogAuth] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedModel, setSelectedModel] = useState(
-    user?.preferredModel || MODEL_DEFAULT
+  // Helper function to get a valid model ID based on preferred model and disabled models
+  const getValidModel = useCallback(
+    (preferredModel: string, disabledModels: string[] = []) => {
+      const disabledSet = new Set(disabledModels);
+      const enabled = MODELS.map((m) => m.id).filter(
+        (id) => !disabledSet.has(id)
+      );
+      return enabled.includes(preferredModel) ? preferredModel : MODEL_DEFAULT;
+    },
+    []
   );
+
+  const [selectedModel, setSelectedModel] = useState(() => {
+    return getValidModel(
+      user?.preferredModel ?? MODEL_DEFAULT,
+      user?.disabledModels
+    );
+  });
   const [reasoningEffort, setReasoningEffort] = useState<
     'low' | 'medium' | 'high'
   >('low');
@@ -224,10 +301,19 @@ export default function Chat() {
   // Sync chat settings from DB to local state
   useEffect(() => {
     if (currentChat) {
-      setSelectedModel(currentChat.model || MODEL_DEFAULT);
+      const chatModel = currentChat.model || MODEL_DEFAULT;
+      setSelectedModel(getValidModel(chatModel, user?.disabledModels));
       setPersonaId(currentChat.personaId);
     }
-  }, [currentChat]);
+  }, [currentChat, user, getValidModel]);
+
+  // Ensure selected model stays valid when user settings change
+  useEffect(() => {
+    const validModel = getValidModel(selectedModel, user?.disabledModels);
+    if (validModel !== selectedModel) {
+      setSelectedModel(validModel);
+    }
+  }, [user, selectedModel, getValidModel]);
 
   // --- Error Handling ---
   useEffect(() => {
@@ -239,6 +325,98 @@ export default function Chat() {
       });
     }
   }, [error]);
+
+  useEffect(() => {
+    if (isUserLoading || isApiKeysLoading || !user || processedUrl.current) {
+      return;
+    }
+
+    const modelId = searchParams.get('model');
+    const query = searchParams.get('q');
+
+    if (modelId && query) {
+      processedUrl.current = true;
+      const model = MODELS_MAP[modelId];
+
+      if (!model) {
+        toast({ title: 'Model not found', status: 'error' });
+        return;
+      }
+
+      // Trim whitespace and validate length of the incoming query parameter.
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length === 0) {
+        toast({ title: 'Query cannot be empty', status: 'error' });
+        return;
+      }
+      if (trimmedQuery.length > MESSAGE_MAX_LENGTH) {
+        toast({
+          title: `Query is too long (max ${MESSAGE_MAX_LENGTH} characters).`,
+          status: 'error',
+        });
+        return;
+      }
+
+      if (user.disabledModels?.includes(modelId)) {
+        toast({
+          title: 'This model is disabled in your settings',
+          status: 'error',
+        });
+        return;
+      }
+
+      if (model.premium && !isPremium) {
+        toast({
+          title: 'This is a premium model. Please upgrade to use it.',
+          status: 'error',
+        });
+        return;
+      }
+
+      if (model.apiKeyUsage.userKeyOnly && !hasApiKey.get(model.provider)) {
+        toast({
+          title: `This model requires an API key for ${model.provider}`,
+          status: 'error',
+        });
+        return;
+      }
+
+      const startChat = async () => {
+        try {
+          const { chatId: newChatId } = await createChat({
+            title: trimmedQuery,
+            model: modelId,
+          });
+          window.history.pushState(null, '', `/c/${newChatId}`);
+          setSelectedModel(modelId);
+          sendInitialMessageHelper(
+            trimmedQuery,
+            newChatId,
+            modelId,
+            personaId,
+            reasoningEffort,
+            append,
+            { body: { enableSearch: false } }
+          );
+        } catch (_err) {
+          toast({ title: 'Failed to create chat', status: 'error' });
+        }
+      };
+
+      startChat();
+    }
+  }, [
+    isUserLoading,
+    isApiKeysLoading,
+    user,
+    searchParams,
+    isPremium,
+    hasApiKey,
+    createChat,
+    append,
+    personaId,
+    reasoningEffort,
+  ]);
 
   // --- Core Logic Handlers ---
 
@@ -365,37 +543,16 @@ export default function Chat() {
     currentChatId: string,
     opts?: { body?: { enableSearch?: boolean } }
   ) => {
-    const isReasoningModel = supportsReasoningEffort(selectedModel);
     setIsSubmitting(true);
-
-    try {
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const options = {
-        body: {
-          chatId: currentChatId,
-          model: selectedModel,
-          personaId,
-          ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
-            ? { enableSearch: opts.body.enableSearch }
-            : {}),
-          ...(isReasoningModel ? { reasoningEffort } : {}),
-          ...(timezone ? { userInfo: { timezone } } : {}),
-        },
-      };
-
-      append(
-        {
-          role: 'user',
-          content: inputMessage,
-        },
-        options
-      ).catch(() => {
-        toast({ title: 'Failed to send message', status: 'error' });
-      });
-    } catch {
-      toast({ title: 'Failed to send message', status: 'error' });
-    }
-
+    sendInitialMessageHelper(
+      inputMessage,
+      currentChatId,
+      selectedModel,
+      personaId,
+      reasoningEffort,
+      append,
+      opts
+    );
     setIsSubmitting(false);
   };
 
@@ -741,10 +898,12 @@ export default function Chat() {
 
   // Use user's preferred model when starting a brand-new chat
   useEffect(() => {
-    if (!chatId && user?.preferredModel) {
-      setSelectedModel(user.preferredModel);
+    if (!chatId && user) {
+      setSelectedModel(
+        getValidModel(user.preferredModel ?? MODEL_DEFAULT, user.disabledModels)
+      );
     }
-  }, [user?.preferredModel, chatId]);
+  }, [user, chatId, getValidModel]);
 
   const targetMessageId = searchParams.get('m');
   const hasScrolledRef = useRef(false);

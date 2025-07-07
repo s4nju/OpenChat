@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
@@ -53,8 +53,12 @@ export function ModelSelector({
   )
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
 
+  const handleSelect = React.useCallback((id: string) => {
+    setSelectedModelId(id);
+  }, [setSelectedModelId]);
+
   // Get product IDs with fallback
-  const productIds = products?.premium?.id ? [products.premium.id] : []
+  const productIds = React.useMemo(() => (products?.premium?.id ? [products.premium.id] : []), [products]);
 
   // Transform API keys array to object format expected by getAvailableModels
   const apiKeysObject = React.useMemo(() => {
@@ -67,8 +71,16 @@ export function ModelSelector({
     )
   }, [apiKeys])
 
+  const disabledSet = React.useMemo(() => new Set(user?.disabledModels ?? []), [user]);
+
+  const enabledSet = React.useMemo(() => {
+    const allIds = MODELS_OPTIONS.map(m => m.id);
+    return new Set(allIds.filter(id => !disabledSet.has(id)));
+  }, [disabledSet]);
+
   const availableModels = React.useMemo(() => {
-    const modelsWithAvailability = MODELS_OPTIONS.map(model => {
+    const modelsToShow = MODELS_OPTIONS.filter(m => enabledSet.has(m.id))
+    const modelsWithAvailability = modelsToShow.map(model => {
       const userHasKey = !!apiKeysObject[model.provider]
       const requiresKey = model.apiKeyUsage.userKeyOnly
       const canUseWithKey = !requiresKey || userHasKey
@@ -85,7 +97,13 @@ export function ModelSelector({
     return modelsWithAvailability.sort((a, b) => {
       return b.available === a.available ? 0 : b.available ? 1 : -1
     })
-  }, [apiKeysObject, hasPremium])
+  }, [apiKeysObject, hasPremium, enabledSet])
+
+  React.useEffect(() => {
+    if (!enabledSet.has(selectedModelId)) {
+      setSelectedModelId(MODEL_DEFAULT)
+    }
+  }, [enabledSet, selectedModelId, setSelectedModelId])
 
   const model = React.useMemo(
     () => availableModels.find(model => model.id === selectedModelId),
@@ -152,7 +170,7 @@ export function ModelSelector({
           selectedModelId === modelOption.id && "bg-accent"
         )}
         onClick={() =>
-          modelOption.available && setSelectedModelId(modelOption.id)
+          modelOption.available && handleSelect(modelOption.id)
         }
       >
         <div className="flex items-center gap-3">
