@@ -185,13 +185,23 @@ export default function Chat() {
   const [isBranching, setIsBranching] = useState(false);
   const [hasDialogAuth, setHasDialogAuth] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  // Helper function to get a valid model ID based on preferred model and disabled models
+  const getValidModel = useCallback(
+    (preferredModel: string, disabledModels: string[] = []) => {
+      const disabledSet = new Set(disabledModels);
+      const enabled = MODELS.map((m) => m.id).filter(
+        (id) => !disabledSet.has(id)
+      );
+      return enabled.includes(preferredModel) ? preferredModel : MODEL_DEFAULT;
+    },
+    []
+  );
+
   const [selectedModel, setSelectedModel] = useState(() => {
-    const disabledSet = new Set(user?.disabledModels ?? []);
-    const enabled = MODELS.map((m) => m.id).filter(
-      (id) => !disabledSet.has(id)
+    return getValidModel(
+      user?.preferredModel ?? MODEL_DEFAULT,
+      user?.disabledModels
     );
-    const pref = user?.preferredModel ?? MODEL_DEFAULT;
-    return enabled.includes(pref) ? pref : MODEL_DEFAULT;
   });
   const [reasoningEffort, setReasoningEffort] = useState<
     'low' | 'medium' | 'high'
@@ -291,26 +301,19 @@ export default function Chat() {
   // Sync chat settings from DB to local state
   useEffect(() => {
     if (currentChat) {
-      const disabledSet = new Set(user?.disabledModels ?? []);
-      const enabled = MODELS.map((m) => m.id).filter(
-        (id) => !disabledSet.has(id)
-      );
       const chatModel = currentChat.model || MODEL_DEFAULT;
-      setSelectedModel(enabled.includes(chatModel) ? chatModel : MODEL_DEFAULT);
+      setSelectedModel(getValidModel(chatModel, user?.disabledModels));
       setPersonaId(currentChat.personaId);
     }
-  }, [currentChat, user]);
+  }, [currentChat, user, getValidModel]);
 
   // Ensure selected model stays valid when user settings change
   useEffect(() => {
-    const disabledSet = new Set(user?.disabledModels ?? []);
-    const enabled = MODELS.map((m) => m.id).filter(
-      (id) => !disabledSet.has(id)
-    );
-    if (!enabled.includes(selectedModel)) {
-      setSelectedModel(MODEL_DEFAULT);
+    const validModel = getValidModel(selectedModel, user?.disabledModels);
+    if (validModel !== selectedModel) {
+      setSelectedModel(validModel);
     }
-  }, [user, selectedModel]);
+  }, [user, selectedModel, getValidModel]);
 
   // --- Error Handling ---
   useEffect(() => {
@@ -335,6 +338,11 @@ export default function Chat() {
       processedUrl.current = true;
       const model = MODELS_MAP[modelId];
 
+      if (!model) {
+        toast({ title: 'Model not found', status: 'error' });
+        return;
+      }
+
       // Trim whitespace and validate length of the incoming query parameter.
       const trimmedQuery = query.trim();
       if (trimmedQuery.length === 0) {
@@ -346,11 +354,6 @@ export default function Chat() {
           title: `Query is too long (max ${MESSAGE_MAX_LENGTH} characters).`,
           status: 'error',
         });
-        return;
-      }
-
-      if (!model) {
-        toast({ title: 'Model not found', status: 'error' });
         return;
       }
 
@@ -896,14 +899,11 @@ export default function Chat() {
   // Use user's preferred model when starting a brand-new chat
   useEffect(() => {
     if (!chatId && user) {
-      const disabledSet = new Set(user.disabledModels ?? []);
-      const enabled = MODELS.map((m) => m.id).filter(
-        (id) => !disabledSet.has(id)
+      setSelectedModel(
+        getValidModel(user.preferredModel ?? MODEL_DEFAULT, user.disabledModels)
       );
-      const pref = user.preferredModel ?? MODEL_DEFAULT;
-      setSelectedModel(enabled.includes(pref) ? pref : MODEL_DEFAULT);
     }
-  }, [user, chatId]);
+  }, [user, chatId, getValidModel]);
 
   const targetMessageId = searchParams.get('m');
   const hasScrolledRef = useRef(false);

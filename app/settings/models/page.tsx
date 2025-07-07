@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { Check, Key, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useUser } from '@/app/providers/user-provider';
 import {
@@ -223,7 +224,7 @@ export default function ModelsPage() {
         setCopied((prev) => (prev === id ? null : prev));
       }, 1000);
     } catch {
-      /* empty */
+      toast.error('Failed to copy to clipboard. Please try again.');
     }
   };
 
@@ -471,11 +472,13 @@ export default function ModelsPage() {
                     </div>
                     <div className="relative">
                       <p className="mr-12 text-xs sm:text-sm">
-                        {expanded[model.id]
-                          ? model.description.replace(/\n/g, ' ')
-                          : model.description.split('\n')[0]}
+                        {model.description ? (
+                          expanded[model.id]
+                            ? model.description.replace(/\n/g, ' ')
+                            : model.description.split('\n')[0]
+                        ) : ''}
                       </p>
-                      {model.description.split('\n').length > 1 && (
+                      {model.description && model.description.split('\n').length > 1 && (
                         <button
                           className="mt-1 cursor-pointer text-xs"
                           onClick={() =>
