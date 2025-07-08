@@ -679,12 +679,14 @@ export async function POST(req: Request) {
         }
 
         // --- Insert User Message (if not a reload) ---
-        userMsgId = await saveUserMessage(
-          messages,
-          chatId,
-          token,
-          reloadAssistantMessageId
-        );
+        if (!userMsgId) {
+          userMsgId = await saveUserMessage(
+            messages,
+            chatId,
+            token,
+            reloadAssistantMessageId
+          );
+        }
 
         // Helper to convert storage IDs to fresh URLs for AI models
         const resolveAttachmentUrls = async (
@@ -824,7 +826,7 @@ export async function POST(req: Request) {
             async onFinish({ usage, response }) {
               try {
                 // Get the actual response data
-                const responseData = await response;
+                const responseData = response;
 
                 // console.log("DEBUG: Response structure:", {
                 //   messageCount: responseData.messages.length,
