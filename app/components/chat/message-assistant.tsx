@@ -384,7 +384,8 @@ const renderReasoningSection = (
   status: string | undefined,
   showReasoning: boolean,
   setShowReasoning: (show: (prev: boolean) => boolean) => void,
-  combinedReasoningMarkdown: string
+  combinedReasoningMarkdown: string,
+  id: string
 ) => {
   if (reasoningParts.length === 0 && !reasoning_text) {
     return null;
@@ -449,7 +450,10 @@ const renderReasoningSection = (
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
             {combinedReasoningMarkdown && (
-              <Markdown className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed">
+              <Markdown
+                className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
+                id={`${id}-reasoning`}
+              >
                 {combinedReasoningMarkdown}
               </Markdown>
             )}
@@ -589,7 +593,8 @@ function MessageAssistantInner({
           status,
           showReasoning,
           setShowReasoning,
-          combinedReasoningMarkdown
+          combinedReasoningMarkdown,
+          id
         )}
 
         {renderErrorParts(errorParts)}
@@ -600,6 +605,7 @@ function MessageAssistantInner({
         {children.trim() && (
           <MessageContent
             className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
+            id={id}
             markdown={true}
           >
             {children}
