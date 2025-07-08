@@ -6,13 +6,14 @@ import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 import { withTracing } from '@posthog/ai';
 import {
   createDataStreamResponse,
+  experimental_generateImage as generateImage,
   type JSONValue,
   type Message as MessageAISDK,
   smoothStream,
   streamText,
 } from 'ai';
 import { checkBotId } from 'botid/server';
-import { fetchMutation, fetchQuery } from 'convex/nextjs';
+import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
 import { PostHog } from 'posthog-node';
 import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
@@ -268,6 +269,175 @@ const buildAnthropicProviderOptions = (
   return options;
 };
 
+/**
+ * Handle image generation for image generation models
+ */
+function handleImageGeneration({
+  messages,
+  chatId,
+  selectedModel,
+  userMsgId,
+  token,
+}: {
+  messages: MessageAISDK[];
+  chatId: Id<'chats'>;
+  selectedModel: (typeof MODELS_MAP)[string];
+  userMsgId: Id<'messages'> | null;
+  token?: string;
+}) {
+  return createDataStreamResponse({
+    execute: async (dataStream) => {
+      let currentUserMsgId: Id<'messages'> | null = userMsgId;
+
+      // Save user message first
+      if (!currentUserMsgId && token) {
+        const userMessage = messages.at(-1);
+        if (userMessage && userMessage.role === 'user') {
+          const userParts = [
+            {
+              type: 'text' as const,
+              text: sanitizeUserInput(userMessage.content as string),
+            },
+          ];
+
+          const { messageId } = await fetchMutation(
+            api.messages.sendUserMessageToChat,
+            {
+              chatId,
+              role: 'user',
+              content: sanitizeUserInput(userMessage.content as string),
+              parts: userParts,
+              metadata: {},
+            },
+            { token }
+          );
+          currentUserMsgId = messageId;
+        }
+      }
+
+      try {
+        // Extract the prompt from the last user message
+        const lastMessage = messages.at(-1);
+        // console.log(lastMessage);
+        const prompt = (lastMessage?.content as string) || 'A beautiful image';
+
+        // Generate the image using built-in API key
+        // Use different parameters based on provider (OpenAI uses size, Google uses aspectRatio)
+        const { image } =
+          selectedModel.provider === 'openai'
+            ? await generateImage({
+                model: selectedModel.api_sdk,
+                prompt,
+                size: '1024x1024',
+              })
+            : await generateImage({
+                model: selectedModel.api_sdk,
+                prompt,
+                aspectRatio: '1:1',
+              });
+
+        // console.log(image);
+
+        // Upload image to Convex storage
+        const imageBuffer = image.uint8Array;
+        const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
+
+        const uploadUrl = await fetchAction(
+          api.files.generateUploadUrl,
+          {},
+          { token }
+        );
+
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          body: imageBlob,
+          headers: {
+            'Content-Type': 'image/png',
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload generated image');
+        }
+
+        const { storageId } = await uploadResponse.json();
+
+        // Save generated image to attachments table
+        if (token) {
+          await fetchAction(
+            api.files.saveGeneratedImage,
+            {
+              storageId,
+              chatId,
+              fileName: `generated-image-${Date.now()}.png`,
+              fileType: 'image/png',
+              fileSize: imageBuffer.length,
+            },
+            { token }
+          );
+        }
+
+        // Create file part for the generated image
+        const filePart = {
+          type: 'file' as const,
+          data: storageId,
+          filename: `generated-image-${Date.now()}.png`,
+          mimeType: 'image/png',
+        };
+
+        // Save assistant message with image
+        if (currentUserMsgId && token) {
+          await fetchMutation(
+            api.messages.saveAssistantMessage,
+            {
+              chatId,
+              role: 'assistant',
+              content: '', // Empty content - let the image speak for itself
+              parentMessageId: currentUserMsgId,
+              parts: [filePart], // Only include the file part, no redundant text
+              metadata: {
+                modelId: selectedModel.id,
+                modelName: selectedModel.name,
+                includeSearch: false,
+                reasoningEffort: 'none',
+              },
+            },
+            { token }
+          );
+        }
+
+        // Increment premium credits usage since image generation uses premium credits
+        if (token) {
+          await fetchMutation(
+            api.users.incrementMessageCount,
+            { usesPremiumCredits: true },
+            { token }
+          );
+        }
+
+        // Stream the response
+        dataStream.writeData('Generated image successfully');
+      } catch (error) {
+        if (currentUserMsgId && token) {
+          await saveErrorMessage(
+            chatId,
+            currentUserMsgId,
+            error,
+            token,
+            selectedModel.id,
+            selectedModel.name
+          );
+        }
+        throw error;
+      }
+    },
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return errorMsg;
+    },
+  });
+}
+
 export async function POST(req: Request) {
   // Verify the request using Vercel BotID. If identified as a bot, block early.
   const { isBot } = await checkBotId();
@@ -466,6 +636,23 @@ export async function POST(req: Request) {
       enableSearch,
       userInfo?.timezone
     );
+
+    // Check if this is an image generation model
+    const isImageGenerationModel = selectedModel.features?.some(
+      (feature) => feature.id === 'image-generation' && feature.enabled
+    );
+
+    // Handle image generation models differently
+    if (isImageGenerationModel) {
+      // Image generation always uses built-in API key, no user key support
+      return handleImageGeneration({
+        messages,
+        chatId,
+        selectedModel,
+        userMsgId: null,
+        token,
+      });
+    }
 
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
 

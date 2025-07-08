@@ -42,5 +42,8 @@ docs*
 .open-next
 .roo
 .windsurf
+.claude
 
 .env.local
+.agent.md
+claude.md

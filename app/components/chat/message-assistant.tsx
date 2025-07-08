@@ -32,13 +32,23 @@ import {
   CaretUp,
   Check,
   Copy,
+  FilePdf,
   GitBranch,
   SpinnerGap,
 } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic'; // Client component – required when using React hooks in the app router
+import Image from 'next/image';
 
 import { memo, useEffect, useRef, useState } from 'react'; // Import React to access memo
+import {
+  MorphingDialog,
+  MorphingDialogClose,
+  MorphingDialogContainer,
+  MorphingDialogContent,
+  MorphingDialogImage,
+  MorphingDialogTrigger,
+} from '@/components/motion-primitives/morphing-dialog';
 import { SourcesList } from './sources-list';
 
 interface Source {
@@ -188,6 +198,139 @@ const extractSourcesFromParts = (
     .flatMap(extractSourcesFromToolInvocation);
 
   return [...sourcesFromParts, ...sourcesFromToolInvocations];
+};
+
+// File part type for rendering
+type FileUIPart = {
+  type: 'file';
+  data: string;
+  filename?: string;
+  mimeType?: string;
+  url?: string;
+};
+
+// Helper function to extract file parts
+const extractFileParts = (
+  combinedParts: MessageType['parts']
+): FileUIPart[] => {
+  if (!combinedParts) {
+    return [];
+  }
+
+  return (combinedParts as unknown[]).filter(
+    (part: unknown): part is FileUIPart =>
+      typeof part === 'object' &&
+      part !== null &&
+      'type' in part &&
+      part.type === 'file'
+  );
+};
+
+// Helper function to get text from data URL
+const getTextFromDataUrl = (dataUrl: string) => {
+  const base64 = dataUrl.split(',')[1];
+  return base64;
+};
+
+// Helper function to render different file types
+const renderFilePart = (filePart: FileUIPart, index: number) => {
+  const displayUrl = filePart.url || filePart.data;
+  const filename = filePart.filename || `file-${index}`;
+  const mimeType = filePart.mimeType || 'application/octet-stream';
+
+  if (mimeType.startsWith('image')) {
+    return (
+      <MorphingDialog
+        key={`file-${index}`}
+        transition={{
+          type: 'spring',
+          stiffness: 280,
+          damping: 18,
+          mass: 0.3,
+        }}
+      >
+        <MorphingDialogTrigger className="z-10">
+          <Image
+            alt={filename}
+            className="mb-1 rounded-md"
+            height={300}
+            src={displayUrl}
+            width={300}
+          />
+        </MorphingDialogTrigger>
+        <MorphingDialogContainer>
+          <MorphingDialogContent className="relative rounded-lg">
+            <MorphingDialogImage
+              alt={filename}
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              src={displayUrl}
+            />
+          </MorphingDialogContent>
+          <MorphingDialogClose className="text-primary" />
+        </MorphingDialogContainer>
+      </MorphingDialog>
+    );
+  }
+
+  if (mimeType.startsWith('text')) {
+    return (
+      <div
+        className="mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-primary text-xs"
+        key={`file-${index}`}
+      >
+        {getTextFromDataUrl(displayUrl)}
+      </div>
+    );
+  }
+
+  if (mimeType === 'application/pdf') {
+    return (
+      <a
+        aria-label={`Download PDF: ${filename}`}
+        className="mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 bg-muted px-4 py-2 shadow-sm transition-colors hover:bg-muted/80 focus:bg-muted/70 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-700"
+        download={filename}
+        href={displayUrl}
+        key={`file-${index}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            (e.currentTarget as HTMLAnchorElement).click();
+          }
+        }}
+        rel="noopener noreferrer"
+        style={{ minWidth: 0, minHeight: 64 }}
+        tabIndex={0}
+        target="_blank"
+      >
+        {/* Placeholder preview lines */}
+        <div
+          aria-hidden="true"
+          className="mt-1 mb-2 flex flex-1 flex-col gap-0.5"
+        >
+          <div className="h-2 w-4/5 rounded bg-gray-200 dark:bg-zinc-600" />
+          <div className="h-2 w-3/5 rounded bg-gray-200 dark:bg-zinc-600" />
+          <div className="h-2 w-2/5 rounded bg-gray-200 dark:bg-zinc-600" />
+        </div>
+        {/* Footer with icon and filename */}
+        <div className="flex items-center gap-2">
+          <FilePdf
+            aria-hidden="true"
+            className="shrink-0 text-gray-500 dark:text-gray-300"
+            size={20}
+            weight="duotone"
+          />
+          <span
+            className="overflow-hidden truncate whitespace-nowrap font-medium text-gray-900 text-sm dark:text-gray-100"
+            style={{ maxWidth: 'calc(100% - 28px)' }}
+            title={filename}
+          >
+            {filename}
+          </span>
+        </div>
+      </a>
+    );
+  }
+
+  return null;
 };
 
 // Helper function to extract reasoning parts
@@ -421,6 +564,7 @@ function MessageAssistantInner({
   const reasoningParts = extractReasoningParts(combinedParts);
   const errorParts = extractErrorParts(combinedParts);
   const sources = extractSourcesFromParts(combinedParts);
+  const fileParts = extractFileParts(combinedParts);
   const toolInvocationsInProgress = getToolInvocationsInProgress(combinedParts);
   const isSearching = toolInvocationsInProgress.length > 0;
 
@@ -452,12 +596,24 @@ function MessageAssistantInner({
 
         {renderSearchSpinner(isSearching)}
 
-        <MessageContent
-          className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
-          markdown={true}
-        >
-          {children}
-        </MessageContent>
+        {/* Render text content only if it's not empty */}
+        {children.trim() && (
+          <MessageContent
+            className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
+            markdown={true}
+          >
+            {children}
+          </MessageContent>
+        )}
+
+        {/* Render file parts (images, PDFs, etc.) */}
+        {fileParts.length > 0 && (
+          <div className="flex w-full flex-wrap gap-2">
+            {fileParts.map((filePart, index) =>
+              renderFilePart(filePart, index)
+            )}
+          </div>
+        )}
 
         {/* Perplexity-style sources list */}
         {sources.length > 0 && <SourcesList sources={sources} />}

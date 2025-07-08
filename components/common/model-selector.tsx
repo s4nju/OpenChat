@@ -30,7 +30,7 @@ import {
   GlobeIcon,
   SketchLogoIcon,
 } from "@phosphor-icons/react"
-import { Key } from "lucide-react"
+import { Key,ImagePlus } from "lucide-react"
 import { ProviderIcon } from "@/app/components/common/provider-icon"
 
 type ModelSelectorProps = {
@@ -146,6 +146,9 @@ export function ModelSelector({
     const hasWebSearch = modelOption.features?.find(
       feature => feature.id === "web-search"
     )?.enabled
+    const hasImageGeneration = modelOption.features?.find(
+      feature => feature.id === "image-generation"
+    )?.enabled
 
     // --- Style Definitions based on the provided HTML ---
     const iconWrapperBaseClasses =
@@ -155,10 +158,11 @@ export function ModelSelector({
     const iconSizeClasses = "h-4 w-4" // Icon size is smaller than wrapper
 
     // Define the TEXT color classes for the wrapper (which icon and overlay inherit)
-    const visionColorClasses = "text-teal-600 dark:text-teal-600"
-    const pdfColorClasses = "text-indigo-600 dark:text-indigo-600" // Matched to file-text example
-    const reasoningColorClasses = "text-pink-600 dark:text-pink-600" // Choosing pink for reasoning
-    const webSearchColorClasses = "text-blue-600 dark:text-blue-600" // Blue for web search
+    const visionColorClasses = "text-teal-600 dark:text-teal-400"
+    const pdfColorClasses = "text-indigo-600 dark:text-indigo-400" // Matched to file-text example
+    const reasoningColorClasses = "text-pink-600 dark:text-pink-400" // Choosing pink for reasoning
+    const webSearchColorClasses = "text-blue-600 dark:text-blue-400" // Blue for web search
+    const imageGenerationColorClasses = "text-orange-600 dark:text-orange-400" // Orange for image generation
 
     return (
       <DropdownMenuItem
@@ -220,7 +224,7 @@ export function ModelSelector({
                   <div className={iconOverlayClasses}></div>
                   {/* Icon is placed on top, inherits text color */}
                   <EyeIcon
-                    className={cn(iconSizeClasses, "relative")}
+                    className={cn(iconSizeClasses, "relative", visionColorClasses)}
                   />{" "}
                   {/* Added relative to ensure it's above overlay */}
                 </div>
@@ -235,7 +239,7 @@ export function ModelSelector({
               <TooltipTrigger asChild>
                 <div className={cn(iconWrapperBaseClasses, pdfColorClasses)}>
                   <div className={iconOverlayClasses}></div>
-                  <FilePdfIcon className={cn(iconSizeClasses, "relative")} />
+                  <FilePdfIcon className={cn(iconSizeClasses, "relative", pdfColorClasses)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -250,7 +254,7 @@ export function ModelSelector({
                   className={cn(iconWrapperBaseClasses, reasoningColorClasses)}
                 >
                   <div className={iconOverlayClasses}></div>
-                  <BrainIcon className={cn(iconSizeClasses, "relative")} />
+                  <BrainIcon className={cn(iconSizeClasses, "relative", reasoningColorClasses)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -263,11 +267,24 @@ export function ModelSelector({
               <TooltipTrigger asChild>
                 <div className={cn(iconWrapperBaseClasses, webSearchColorClasses)}>
                   <div className={iconOverlayClasses}></div>
-                  <GlobeIcon className={cn(iconSizeClasses, "relative")} />
+                  <GlobeIcon className={cn(iconSizeClasses, "relative", webSearchColorClasses)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
                 <p>Supports web search</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {hasImageGeneration && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(iconWrapperBaseClasses, imageGenerationColorClasses)}>
+                  <div className={iconOverlayClasses}></div>
+                  <ImagePlus className={cn(iconSizeClasses, "relative", imageGenerationColorClasses)} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Can generate images</p>
               </TooltipContent>
             </Tooltip>
           )}

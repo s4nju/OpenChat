@@ -7,7 +7,7 @@ import {
   GlobeIcon,
   SketchLogoIcon,
 } from '@phosphor-icons/react';
-import { Check, Key, Link as LinkIcon } from 'lucide-react';
+import { Check, ImagePlus, Key, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -48,34 +47,28 @@ import { cn } from '@/lib/utils';
 type FeatureInfo = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  colorDark: string;
 };
 
 const FEATURE_INFO: Record<string, FeatureInfo> = {
   'file-upload': {
     label: 'Vision',
     icon: EyeIcon,
-    color: 'hsl(168 54% 52%)',
-    colorDark: 'hsl(168 54% 74%)',
   },
   'pdf-processing': {
     label: 'PDF Comprehension',
     icon: FilePdfIcon,
-    color: 'hsl(237 55% 57%)',
-    colorDark: 'hsl(237 75% 77%)',
   },
   reasoning: {
     label: 'Reasoning',
     icon: BrainIcon,
-    color: 'hsl(10 54% 54%)',
-    colorDark: 'hsl(10 74% 74%)',
   },
   'web-search': {
     label: 'Web Search',
     icon: GlobeIcon,
-    color: 'hsl(211 55% 55%)',
-    colorDark: 'hsl(211 72% 75%)',
+  },
+  'image-generation': {
+    label: 'Image Generation',
+    icon: ImagePlus,
   },
 };
 
@@ -119,6 +112,24 @@ function ToggleSwitch({
     </button>
   );
 }
+
+// Get the appropriate color classes for each feature
+const getFeatureColorClasses = (featureId: string) => {
+  switch (featureId) {
+    case 'file-upload':
+      return 'text-teal-600 dark:text-teal-400';
+    case 'pdf-processing':
+      return 'text-indigo-600 dark:text-indigo-400';
+    case 'reasoning':
+      return 'text-pink-600 dark:text-pink-400';
+    case 'web-search':
+      return 'text-blue-600 dark:text-blue-400';
+    case 'image-generation':
+      return 'text-orange-600 dark:text-orange-400';
+    default:
+      return 'text-muted-foreground';
+  }
+};
 
 export default function ModelsPage() {
   const { user, updateUser } = useUser();
@@ -267,16 +278,18 @@ export default function ModelsPage() {
                     >
                       <div className="flex items-center gap-2">
                         <div
-                          className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md text-[--color] dark:text-[--color-dark]"
-                          style={
-                            {
-                              '--color': info.color,
-                              '--color-dark': info.colorDark,
-                            } as React.CSSProperties
-                          }
+                          className={cn(
+                            'relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md',
+                            getFeatureColorClasses(fid)
+                          )}
                         >
                           <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
-                          <Icon className="h-4 w-4" />
+                          <Icon
+                            className={cn(
+                              'relative h-4 w-4',
+                              getFeatureColorClasses(fid)
+                            )}
+                          />
                         </div>
                         <span>{info.label}</span>
                       </div>
@@ -472,26 +485,31 @@ export default function ModelsPage() {
                     </div>
                     <div className="relative">
                       <p className="mr-12 text-xs sm:text-sm">
-                        {model.description ? (
-                          expanded[model.id]
-                            ? model.description.replace(/\n/g, ' ')
-                            : model.description.split('\n')[0]
-                        ) : ''}
-                      </p>
-                      {model.description && model.description.split('\n').length > 1 && (
-                        <button
-                          className="mt-1 cursor-pointer text-xs"
-                          onClick={() =>
-                            setExpanded((prev) => ({
-                              ...prev,
-                              [model.id]: !prev[model.id],
-                            }))
+                        {(() => {
+                          if (!model.description) {
+                            return '';
                           }
-                          type="button"
-                        >
-                          {expanded[model.id] ? 'Show less' : 'Show more'}
-                        </button>
-                      )}
+                          if (expanded[model.id]) {
+                            return model.description.replace(/\n/g, ' ');
+                          }
+                          return model.description.split('\n')[0];
+                        })()}
+                      </p>
+                      {model.description &&
+                        model.description.split('\n').length > 1 && (
+                          <button
+                            className="mt-1 cursor-pointer text-xs"
+                            onClick={() =>
+                              setExpanded((prev) => ({
+                                ...prev,
+                                [model.id]: !prev[model.id],
+                              }))
+                            }
+                            type="button"
+                          >
+                            {expanded[model.id] ? 'Show less' : 'Show more'}
+                          </button>
+                        )}
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-1 sm:mt-2 sm:gap-2">
                       <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -504,23 +522,21 @@ export default function ModelsPage() {
                             return null;
                           }
                           const Icon = info.icon;
+
                           return (
-                            <Badge
-                              className="relative flex items-center gap-1 overflow-hidden rounded-full px-1.5 py-0.5 text-[10px] sm:gap-1.5 sm:px-2 sm:text-xs dark:text-[--color-dark]"
+                            <div
+                              className={cn(
+                                'relative flex items-center gap-1 overflow-hidden rounded-full px-1.5 py-0.5 text-[10px] sm:gap-1.5 sm:px-2 sm:text-xs',
+                                getFeatureColorClasses(feat.id)
+                              )}
                               key={feat.id}
-                              style={
-                                {
-                                  '--color': info.color,
-                                  '--color-dark': info.colorDark,
-                                } as React.CSSProperties
-                              }
                             >
                               <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
-                              <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                              <span className="whitespace-nowrap">
+                              <Icon className="relative h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                              <span className="relative whitespace-nowrap">
                                 {info.label}
                               </span>
-                            </Badge>
+                            </div>
                           );
                         })}
                       </div>

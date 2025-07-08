@@ -86,6 +86,33 @@ export const saveFileAttachment = action({
   },
 });
 
+/**
+ * Saves a generated image to the attachments table with isGenerated flag
+ */
+export const saveGeneratedImage = action({
+  args: {
+    storageId: v.id('_storage'),
+    chatId: v.id('chats'),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+  },
+  handler: async (ctx, args): Promise<SavedAttachment> => {
+    const attachmentId = await ctx.runMutation(
+      api.files.internalSaveGenerated,
+      args
+    );
+    const attachment = await ctx.runQuery(api.files.getAttachment, {
+      attachmentId,
+    });
+    if (!attachment) {
+      throw new Error('Attachment not found');
+    }
+    // Return storage ID instead of temporary URL - URLs will be generated on-demand
+    return { ...attachment, storageId: attachment.fileId };
+  },
+});
+
 export const internalSave = mutation({
   args: {
     storageId: v.id('_storage'),
@@ -136,6 +163,43 @@ export const internalSave = mutation({
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
+    });
+  },
+});
+
+export const internalSaveGenerated = mutation({
+  args: {
+    storageId: v.id('_storage'),
+    chatId: v.id('chats'),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    // Verify ownership of the chat before attaching the file
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat || chat.userId !== userId) {
+      // Clean up orphaned file if chat not found
+      await ctx.storage.delete(args.storageId);
+      throw new Error('Chat not found or unauthorized');
+    }
+
+    // Generated images don't need model validation since they're created by our system
+    // Also don't need MIME type validation since we control the generation
+
+    return await ctx.db.insert('chat_attachments', {
+      userId,
+      chatId: args.chatId,
+      fileId: args.storageId,
+      fileName: args.fileName,
+      fileType: args.fileType,
+      fileSize: args.fileSize,
+      isGenerated: true, // Mark as AI-generated
     });
   },
 });

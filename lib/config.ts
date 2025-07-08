@@ -7,12 +7,14 @@ import { anthropic } from "@ai-sdk/anthropic"
 import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { togetherai } from "@ai-sdk/togetherai"
+import { fal } from "@ai-sdk/fal"
 import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
 import {
   BookOpenTextIcon,
   BrainIcon,
   CodeIcon,
   DetectiveIcon,
+  ImageIcon,
   LightbulbIcon,
   NotepadIcon,
   PaintBrushIcon,
@@ -167,6 +169,19 @@ export const MODELS_DATA = [
       { id: "reasoning", enabled: true, supportsEffort: true, label: "Supports reasoning capabilities" },
     ],
     api_sdk: openai("o3-pro"),
+  },
+  {
+    id: "gpt-image-1",
+    name: "GPT Image 1",
+    provider: "openai",
+    premium: true,
+    usesPremiumCredits: true,
+    description: `AI model specialized for generating high-quality images.\nPerfect for creating visual content from text descriptions.`,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "image-generation", enabled: true, label: "Generates images from text prompts" },
+    ],
+    api_sdk: openai.image("gpt-image-1"),
   },
     {
     id: "gpt-4.1",
@@ -346,6 +361,32 @@ export const MODELS_DATA = [
       { id: "web-search", enabled: true, label: "Supports web search" },
     ],
     api_sdk: google("gemini-2.5-pro"),
+  },  
+  {
+    id: "imagen-4",
+    name: "Imagen 4",
+    provider: "gemini",
+    premium: true,
+    usesPremiumCredits: true,
+    description: `Google's flagship text-to-image model.\nOffers significantly improved text rendering and photorealistic images.`,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "image-generation", enabled: true, label: "Generates images from text prompts" },
+    ],
+    api_sdk: fal.image("fal-ai/imagen4/preview/fast"),  
+  },
+  {
+    id: "imagen-4-ultra",
+    name: "Imagen 4 Ultra",
+    provider: "gemini",
+    premium: true,
+    usesPremiumCredits: true,
+    description: `Google's premium image model for precise instruction following.\nDesigned for when you need images that precisely follow prompts.`,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "image-generation", enabled: true, label: "Generates images from text prompts" },
+    ],
+    api_sdk: fal.image("fal-ai/imagen4/preview/ultra"),
   },
   {
     id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
@@ -433,19 +474,19 @@ export const MODELS_DATA = [
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
-  // {
-  //   id: "qwen/qwq-32b:free",
-  //   name: "QWEN 32B",
-  //   provider: "Qwen",
-  //   apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-  //   features: [
-  //     {
-  //       id: "file-upload",
-  //       enabled: false,
-  //     },
-  //   ],
-  //   api_sdk: openrouter("qwen/qwq-32b:free"),
-  // },
+  {
+    id: "flux-schnell",
+    name: "Flux Schnell",
+    provider: "fal",
+    premium: true,
+    usesPremiumCredits: true,
+    description: `Google's premium image model for precise instruction following.\nDesigned for when you need images that precisely follow prompts.`,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "image-generation", enabled: true, label: "Generates images from text prompts" },
+    ],
+    api_sdk: fal.image("fal-ai/flux/schnell"),
+  },
 ]
 export const MODELS_RAW = z.array(ModelSchema).parse(MODELS_DATA)
 
@@ -475,6 +516,11 @@ export const PROVIDERS = [
     id: "deepseek",
     name: "DeepSeek",
     icon: DeepSeek,
+  },
+  {
+    id: "fal",
+    name: "Fal.ai",
+    icon: Gemini,
   },
   {
     id: "gemini",

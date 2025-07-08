@@ -2,8 +2,10 @@ import type { Message as MessageType } from '@ai-sdk/react';
 import React, { useRef } from 'react';
 import { ScrollButton } from '@/components/motion-primitives/scroll-button';
 import { ChatContainer } from '@/components/prompt-kit/chat-container';
+import { ImageSkeleton } from '@/components/prompt-kit/image-skeleton';
 import { Loader } from '@/components/prompt-kit/loader';
 import type { MessageMetadata } from '@/lib/ai-sdk-utils';
+import { MODELS_MAP } from '@/lib/config';
 import { Message } from './message';
 
 type MessageWithReasoning = MessageType & {
@@ -20,6 +22,7 @@ type ConversationProps = {
   onReload: (id: string) => void;
   onBranch: (messageId: string) => void;
   autoScroll?: boolean;
+  selectedModel?: string;
 };
 
 const Conversation = React.memo(
@@ -31,9 +34,17 @@ const Conversation = React.memo(
     onReload,
     onBranch,
     autoScroll = true,
+    selectedModel,
   }: ConversationProps) => {
     const initialMessageCount = useRef(messages.length);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Check if the selected model is an image generation model
+    const isImageGenerationModel =
+      selectedModel &&
+      MODELS_MAP[selectedModel]?.features?.some(
+        (feature) => feature.id === 'image-generation' && feature.enabled
+      );
 
     if (!messages || messages.length === 0) {
       return <div className="h-full w-full" />;
@@ -77,13 +88,23 @@ const Conversation = React.memo(
               </Message>
             );
           })}
-          {status === 'submitted' &&
+          {((status === 'submitted' &&
             messages.length > 0 &&
-            messages.at(-1)?.role === 'user' && (
-              <div className="group flex min-h-scroll-anchor w-full max-w-3xl flex-col items-start gap-2 px-6 pb-2">
+            messages.at(-1)?.role === 'user') ||
+            (status === 'streaming' &&
+              isImageGenerationModel &&
+              messages.length > 0 &&
+              (messages.at(-1)?.role === 'user' ||
+                (messages.at(-1)?.role === 'assistant' &&
+                  !messages.at(-1)?.experimental_attachments)))) && (
+            <div className="group flex min-h-scroll-anchor w-full max-w-3xl flex-col items-start gap-2 px-6 pb-2">
+              {isImageGenerationModel ? (
+                <ImageSkeleton height={300} width={300} />
+              ) : (
                 <Loader size="md" variant="dots" />
-              </div>
-            )}
+              )}
+            </div>
+          )}
         </ChatContainer>
         <div className="absolute bottom-0 w-full max-w-3xl">
           <ScrollButton

@@ -966,6 +966,7 @@ export default function Chat() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            selectedModel={selectedModel}
             status={status}
           />
         )}
