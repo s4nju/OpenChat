@@ -276,35 +276,30 @@ export const deleteAttachments = mutation({
       throw new Error('Not authenticated');
     }
 
-    const validAttachments: Array<{
-      _id: Id<'chat_attachments'>;
-      userId: Id<'users'>;
-      chatId: Id<'chats'>;
-      fileId: Id<'_storage'>;
-      fileName: string;
-      fileType: string;
-      fileSize: number;
-      _creationTime: number;
-    }> = [];
+    // Create a Set for O(1) lookup of attachment IDs to delete
+    const attachmentIdsToDelete = new Set(attachmentIds);
 
-    const attachments = await Promise.all(
-      attachmentIds.map((id) => ctx.db.get(id))
+    // Fetch all user attachments in a single query using the by_userId index
+    const userAttachments = await ctx.db
+      .query('chat_attachments')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .collect();
+
+    // Filter to only include attachments that are in the deletion list
+    const validAttachments = userAttachments.filter((attachment) =>
+      attachmentIdsToDelete.has(attachment._id)
     );
 
-    for (const attachment of attachments) {
-      if (attachment && attachment.userId === userId) {
-        validAttachments.push(attachment);
-      }
-      // Silently skip invalid attachments
-    }
-
+    // Delete files from storage and database records in parallel
     const fileIdsToDelete = validAttachments.map(
       (a) => a.fileId as Id<'_storage'>
     );
-    await Promise.all(fileIdsToDelete.map((id) => ctx.storage.delete(id)));
-
     const docIdsToDelete = validAttachments.map((a) => a._id);
-    await Promise.all(docIdsToDelete.map((id) => ctx.db.delete(id)));
+
+    await Promise.all([
+      ...fileIdsToDelete.map((id) => ctx.storage.delete(id)),
+      ...docIdsToDelete.map((id) => ctx.db.delete(id)),
+    ]);
   },
 });
 

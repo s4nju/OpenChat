@@ -146,26 +146,36 @@ export const storeCurrentUser = mutation({
     try {
       const isPremium = false; // Newly-created users are non-premium by default
 
+      const rateLimitPromises: Promise<unknown>[] = [];
+
       if (!isPremium) {
         const dailyLimitName = isAnonymous
           ? 'anonymousDaily'
           : 'authenticatedDaily';
-        await rateLimiter.limit(ctx, dailyLimitName, {
-          key: targetUserId,
-          count: 0,
-        });
+        rateLimitPromises.push(
+          rateLimiter.limit(ctx, dailyLimitName, {
+            key: targetUserId,
+            count: 0,
+          })
+        );
       }
 
-      await rateLimiter.limit(ctx, 'standardMonthly', {
-        key: targetUserId,
-        count: 0,
-      });
+      rateLimitPromises.push(
+        rateLimiter.limit(ctx, 'standardMonthly', {
+          key: targetUserId,
+          count: 0,
+        })
+      );
 
       // Initialize premium credits counter for all users (will only be used by premium users)
-      await rateLimiter.limit(ctx, 'premiumMonthly', {
-        key: targetUserId,
-        count: 0,
-      });
+      rateLimitPromises.push(
+        rateLimiter.limit(ctx, 'premiumMonthly', {
+          key: targetUserId,
+          count: 0,
+        })
+      );
+
+      await Promise.all(rateLimitPromises);
     } catch {
       // Non-fatal: rate-limit initialisation failure should never block the
       // user flow. The rate-limiter will lazily create windows on first use.
@@ -289,23 +299,39 @@ export const assertNotOverLimit = mutation({
     } else {
       // For non-premium models or non-premium users, check standard credits
 
+      const checkPromises: Promise<unknown>[] = [];
+
       // CHECK daily limits for non-premium users (don't consume yet)
       if (!isPremium) {
         const dailyLimitName = isAnonymous
           ? 'anonymousDaily'
           : 'authenticatedDaily';
-        const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
+        checkPromises.push(
+          rateLimiter.check(ctx, dailyLimitName, {
+            key: userId,
+          })
+        );
+      }
+
+      // CHECK monthly limits for all users (don't consume yet)
+      checkPromises.push(
+        rateLimiter.check(ctx, 'standardMonthly', {
           key: userId,
-        });
+        })
+      );
+
+      const results = await Promise.all(checkPromises);
+
+      // Check daily limit result (if applicable)
+      if (!isPremium && results.length > 1) {
+        const dailyStatus = results[0] as { ok: boolean };
         if (!dailyStatus.ok) {
           throw new Error('DAILY_LIMIT_REACHED');
         }
       }
 
-      // CHECK monthly limits for all users (don't consume yet)
-      const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
-        key: userId,
-      });
+      // Check monthly limit result (always the last promise)
+      const monthlyStatus = results.at(-1) as { ok: boolean };
       if (!monthlyStatus.ok) {
         throw new Error('MONTHLY_LIMIT_REACHED');
       }
@@ -349,23 +375,43 @@ export const getRateLimitStatus = query({
     const isAnonymous = user.isAnonymous ?? false;
     const now = Date.now();
 
-    // Get daily limits and current values
+    // Determine daily limit name for non-premium users
+    const dailyLimitName = isAnonymous
+      ? 'anonymousDaily'
+      : 'authenticatedDaily';
+
+    // Parallel fetching of all rate limit data
+    const [
+      dailyStatus,
+      dailyConfig,
+      monthlyStatus,
+      monthlyConfig,
+      premiumStatus,
+      premiumConfig,
+    ] = await Promise.all([
+      isPremium
+        ? Promise.resolve(null)
+        : rateLimiter.check(ctx, dailyLimitName, { key: userId }),
+      isPremium
+        ? Promise.resolve(null)
+        : rateLimiter.getValue(ctx, dailyLimitName, { key: userId }),
+      rateLimiter.check(ctx, 'standardMonthly', { key: userId }),
+      rateLimiter.getValue(ctx, 'standardMonthly', { key: userId }),
+      isPremium
+        ? rateLimiter.check(ctx, 'premiumMonthly', { key: userId })
+        : Promise.resolve(null),
+      isPremium
+        ? rateLimiter.getValue(ctx, 'premiumMonthly', { key: userId })
+        : Promise.resolve(null),
+    ]);
+
+    // Process daily limits
     let dailyLimit = 0;
     let dailyCount = 0;
     let dailyRemaining = 0;
     let dailyReset: number | undefined;
 
-    if (!isPremium) {
-      const dailyLimitName = isAnonymous
-        ? 'anonymousDaily'
-        : 'authenticatedDaily';
-      const dailyStatus = await rateLimiter.check(ctx, dailyLimitName, {
-        key: userId,
-      });
-      const dailyConfig = await rateLimiter.getValue(ctx, dailyLimitName, {
-        key: userId,
-      });
-
+    if (!isPremium && dailyStatus && dailyConfig) {
       dailyLimit = isAnonymous
         ? RATE_LIMITS.ANONYMOUS_DAILY
         : RATE_LIMITS.AUTHENTICATED_DAILY;
@@ -387,14 +433,7 @@ export const getRateLimitStatus = query({
       }
     }
 
-    // Get monthly limits (standard for all users)
-    const monthlyStatus = await rateLimiter.check(ctx, 'standardMonthly', {
-      key: userId,
-    });
-    const monthlyConfig = await rateLimiter.getValue(ctx, 'standardMonthly', {
-      key: userId,
-    });
-
+    // Process monthly limits (standard for all users)
     const monthlyLimit = RATE_LIMITS.STANDARD_MONTHLY;
     const monthlyCount =
       monthlyLimit - (monthlyStatus.ok ? monthlyConfig.value : 0);
@@ -415,20 +454,13 @@ export const getRateLimitStatus = query({
       monthlyReset = monthlyRateLimit.windowStart + config.period;
     }
 
-    // Get premium credits (for premium users)
+    // Process premium credits (for premium users)
     let premiumLimit = 0;
     let premiumCount = 0;
     let premiumRemaining = 0;
     let premiumReset: number | undefined;
 
-    if (isPremium) {
-      const premiumStatus = await rateLimiter.check(ctx, 'premiumMonthly', {
-        key: userId,
-      });
-      const premiumConfig = await rateLimiter.getValue(ctx, 'premiumMonthly', {
-        key: userId,
-      });
-
+    if (isPremium && premiumStatus && premiumConfig) {
       premiumLimit = RATE_LIMITS.PREMIUM_MONTHLY;
       premiumCount =
         premiumLimit - (premiumStatus.ok ? premiumConfig.value : 0);
@@ -489,43 +521,39 @@ export const mergeAnonymousToGoogleAccount = mutation({
       return null;
     }
 
-    // --- Step 1: Reassign Chats ---
-    const anonChats = await ctx.db
-      .query('chats')
-      .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
-      .collect();
-    await Promise.all(
-      anonChats.map((chat) => ctx.db.patch(chat._id, { userId: currentId }))
-    );
+    // --- Step 1: Fetch all data in parallel ---
+    const [anonChats, anonMessages, anonAttachments] = await Promise.all([
+      ctx.db
+        .query('chats')
+        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
+        .collect(),
+      ctx.db
+        .query('messages')
+        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
+        .collect(),
+      ctx.db
+        .query('chat_attachments')
+        .withIndex('by_userId', (q) => q.eq('userId', previousAnonymousUserId))
+        .collect(),
+    ]);
 
-    // --- Step 2: Reassign Messages ---
-    const anonMessages = await ctx.db
-      .query('messages')
-      .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
-      .collect();
-    await Promise.all(
-      anonMessages.map((message) =>
+    // --- Step 2: Reassign all entities in parallel ---
+    await Promise.all([
+      ...anonChats.map((chat) => ctx.db.patch(chat._id, { userId: currentId })),
+      ...anonMessages.map((message) =>
         ctx.db.patch(message._id, { userId: currentId })
-      )
-    );
-
-    // --- Step 3: Reassign Chat Attachments ---
-    const anonAttachments = await ctx.db
-      .query('chat_attachments')
-      .withIndex('by_userId', (q) => q.eq('userId', previousAnonymousUserId))
-      .collect();
-    await Promise.all(
-      anonAttachments.map((attachment) =>
+      ),
+      ...anonAttachments.map((attachment) =>
         ctx.db.patch(attachment._id, { userId: currentId })
-      )
-    );
+      ),
+    ]);
 
-    // --- Step 4: Mark as non-anonymous (rate limits are managed automatically) ---
+    // --- Step 3: Mark as non-anonymous (rate limits are managed automatically) ---
     await ctx.db.patch(currentId, {
       isAnonymous: false,
     });
 
-    // --- Step 5: Delete anonymous user record ---
+    // --- Step 4: Delete anonymous user record ---
     await ctx.db.delete(previousAnonymousUserId);
     return null;
   },
@@ -541,81 +569,89 @@ export const deleteAccount = mutation({
       throw new Error('Not authenticated');
     }
 
-    // Delete attachments and files
-    const attachments = await ctx.db
-      .query('chat_attachments')
-      .withIndex('by_userId', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(
-      attachments.map(async (att) => {
-        try {
-          await ctx.storage.delete(att.fileId as Id<'_storage'>);
-        } catch {
-          // Silently handle storage deletion errors
-        }
-        try {
-          await ctx.db.delete(att._id);
-        } catch {
-          // Silently handle database deletion errors
-        }
-      })
-    );
+    // --- Step 1: Fetch all documents that need to be deleted in parallel ---
+    const [
+      attachments,
+      messages,
+      chats,
+      feedback,
+      usage,
+      authAccounts,
+      authSessions,
+    ] = await Promise.all([
+      ctx.db
+        .query('chat_attachments')
+        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('messages')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('chats')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('feedback')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('usage_history')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('authAccounts')
+        .withIndex('userIdAndProvider', (q) => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('authSessions')
+        .withIndex('userId', (q) => q.eq('userId', userId))
+        .collect(),
+    ]);
 
-    // Delete messages authored by user
-    const messages = await ctx.db
-      .query('messages')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(messages.map((msg) => ctx.db.delete(msg._id)));
+    // --- Step 2: Collect all deletion promises and execute them concurrently ---
+    const deletionPromises: Promise<unknown>[] = [];
+
+    // Delete attachments and their files
+    for (const att of attachments) {
+      deletionPromises.push(
+        ctx.storage.delete(att.fileId as Id<'_storage'>).catch(() => {
+          // Silently handle storage deletion errors
+        })
+      );
+      deletionPromises.push(
+        ctx.db.delete(att._id).catch(() => {
+          // Silently handle database deletion errors
+        })
+      );
+    }
+
+    // Delete messages
+    deletionPromises.push(...messages.map((msg) => ctx.db.delete(msg._id)));
 
     // Delete chats
-    const chats = await ctx.db
-      .query('chats')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(chats.map((chat) => ctx.db.delete(chat._id)));
+    deletionPromises.push(...chats.map((chat) => ctx.db.delete(chat._id)));
 
     // Delete feedback
-    const feedback = await ctx.db
-      .query('feedback')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(feedback.map((f) => ctx.db.delete(f._id)));
+    deletionPromises.push(...feedback.map((f) => ctx.db.delete(f._id)));
 
     // Delete usage history
-    const usage = await ctx.db
-      .query('usage_history')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(usage.map((u) => ctx.db.delete(u._id)));
+    deletionPromises.push(...usage.map((u) => ctx.db.delete(u._id)));
 
-    // --- Delete auth-related records (accounts, sessions, verificationTokens) ---
-    // These tables are provided by `@convex-dev/auth` via `authTables` in schema.ts.
-    // They store OAuth linkage and session data that still reference the `users` document.
-    // If we remove the user without removing these, future logins with the same provider
-    // will fail because the auth library will try to update a non-existent user.
-
-    // Delete accounts that reference this user
-    // Use index for better performance instead of filter
-    // See: https://docs.convex.dev/database/indexes/
-    const authAccounts = await ctx.db
-      .query('authAccounts')
-      .withIndex('userIdAndProvider', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(
-      authAccounts.map((acc) => ctx.db.delete(acc._id as Id<'authAccounts'>))
+    // Delete auth accounts
+    deletionPromises.push(
+      ...authAccounts.map((acc) => ctx.db.delete(acc._id as Id<'authAccounts'>))
     );
 
-    // Delete sessions associated with this user
-    // Use index for better performance instead of filter
-    // See: https://docs.convex.dev/database/indexes/
-    const authSessions = await ctx.db
-      .query('authSessions')
-      .withIndex('userId', (q) => q.eq('userId', userId))
-      .collect();
-    await Promise.all(
-      authSessions.map((sess) => ctx.db.delete(sess._id as Id<'authSessions'>))
+    // Delete auth sessions
+    deletionPromises.push(
+      ...authSessions.map((sess) =>
+        ctx.db.delete(sess._id as Id<'authSessions'>)
+      )
     );
+
+    // Execute all deletions concurrently
+    await Promise.allSettled(deletionPromises);
 
     // Finally delete user record
     await ctx.db.delete(userId);

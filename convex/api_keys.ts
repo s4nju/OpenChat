@@ -213,13 +213,15 @@ export const saveApiKey = mutation({
     if (!userId) {
       throw new Error('Not authenticated');
     }
-    const encrypted = await encrypt(key, userId);
-    const existing = await ctx.db
-      .query('user_api_keys')
-      .withIndex('by_user_provider', (q) =>
-        q.eq('userId', userId).eq('provider', provider)
-      )
-      .unique();
+    const [encrypted, existing] = await Promise.all([
+      encrypt(key, userId),
+      ctx.db
+        .query('user_api_keys')
+        .withIndex('by_user_provider', (q) =>
+          q.eq('userId', userId).eq('provider', provider)
+        )
+        .unique(),
+    ]);
     const now = Date.now();
     // Default to "fallback" mode if not specified
     const finalMode = mode || 'fallback';

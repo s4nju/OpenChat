@@ -1,3 +1,4 @@
+
 # **Global Rules**
 - You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved.
 - If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
@@ -8,7 +9,7 @@
 - Take your time and think through every step - remember to check your solution rigorously and watch out for boundary cases, especially with the changes you made. Your solution must be perfect. If not, continue working on it. At the end, you must test your code rigorously using the tools provided, and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect. Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks; make sure you handle all edge cases, and run existing tests if they are provided.
 - Do not assume anything. Use the docs.
 - If there is a lint error (bun run lint), fix it before moving on.
-- Always refer docs using context7 about Vercel AI SDK
+- Always refer docs using ref/context7 about Vercel AI SDK
 
 # **Project Details**
 - Bun as the package manager
@@ -40,7 +41,70 @@
 - Do not use `any` or `unknown` as type constraints.
 - Do not use `var` or function declarations outside their block.
 - Update this section whenever the stack or tooling changes.
+- use 'bun run typecheck' for typecheck.
+
+# **Architecture Overview**
+
+## Frontend Architecture
+- **Next.js App Router**: Uses the modern App Router with layout nesting. Main layout at `app/layout.tsx` with nested layouts for settings (`app/settings/layout.tsx`).
+- **Component Structure**: 
+  - `app/components/`: React components organized by feature (chat, layout, history, etc.)
+  - `components/`: Reusable UI components (shadcn/ui, prompt-kit, motion primitives)
+  - Components are functional with TypeScript interfaces for props
+- **State Management**: 
+  - React Context providers in `app/providers/` for global state
+  - Convex queries/mutations for server state
+  - Local state with React hooks
+- **Styling**: Tailwind CSS with custom themes and animations
+
+## Backend Architecture (Convex)
+- **Real-time Database**: Convex provides real-time updates across all clients
+- **Authentication**: Convex Auth with Google OAuth integration
+- **File Storage**: Built-in file storage for attachments and images
+- **Schema**: Defined in `convex/schema/` with modular table definitions
+- **API Functions**: 
+  - Queries for reading data (`convex/*.ts`)
+  - Mutations for writing data 
+  - Actions for external API calls (AI models, web search)
+  - Internal functions for server-side logic
+
+## AI Integration
+- **Multi-model Support**: Supports OpenAI, Anthropic, Google, Mistral, Together AI, and more
+- **Vercel AI SDK v4**: Handles streaming, tool calling, and model switching
+- **Model Selection**: Dynamic model switching with per-chat preferences
+- **API Key Management**: Secure encryption of user-provided API keys
+- **Web Search**: Integrated Exa, Tavily, and Brave search APIs
+
+## Key Features
+- **Real-time Chat**: Live message streaming with Convex subscriptions
+- **Multi-modal**: Text, images, and reasoning model support
+- **Chat Management**: Pinning, branching, export/import, time-based organization
+- **Search**: Full-text search across chat history
+- **Personalization**: User customization with traits and preferences
+- **Responsive Design**: Mobile-first with drawer navigation
+
+# **Development Commands**
+- `bun install` - Install dependencies
+- `bun dev` - Start development server with Turbopack
+- `bun build` - Build for production
+- `bun start` - Start production server
+- `bun run lint` - Run Biome linter (ultracite ruleset)
+- `bun run format` - Format code with Biome
+- `bunx convex dev` - Run Convex development server
+- `bun run typecheck` - Run Typecheck
+
+# **Testing and Quality**
+- Run `bun run lint` before committing to ensure code quality
+- All TypeScript errors must be resolved
+- Follow accessibility guidelines from `ultracite.md`
+- Test responsive design on mobile and desktop
+- Verify real-time features work across multiple clients
 
 # **Files to read**
 - Read convex_rules.md for convex guidelines.
 - Read ultracite.md for general code rules (Always read this to avoid lint error)
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

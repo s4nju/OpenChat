@@ -36,26 +36,16 @@ async function resetUserRateLimits(
   // Reset daily limits (for non-premium tracking)
   const dailyLimitName = isAnonymous ? 'anonymousDaily' : 'authenticatedDaily';
 
-  try {
-    await rateLimiter.reset(ctx, dailyLimitName, { key: userId });
-    await rateLimiter.limit(ctx, dailyLimitName, { key: userId, count: 0 });
-  } catch (_error) {
-    // Ignore rate limit reset errors
-  }
+  // Run all rate limiter operations concurrently
+  const operations = [
+    rateLimiter.reset(ctx, dailyLimitName, { key: userId }),
+    rateLimiter.limit(ctx, dailyLimitName, { key: userId, count: 0 }),
+    rateLimiter.reset(ctx, 'standardMonthly', { key: userId }),
+    rateLimiter.limit(ctx, 'standardMonthly', { key: userId, count: 0 }),
+    rateLimiter.reset(ctx, 'premiumMonthly', { key: userId }),
+    rateLimiter.limit(ctx, 'premiumMonthly', { key: userId, count: 0 }),
+  ];
 
-  // Reset monthly standard limits
-  try {
-    await rateLimiter.reset(ctx, 'standardMonthly', { key: userId });
-    await rateLimiter.limit(ctx, 'standardMonthly', { key: userId, count: 0 });
-  } catch (_error) {
-    // Ignore rate limit reset errors
-  }
-
-  // Reset premium monthly limits
-  try {
-    await rateLimiter.reset(ctx, 'premiumMonthly', { key: userId });
-    await rateLimiter.limit(ctx, 'premiumMonthly', { key: userId, count: 0 });
-  } catch (_error) {
-    // Ignore rate limit reset errors
-  }
+  // Use Promise.allSettled to ensure all operations complete independently
+  await Promise.allSettled(operations);
 }
