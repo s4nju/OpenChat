@@ -480,7 +480,7 @@ export const MODELS_DATA = [
     provider: "fal",
     premium: true,
     usesPremiumCredits: true,
-    description: `Google's premium image model for precise instruction following.\nDesigned for when you need images that precisely follow prompts.`,
+    description: `Fast and efficient image generation model from Fal.ai.\nOptimized for quick image creation with good quality.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "image-generation", enabled: true, label: "Generates images from text prompts" },

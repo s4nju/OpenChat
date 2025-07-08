@@ -362,6 +362,9 @@ function handleImageGeneration({
 
         const { storageId } = await uploadResponse.json();
 
+        // Generate a single filename to ensure consistency
+        const fileName = `generated-image-${Date.now()}.png`;
+
         // Save generated image to attachments table
         if (token) {
           await fetchAction(
@@ -369,7 +372,7 @@ function handleImageGeneration({
             {
               storageId,
               chatId,
-              fileName: `generated-image-${Date.now()}.png`,
+              fileName,
               fileType: 'image/png',
               fileSize: imageBuffer.length,
             },
@@ -381,7 +384,7 @@ function handleImageGeneration({
         const filePart = {
           type: 'file' as const,
           data: storageId,
-          filename: `generated-image-${Date.now()}.png`,
+          filename: fileName,
           mimeType: 'image/png',
         };
 
