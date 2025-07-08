@@ -1,6 +1,5 @@
 'use client';
 
-import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { Info } from '@phosphor-icons/react';
 import React, { useCallback } from 'react';
 import { useSettings } from '@/app/components/layout/settings/settings-provider';
@@ -11,12 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { api } from '@/convex/_generated/api';
 import { PREMIUM_CREDITS } from '@/lib/config';
 
 function MessageUsageCardComponent() {
   const { user } = useUser();
-  const { rateLimitStatus, hasPremium, products } = useSettings();
+  const { rateLimitStatus, hasPremium } = useSettings();
 
   // Memoize the format date function
   const formatResetDate = useCallback(
@@ -37,54 +35,6 @@ function MessageUsageCardComponent() {
     },
     []
   );
-
-  // Memoize product IDs calculation
-  const productIds = React.useMemo(() => {
-    return products?.premium?.id ? [products.premium.id] : [];
-  }, [products?.premium?.id]);
-
-  // Memoize the subscription button renderer
-  const renderSubscriptionButton = useCallback(() => {
-    if (hasPremium) {
-      return (
-        <CustomerPortalLink polarApi={api.polar}>
-          <button
-            className="mt-4 w-full rounded-md bg-primary py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
-            type="button"
-          >
-            Manage Subscription →
-          </button>
-        </CustomerPortalLink>
-      );
-    }
-
-    if (productIds.length > 0) {
-      return (
-        <CheckoutLink
-          embed={false}
-          polarApi={api.polar}
-          productIds={productIds}
-        >
-          <button
-            className="mt-4 w-full rounded-md bg-primary py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
-            type="button"
-          >
-            Subscribe to Premium →
-          </button>
-        </CheckoutLink>
-      );
-    }
-
-    return (
-      <button
-        className="mt-4 w-full cursor-not-allowed rounded-md bg-muted py-2 font-medium text-muted-foreground text-sm"
-        disabled
-        type="button"
-      >
-        Loading products...
-      </button>
-    );
-  }, [hasPremium, productIds]);
 
   if (!(user && rateLimitStatus)) {
     return null;
@@ -176,7 +126,6 @@ function MessageUsageCardComponent() {
           </div>
         )}
       </div>
-      {renderSubscriptionButton()}
     </div>
   );
 }

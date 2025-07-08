@@ -136,8 +136,8 @@ export default function AccountSettingsPage() {
           </div>
           <p className="text-muted-foreground/60 text-sm">
             <span className="mx-0.5 font-medium text-base">*</span>Premium
-            credits are used for GPT Image Gen, Claude Sonnet, and Grok 3.
-            Additional Premium credits can be purchased separately.
+            credits are used for GPT Image Gen, Claude Sonnet, Gemini 2.5 Pro
+            and Grok 3. Additional Premium credits can be purchased separately.
           </p>
           <div className="mt-6 md:hidden">
             <MessageUsageCard />
