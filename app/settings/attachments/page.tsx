@@ -1,7 +1,7 @@
 'use client';
 
-import { ArrowSquareOut, FileText, Trash } from '@phosphor-icons/react';
 import { convexQuery } from '@convex-dev/react-query';
+import { ArrowSquareOut, FileText, Trash } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Image from 'next/image';
