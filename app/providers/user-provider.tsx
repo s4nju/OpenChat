@@ -1,6 +1,8 @@
 'use client';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useConvexAuth, useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useConvexAuth, useMutation } from 'convex/react';
 import {
   createContext,
   useCallback,
@@ -19,6 +21,27 @@ type UserContextType = {
   signInGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateUser: (updates: Partial<UserProfile>) => Promise<void>;
+  // User capabilities and settings
+  hasPremium: boolean;
+  products: { premium?: { id: string } } | undefined;
+  rateLimitStatus:
+    | {
+        isPremium: boolean;
+        dailyCount: number;
+        dailyLimit: number;
+        dailyRemaining: number;
+        monthlyCount: number;
+        monthlyLimit: number;
+        monthlyRemaining: number;
+        premiumCount: number;
+        premiumLimit: number;
+        premiumRemaining: number;
+        effectiveRemaining: number;
+        dailyReset?: number;
+        monthlyReset?: number;
+        premiumReset?: number;
+      }
+    | undefined;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,7 +54,44 @@ export function UserProvider({
 }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signIn, signOut } = useAuthActions();
-  const user = useQuery(api.users.getCurrentUser) ?? null;
+  const { data: user = null, isLoading: isUserLoading } = useTanStackQuery({
+    ...convexQuery(api.users.getCurrentUser, {}),
+    // Extended cache for user data to prevent auth flickering
+    gcTime: 30 * 60 * 1000, // 30 minutes - user data persists longer
+    staleTime: 15 * 60 * 1000, // 15 minutes - consider user data fresh for longer
+    retry: 2, // Retry failed auth requests
+    refetchOnWindowFocus: false, // Don't refetch user on focus to prevent flicker
+    refetchOnMount: 'always', // Always check auth state on mount
+  });
+
+  // User capabilities and settings - only fetch when authenticated
+  const { data: hasPremium, isLoading: isPremiumLoading } = useTanStackQuery({
+    ...convexQuery(api.users.userHasPremium, {}),
+    enabled: !!user && !user.isAnonymous,
+    // Premium status changes infrequently, cache longer
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: products, isLoading: isProductsLoading } = useTanStackQuery({
+    ...convexQuery(api.polar.getConfiguredProducts, {}),
+    enabled: !!user && !user.isAnonymous,
+    // Product configurations are very stable, cache aggressively
+    gcTime: 60 * 60 * 1000, // 60 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: rateLimitStatus, isLoading: isRateLimitLoading } =
+    useTanStackQuery({
+      ...convexQuery(api.users.getRateLimitStatus, {}),
+      enabled: !!user && !user.isAnonymous,
+      // Rate limits update more frequently, shorter cache
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      refetchOnWindowFocus: false,
+    });
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
@@ -86,7 +146,7 @@ export function UserProvider({
 
   // Handle user authentication and storage
   useEffect(() => {
-    if (!isAuthenticated || user === undefined) {
+    if (!isAuthenticated || isUserLoading || user === null) {
       return;
     }
 
@@ -102,7 +162,7 @@ export function UserProvider({
     if (user.isAnonymous) {
       localStorage.setItem('anonymousUserId', user._id as unknown as string);
     }
-  }, [isAuthenticated, user, handleUserStorage]);
+  }, [isAuthenticated, user, isUserLoading, handleUserStorage]);
 
   const signInGoogle = async () => {
     await signIn('google');
@@ -112,9 +172,28 @@ export function UserProvider({
     await updateUserProfile({ updates });
   };
 
+  // Combined loading state for all user-related data
+  const combinedLoading = Boolean(
+    isLoading ||
+    isUserLoading ||
+    (user &&
+      !user.isAnonymous &&
+      (isPremiumLoading || isProductsLoading || isRateLimitLoading))
+  );
+
   return (
     <UserContext.Provider
-      value={{ user, isLoading, signInGoogle, signOut, updateUser }}
+      value={{
+        user,
+        isLoading: combinedLoading,
+        signInGoogle,
+        signOut,
+        updateUser,
+        // User capabilities and settings
+        hasPremium: hasPremium ?? false,
+        products,
+        rateLimitStatus,
+      }}
     >
       {children}
     </UserContext.Provider>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { HeaderGoBack } from '@/app/components/header-go-back';
 import { SettingsNav } from '@/app/components/layout/settings/settings-nav';
-import { SettingsProvider } from '@/app/components/layout/settings/settings-provider';
 import { SettingsSidebar } from '@/app/components/layout/settings/settings-sidebar';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { useUser } from '@/app/providers/user-provider';
@@ -62,46 +61,42 @@ export default function SettingsLayout({
   // Mobile: render settings in a drawer overlay
   if (isMobile) {
     return (
-      <SettingsProvider>
-        <Drawer onOpenChange={handleDrawerChange} open={open}>
-          <DrawerContent>
-            <div className="flex h-dvh max-h-[80vh] flex-col">
-              <DrawerHeader className="border-border border-b px-6 py-4">
-                <DrawerTitle>Settings</DrawerTitle>
-                <DrawerClose asChild>
-                  <Button size="icon" variant="ghost">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DrawerClose>
-              </DrawerHeader>
-              <SettingsNav />
-              <div className="flex-1 overflow-auto">
-                <div className="px-6 pt-4 pb-8">{children}</div>
-              </div>
+      <Drawer onOpenChange={handleDrawerChange} open={open}>
+        <DrawerContent>
+          <div className="flex h-dvh max-h-[80vh] flex-col">
+            <DrawerHeader className="border-border border-b px-6 py-4">
+              <DrawerTitle>Settings</DrawerTitle>
+              <DrawerClose asChild>
+                <Button size="icon" variant="ghost">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </DrawerHeader>
+            <SettingsNav />
+            <div className="flex-1 overflow-auto">
+              <div className="px-6 pt-4 pb-8">{children}</div>
             </div>
-          </DrawerContent>
-        </Drawer>
-      </SettingsProvider>
+          </div>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
   // Desktop: standard layout with sidebar
   return (
-    <SettingsProvider>
-      <div className="flex min-h-screen flex-col items-center">
-        <div className="w-full max-w-6xl">
-          <HeaderGoBack href="/" />
-        </div>
-        <main className="flex w-full max-w-6xl flex-1 gap-4 p-4 md:flex-row md:p-8">
-          <div className="hidden w-full space-y-8 md:block md:w-1/4">
-            <SettingsSidebar />
-          </div>
-          <div className="w-full md:w-3/4 md:pl-12">
-            <SettingsNav />
-            {children}
-          </div>
-        </main>
+    <div className="flex min-h-screen flex-col items-center">
+      <div className="w-full max-w-6xl">
+        <HeaderGoBack href="/" />
       </div>
-    </SettingsProvider>
+      <main className="flex w-full max-w-6xl flex-1 gap-4 p-4 md:flex-row md:p-8">
+        <div className="hidden w-full space-y-8 md:block md:w-1/4">
+          <SettingsSidebar />
+        </div>
+        <div className="w-full md:w-3/4 md:pl-12">
+          <SettingsNav />
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }

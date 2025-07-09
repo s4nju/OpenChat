@@ -4,7 +4,6 @@ import { Eye, EyeSlash, User } from '@phosphor-icons/react';
 import Image from 'next/image';
 import React, { useCallback } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
-import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Kbd } from '@/components/ui/kbd';
 import type { Doc } from '@/convex/_generated/dataModel';
@@ -23,8 +22,7 @@ const getDisplayName = (user: Doc<'users'> | null): string => {
 };
 
 function SettingsSidebarComponent() {
-  const { user } = useUser();
-  const { hasPremium } = useSettings();
+  const { user, hasPremium } = useUser();
 
   const [showEmail, setShowEmail] = React.useState<boolean>(() => {
     if (typeof window === 'undefined') {

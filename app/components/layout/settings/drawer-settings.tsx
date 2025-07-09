@@ -3,7 +3,6 @@
 import { X } from '@phosphor-icons/react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { SettingsProvider } from '@/app/components/layout/settings/settings-provider';
 import {
   Drawer,
   DrawerClose,
@@ -125,7 +124,7 @@ export function DrawerSettings({
           </nav>
 
           <div className="flex-1 overflow-auto px-6 pt-4 pb-16">
-            <SettingsProvider>{renderContent()}</SettingsProvider>
+            {renderContent()}
           </div>
         </div>
       </DrawerContent>

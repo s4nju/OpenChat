@@ -19,7 +19,6 @@ import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
-import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import {
@@ -45,12 +44,7 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   const { apiKeys } = useApiKeys()
-  const { user } = useUser()
-  const hasPremium = useQuery(api.users.userHasPremium, user ? {} : "skip")
-  const products = useQuery(
-    api.polar.getConfiguredProducts,
-    user ? {} : "skip"
-  )
+  const { user, hasPremium, products } = useUser()
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
 
   const handleSelect = React.useCallback((id: string) => {

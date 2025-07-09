@@ -1,7 +1,9 @@
 'use client';
 
+import { convexQuery } from '@convex-dev/react-query';
 import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
-import { useMutation, useQuery } from 'convex/react';
+import { useQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -37,7 +39,12 @@ const ChatSidebar = memo(function SidebarComponent({
   isOpen,
   toggleSidebar,
 }: ChatSidebarProps) {
-  const chatsQuery = useQuery(api.chats.listChatsForUser);
+  const { data: chatsQuery = [], isLoading: chatsLoading } = useQuery({
+    ...convexQuery(api.chats.listChatsForUser, {}),
+    // Extended cache for chat list to prevent flickering
+    gcTime: 20 * 60 * 1000, // 20 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
   const updateChatTitle = useMutation(api.chats.updateChatTitle);
   const deleteChat = useMutation(api.chats.deleteChat);
   const pinChatToggle = useMutation(api.chats.pinChatToggle);
@@ -52,7 +59,7 @@ const ChatSidebar = memo(function SidebarComponent({
   const [searchQuery, setSearchQuery] = useState('');
 
   // Memoize chats array to stabilize dependencies
-  const chats = useMemo(() => chatsQuery ?? [], [chatsQuery]);
+  const chats = useMemo(() => chatsQuery, [chatsQuery]);
 
   // --- Handlers for main sidebar list ---
   const handleSaveEdit = useCallback(
@@ -232,16 +239,28 @@ const ChatSidebar = memo(function SidebarComponent({
             />
           </div>
 
-          <ChatList
-            activeChatId={activeChatId}
-            groupedChats={groupedChats}
-            handleConfirmDelete={handleConfirmDelete}
-            handleSaveEdit={handleSaveEdit}
-            handleTogglePin={handleTogglePin}
-            hasChatsInGroup={hasChatsInGroup}
-            orderedGroupKeys={orderedGroupKeys}
-            pinnedChats={pinnedChats}
-          />
+          {chatsLoading && chats.length === 0 ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div
+                  className="h-8 animate-pulse rounded bg-muted/50"
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton items don't change
+                  key={i}
+                />
+              ))}
+            </div>
+          ) : (
+            <ChatList
+              activeChatId={activeChatId}
+              groupedChats={groupedChats}
+              handleConfirmDelete={handleConfirmDelete}
+              handleSaveEdit={handleSaveEdit}
+              handleTogglePin={handleTogglePin}
+              hasChatsInGroup={hasChatsInGroup}
+              orderedGroupKeys={orderedGroupKeys}
+              pinnedChats={pinnedChats}
+            />
+          )}
         </div>
       </aside>
     </div>

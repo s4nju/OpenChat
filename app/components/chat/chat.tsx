@@ -160,9 +160,8 @@ export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading: isUserLoading } = useUser();
+  const { user, hasPremium, isLoading: isUserLoading } = useUser();
   const { hasApiKey, isLoading: isApiKeysLoading } = useApiKeys();
-  const isPremium = useQuery(api.users.userHasPremium) ?? false;
   const processedUrl = useRef(false);
   const messagesFromDB = useQuery(
     api.messages.getMessagesForChat,
@@ -365,7 +364,7 @@ export default function Chat() {
         return;
       }
 
-      if (model.premium && !isPremium) {
+      if (model.premium && !hasPremium) {
         toast({
           title: 'This is a premium model. Please upgrade to use it.',
           status: 'error',
@@ -410,7 +409,7 @@ export default function Chat() {
     isApiKeysLoading,
     user,
     searchParams,
-    isPremium,
+    hasPremium,
     hasApiKey,
     createChat,
     append,

@@ -6,7 +6,6 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
-import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
@@ -15,9 +14,8 @@ import { api } from '@/convex/_generated/api';
 export default function AccountSettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteAccount = useMutation(api.users.deleteAccount);
-  const { signOut } = useUser();
+  const { signOut, hasPremium, products } = useUser();
   const router = useRouter();
-  const { hasPremium, products } = useSettings();
 
   // Get product IDs with fallback - memoize to prevent unnecessary re-calculations
   const productIds = React.useMemo(() => {

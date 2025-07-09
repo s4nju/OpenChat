@@ -2,7 +2,6 @@
 
 import { Info } from '@phosphor-icons/react';
 import React, { useCallback } from 'react';
-import { useSettings } from '@/app/components/layout/settings/settings-provider';
 import { useUser } from '@/app/providers/user-provider';
 import {
   Tooltip,
@@ -13,8 +12,7 @@ import {
 import { PREMIUM_CREDITS } from '@/lib/config';
 
 function MessageUsageCardComponent() {
-  const { user } = useUser();
-  const { rateLimitStatus, hasPremium } = useSettings();
+  const { user, rateLimitStatus, hasPremium } = useUser();
 
   // Memoize the format date function
   const formatResetDate = useCallback(
