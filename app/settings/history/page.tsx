@@ -6,7 +6,9 @@ import {
   Trash,
   UploadSimple,
 } from '@phosphor-icons/react';
-import { useConvex, useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useConvex, useMutation } from 'convex/react';
 import { useRef, useState } from 'react';
 import superjson from 'superjson';
 import { z } from 'zod';
@@ -84,9 +86,9 @@ function formatDateLines(timestamp?: number | null) {
 }
 
 export default function HistoryPage() {
-  const chats =
-    useQuery(api.chats.listChatsForUser) ??
-    (undefined as Doc<'chats'>[] | undefined);
+  const { data: chats } = useTanStackQuery({
+    ...convexQuery(api.chats.listChatsForUser, {}),
+  });
   const deleteChat = useMutation(api.chats.deleteChat);
   const deleteBulkChats = useMutation(api.chats.deleteBulkChats);
   const deleteAllChats = useMutation(api.chats.deleteAllChatsForUser);

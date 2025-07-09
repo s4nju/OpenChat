@@ -22,22 +22,32 @@ export default async function ChatPage({
   // `params` is asynchronous in Next.js 15.
   const { chatId } = await params;
 
-  const chat = await fetchQuery(
-    api.chats.getChat,
-    { chatId: chatId as Id<'chats'> },
-    { token }
-  );
-
-  if (!chat) {
-    // Chat either does not exist or is not owned by the user.
+  if (!chatId) {
+    // If no chatId is provided, redirect to the home page.
     redirect('/');
   }
 
-  // Render the regular chat shell. The Chat component is a client component
-  // and will fetch its messages as usual.
-  return (
-    <LayoutApp>
-      <Chat />
-    </LayoutApp>
-  );
+  try {
+    const chat = await fetchQuery(
+      api.chats.getChat,
+      { chatId: chatId as Id<'chats'> },
+      { token }
+    );
+
+    if (!chat) {
+      // Chat either does not exist or is not owned by the user.
+      redirect('/');
+    }
+
+    // Render the regular chat shell. The Chat component is a client component
+    // and will fetch its messages as usual.
+    return (
+      <LayoutApp>
+        <Chat />
+      </LayoutApp>
+    );
+  } catch (_error) {
+    // Handle ArgumentValidationError or any other errors gracefully
+    redirect('/');
+  }
 }

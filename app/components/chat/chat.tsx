@@ -1,7 +1,9 @@
 'use client';
 
 import { type Message, useChat } from '@ai-sdk/react';
-import { useAction, useConvex, useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useAction, useConvex, useMutation } from 'convex/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -167,14 +169,14 @@ export default function Chat() {
     isApiKeysLoading,
   } = useUser();
   const processedUrl = useRef(false);
-  const messagesFromDB = useQuery(
-    api.messages.getMessagesForChat,
-    chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
-  );
-  const currentChat = useQuery(
-    api.chats.getChat,
-    chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
-  );
+  const { data: messagesFromDB } = useTanStackQuery({
+    ...convexQuery(api.messages.getMessagesForChat, chatId ? { chatId: chatId as Id<'chats'> } : 'skip'),
+    enabled: !!chatId,
+  });
+  const { data: currentChat } = useTanStackQuery({
+    ...convexQuery(api.chats.getChat, chatId ? { chatId: chatId as Id<'chats'> } : 'skip'),
+    enabled: !!chatId,
+  });
   const createChat = useMutation(api.chats.createChat);
   const updateChatModel = useMutation(api.chats.updateChatModel);
   const branchChat = useMutation(api.chats.branchChat);

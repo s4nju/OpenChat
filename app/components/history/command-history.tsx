@@ -1,7 +1,9 @@
 'use client';
 
 import { ListMagnifyingGlass, PushPinSimple } from '@phosphor-icons/react';
-import { useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -47,17 +49,18 @@ function getSnippet(text: string, query: string, length = 80): React.ReactNode {
 
 export function CommandHistory() {
   const router = useRouter();
-  const chatHistory = useQuery(api.chats.listChatsForUser);
+  const { data: chatHistory } = useTanStackQuery({
+    ...convexQuery(api.chats.listChatsForUser, {}),
+  });
   const deleteChat = useMutation(api.chats.deleteChat);
   const updateChatTitle = useMutation(api.chats.updateChatTitle);
   const pinChatToggle = useMutation(api.chats.pinChatToggle);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const messageResults =
-    useQuery(
-      api.messages.searchMessages,
-      searchQuery ? { query: searchQuery } : 'skip'
-    ) ?? [];
+  const { data: messageResults = [] } = useTanStackQuery({
+    ...convexQuery(api.messages.searchMessages, searchQuery ? { query: searchQuery } : 'skip'),
+    enabled: !!searchQuery,
+  });
   const [editingId, setEditingId] = useState<Id<'chats'> | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deletingId, setDeletingId] = useState<Id<'chats'> | null>(null);

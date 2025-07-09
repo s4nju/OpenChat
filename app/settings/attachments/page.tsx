@@ -1,13 +1,15 @@
 'use client';
 
 import { ArrowSquareOut, FileText, Trash } from '@phosphor-icons/react';
-import { useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
-import type { Doc, Id } from '@/convex/_generated/dataModel';
+import type { Id } from '@/convex/_generated/dataModel';
 
 function formatBytes(bytes: number) {
   if (bytes === 0) {
@@ -20,11 +22,9 @@ function formatBytes(bytes: number) {
 }
 
 export default function AttachmentsPage() {
-  const rawAttachments =
-    useQuery(api.files.getAttachmentsForUser) ??
-    (undefined as
-      | (Doc<'chat_attachments'> & { url: string | null })[]
-      | undefined);
+  const { data: rawAttachments } = useTanStackQuery({
+    ...convexQuery(api.files.getAttachmentsForUser, {}),
+  });
 
   // Sort attachments by creation time (latest first)
   const attachments = rawAttachments?.sort(

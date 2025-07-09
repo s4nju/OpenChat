@@ -31,18 +31,8 @@ export function ConvexClientProvider({
           // Convex query configuration
           queryKeyHashFn: convexQueryClient.hashFn(),
           queryFn: convexQueryClient.queryFn(),
-          // Stale time: Data is considered fresh for 5 minutes
-          staleTime: 5 * 60 * 1000,
           // Cache time: Data stays in cache for 10 minutes after becoming unused
           gcTime: 10 * 60 * 1000,
-          // Retry failed requests 3 times
-          retry: 3,
-          // Don't refetch on window focus for better UX
-          refetchOnWindowFocus: false,
-          // Refetch on reconnect to ensure data freshness
-          refetchOnReconnect: true,
-          // Refetch on mount only if data is stale
-          refetchOnMount: 'always',
         },
       },
     });

@@ -174,7 +174,8 @@ export const getApiKeys = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      // Return empty array for unauthenticated users
+      return [];
     }
     const keys = await ctx.db
       .query('user_api_keys')

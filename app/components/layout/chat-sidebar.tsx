@@ -2,7 +2,7 @@
 
 import { convexQuery } from '@convex-dev/react-query';
 import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -39,11 +39,10 @@ const ChatSidebar = memo(function SidebarComponent({
   isOpen,
   toggleSidebar,
 }: ChatSidebarProps) {
-  const { data: chatsQuery = [], isLoading: chatsLoading } = useQuery({
+  const { data: chatsQuery = [], isLoading: chatsLoading } = useTanStackQuery({
     ...convexQuery(api.chats.listChatsForUser, {}),
     // Extended cache for chat list to prevent flickering
     gcTime: 20 * 60 * 1000, // 20 minutes
-    staleTime: 10 * 60 * 1000, // 10 minutes
   });
   const updateChatTitle = useMutation(api.chats.updateChatTitle);
   const deleteChat = useMutation(api.chats.deleteChat);

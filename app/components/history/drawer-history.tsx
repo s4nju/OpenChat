@@ -7,7 +7,9 @@ import {
   TrashSimple,
   X,
 } from '@phosphor-icons/react';
-import { useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -244,7 +246,9 @@ export function DrawerHistory({
 }: DrawerHistoryProps) {
   const params = useParams<{ chatId?: string }>();
   const currentChatId = params.chatId;
-  const chatHistory = useQuery(api.chats.listChatsForUser);
+  const { data: chatHistory } = useTanStackQuery({
+    ...convexQuery(api.chats.listChatsForUser, {}),
+  });
   const deleteChat = useMutation(api.chats.deleteChat);
   const updateChatTitle = useMutation(api.chats.updateChatTitle);
   const pinChatToggle = useMutation(api.chats.pinChatToggle);

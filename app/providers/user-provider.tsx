@@ -75,20 +75,22 @@ export function UserProvider({
     ...convexQuery(api.users.getCurrentUser, {}),
     // Extended cache for user data to prevent auth flickering
     gcTime: 30 * 60 * 1000, // 30 minutes - user data persists longer
-    staleTime: 15 * 60 * 1000, // 15 minutes - consider user data fresh for longer
-    retry: 2, // Retry failed auth requests
-    refetchOnWindowFocus: false, // Don't refetch user on focus to prevent flicker
-    refetchOnMount: 'always', // Always check auth state on mount
   });
 
   // User capabilities and settings - only fetch when authenticated
+  // NOTE: The `enabled` flag prevents TanStack Query execution but does NOT prevent
+  // Convex subscription establishment. The convexQuery() call creates a WebSocket
+  // subscription immediately, regardless of the enabled state. This is a known
+  // limitation of the current @convex-dev/react-query integration.
+  //
+  // For now, we rely on server-side safety (queries return [] or null for unauthenticated users)
+  // and proper error handling rather than preventing the subscription entirely.
+
   const { data: hasPremium, isLoading: isPremiumLoading } = useTanStackQuery({
     ...convexQuery(api.users.userHasPremium, {}),
     enabled: !!user && !user.isAnonymous,
     // Premium status changes infrequently, cache longer
     gcTime: 15 * 60 * 1000, // 15 minutes
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false,
   });
 
   const { data: products, isLoading: isProductsLoading } = useTanStackQuery({
@@ -96,18 +98,14 @@ export function UserProvider({
     enabled: !!user && !user.isAnonymous,
     // Product configurations are very stable, cache aggressively
     gcTime: 60 * 60 * 1000, // 60 minutes
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnWindowFocus: false,
   });
 
   const { data: rateLimitStatus, isLoading: isRateLimitLoading } =
     useTanStackQuery({
       ...convexQuery(api.users.getRateLimitStatus, {}),
-      enabled: !!user && !user.isAnonymous,
+      enabled: !!user,
       // Rate limits update more frequently, shorter cache
       gcTime: 5 * 60 * 1000, // 5 minutes
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      refetchOnWindowFocus: false,
     });
 
   const { data: apiKeysQuery, isLoading: isApiKeysLoading } = useTanStackQuery({
@@ -115,8 +113,6 @@ export function UserProvider({
     enabled: !!user && !user.isAnonymous,
     // API keys are relatively stable, cache reasonably
     gcTime: 10 * 60 * 1000, // 10 minutes
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
   });
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
@@ -199,7 +195,10 @@ export function UserProvider({
   };
 
   // Process API keys data
-  const apiKeys = useMemo(() => apiKeysQuery ?? [], [apiKeysQuery]);
+  const apiKeys = useMemo(
+    () => (apiKeysQuery ?? []) as ApiKey[],
+    [apiKeysQuery]
+  );
 
   const hasApiKey = useMemo(() => {
     const keyMap = new Map<string, boolean>();
@@ -234,9 +233,26 @@ export function UserProvider({
         signOut,
         updateUser,
         // User capabilities and settings
-        hasPremium: hasPremium ?? false,
-        products,
-        rateLimitStatus,
+        hasPremium: (hasPremium ?? false) as boolean,
+        products: products as { premium?: { id: string } } | undefined,
+        rateLimitStatus: rateLimitStatus as
+          | {
+              isPremium: boolean;
+              dailyCount: number;
+              dailyLimit: number;
+              dailyRemaining: number;
+              monthlyCount: number;
+              monthlyLimit: number;
+              monthlyRemaining: number;
+              premiumCount: number;
+              premiumLimit: number;
+              premiumRemaining: number;
+              effectiveRemaining: number;
+              dailyReset?: number;
+              monthlyReset?: number;
+              premiumReset?: number;
+            }
+          | undefined,
         // API Keys
         apiKeys,
         hasApiKey,

@@ -360,7 +360,20 @@ export const getRateLimitStatus = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      // Return safe defaults for unauthenticated users
+      return {
+        isPremium: false,
+        dailyCount: 0,
+        dailyLimit: 0,
+        dailyRemaining: 0,
+        monthlyCount: 0,
+        monthlyLimit: 0,
+        monthlyRemaining: 0,
+        premiumCount: 0,
+        premiumLimit: 0,
+        premiumRemaining: 0,
+        effectiveRemaining: 0,
+      };
     }
 
     const user = await ctx.db.get(userId);
