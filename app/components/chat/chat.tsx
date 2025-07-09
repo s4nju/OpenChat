@@ -170,11 +170,17 @@ export default function Chat() {
   } = useUser();
   const processedUrl = useRef(false);
   const { data: messagesFromDB } = useTanStackQuery({
-    ...convexQuery(api.messages.getMessagesForChat, chatId ? { chatId: chatId as Id<'chats'> } : 'skip'),
+    ...convexQuery(
+      api.messages.getMessagesForChat,
+      chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
+    ),
     enabled: !!chatId,
   });
   const { data: currentChat } = useTanStackQuery({
-    ...convexQuery(api.chats.getChat, chatId ? { chatId: chatId as Id<'chats'> } : 'skip'),
+    ...convexQuery(
+      api.chats.getChat,
+      chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
+    ),
     enabled: !!chatId,
   });
   const createChat = useMutation(api.chats.createChat);
