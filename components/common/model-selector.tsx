@@ -16,7 +16,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
-import { useApiKeys } from "@/app/hooks/use-api-keys"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
 import { api } from "@/convex/_generated/api"
@@ -43,8 +42,7 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
-  const { apiKeys } = useApiKeys()
-  const { user, hasPremium, products } = useUser()
+  const { user, hasPremium, products, apiKeys } = useUser()
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
 
   const handleSelect = React.useCallback((id: string) => {

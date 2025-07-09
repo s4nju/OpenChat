@@ -9,7 +9,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Conversation } from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
-import { useApiKeys } from '@/app/hooks/use-api-keys';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { toast } from '@/components/ui/toast';
@@ -160,8 +159,13 @@ export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, hasPremium, isLoading: isUserLoading } = useUser();
-  const { hasApiKey, isLoading: isApiKeysLoading } = useApiKeys();
+  const {
+    user,
+    hasPremium,
+    isLoading: isUserLoading,
+    hasApiKey,
+    isApiKeysLoading,
+  } = useUser();
   const processedUrl = useRef(false);
   const messagesFromDB = useQuery(
     api.messages.getMessagesForChat,

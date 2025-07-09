@@ -1,8 +1,9 @@
 'use client';
 
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { AlertCircle, Check, Key, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
@@ -331,7 +332,7 @@ function ProviderCard({
 }
 
 export default function ApiKeysPage() {
-  const apiKeys = useQuery(api.api_keys.getApiKeys) ?? [];
+  const { apiKeys } = useUser();
   const saveApiKey = useMutation(api.api_keys.saveApiKey);
   const deleteApiKey = useMutation(api.api_keys.deleteApiKey);
   const updateMode = useMutation(api.api_keys.updateApiKeyMode);

@@ -8,12 +8,22 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
 } from 'react';
 import { api } from '../../convex/_generated/api';
 import type { Doc, Id } from '../../convex/_generated/dataModel';
 
 export type UserProfile = Doc<'users'>;
+
+export type ApiKey = {
+  _id: Id<'user_api_keys'>;
+  provider: string;
+  mode?: 'priority' | 'fallback';
+  messageCount?: number;
+  createdAt?: number;
+  updatedAt?: number;
+};
 
 type UserContextType = {
   user: UserProfile | null;
@@ -42,6 +52,13 @@ type UserContextType = {
         premiumReset?: number;
       }
     | undefined;
+  // API Keys
+  apiKeys: ApiKey[];
+  hasApiKey: Map<string, boolean>;
+  hasOpenAI: boolean;
+  hasAnthropic: boolean;
+  hasGemini: boolean;
+  isApiKeysLoading: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -92,6 +109,15 @@ export function UserProvider({
       staleTime: 2 * 60 * 1000, // 2 minutes
       refetchOnWindowFocus: false,
     });
+
+  const { data: apiKeysQuery, isLoading: isApiKeysLoading } = useTanStackQuery({
+    ...convexQuery(api.api_keys.getApiKeys, {}),
+    enabled: !!user && !user.isAnonymous,
+    // API keys are relatively stable, cache reasonably
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
@@ -172,13 +198,31 @@ export function UserProvider({
     await updateUserProfile({ updates });
   };
 
+  // Process API keys data
+  const apiKeys = useMemo(() => apiKeysQuery ?? [], [apiKeysQuery]);
+
+  const hasApiKey = useMemo(() => {
+    const keyMap = new Map<string, boolean>();
+    for (const key of apiKeys) {
+      keyMap.set(key.provider, true);
+    }
+    return keyMap;
+  }, [apiKeys]);
+
+  const hasOpenAI = hasApiKey.get('openai') ?? false;
+  const hasAnthropic = hasApiKey.get('anthropic') ?? false;
+  const hasGemini = hasApiKey.get('gemini') ?? false;
+
   // Combined loading state for all user-related data
   const combinedLoading = Boolean(
     isLoading ||
-    isUserLoading ||
-    (user &&
-      !user.isAnonymous &&
-      (isPremiumLoading || isProductsLoading || isRateLimitLoading))
+      isUserLoading ||
+      (user &&
+        !user.isAnonymous &&
+        (isPremiumLoading ||
+          isProductsLoading ||
+          isRateLimitLoading ||
+          isApiKeysLoading))
   );
 
   return (
@@ -193,6 +237,13 @@ export function UserProvider({
         hasPremium: hasPremium ?? false,
         products,
         rateLimitStatus,
+        // API Keys
+        apiKeys,
+        hasApiKey,
+        hasOpenAI,
+        hasAnthropic,
+        hasGemini,
+        isApiKeysLoading,
       }}
     >
       {children}
