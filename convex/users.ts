@@ -359,6 +359,7 @@ export const getRateLimitStatus = query({
   }),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
+    // console.log('getRateLimitStatus called for userId:', userId);
     if (!userId) {
       // Return safe defaults for unauthenticated users
       return {

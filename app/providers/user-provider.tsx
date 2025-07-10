@@ -69,7 +69,7 @@ export function UserProvider({
   children: React.ReactNode;
   initialUser?: null;
 }) {
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { isAuthenticated } = useConvexAuth(); // isLoading will always be false here
   const { signIn, signOut } = useAuthActions();
   const { data: user = null, isLoading: isUserLoading } = useTanStackQuery({
     ...convexQuery(api.users.getCurrentUser, {}),
@@ -117,16 +117,9 @@ export function UserProvider({
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
-  const attemptedAnon = useRef(false);
   const lastUserId = useRef<Id<'users'> | null>(null);
 
-  // Handle anonymous sign-in
-  useEffect(() => {
-    if (!(isLoading || isAuthenticated || attemptedAnon.current)) {
-      attemptedAnon.current = true;
-      signIn('anonymous');
-    }
-  }, [isLoading, isAuthenticated, signIn]);
+  // Anonymous sign-in is now handled by AnonymousSignIn component in AuthGuard
 
   // Helper function to handle anonymous account merging
   const handleAnonymousAccountMerge = useCallback(
@@ -212,10 +205,9 @@ export function UserProvider({
   const hasAnthropic = hasApiKey.get('anthropic') ?? false;
   const hasGemini = hasApiKey.get('gemini') ?? false;
 
-  // Combined loading state for all user-related data
+  // Combined loading state for user-related data (auth loading is handled by AuthLoading component)
   const combinedLoading = Boolean(
-    isLoading ||
-      isUserLoading ||
+    isUserLoading ||
       (user &&
         !user.isAnonymous &&
         (isPremiumLoading ||

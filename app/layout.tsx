@@ -3,14 +3,10 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { BotIdClient } from 'botid/client';
 import Script from 'next/script';
-import { Toaster } from '@/components/ui/sonner';
 import { APP_BASE_URL, APP_DESCRIPTION, APP_NAME } from '@/lib/config';
+import { AuthGuard } from './components/auth/auth-guard';
 import { LayoutClient } from './layout-client';
-import { ChatSessionProvider } from './providers/chat-session-provider';
 import { ConvexClientProvider } from './providers/convex-client-provider';
-import { CSPostHogProvider } from './providers/posthog-provider';
-import { ThemeProvider } from './providers/theme-provider';
-import { UserProvider } from './providers/user-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -87,16 +83,7 @@ export default function RootLayout({
         <LayoutClient />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
-            <UserProvider>
-              <CSPostHogProvider>
-                <ChatSessionProvider>
-                  <ThemeProvider>
-                    <Toaster position="top-center" />
-                    {children}
-                  </ThemeProvider>
-                </ChatSessionProvider>
-              </CSPostHogProvider>
-            </UserProvider>
+            <AuthGuard>{children}</AuthGuard>
           </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>
       </body>
