@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Conversation } from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
+import { useDocumentTitle } from '@/app/hooks/use-document-title';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { toast } from '@/components/ui/toast';
@@ -915,6 +916,9 @@ export default function Chat() {
       );
     }
   }, [user, chatId, getValidModel]);
+
+  // Update document title when chat changes
+  useDocumentTitle(currentChat?.title, chatId || undefined);
 
   const targetMessageId = searchParams.get('m');
   const hasScrolledRef = useRef(false);
