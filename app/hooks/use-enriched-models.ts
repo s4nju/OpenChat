@@ -40,9 +40,9 @@ export function useEnrichedModels() {
     return MODELS_OPTIONS.map((model): EnrichedModel => {
       // Compute availability once
       const userHasKey = apiKeysMap.has(model.provider);
-      const requiresKey = model.apiKeyUsage.userKeyOnly;
+      const requiresKey = model.apiKeyUsage?.userKeyOnly ?? false;
       const canUseWithKey = !requiresKey || userHasKey;
-      const requiresPremium = model.premium;
+      const requiresPremium = model.premium ?? false;
       const canUseAsPremium = !requiresPremium || hasPremium || userHasKey;
       const available = canUseWithKey && canUseAsPremium;
       // Pre-compute features map for O(1) feature lookups

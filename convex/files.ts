@@ -33,17 +33,44 @@ const ALLOWED_FILE_MIME_TYPES = [
 
 // Only these models currently support file inputs. Update as new ones roll out.
 const FILE_UPLOAD_MODELS = [
-  'gpt-4o-mini',
+  // Anthropic models
+  'claude-3-5-sonnet-20241022',
+  'claude-3-7-sonnet-20250219',
+  'claude-3-7-sonnet-reasoning',
+  'claude-4-opus',
+  'claude-4-sonnet',
+  'claude-4-sonnet-reasoning',
+  
+  // OpenAI models
   'gpt-4o',
+  'gpt-4o-mini',
+  'o4-mini',
+  'o3',
+  'o3-pro',
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano',
+  'gpt-4.5',
+  
+  // Google models
   'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-thinking',
+  'gemini-2.5-flash-lite-preview-06-17',
+  'gemini-2.5-flash-lite-preview-06-17-thinking',
   'gemini-2.5-pro',
-  'Llama-4-Maverick-17B-128E-Instruct-FP8',
-  'Llama-4-Scout-17B-16E-Instruct',
+  
+  // Meta models
+  'meta-llama/llama-4-maverick:free',
+  'meta-llama/llama-4-scout:free',
+  
+  // Mistral models
   'pixtral-large-latest',
-  // Upcoming / temporarily unavailable models still supporting file uploads
-  'claude-3-5-sonnet',
-  'claude-3.7-sonnet',
+  
+  // Grok models
   'grok-3',
+  'grok-3-mini',
 ] as const;
 
 type AllowedMimeType = (typeof ALLOWED_FILE_MIME_TYPES)[number];

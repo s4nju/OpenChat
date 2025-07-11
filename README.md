@@ -154,6 +154,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=your-gemini-key
 GROQ_API_KEY=your-groq-key
 MISTRAL_API_KEY=your-mistral-key
 TOGETHER_API_KEY=your-together-key
+XAI_API_KEY=your-xai-key
 
 # Secret used to encrypt user-provided API keys
 API_KEY_SECRET=change-me

@@ -25,8 +25,8 @@ export const PROVIDERS = [
     icon: Gemini,
   },
   {
-    id: "grok",
-    name: "Grok",
+    id: "xai",
+    name: "xAI",
     icon: GrokDark,
     icon_light: GrokLight,
   },
