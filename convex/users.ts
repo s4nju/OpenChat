@@ -4,6 +4,7 @@ import {
   type RateLimitConfig,
 } from '@convex-dev/rate-limiter';
 import { v } from 'convex/values';
+import { RECOMMENDED_MODELS } from '../lib/config';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { RATE_LIMITS } from './lib/rateLimitConstants';
@@ -55,6 +56,8 @@ const initializeUserFields = () => ({
   preferredModel: MODEL_DEFAULT,
   // By default no models are disabled – an empty array means all are enabled
   disabledModels: [],
+  // Initialize with recommended models as favorites
+  favoriteModels: [...RECOMMENDED_MODELS],
 });
 
 // Helper function to get updates for existing user
@@ -67,6 +70,10 @@ const getExistingUserUpdates = (existing: Record<string, unknown>) => {
 
   if (existing.disabledModels === undefined) {
     updates.disabledModels = [];
+  }
+
+  if (existing.favoriteModels === undefined) {
+    updates.favoriteModels = [...RECOMMENDED_MODELS];
   }
 
   return updates;
@@ -194,6 +201,7 @@ export const updateUserProfile = mutation({
       traits: v.optional(v.string()),
       about: v.optional(v.string()),
       disabledModels: v.optional(v.array(v.string())),
+      favoriteModels: v.optional(v.array(v.string())),
     }),
   },
   returns: v.null(),

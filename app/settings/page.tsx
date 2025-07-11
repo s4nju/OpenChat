@@ -1,10 +1,9 @@
 'use client';
 
-import { CheckoutLink, CustomerPortalLink } from '@convex-dev/polar/react';
 import { CircleNotch, Headset, Rocket, Sparkle } from '@phosphor-icons/react';
-import { useMutation } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
@@ -14,13 +13,41 @@ import { api } from '@/convex/_generated/api';
 export default function AccountSettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteAccount = useMutation(api.users.deleteAccount);
+  const generateCheckoutLink = useAction(api.polar.generateCheckoutLink);
+  const generateCustomerPortalUrl = useAction(
+    api.polar.generateCustomerPortalUrl
+  );
   const { signOut, hasPremium, products } = useUser();
   const router = useRouter();
 
-  // Get product IDs with fallback - memoize to prevent unnecessary re-calculations
-  const productIds = React.useMemo(() => {
-    return products?.premium?.id ? [products.premium.id] : [];
-  }, [products?.premium?.id]);
+  // Handle upgrade button click
+  const handleUpgrade = useCallback(async () => {
+    if (!products?.premium?.id) {
+      return;
+    }
+
+    try {
+      const { url } = await generateCheckoutLink({
+        productIds: [products.premium.id],
+        origin: window.location.origin,
+        successUrl: `${window.location.origin}/settings?upgraded=true`,
+      });
+
+      window.location.href = url;
+    } catch (_error) {
+      // Silent error handling for checkout
+    }
+  }, [products?.premium?.id, generateCheckoutLink]);
+
+  // Handle manage subscription button click
+  const handleManageSubscription = useCallback(async () => {
+    try {
+      const { url } = await generateCustomerPortalUrl({});
+      window.location.href = url;
+    } catch (_error) {
+      // Silent error handling for customer portal
+    }
+  }, [generateCustomerPortalUrl]);
 
   // Memoize the delete account handler
   const handleDeleteAccount = useCallback(async () => {
@@ -51,23 +78,17 @@ export default function AccountSettingsPage() {
   const renderSubscriptionButton = useCallback(() => {
     if (hasPremium) {
       return (
-        <CustomerPortalLink polarApi={api.polar}>
-          <Button className="w-full md:w-64">Manage Subscription</Button>
-        </CustomerPortalLink>
+        <Button className="w-full md:w-64" onClick={handleManageSubscription}>
+          Manage Subscription
+        </Button>
       );
     }
 
-    if (productIds.length > 0) {
+    if (products?.premium?.id) {
       return (
-        <CheckoutLink
-          embed={false}
-          polarApi={api.polar}
-          productIds={productIds}
-        >
-          <Button className="w-full md:w-64">
-            Upgrade to Premium - $15/month
-          </Button>
-        </CheckoutLink>
+        <Button className="w-full md:w-64" onClick={handleUpgrade}>
+          Upgrade to Premium - $15/month
+        </Button>
       );
     }
 
@@ -76,7 +97,12 @@ export default function AccountSettingsPage() {
         Loading products...
       </Button>
     );
-  }, [hasPremium, productIds]);
+  }, [
+    hasPremium,
+    products?.premium?.id,
+    handleUpgrade,
+    handleManageSubscription,
+  ]);
 
   return (
     <div className="w-full">

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CheckoutLink } from "@convex-dev/polar/react"
+import { useAction } from "convex/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import {
 import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
+import { useModelPreferences } from "@/app/hooks/use-model-preferences"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import {
@@ -28,8 +29,11 @@ import {
   GlobeIcon,
   SketchLogoIcon,
 } from "@phosphor-icons/react"
-import { Key,ImagePlus } from "lucide-react"
+import { Key, ImagePlus, Pin } from "lucide-react"
 import { ProviderIcon } from "@/app/components/common/provider-icon"
+import { ModelCard } from "./model-card"
+import { ModelSelectorSearchHeader } from "./model-selector-search-header"
+import { ModelSelectorFooter } from "./model-selector-footer"
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -43,14 +47,18 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   const { user, hasPremium, products, apiKeys } = useUser()
+  const { favoriteModels, toggleFavoriteModel } = useModelPreferences()
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
+  const generateCheckoutLink = useAction(api.polar.generateCheckoutLink)
+  
+  // State for search and extended mode
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [isExtendedMode, setIsExtendedMode] = React.useState(false)
 
   const handleSelect = React.useCallback((id: string) => {
     setSelectedModelId(id);
   }, [setSelectedModelId]);
 
-  // Get product IDs with fallback
-  const productIds = React.useMemo(() => (products?.premium?.id ? [products.premium.id] : []), [products]);
 
   // Transform API keys array to object format expected by getAvailableModels
   const apiKeysObject = React.useMemo(() => {
@@ -64,43 +72,111 @@ export function ModelSelector({
   }, [apiKeys])
 
   const disabledSet = React.useMemo(() => new Set(user?.disabledModels ?? []), [user]);
+  const favoritesSet = React.useMemo(() => new Set(favoriteModels), [favoriteModels]);
 
-  const enabledSet = React.useMemo(() => {
-    const allIds = MODELS_OPTIONS.map(m => m.id);
-    return new Set(allIds.filter(id => !disabledSet.has(id)));
-  }, [disabledSet]);
+  // Determine if extended mode should be shown
+  const isExtended = searchQuery.length > 0 || isExtendedMode
 
-  const availableModels = React.useMemo(() => {
-    const modelsToShow = MODELS_OPTIONS.filter(m => enabledSet.has(m.id))
-    const modelsWithAvailability = modelsToShow.map(model => {
+  // Model filtering logic
+  const { normalModeModels, favoritesModels, othersModels } = React.useMemo(() => {
+    const addAvailability = (model: typeof MODELS_OPTIONS[0]) => {
       const userHasKey = !!apiKeysObject[model.provider]
       const requiresKey = model.apiKeyUsage.userKeyOnly
       const canUseWithKey = !requiresKey || userHasKey
       const requiresPremium = model.premium
       const canUseAsPremium = !requiresPremium || hasPremium || userHasKey
       const isAvailable = canUseWithKey && canUseAsPremium
+      const isEnabled = favoritesSet.has(model.id) || !disabledSet.has(model.id)
       return {
         ...model,
         available: isAvailable,
+        enabled: isEnabled,
       }
-    })
-
-    // Sort models to show available ones first
-    return modelsWithAvailability.sort((a, b) => {
-      return b.available === a.available ? 0 : b.available ? 1 : -1
-    })
-  }, [apiKeysObject, hasPremium, enabledSet])
-
-  React.useEffect(() => {
-    if (!enabledSet.has(selectedModelId)) {
-      setSelectedModelId(MODEL_DEFAULT)
     }
-  }, [enabledSet, selectedModelId, setSelectedModelId])
 
-  const model = React.useMemo(
-    () => availableModels.find(model => model.id === selectedModelId),
-    [selectedModelId, availableModels]
-  )
+    // Filter models based on search query
+    const filteredModels = MODELS_OPTIONS.filter(model => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return (
+        model.name.toLowerCase().includes(query) ||
+        model.provider.toLowerCase().includes(query)
+      )
+    }).map(addAvailability)
+
+    // Normal mode: Only show favorites that are enabled
+    const normalModels = filteredModels.filter(model => favoritesSet.has(model.id))
+
+    // Extended mode: Separate favorites and others
+    const favorites = filteredModels.filter(model => favoritesSet.has(model.id))
+    const others = filteredModels.filter(model => !favoritesSet.has(model.id))
+
+    // Sort by availability (available first)
+    const sortByAvailability = (a: any, b: any) => {
+      return b.available === a.available ? 0 : b.available ? 1 : -1
+    }
+
+    return {
+      normalModeModels: normalModels.sort(sortByAvailability),
+      favoritesModels: favorites.sort(sortByAvailability),
+      othersModels: others.sort(sortByAvailability),
+    }
+  }, [apiKeysObject, hasPremium, disabledSet, favoritesSet, searchQuery])
+
+  // Ensure selected model is valid
+  React.useEffect(() => {
+    const allValidModels = isExtended 
+      ? [...favoritesModels, ...othersModels]
+      : normalModeModels
+    
+    const selectedModelExists = allValidModels.some(m => m.id === selectedModelId)
+    
+    if (!selectedModelExists && allValidModels.length > 0) {
+      // Try to select first favorite, otherwise first available
+      const firstFavorite = favoritesModels.find(m => m.available)
+      const firstAvailable = allValidModels.find(m => m.available)
+      setSelectedModelId(firstFavorite?.id || firstAvailable?.id || MODEL_DEFAULT)
+    }
+  }, [selectedModelId, setSelectedModelId, isExtended, favoritesModels, othersModels, normalModeModels])
+
+  // Handle toggle between normal and extended mode
+  const handleToggleMode = React.useCallback(() => {
+    if (isExtended && searchQuery) {
+      // If in extended mode with search, clear search to go back to normal
+      setSearchQuery("")
+    } else {
+      // Toggle extended mode
+      setIsExtendedMode(!isExtendedMode)
+    }
+  }, [isExtended, searchQuery, isExtendedMode])
+
+  // Handle favorite toggle
+  const handleToggleFavorite = React.useCallback((modelId: string) => {
+    toggleFavoriteModel(modelId)
+  }, [toggleFavoriteModel])
+
+  // Handle upgrade button click
+  const handleUpgrade = React.useCallback(async () => {
+    if (!products?.premium?.id) return
+    
+    try {
+      const { url } = await generateCheckoutLink({
+        productIds: [products.premium.id],
+        origin: window.location.origin,
+        successUrl: `${window.location.origin}/settings?upgraded=true`
+      })
+      
+      window.location.href = url
+    } catch (error) {
+      console.error("Checkout failed:", error)
+    }
+  }, [products?.premium?.id, generateCheckoutLink])
+
+  const model = React.useMemo(() => {
+    const allModels = [...favoritesModels, ...othersModels, ...normalModeModels]
+    return allModels.find(model => model.id === selectedModelId)
+  }, [selectedModelId, favoritesModels, othersModels, normalModeModels])
+  
   const provider = React.useMemo(
     () => PROVIDERS_OPTIONS.find(provider => provider.id === model?.provider),
     [model]
@@ -121,25 +197,25 @@ export function ModelSelector({
     }
   }
 
-  const renderModelOption = (modelOption: (typeof availableModels)[number]) => {
+  const renderModelOption = (modelOption: (typeof MODELS_OPTIONS)[number] & { available: boolean; enabled: boolean }) => {
     const providerOption = PROVIDERS_OPTIONS.find(
       p => p.id === modelOption.provider
     )
     // Feature Flags
     const hasFileUpload = modelOption.features?.find(
-      feature => feature.id === "file-upload"
+      (feature: any) => feature.id === "file-upload"
     )?.enabled
     const hasPdfProcessing = modelOption.features?.find(
-      feature => feature.id === "pdf-processing"
+      (feature: any) => feature.id === "pdf-processing"
     )?.enabled
     const hasReasoning = modelOption.features?.find(
-      feature => feature.id === "reasoning"
+      (feature: any) => feature.id === "reasoning"
     )?.enabled
     const hasWebSearch = modelOption.features?.find(
-      feature => feature.id === "web-search"
+      (feature: any) => feature.id === "web-search"
     )?.enabled
     const hasImageGeneration = modelOption.features?.find(
-      feature => feature.id === "image-generation"
+      (feature: any) => feature.id === "image-generation"
     )?.enabled
 
     // --- Style Definitions based on the provided HTML ---
@@ -294,14 +370,14 @@ export function ModelSelector({
             className={cn(
               "dark:bg-secondary justify-between",
               isMobile && "py-3",
-            className
-          )}
-        >
-          <div className="flex items-center gap-2">
-            {provider && <ProviderIcon provider={provider} className="size-5" />}
-            {isMobile ? (
-              <div className="flex flex-col items-start">
-                <span className="text-sm leading-tight">
+              className
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {provider && <ProviderIcon provider={provider} className="size-5" />}
+              {isMobile ? (
+                <div className="flex flex-col items-start">
+                  <span className="text-sm leading-tight">
                     {parseModelName(model?.name ?? "Select Model").baseName}
                   </span>
                   {model && parseModelName(model.name).hasReasoningInName && (
@@ -318,39 +394,101 @@ export function ModelSelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="max-h-[400px] w-[400px] overflow-y-auto"
+          className={cn(
+            "relative overflow-y-auto rounded-lg !border-none p-0 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-125px)] transition-[height,width] ease-snappy max-sm:mx-4 sm:rounded-lg flex flex-col",
+            isExtended ? "sm:w-[640px]" : "sm:w-[420px]"
+          )}
           align="start"
           sideOffset={4}
         >
-          {!hasPremium && productIds.length > 0 && (
-            <>
-              <div className="p-3">
-                <div className="rounded-lg border bg-card p-4">
-                  <div className="mb-2 text-lg font-semibold">
-                    Unlock all models + higher limits
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-2xl font-bold">
-                      $15
-                      <span className="text-muted-foreground text-sm font-normal">
-                        /month
-                      </span>
+          {/* Fixed Search Header */}
+          <ModelSelectorSearchHeader
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+
+          {/* Scrollable Content */}
+          <div className="px-1.5 py-3">
+            {/* Premium Upgrade Section */}
+            {!hasPremium && products?.premium?.id && (
+              <>
+                <div className="p-3">
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-2 text-lg font-semibold">
+                      Unlock all models + higher limits
                     </div>
-                    <CheckoutLink
-                      embed={false}
-                      polarApi={api.polar}
-                      productIds={productIds}
-                    >
-                      <Button size="sm" className="cursor-pointer">Upgrade now</Button>
-                    </CheckoutLink>
+                    <div className="flex items-center justify-between">
+                      <div className="text-2xl font-bold">
+                        $15
+                        <span className="text-muted-foreground text-sm font-normal">
+                          /month
+                        </span>
+                      </div>
+                      <Button size="sm" onClick={handleUpgrade}>
+                        Upgrade now
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="mx-2 my-1 border-t border-border" />
-            </>
-          )}
+                <div className="mx-2 my-1 border-t border-border" />
+              </>
+            )}
 
-          {availableModels.map(modelOption => renderModelOption(modelOption))}
+            {isExtended ? (
+              <div className="flex w-full flex-wrap justify-start gap-3.5 pb-4 pl-3 pr-2 pt-2.5">
+                {/* Favorites Section */}
+                {favoritesModels.length > 0 && (
+                  <>
+                    <div className="-mb-2 ml-0 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
+                      <Pin className="mt-px size-4" />
+                      Favorites
+                    </div>
+                    {favoritesModels.map(modelOption => (
+                      <ModelCard
+                        key={modelOption.id}
+                        model={modelOption}
+                        isSelected={selectedModelId === modelOption.id}
+                        isFavorite={true}
+                        isLastFavorite={favoritesModels.length === 1}
+                        isDisabled={!modelOption.available}
+                        onSelect={handleSelect}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {/* Others Section */}
+                {othersModels.length > 0 && (
+                  <>
+                    <div className="-mb-2 ml-2 mt-1 w-full select-none text-color-heading">
+                      Others
+                    </div>
+                    {othersModels.map(modelOption => (
+                      <ModelCard
+                        key={modelOption.id}
+                        model={modelOption}
+                        isSelected={selectedModelId === modelOption.id}
+                        isFavorite={false}
+                        isLastFavorite={false}
+                        isDisabled={!modelOption.available}
+                        onSelect={handleSelect}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    ))}
+                  </>
+                )}
+              </div>
+            ) : (
+              normalModeModels.map(modelOption => renderModelOption(modelOption))
+            )}
+          </div>
+
+          {/* Fixed Footer */}
+          <ModelSelectorFooter
+            isExtended={isExtended}
+            onToggleMode={handleToggleMode}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>

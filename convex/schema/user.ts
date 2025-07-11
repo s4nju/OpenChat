@@ -12,4 +12,5 @@ export const User = v.object({
   traits: v.optional(v.string()),
   about: v.optional(v.string()),
   disabledModels: v.optional(v.array(v.string())),
+  favoriteModels: v.optional(v.array(v.string())),
 });

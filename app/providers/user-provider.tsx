@@ -184,6 +184,29 @@ export function UserProvider({
   };
 
   const updateUser = async (updates: Partial<UserProfile>) => {
+    // If disabling models, automatically remove them from favorites
+    if (updates.disabledModels && user?.favoriteModels) {
+      const disabledSet = new Set(updates.disabledModels);
+      const currentFavorites = user.favoriteModels;
+      const newFavorites = currentFavorites.filter(
+        (modelId) => !disabledSet.has(modelId)
+      );
+
+      // Ensure at least one favorite remains - if all would be removed, keep the first one enabled
+      if (newFavorites.length === 0 && currentFavorites.length > 0) {
+        const firstFavorite = currentFavorites[0];
+        // Remove the first favorite from disabled models to keep it enabled
+        const updatedDisabled = updates.disabledModels.filter(
+          (modelId) => modelId !== firstFavorite
+        );
+        updates.disabledModels = updatedDisabled;
+        updates.favoriteModels = [firstFavorite];
+      } else if (newFavorites.length !== currentFavorites.length) {
+        // Only update favorites if they actually changed and we have at least one
+        updates.favoriteModels = newFavorites;
+      }
+    }
+
     await updateUserProfile({ updates });
   };
 

@@ -41,6 +41,7 @@ import {
   MODEL_DEFAULT,
   MODELS_OPTIONS,
   PROVIDERS_OPTIONS,
+  RECOMMENDED_MODELS,
 } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
@@ -71,15 +72,6 @@ const FEATURE_INFO: Record<string, FeatureInfo> = {
     icon: ImagePlus,
   },
 };
-
-const RECOMMENDED_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.5-pro',
-  'gpt-4o-mini',
-  'o4-mini',
-  'claude-4-sonnet-reasoning',
-  'deepseek-r1-0528',
-];
 
 function ToggleSwitch({
   checked,
