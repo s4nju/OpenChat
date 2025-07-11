@@ -169,7 +169,7 @@ export function ModelCard({
               "group relative flex h-[9.25rem] w-[6.75rem] cursor-pointer flex-col items-start gap-0.5 overflow-hidden rounded-xl border border-chat-border/50 bg-sidebar/20 px-1 py-3 text-color-heading transition-colors",
               "[--model-muted:hsl(var(--muted-foreground)/0.9)] [--model-primary:hsl(var(--color-heading))]",
               "hover:bg-accent/30 hover:text-color-heading",
-              "dark:border-chat-border dark:bg-[hsl(320,20%,2.9%)]",
+              "dark:border-chat-border",
               "dark:[--model-muted:hsl(var(--color-heading))] dark:[--model-primary:hsl(var(--muted-foreground)/0.9)]",
               "dark:hover:bg-accent/30",
               isSelected && "ring-2 ring-primary",

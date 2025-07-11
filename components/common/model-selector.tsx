@@ -123,21 +123,6 @@ export function ModelSelector({
     }
   }, [apiKeysObject, hasPremium, disabledSet, favoritesSet, searchQuery])
 
-  // Ensure selected model is valid
-  React.useEffect(() => {
-    const allValidModels = isExtended 
-      ? [...favoritesModels, ...othersModels]
-      : normalModeModels
-    
-    const selectedModelExists = allValidModels.some(m => m.id === selectedModelId)
-    
-    if (!selectedModelExists && allValidModels.length > 0) {
-      // Try to select first favorite, otherwise first available
-      const firstFavorite = favoritesModels.find(m => m.available)
-      const firstAvailable = allValidModels.find(m => m.available)
-      setSelectedModelId(firstFavorite?.id || firstAvailable?.id || MODEL_DEFAULT)
-    }
-  }, [selectedModelId, setSelectedModelId, isExtended, favoritesModels, othersModels, normalModeModels])
 
   // Handle toggle between normal and extended mode
   const handleToggleMode = React.useCallback(() => {
@@ -173,9 +158,9 @@ export function ModelSelector({
   }, [products?.premium?.id, generateCheckoutLink])
 
   const model = React.useMemo(() => {
-    const allModels = [...favoritesModels, ...othersModels, ...normalModeModels]
-    return allModels.find(model => model.id === selectedModelId)
-  }, [selectedModelId, favoritesModels, othersModels, normalModeModels])
+    // Always look in the full MODELS_OPTIONS list, not just filtered results
+    return MODELS_OPTIONS.find(model => model.id === selectedModelId)
+  }, [selectedModelId])
   
   const provider = React.useMemo(
     () => PROVIDERS_OPTIONS.find(provider => provider.id === model?.provider),
@@ -437,7 +422,7 @@ export function ModelSelector({
             )}
 
             {isExtended ? (
-              <div className="flex w-full flex-wrap justify-start gap-3.5 pb-4 pl-3 pr-2 pt-2.5">
+              <div className="flex w-full flex-wrap justify-start gap-3.5 pb-4 pl-3 pr-0 pt-2.5">
                 {/* Favorites Section */}
                 {favoritesModels.length > 0 && (
                   <>

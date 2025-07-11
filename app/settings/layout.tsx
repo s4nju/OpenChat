@@ -12,17 +12,22 @@ export default function SettingsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
+    // Don't redirect while user data is still loading
+    if (isLoading) {
+      return;
+    }
+
     if (user?.isAnonymous) {
       router.replace('/');
     }
     if (!user) {
       router.replace('/');
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
   if (!user || user?.isAnonymous) {
     return null;
