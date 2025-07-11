@@ -53,13 +53,18 @@ export function ModelSelector({
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink)
   
-  // State for search and extended mode
+  // State for dropdown, search, and extended mode
+  const [isOpen, setIsOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isExtendedMode, setIsExtendedMode] = React.useState(false)
 
-  const handleSelect = React.useCallback((id: string) => {
-    setSelectedModelId(id);
-  }, [setSelectedModelId]);
+  const handleSelect = React.useCallback(
+    (id: string) => {
+      setSelectedModelId(id)
+      setIsOpen(false) // Close dropdown on selection
+    },
+    [setSelectedModelId],
+  )
 
   // Determine if extended mode should be shown
   const isExtended = searchQuery.length > 0 || isExtendedMode
@@ -300,7 +305,7 @@ export function ModelSelector({
 
   return (
     <TooltipProvider>
-      <DropdownMenu modal={false}>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
