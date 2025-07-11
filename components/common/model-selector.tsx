@@ -363,7 +363,7 @@ export function ModelSelector({
 
   return (
     <TooltipProvider>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -401,6 +401,7 @@ export function ModelSelector({
           align="start"
           sideOffset={4}
           collisionPadding={16}
+          side="bottom"
         >
           {/* Fixed Search Header */}
           <ModelSelectorSearchHeader

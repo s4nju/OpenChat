@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Nav items are static; declare once to avoid recreation per render
 const NAV_ITEMS = [
   { name: 'Account', href: '/settings' },
   { name: 'Customization', href: '/settings/customization' },
@@ -18,30 +17,34 @@ const NAV_ITEMS = [
 function SettingsNavComponent() {
   const pathname = usePathname();
 
+  // Determine the active tab by finding the most specific match.
+  // This handles nested routes correctly.
+  const activeTab = NAV_ITEMS.slice()
+    .reverse()
+    .find(
+      (item) =>
+        pathname === item.href ||
+        (item.href !== '/settings' && pathname.startsWith(item.href))
+    )?.href;
+
   return (
-    <nav className="mb-8">
-      <ul className="flex flex-nowrap space-x-1 overflow-x-auto whitespace-nowrap rounded-lg bg-muted p-1 md:overflow-x-visible">
-        {NAV_ITEMS.map((item) => (
-          <li className="shrink-0 md:flex-1" key={item.href}>
-            <Link
-              className={cn(
-                'block rounded-md px-4 py-2 text-center font-medium text-sm',
-                (item.href === '/settings' &&
-                  (pathname === '/settings' || pathname === '/settings/')) ||
-                  (item.href !== '/settings' && pathname.startsWith(item.href))
-                  ? 'bg-background text-foreground'
-                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
-              )}
-              href={item.href}
+    <Tabs className="mb-8" value={activeTab}>
+      <div className="overflow-x-auto">
+        <TabsList className="h-auto p-1 md:w-full">
+          {NAV_ITEMS.map((item) => (
+            <TabsTrigger
+              asChild
+              className="flex-1 md:flex-auto"
+              key={item.href}
+              value={item.href}
             >
-              {item.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+              <Link href={item.href}>{item.name}</Link>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
+    </Tabs>
   );
 }
 
-// Export memoized component to prevent unnecessary re-renders
 export const SettingsNav = React.memo(SettingsNavComponent);

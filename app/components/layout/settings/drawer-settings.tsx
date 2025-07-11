@@ -2,7 +2,6 @@
 
 import { X } from '@phosphor-icons/react';
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
 import {
   Drawer,
   DrawerClose,
@@ -11,7 +10,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type DrawerSettingsProps = {
   trigger: React.ReactNode;
@@ -42,11 +41,16 @@ const ApiKeysPage = dynamic(
   () => import('@/app/settings/api-keys/page').then((m) => m.default),
   { ssr: false }
 );
+const ModelsPage = dynamic(
+  () => import('@/app/settings/models/page').then((m) => m.default),
+  { ssr: false }
+);
 
 const NAV_ITEMS = [
   { key: 'account', name: 'Account' },
   { key: 'customization', name: 'Customization' },
   { key: 'history', name: 'History & Sync' },
+  { key: 'models', name: 'Models' },
   { key: 'api-keys', name: 'API Keys' },
   { key: 'attachments', name: 'Attachments' },
 ] as const;
@@ -56,24 +60,6 @@ export function DrawerSettings({
   isOpen,
   setIsOpenAction,
 }: DrawerSettingsProps) {
-  const [active, setActive] =
-    useState<(typeof NAV_ITEMS)[number]['key']>('account');
-
-  const renderContent = () => {
-    switch (active) {
-      case 'customization':
-        return <CustomizationPage />;
-      case 'history':
-        return <HistorySettingsPage />;
-      case 'attachments':
-        return <AttachmentsPage />;
-      case 'api-keys':
-        return <ApiKeysPage />;
-      default:
-        return <AccountPage />;
-    }
-  };
-
   return (
     <Drawer onOpenChange={setIsOpenAction} open={isOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
@@ -94,38 +80,49 @@ export function DrawerSettings({
             </DrawerClose>
           </DrawerHeader>
 
-          {/* Drawer-local navigation */}
-          <nav className="relative mb-2">
-            {/* gradient overlays hinting overflow */}
-            <span className="pointer-events-none absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-background" />
-            <span className="pointer-events-none absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-background" />
+          <Tabs
+            className="flex flex-1 flex-col overflow-hidden"
+            defaultValue="account"
+          >
+            <div className="relative mb-2">
+              <span className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background" />
+              <span className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background" />
+              <div className="overflow-x-auto">
+                <TabsList className="h-auto p-1 [scroll-snap-type:x_mandatory]">
+                  {NAV_ITEMS.map((item) => (
+                    <TabsTrigger
+                      className="shrink-0 [scroll-snap-align:start]"
+                      key={item.key}
+                      value={item.key}
+                    >
+                      {item.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            </div>
 
-            <ul className="flex gap-1 overflow-x-auto whitespace-nowrap rounded-lg bg-muted px-1 py-1 [scroll-snap-type:x_mandatory]">
-              {NAV_ITEMS.map((item) => (
-                <li
-                  className="shrink-0 [scroll-snap-align:start]"
-                  key={item.key}
-                >
-                  <button
-                    className={cn(
-                      'rounded-md px-4 py-2 text-center font-medium text-sm',
-                      active === item.key
-                        ? 'bg-background text-foreground'
-                        : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
-                    )}
-                    onClick={() => setActive(item.key)}
-                    type="button"
-                  >
-                    {item.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="flex-1 overflow-auto px-6 pt-4 pb-16">
-            {renderContent()}
-          </div>
+            <div className="flex-1 overflow-auto px-6 pt-4 pb-16">
+              <TabsContent value="account">
+                <AccountPage />
+              </TabsContent>
+              <TabsContent value="customization">
+                <CustomizationPage />
+              </TabsContent>
+              <TabsContent value="history">
+                <HistorySettingsPage />
+              </TabsContent>
+              <TabsContent value="models">
+                <ModelsPage />
+              </TabsContent>
+              <TabsContent value="api-keys">
+                <ApiKeysPage />
+              </TabsContent>
+              <TabsContent value="attachments">
+                <AttachmentsPage />
+              </TabsContent>
+            </div>
+          </Tabs>
         </div>
       </DrawerContent>
     </Drawer>
