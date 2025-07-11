@@ -395,11 +395,12 @@ export function ModelSelector({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           className={cn(
-            "relative overflow-y-auto rounded-lg !border-none p-0 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-125px)] transition-[height,width] ease-snappy max-sm:mx-4 sm:rounded-lg flex flex-col",
+            "relative overflow-y-auto rounded-lg !border-none p-0 max-w-[calc(100vw-2.5rem)] transition-[height,width] ease-snappy max-sm:mx-4 sm:rounded-lg flex flex-col",
             isExtended ? "sm:w-[640px]" : "sm:w-[420px]"
           )}
           align="start"
           sideOffset={4}
+          collisionPadding={16}
         >
           {/* Fixed Search Header */}
           <ModelSelectorSearchHeader
