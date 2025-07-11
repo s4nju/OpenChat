@@ -88,7 +88,7 @@ export function DrawerSettings({
               <span className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background" />
               <span className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background" />
               <div className="overflow-x-auto">
-                <TabsList className="h-auto p-1 [scroll-snap-type:x_mandatory]">
+                <TabsList className="h-auto w-max min-w-full p-1 [scroll-snap-type:x_mandatory]">
                   {NAV_ITEMS.map((item) => (
                     <TabsTrigger
                       className="shrink-0 [scroll-snap-align:start]"

@@ -4,8 +4,10 @@ import { useMutation } from 'convex/react';
 import { AlertCircle, Check, Key, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
 
@@ -142,24 +144,7 @@ function ToggleSwitch({
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        aria-checked={checked}
-        className={`peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          checked
-            ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-            : 'bg-muted hover:bg-muted/80'
-        }`}
-        data-state={checked ? 'checked' : 'unchecked'}
-        id={switchId}
-        onClick={() => onChange(!checked)}
-        role="switch"
-        type="button"
-      >
-        <span
-          className="pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0 dark:bg-white"
-          data-state={checked ? 'checked' : 'unchecked'}
-        />
-      </button>
+      <Switch checked={checked} id={switchId} onCheckedChange={onChange} />
       <label
         className={`text-sm ${checked ? 'font-medium text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}
         htmlFor={switchId}
@@ -299,12 +284,9 @@ function ProviderCard({
         </p>
         <div className="flex flex-wrap gap-2">
           {providerConfig.models.map((m) => (
-            <span
-              className="rounded-full bg-secondary px-2 py-1 text-xs"
-              key={m}
-            >
+            <Badge key={m} variant="secondary">
               {m}
-            </span>
+            </Badge>
           ))}
         </div>
       </div>
@@ -439,19 +421,17 @@ export default function ApiKeysPage() {
   return (
     <div className="w-full">
       <div className="space-y-6">
-        <div>
-          <h1 className="font-bold text-2xl">API Keys</h1>
-          <div className="mt-2 space-y-2">
-            <p className="text-muted-foreground text-xs">
-              Bring your own API keys for select models. Messages sent using
-              your API keys will not count towards your monthly limits.
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Note: For optional API key models, you can choose Priority (always
-              use your API key first) or Fallback (use your credits first, then
-              your API key).
-            </p>
-          </div>
+        <h1 className="font-bold text-2xl">API Keys</h1>
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-xs">
+            Bring your own API keys for select models. Messages sent using your
+            API keys will not count towards your monthly limits.
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Note: For optional API key models, you can choose Priority (always
+            use your API key first) or Fallback (use your credits first, then
+            your API key).
+          </p>
         </div>
         {PROVIDERS.map((providerConfig) => (
           <ProviderCard

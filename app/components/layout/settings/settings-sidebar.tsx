@@ -1,10 +1,12 @@
 'use client';
 
 import { Eye, EyeSlash, User } from '@phosphor-icons/react';
-import Image from 'next/image';
 import React, { useCallback } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
 import { useUser } from '@/app/providers/user-provider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Kbd } from '@/components/ui/kbd';
 import type { Doc } from '@/convex/_generated/dataModel';
 
@@ -59,19 +61,12 @@ function SettingsSidebarComponent() {
       {/* User Info */}
       <div className="flex flex-col items-center text-center">
         <div className="relative mb-4">
-          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-muted">
-            {user?.image ? (
-              <Image
-                alt="Profile"
-                className="h-full w-full object-cover"
-                height={96}
-                src={user.image}
-                width={96}
-              />
-            ) : (
+          <Avatar className="h-24 w-24">
+            <AvatarImage alt="Profile" src={user?.image} />
+            <AvatarFallback>
               <User className="size-12 text-muted-foreground" />
-            )}
-          </div>
+            </AvatarFallback>
+          </Avatar>
         </div>
         <h2 className="font-semibold text-xl">{getDisplayName(user)}</h2>
         <button
@@ -84,9 +79,9 @@ function SettingsSidebarComponent() {
         </button>
         {hasPremium && (
           <div className="mt-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 font-bold text-primary text-xs">
+            <Badge className="font-bold" variant="secondary">
               Pro Plan
-            </span>
+            </Badge>
           </div>
         )}
       </div>
@@ -95,33 +90,37 @@ function SettingsSidebarComponent() {
       <MessageUsageCard />
 
       {/* Keyboard Shortcuts */}
-      <div className="rounded-lg border bg-card p-4">
-        <h3 className="mb-4 font-semibold">Keyboard Shortcuts</h3>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Search</span>
-            <div className="flex items-center space-x-1">
-              <Kbd>⌘</Kbd>
-              <Kbd>K</Kbd>
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyboard Shortcuts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Search</span>
+              <div className="flex items-center space-x-1">
+                <Kbd>⌘</Kbd>
+                <Kbd>K</Kbd>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">New Chat</span>
+              <div className="flex items-center space-x-1">
+                <Kbd>⌘</Kbd>
+                <Kbd>Shift</Kbd>
+                <Kbd>O</Kbd>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Toggle Sidebar</span>
+              <div className="flex items-center space-x-1">
+                <Kbd>⌘</Kbd>
+                <Kbd>B</Kbd>
+              </div>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">New Chat</span>
-            <div className="flex items-center space-x-1">
-              <Kbd>⌘</Kbd>
-              <Kbd>Shift</Kbd>
-              <Kbd>O</Kbd>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Toggle Sidebar</span>
-            <div className="flex items-center space-x-1">
-              <Kbd>⌘</Kbd>
-              <Kbd>B</Kbd>
-            </div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </aside>
   );
 }

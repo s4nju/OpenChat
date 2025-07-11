@@ -13,8 +13,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { APP_NAME } from '@/lib/config';
@@ -186,12 +188,9 @@ export default function CustomizationPage() {
         <div className="space-y-6">
           <div>
             <div className="flex justify-between">
-              <label
-                className="mb-2 block font-medium text-sm"
-                htmlFor="preferred-name"
-              >
+              <Label className="mb-2 block" htmlFor="preferred-name">
                 What should {APP_NAME} call you?
-              </label>
+              </Label>
               <span className="text-muted-foreground text-sm">
                 {preferredName.length}/50
               </span>
@@ -210,12 +209,9 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <label
-                className="mb-2 block font-medium text-sm"
-                htmlFor="occupation"
-              >
+              <Label className="mb-2 block" htmlFor="occupation">
                 What do you do?
-              </label>
+              </Label>
               <span className="text-muted-foreground text-sm">
                 {occupation.length}/100
               </span>
@@ -234,15 +230,12 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <label
-                className="mb-2 block font-medium text-sm"
-                htmlFor="traits-input"
-              >
+              <Label className="mb-2 block" htmlFor="traits-input">
                 What traits should {APP_NAME} have?{' '}
                 <span className="text-muted-foreground">
                   (up to 50, max 100 chars each)
                 </span>
-              </label>
+              </Label>
               <span className="text-muted-foreground text-sm">
                 {traits.length}/50
               </span>
@@ -250,13 +243,14 @@ export default function CustomizationPage() {
             <div className="rounded-lg border bg-background p-2">
               <div className="mb-2 flex flex-wrap gap-2">
                 {traits.map((trait) => (
-                  <div
-                    className="flex items-center gap-1 rounded-full bg-muted px-3 py-1"
+                  <Badge
+                    className="flex items-center gap-1 rounded-full bg-muted text-foreground hover:bg-muted/80"
                     key={trait}
+                    variant="secondary"
                   >
                     <span>{trait}</span>
                     <button
-                      className="text-muted-foreground hover:text-foreground"
+                      className="ml-1 text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         handleRemoveTrait(trait);
                         setHasUnsavedChanges(true);
@@ -265,7 +259,7 @@ export default function CustomizationPage() {
                     >
                       &times;
                     </button>
-                  </div>
+                  </Badge>
                 ))}
               </div>
               <Input
@@ -298,9 +292,9 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <label className="mb-2 block font-medium text-sm" htmlFor="about">
+              <Label className="mb-2 block" htmlFor="about">
                 Anything else {APP_NAME} should know about you?
-              </label>
+              </Label>
               <span className="text-muted-foreground text-sm">
                 {about.length}/3000
               </span>

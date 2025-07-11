@@ -3,6 +3,8 @@
 import { Info } from '@phosphor-icons/react';
 import React, { useCallback } from 'react';
 import { useUser } from '@/app/providers/user-provider';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
@@ -61,14 +63,14 @@ function MessageUsageCardComponent() {
   const premiumRemaining = rateLimitStatus.premiumRemaining || premiumLimit;
 
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between gap-0.5">
-        <h3 className="font-semibold">Message Usage</h3>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-0.5 space-y-0">
+        <CardTitle>Message Usage</CardTitle>
         <p className="text-muted-foreground text-xs">
           Resets {nextResetDateStr}
         </p>
-      </div>
-      <div className="space-y-4">
+      </CardHeader>
+      <CardContent className="space-y-4">
         <div>
           <div className="mb-1 flex justify-between text-sm">
             <span>Standard</span>
@@ -76,14 +78,9 @@ function MessageUsageCardComponent() {
               {standardCount} / {standardLimit}
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-muted">
-            <div
-              className="h-2 rounded-full bg-primary"
-              style={{
-                width: `${Math.min((standardCount / standardLimit) * 100, 100)}%`,
-              }}
-            />
-          </div>
+          <Progress
+            value={Math.min((standardCount / standardLimit) * 100, 100)}
+          />
           <p className="mt-1 text-muted-foreground text-xs">
             {standardRemaining} messages remaining
           </p>
@@ -110,21 +107,16 @@ function MessageUsageCardComponent() {
                 {premiumCount} / {premiumLimit}
               </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-muted">
-              <div
-                className="h-2 rounded-full bg-primary"
-                style={{
-                  width: `${Math.min((premiumCount / premiumLimit) * 100, 100)}%`,
-                }}
-              />
-            </div>
+            <Progress
+              value={Math.min((premiumCount / premiumLimit) * 100, 100)}
+            />
             <p className="mt-1 text-muted-foreground text-xs">
               {premiumRemaining} messages remaining
             </p>
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 

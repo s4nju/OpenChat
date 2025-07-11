@@ -13,6 +13,15 @@ import { useRef, useState } from 'react';
 import superjson from 'superjson';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
 import type { Doc, Id } from '@/convex/_generated/dataModel';
@@ -301,25 +310,8 @@ export default function HistoryPage() {
           {/* Selection Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                className="flex items-center gap-2 px-4"
-                disabled={!chats}
-                onClick={() => {
-                  if (
-                    chats &&
-                    chats.length > 0 &&
-                    selectedIds.size === chats.length
-                  ) {
-                    clearSelection();
-                  } else {
-                    selectAll();
-                  }
-                }}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                <input
+              <Label className="flex items-center gap-3 rounded-lg border px-4 py-1.5 hover:bg-accent/25 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+                <Checkbox
                   checked={
                     !!(
                       chats &&
@@ -327,12 +319,25 @@ export default function HistoryPage() {
                       selectedIds.size === chats.length
                     )
                   }
-                  className="size-4 accent-primary"
-                  readOnly
-                  type="checkbox"
+                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+                  disabled={!chats}
+                  id="select-all"
+                  onCheckedChange={() => {
+                    if (
+                      chats &&
+                      chats.length > 0 &&
+                      selectedIds.size === chats.length
+                    ) {
+                      clearSelection();
+                    } else {
+                      selectAll();
+                    }
+                  }}
                 />
-                <span className="hidden text-sm sm:inline">Select All</span>
-              </Button>
+                <span className="hidden font-medium text-sm sm:inline">
+                  Select All
+                </span>
+              </Label>
               {selectedIds.size > 0 && (
                 <Button
                   onClick={clearSelection}
@@ -397,11 +402,11 @@ export default function HistoryPage() {
                     className={`flex items-center gap-4 px-4 py-1 text-sm ${isSelected(chat._id as Id<'chats'>) ? 'bg-muted/50' : ''}`}
                     key={chat._id}
                   >
-                    <input
+                    <Checkbox
                       checked={isSelected(chat._id as Id<'chats'>)}
-                      className="size-4 accent-primary"
-                      onChange={() => toggleSelect(chat._id as Id<'chats'>)}
-                      type="checkbox"
+                      onCheckedChange={() =>
+                        toggleSelect(chat._id as Id<'chats'>)
+                      }
                     />
                     <span className="flex-1 truncate font-medium">
                       {chat.title || 'Untitled Chat'}
@@ -445,34 +450,38 @@ export default function HistoryPage() {
           )}
         </div>
         {/* Danger Zone */}
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-4 font-semibold text-destructive">Danger Zone</h3>
-          <p className="mb-4 text-muted-foreground text-sm">
-            Permanently delete all of your chat history. This action cannot be
-            undone.
-          </p>
-          <Button
-            onClick={async () => {
-              if (
-                !confirm(
-                  'This will permanently delete all chat history. Are you sure?'
-                )
-              ) {
-                return;
-              }
-              try {
-                await deleteAllChats({});
-                toast({ title: 'All chats deleted', status: 'success' });
-              } catch {
-                toast({ title: 'Failed to delete chats', status: 'error' });
-              }
-            }}
-            size="sm"
-            variant="destructive"
-          >
-            <Trash className="mr-2 size-4" /> Delete All Chats
-          </Button>
-        </div>
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>
+              Permanently delete all of your chat history. This action cannot be
+              undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={async () => {
+                if (
+                  !confirm(
+                    'This will permanently delete all chat history. Are you sure?'
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  await deleteAllChats({});
+                  toast({ title: 'All chats deleted', status: 'success' });
+                } catch {
+                  toast({ title: 'Failed to delete chats', status: 'error' });
+                }
+              }}
+              size="sm"
+              variant="destructive"
+            >
+              <Trash className="mr-2 size-4" /> Delete All Chats
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Retention policy note */}
         <p className="mt-6 text-muted-foreground text-xs italic">

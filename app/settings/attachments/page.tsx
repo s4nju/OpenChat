@@ -7,6 +7,10 @@ import { useMutation } from 'convex/react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -90,7 +94,7 @@ export default function AttachmentsPage() {
     <div className="w-full">
       <div className="space-y-6">
         <h1 className="font-bold text-2xl">Attachments</h1>
-        <p className="max-w-prose text-muted-foreground text-sm">
+        <p className="max-w text-muted-foreground text-sm">
           Manage your uploaded files and attachments. Note that deleting files
           here will remove them from the relevant chats, but will not delete
           those chats. This may lead to unexpected behavior if you delete a file
@@ -100,21 +104,8 @@ export default function AttachmentsPage() {
           {/* Selection Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                className="flex items-center gap-2 px-4"
-                disabled={!attachments}
-                onClick={() => {
-                  if (attachments && selectedIds.size === attachments.length) {
-                    clearSelection();
-                  } else {
-                    selectAll();
-                  }
-                }}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                <input
+              <Label className="flex items-center gap-3 rounded-lg border px-4 py-1.5 hover:bg-accent/25 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+                <Checkbox
                   checked={
                     !!(
                       attachments &&
@@ -122,12 +113,25 @@ export default function AttachmentsPage() {
                       selectedIds.size === attachments.length
                     )
                   }
-                  className="size-4 accent-primary"
-                  readOnly
-                  type="checkbox"
+                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+                  disabled={!attachments}
+                  id="select-all"
+                  onCheckedChange={() => {
+                    if (
+                      attachments &&
+                      attachments.length > 0 &&
+                      selectedIds.size === attachments.length
+                    ) {
+                      clearSelection();
+                    } else {
+                      selectAll();
+                    }
+                  }}
                 />
-                <span className="hidden text-sm sm:inline">Select All</span>
-              </Button>
+                <span className="hidden font-medium text-sm sm:inline">
+                  Select All
+                </span>
+              </Label>
               {selectedIds.size > 0 && (
                 <Button
                   onClick={clearSelection}
@@ -159,74 +163,73 @@ export default function AttachmentsPage() {
               <p className="text-muted-foreground">No attachments found.</p>
             ) : (
               attachments.map((att) => (
-                <div
-                  className={`flex items-center gap-4 rounded-lg border p-4 ${isSelected(att._id as Id<'chat_attachments'>) ? 'border-primary bg-muted/50' : ''}`}
+                <Card
+                  className={`${isSelected(att._id as Id<'chat_attachments'>) ? 'bg-muted/50 py-3' : 'py-3'}`}
                   key={att._id}
                 >
-                  <input
-                    checked={isSelected(att._id as Id<'chat_attachments'>)}
-                    className="size-4 accent-primary"
-                    onChange={() =>
-                      toggleSelect(att._id as Id<'chat_attachments'>)
-                    }
-                    type="checkbox"
-                  />
-                  {att.fileType.startsWith('image/') && att.url ? (
-                    <div className="h-10 w-10 overflow-hidden rounded border">
-                      <Image
-                        alt={att.fileName}
-                        className="h-full w-full object-cover"
-                        height={40}
-                        src={att.url}
-                        width={40}
-                      />
+                  <CardContent className="flex items-center gap-4 px-4">
+                    <Checkbox
+                      checked={isSelected(att._id as Id<'chat_attachments'>)}
+                      onCheckedChange={() =>
+                        toggleSelect(att._id as Id<'chat_attachments'>)
+                      }
+                    />
+                    {att.fileType.startsWith('image/') && att.url ? (
+                      <div className="h-10 w-10 overflow-hidden rounded border">
+                        <Image
+                          alt={att.fileName}
+                          className="h-full w-full object-cover"
+                          height={40}
+                          src={att.url}
+                          width={40}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted/5">
+                        <FileText className="size-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <a
+                        className="flex items-center gap-1 truncate text-primary hover:underline"
+                        href={att.url ?? undefined}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <span className="truncate">{att.fileName}</span>
+                        <ArrowSquareOut className="size-4 shrink-0" />
+                      </a>
+                      <span className="text-muted-foreground text-sm">
+                        {att.fileType} • {formatBytes(att.fileSize)}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted/5">
-                      <FileText className="size-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <a
-                      className="flex items-center gap-1 truncate text-primary hover:underline"
-                      href={att.url ?? undefined}
-                      rel="noopener noreferrer"
-                      target="_blank"
+                    <Button
+                      onClick={() =>
+                        handleDelete(att._id as Id<'chat_attachments'>)
+                      }
+                      size="icon"
+                      variant="destructive"
                     >
-                      <span className="truncate">{att.fileName}</span>
-                      <ArrowSquareOut className="size-4 shrink-0" />
-                    </a>
-                    <span className="text-muted-foreground text-sm">
-                      {att.fileType} • {formatBytes(att.fileSize)}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={() =>
-                      handleDelete(att._id as Id<'chat_attachments'>)
-                    }
-                    size="icon"
-                    variant="destructive"
-                  >
-                    <Trash className="size-4" />
-                  </Button>
-                </div>
+                      <Trash className="size-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
               ))
             )
           ) : (
             <div className="space-y-4">
               {['skeleton-1', 'skeleton-2', 'skeleton-3'].map((skeletonId) => (
-                <div
-                  className="flex items-center gap-4 rounded-lg border p-4"
-                  key={skeletonId}
-                >
-                  <div className="h-4 w-4 animate-pulse rounded bg-muted" />
-                  <div className="h-10 w-10 animate-pulse rounded bg-muted" />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-                    <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-                  </div>
-                  <div className="h-8 w-8 animate-pulse rounded bg-muted" />
-                </div>
+                <Card key={skeletonId}>
+                  <CardContent className="flex items-center gap-4 p-4">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-10 w-10" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                    <Skeleton className="h-8 w-8" />
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}

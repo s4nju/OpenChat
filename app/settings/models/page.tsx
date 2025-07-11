@@ -23,7 +23,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -72,38 +75,6 @@ const FEATURE_INFO: Record<string, FeatureInfo> = {
     icon: ImagePlus,
   },
 };
-
-function ToggleSwitch({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (isChecked: boolean) => void;
-}) {
-  return (
-    <button
-      aria-checked={checked}
-      className={cn(
-        'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
-        checked
-          ? 'bg-primary hover:bg-primary/90'
-          : 'bg-muted hover:bg-muted/80'
-      )}
-      data-state={checked ? 'checked' : 'unchecked'}
-      onClick={() => onChange(!checked)}
-      role="switch"
-      type="button"
-    >
-      <span
-        className={cn(
-          'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform dark:bg-background',
-          checked ? 'translate-x-4' : 'translate-x-0'
-        )}
-        data-state={checked ? 'checked' : 'unchecked'}
-      />
-    </button>
-  );
-}
 
 // Get the appropriate color classes for each feature
 const getFeatureColorClasses = (featureId: string) => {
@@ -235,7 +206,7 @@ export default function ModelsPage() {
     <div className="w-full">
       <div className="space-y-6">
         <h1 className="font-bold text-2xl">Available Models</h1>
-        <p className="max-w-prose text-muted-foreground text-sm">
+        <p className="max-w text-muted-foreground text-sm">
           Choose which models appear in your model selector. This won't affect
           existing conversations.
         </p>
@@ -286,21 +257,7 @@ export default function ModelsPage() {
                         <span>{info.label}</span>
                       </div>
                       <span className="flex h-3.5 w-3.5 items-center justify-center">
-                        {checked && (
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <title>Selected</title>
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        )}
+                        {checked && <Check className="h-4 w-4" />}
                       </span>
                     </DropdownMenuItem>
                   );
@@ -318,21 +275,7 @@ export default function ModelsPage() {
                 >
                   <span>Only show free plan models</span>
                   <span className="flex h-3.5 w-3.5 items-center justify-center">
-                    {freeOnly && (
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <title>Selected</title>
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    )}
+                    {freeOnly && <Check className="h-4 w-4" />}
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -425,10 +368,7 @@ export default function ModelsPage() {
               (p) => p.id === model.provider
             );
             return (
-              <div
-                className="relative flex flex-col rounded-lg border border-input p-3 sm:p-4"
-                key={model.id}
-              >
+              <Card className="relative p-3 sm:p-4" key={model.id}>
                 <div className="flex w-full items-start gap-4">
                   <div className="relative h-8 w-8 flex-shrink-0 sm:h-10 sm:w-10">
                     {provider && (
@@ -470,9 +410,9 @@ export default function ModelsPage() {
                           </Tooltip>
                         )}
                       </div>
-                      <ToggleSwitch
+                      <Switch
                         checked={isModelEnabled(model.id)}
-                        onChange={() => handleToggle(model.id)}
+                        onCheckedChange={() => handleToggle(model.id)}
                       />
                     </div>
                     <div className="relative">
@@ -516,19 +456,20 @@ export default function ModelsPage() {
                           const Icon = info.icon;
 
                           return (
-                            <div
+                            <Badge
                               className={cn(
                                 'relative flex items-center gap-1 overflow-hidden rounded-full px-1.5 py-0.5 text-[10px] sm:gap-1.5 sm:px-2 sm:text-xs',
                                 getFeatureColorClasses(feat.id)
                               )}
                               key={feat.id}
+                              variant="outline"
                             >
                               <div className="absolute inset-0 bg-current opacity-20 dark:opacity-15" />
                               <Icon className="relative h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               <span className="relative whitespace-nowrap">
                                 {info.label}
                               </span>
-                            </div>
+                            </Badge>
                           );
                         })}
                       </div>
@@ -554,7 +495,7 @@ export default function ModelsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
