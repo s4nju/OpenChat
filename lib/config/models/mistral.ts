@@ -8,7 +8,7 @@ export const MISTRAL_MODELS = [
     provider: "mistral",
     premium: false,
     usesPremiumCredits: false,
-    description: `124B multimodal model leading on mathematical reasoning benchmarks.\\nExcels at document analysis and complex visual comprehension.`,
+    description: `124B multimodal model leading on mathematical reasoning benchmarks.\nExcels at document analysis and complex visual comprehension.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -23,7 +23,7 @@ export const MISTRAL_MODELS = [
     provider: "mistral",
     premium: false,
     usesPremiumCredits: false,
-    description: `Mistral's flagship text-focused model for general tasks.\\nDelivers reliable performance across diverse applications.`,
+    description: `Mistral's flagship text-focused model for general tasks.\nDelivers reliable performance across diverse applications.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },

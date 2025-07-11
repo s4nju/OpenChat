@@ -8,7 +8,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
-    description: `First model which excels at coding and tool calling.\\nExcels at agentic coding, tool use, and complex reasoning tasks.`,
+    description: `First model which excels at coding and tool calling.\nExcels at agentic coding, tool use, and complex reasoning tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,

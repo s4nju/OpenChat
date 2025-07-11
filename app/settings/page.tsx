@@ -35,7 +35,12 @@ export default function AccountSettingsPage() {
 
       window.location.href = url;
     } catch (_error) {
-      // Silent error handling for checkout
+      toast({
+        title: 'Unable to start upgrade process',
+        description:
+          'Please try again or contact support if the problem persists.',
+        status: 'error',
+      });
     }
   }, [products?.premium?.id, generateCheckoutLink]);
 
@@ -45,7 +50,12 @@ export default function AccountSettingsPage() {
       const { url } = await generateCustomerPortalUrl({});
       window.location.href = url;
     } catch (_error) {
-      // Silent error handling for customer portal
+      toast({
+        title: 'Unable to access customer portal',
+        description:
+          'Please try again or contact support if the problem persists.',
+        status: 'error',
+      });
     }
   }, [generateCustomerPortalUrl]);
 
