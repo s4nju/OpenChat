@@ -88,7 +88,7 @@ export function ButtonSearch({
                 type="button"
                 variant="secondary"
               >
-                <Globe className="size-4" />
+                <Globe className="size-5" />
                 {/* {isMobile && <span className="text-sm">Search</span>} */}
               </Button>
             </PopoverTrigger>
@@ -112,7 +112,7 @@ export function ButtonSearch({
           variant={searchEnabled ? 'ghost' : 'secondary'}
         >
           <Globe
-            className={searchEnabled ? 'size-4 text-blue-400' : 'size-4'}
+            className={searchEnabled ? 'size-5 text-blue-400' : 'size-5'}
           />
           {/* {isMobile && <span className="text-sm">Search</span>} */}
         </Button>

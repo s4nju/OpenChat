@@ -386,7 +386,7 @@ export function ModelSelector({
           align="start"
           sideOffset={4}
           collisionPadding={16}
-          side="bottom"
+          side="top"
         >
           {/* Fixed Search Header */}
           <ModelSelectorSearchHeader
