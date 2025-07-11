@@ -1,0 +1,67 @@
+import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
+import { DetectiveIcon } from "@phosphor-icons/react/dist/ssr"
+
+export type Provider = {
+  id: string
+  name: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  icon_light?: React.ComponentType<React.SVGProps<SVGSVGElement>>
+}
+
+export const PROVIDERS = [
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    icon: DeepSeek,
+  },
+  {
+    id: "fal",
+    name: "Fal.ai",
+    icon: Gemini,
+  },
+  {
+    id: "gemini",
+    name: "Gemini",
+    icon: Gemini,
+  },
+  {
+    id: "grok",
+    name: "Grok",
+    icon: GrokDark,
+    icon_light: GrokLight,
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    icon: DetectiveIcon,
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    icon: OpenAIDark,
+    icon_light: OpenAILight,
+  },
+  {
+    id: "anthropic",
+    name: "Claude",
+    icon: AnthropicDark,
+    icon_light: AnthropicLight,
+  },
+  {
+    id: "mistral",
+    name: "Mistral",
+    icon: MistralAI,
+  },
+  {
+    id: "meta",
+    name: "Meta",
+    icon: Meta,
+  },
+  {
+    id: "Qwen",
+    name: "Qwen",
+    icon: QwenLight,
+  },
+] as Provider[]
+
+export const PROVIDERS_OPTIONS = PROVIDERS

@@ -1,0 +1,30 @@
+import { z } from "zod"
+
+export const ModelFeatureSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  label: z.string().optional(),
+  supportsEffort: z.boolean().optional(),
+})
+
+export const ApiKeyUsageSchema = z.object({
+  allowUserKey: z.boolean(),
+  userKeyOnly: z.boolean(),
+})
+
+export const ModelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.string(),
+  api_sdk: z.any().optional(),
+  premium: z.boolean(),
+  usesPremiumCredits: z.boolean(),
+  description: z.string(),
+  features: z.array(ModelFeatureSchema).default([]),
+  apiKeyUsage: ApiKeyUsageSchema.default({
+    allowUserKey: false,
+    userKeyOnly: false,
+  }),
+})
+
+export type Model = z.infer<typeof ModelSchema>
