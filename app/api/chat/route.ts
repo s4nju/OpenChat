@@ -211,6 +211,20 @@ type ChatRequest = {
   userInfo?: { timezone?: string };
 };
 
+/**
+ * Helper function to check if a model should have thinking enabled
+ * based on its features configuration
+ */
+const shouldEnableThinking = (modelId: string): boolean => {
+  const model = MODELS_MAP[modelId];
+  if (!model) {
+    return false;
+  }
+
+  const reasoningFeature = model.features?.find((f) => f.id === 'reasoning');
+  return reasoningFeature?.enabled === true;
+};
+
 const buildGoogleProviderOptions = (
   modelId: string,
   reasoningEffort?: ReasoningEffort
@@ -219,12 +233,16 @@ const buildGoogleProviderOptions = (
 
   // Check if model supports reasoning using centralized configuration
   if (REASONING_MODELS.google.some((m) => modelId.includes(m))) {
-    options.thinkingConfig = {
-      includeThoughts: true,
-      thinkingBudget: reasoningEffort
-        ? REASONING_BUDGETS[reasoningEffort].google
-        : REASONING_BUDGETS.medium.google,
-    };
+    const enableThinking = shouldEnableThinking(modelId);
+
+    if (enableThinking) {
+      options.thinkingConfig = {
+        includeThoughts: true,
+        thinkingBudget: reasoningEffort
+          ? REASONING_BUDGETS[reasoningEffort].google
+          : REASONING_BUDGETS.medium.google,
+      };
+    }
   }
 
   return options;

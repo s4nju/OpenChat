@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from '@/lib/config';
 import { useUser } from '../providers/user-provider';
 import { useModelPreferences } from './use-model-preferences';
-// import { useModelSettings } from './use-model-settings';
 
 export type EnrichedModel = {
   id: string;
@@ -31,7 +30,6 @@ export type EnrichedModel = {
 export function useEnrichedModels() {
   const { hasPremium, apiKeys } = useUser();
   const { favoriteModelsSet } = useModelPreferences();
-  // const { disabledModelsSet } = useModelSettings();
 
   // Transform API keys array to Map for O(1) lookups
   const apiKeysMap = useMemo(() => {
