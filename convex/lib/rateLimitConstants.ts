@@ -3,7 +3,7 @@ import { HOUR } from '@convex-dev/rate-limiter';
 // Rate limit values - Single source of truth
 export const RATE_LIMITS = {
   ANONYMOUS_DAILY: 5,
-  AUTHENTICATED_DAILY: 50,
+  AUTHENTICATED_DAILY: 15,
   STANDARD_MONTHLY: 1500,
   PREMIUM_MONTHLY: 100, // Premium credits for premium users
   MONTHLY_PERIOD_DAYS: 30,

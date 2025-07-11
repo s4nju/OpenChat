@@ -1,12 +1,11 @@
 import type { Doc } from "@/convex/_generated/dataModel"
 import { google } from "@ai-sdk/google"
+import { openai } from "@ai-sdk/openai"
 import { groq } from "@ai-sdk/groq"
 import { mistral } from "@ai-sdk/mistral"
 import { anthropic } from "@ai-sdk/anthropic"
-// import { openrouter } from "@openrouter/ai-sdk-provider"
-import { createOpenAI, openai } from "@ai-sdk/openai"
+import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import { togetherai } from "@ai-sdk/togetherai"
 import { fal } from "@ai-sdk/fal"
 import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
 import {
@@ -24,18 +23,6 @@ import { extractReasoningMiddleware, wrapLanguageModel } from "ai"
 import { z } from "zod"
 
 const reasoningMiddleware = extractReasoningMiddleware({ tagName: "think" })
-
-const chutes = createOpenAI({
-  // custom settings, e.g.
-  // compatibility: 'strict', // strict mode, enable when using the OpenAI API
-  baseURL: "https://llm.chutes.ai/v1/",
-  apiKey: process.env.CHUTES_API_KEY,
-  headers: {
-    Authorization: `Bearer ${process.env.CHUTES_API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  // other options...
-})
 
 const nim = createOpenAICompatible({
   name: "nim",
@@ -347,6 +334,22 @@ export const MODELS_DATA = [
     ],
   },
   {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash (Thinking)",
+    provider: "gemini",
+    premium: true,
+    usesPremiumCredits: false,
+    description: `Baseline Gemini model with fast inference.\nGreat for general tasks and web search.`,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    api_sdk: google("gemini-2.5-flash"),
+    features: [
+      { id: "file-upload", enabled: true },
+      { id: "pdf-processing", enabled: true, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, label: "Supports reasoning capabilities" },
+      { id: "web-search", enabled: true, label: "Supports web search" },
+    ],
+  },
+  {
     id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "gemini",
@@ -389,7 +392,7 @@ export const MODELS_DATA = [
     api_sdk: fal.image("fal-ai/imagen4/preview/ultra"),
   },
   {
-    id: "Llama-4-Maverick-17B-128E-Instruct-FP8",
+    id: "meta-llama/llama-4-maverick:free",
     name: "Llama 4 Maverick",
     provider: "meta",
     premium: false,
@@ -401,10 +404,10 @@ export const MODELS_DATA = [
       { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
       { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
-    api_sdk: togetherai("meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"),
+    api_sdk: openrouter("meta-llama/llama-4-maverick:free"),
   },
   {
-    id: "Llama-4-Scout-17B-16E-Instruct",
+    id: "meta-llama/llama-4-scout:free",
     name: "Llama 4 Scout",
     provider: "meta",
     premium: false,
@@ -416,7 +419,7 @@ export const MODELS_DATA = [
       { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
       { id: "reasoning", enabled: false, label: "Supports reasoning capabilities" },
     ],
-    api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
+    api_sdk: openrouter("meta-llama/llama-4-scout:free"),
   },
   {
     id: "pixtral-large-latest",
@@ -447,14 +450,14 @@ export const MODELS_DATA = [
     api_sdk: mistral("mistral-large-latest"),
   },
   {
-    id: "deepseek-ai/DeepSeek-V3-0324",
+    id: "deepseek/deepseek-chat-v3-0324:free",
     name: "DeepSeek V3 0324",
     provider: "deepseek",
     premium: false,
     usesPremiumCredits: false,
     description: `Early DeepSeek release for experimentation.\nFocuses on research-friendly output.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    api_sdk: chutes("deepseek-ai/DeepSeek-V3-0324"),
+    api_sdk: openrouter("deepseek/deepseek-chat-v3-0324:free"),
     features: [
       { id: "file-upload", enabled: false },
     ],
@@ -473,6 +476,21 @@ export const MODELS_DATA = [
       { id: "reasoning", enabled: true, supportsEffort: false, label: "Supports reasoning capabilities" },
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
+  },
+  {
+    id: "deepseek/deepseek-r1-distill-llama-70b:free",
+    name: "DeepSeek R1 (Llama Distilled)",
+    provider: "deepseek",
+    premium: true,
+    usesPremiumCredits: false,
+    description: `Stable release with reasoning enabled.\nRecommended for developers exploring new features.`,
+    apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
+    features: [
+      { id: "file-upload", enabled: false },
+      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
+      { id: "reasoning", enabled: true, supportsEffort: false, label: "Supports reasoning capabilities" },
+    ],
+    api_sdk: openrouter("deepseek/deepseek-r1-distill-llama-70b:free"),
   },
   {
     id: "flux-schnell",
