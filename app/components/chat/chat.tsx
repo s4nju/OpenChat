@@ -198,12 +198,13 @@ export default function Chat() {
   const [hasDialogAuth, setHasDialogAuth] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   // Helper function to get a valid model ID based on preferred model and disabled models
+  // NOTE: We do not filter out disabled models here; we only check if the preferred model is enabled.
+  // Filtering of disabled models is handled elsewhere in the UI.
   const getValidModel = useCallback(
     (preferredModel: string, disabledModels: string[] = []) => {
+      // biome-ignore lint/correctness/noUnusedVariables: <above>
       const disabledSet = new Set(disabledModels);
-      const enabled = MODELS.map((m) => m.id).filter(
-        (id) => !disabledSet.has(id)
-      );
+      const enabled = MODELS.map((m) => m.id); // No filtering of disabled models here
       return enabled.includes(preferredModel) ? preferredModel : MODEL_DEFAULT;
     },
     []

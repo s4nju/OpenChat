@@ -11,7 +11,8 @@ import { Check, ImagePlus, Key, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
-import { useUser } from '@/app/providers/user-provider';
+import { useModelPreferences } from '@/app/hooks/use-model-preferences';
+import { useModelSettings } from '@/app/hooks/use-model-settings';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,10 +96,10 @@ const getFeatureColorClasses = (featureId: string) => {
 };
 
 export default function ModelsPage() {
-  const { user, updateUser } = useUser();
-  const [disabled, setDisabled] = useState<Set<string>>(
-    () => new Set(user?.disabledModels ?? [])
-  );
+  const { disabledModelsSet, setModelEnabled, bulkSetModelsDisabled } =
+    useModelSettings();
+  const { bulkSetFavoriteModels } = useModelPreferences();
+  const [disabled, setDisabled] = useState<Set<string>>(disabledModelsSet);
   const [filters, setFilters] = useState<Set<string>>(new Set());
   const [freeOnly, setFreeOnly] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -106,10 +107,8 @@ export default function ModelsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setDisabled(new Set(user.disabledModels ?? []));
-    }
-  }, [user]);
+    setDisabled(disabledModelsSet);
+  }, [disabledModelsSet]);
 
   const allFeatures = useMemo(() => {
     const f = new Set<string>();
@@ -123,7 +122,7 @@ export default function ModelsPage() {
     return Array.from(f);
   }, []);
 
-  const isModelEnabled = (id: string) => !disabled.has(id);
+  const isCurrentlyEnabled = (id: string) => !disabled.has(id);
 
   const filteredModels = useMemo(() => {
     return MODELS_OPTIONS.filter((m) => {
@@ -137,33 +136,75 @@ export default function ModelsPage() {
   }, [filters, freeOnly]);
 
   const handleToggle = async (id: string) => {
+    const isCurrentlyDisabled = disabled.has(id);
+    const shouldEnable = isCurrentlyDisabled;
+
+    // Update local state optimistically
     const next = new Set(disabled);
-    if (next.has(id)) {
+    if (shouldEnable) {
       next.delete(id);
     } else if (id !== MODEL_DEFAULT) {
       next.add(id);
     }
     setDisabled(next);
-    await updateUser({ disabledModels: Array.from(next) });
+
+    try {
+      // Call backend mutation
+      await setModelEnabled({ modelId: id, enabled: shouldEnable });
+    } catch (_error) {
+      // Rollback optimistic update on error
+      setDisabled(disabled);
+      toast.error(
+        `Failed to ${shouldEnable ? 'enable' : 'disable'} model. Please try again.`
+      );
+    }
   };
 
   const handleRecommended = async () => {
-    // Recommended: disable all not in rec
-    const recSet = new Set<string>();
+    // Recommended: disable all not in recommended list
+    const modelsToDisable: string[] = [];
     for (const id of MODELS_OPTIONS.map((m) => m.id)) {
       if (!RECOMMENDED_MODELS.includes(id) && id !== MODEL_DEFAULT) {
-        recSet.add(id);
+        modelsToDisable.push(id);
       }
     }
-    setDisabled(recSet);
-    await updateUser({ disabledModels: Array.from(recSet) });
+
+    const originalDisabled = disabled;
+    // Update local state optimistically
+    setDisabled(new Set(modelsToDisable));
+
+    try {
+      // Call backend mutations in parallel
+      await Promise.all([
+        bulkSetModelsDisabled({ modelIds: modelsToDisable }),
+        bulkSetFavoriteModels(RECOMMENDED_MODELS),
+      ]);
+    } catch (_error) {
+      // Rollback on error
+      setDisabled(originalDisabled);
+      toast.error('Failed to apply recommended models. Please try again.');
+    }
   };
 
   const handleUnselectAll = async () => {
-    const next = new Set<string>(); // no disabled models
-    setDisabled(next);
-    await updateUser({ disabledModels: [] });
-    setShowConfirm(false);
+    // Unselect all: disable all models except default (backend filters out default)
+    const allModelIds = MODELS_OPTIONS.map((m) => m.id);
+
+    const originalDisabled = disabled;
+    // Update local state optimistically - all models disabled except default
+    const modelsToDisable = allModelIds.filter((id) => id !== MODEL_DEFAULT);
+    setDisabled(new Set(modelsToDisable));
+
+    try {
+      // Backend will automatically filter out MODEL_DEFAULT
+      await bulkSetModelsDisabled({ modelIds: allModelIds });
+      setShowConfirm(false);
+    } catch (_error) {
+      // Rollback on error
+      setDisabled(originalDisabled);
+      setShowConfirm(false);
+      toast.error('Failed to unselect all models. Please try again.');
+    }
   };
 
   const toggleFilter = (id: string) => {
@@ -411,7 +452,7 @@ export default function ModelsPage() {
                         )}
                       </div>
                       <Switch
-                        checked={isModelEnabled(model.id)}
+                        checked={isCurrentlyEnabled(model.id)}
                         onCheckedChange={() => handleToggle(model.id)}
                       />
                     </div>

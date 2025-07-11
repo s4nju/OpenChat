@@ -15,10 +15,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MODEL_DEFAULT, MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
 import { useModelPreferences } from "@/app/hooks/use-model-preferences"
+import { useEnrichedModels, type EnrichedModel } from "@/app/hooks/use-enriched-models"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import {
@@ -46,8 +47,9 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
-  const { user, hasPremium, products, apiKeys } = useUser()
-  const { favoriteModels, toggleFavoriteModel } = useModelPreferences()
+  const { hasPremium, products } = useUser()
+  const { favoriteModelsSet, toggleFavoriteModel } = useModelPreferences()
+  const { categorizedModels } = useEnrichedModels()
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink)
   
@@ -59,69 +61,31 @@ export function ModelSelector({
     setSelectedModelId(id);
   }, [setSelectedModelId]);
 
-
-  // Transform API keys array to object format expected by getAvailableModels
-  const apiKeysObject = React.useMemo(() => {
-    return apiKeys.reduce(
-      (acc, key) => {
-        acc[key.provider] = "available" // We just need to know if the key exists
-        return acc
-      },
-      {} as { [key: string]: string }
-    )
-  }, [apiKeys])
-
-  const disabledSet = React.useMemo(() => new Set(user?.disabledModels ?? []), [user]);
-  const favoritesSet = React.useMemo(() => new Set(favoriteModels), [favoriteModels]);
-
   // Determine if extended mode should be shown
   const isExtended = searchQuery.length > 0 || isExtendedMode
 
-  // Model filtering logic
+  // Optimized model filtering using pre-computed enriched models
   const { normalModeModels, favoritesModels, othersModels } = React.useMemo(() => {
-    const addAvailability = (model: typeof MODELS_OPTIONS[0]) => {
-      const userHasKey = !!apiKeysObject[model.provider]
-      const requiresKey = model.apiKeyUsage.userKeyOnly
-      const canUseWithKey = !requiresKey || userHasKey
-      const requiresPremium = model.premium
-      const canUseAsPremium = !requiresPremium || hasPremium || userHasKey
-      const isAvailable = canUseWithKey && canUseAsPremium
-      const isEnabled = favoritesSet.has(model.id) || !disabledSet.has(model.id)
-      return {
-        ...model,
-        available: isAvailable,
-        enabled: isEnabled,
-      }
-    }
+    let favorites = categorizedModels.favorites;
+    let others = categorizedModels.others;
 
-    // Filter models based on search query
-    const filteredModels = MODELS_OPTIONS.filter(model => {
-      if (!searchQuery) return true
-      const query = searchQuery.toLowerCase()
-      return (
+    // Apply search filter if needed
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (model: EnrichedModel) => 
         model.name.toLowerCase().includes(query) ||
-        model.provider.toLowerCase().includes(query)
-      )
-    }).map(addAvailability)
-
-    // Normal mode: Only show favorites that are enabled
-    const normalModels = filteredModels.filter(model => favoritesSet.has(model.id))
-
-    // Extended mode: Separate favorites and others
-    const favorites = filteredModels.filter(model => favoritesSet.has(model.id))
-    const others = filteredModels.filter(model => !favoritesSet.has(model.id))
-
-    // Sort by availability (available first)
-    const sortByAvailability = (a: any, b: any) => {
-      return b.available === a.available ? 0 : b.available ? 1 : -1
+        model.provider.toLowerCase().includes(query);
+      
+      favorites = favorites.filter(matchesSearch);
+      others = others.filter(matchesSearch);
     }
 
     return {
-      normalModeModels: normalModels.sort(sortByAvailability),
-      favoritesModels: favorites.sort(sortByAvailability),
-      othersModels: others.sort(sortByAvailability),
-    }
-  }, [apiKeysObject, hasPremium, disabledSet, favoritesSet, searchQuery])
+      normalModeModels: favorites, // Normal mode shows only favorites
+      favoritesModels: favorites,
+      othersModels: others,
+    };
+  }, [categorizedModels, searchQuery])
 
 
   // Handle toggle between normal and extended mode
@@ -182,26 +146,14 @@ export function ModelSelector({
     }
   }
 
-  const renderModelOption = (modelOption: (typeof MODELS_OPTIONS)[number] & { available: boolean; enabled: boolean }) => {
-    const providerOption = PROVIDERS_OPTIONS.find(
-      p => p.id === modelOption.provider
-    )
-    // Feature Flags
-    const hasFileUpload = modelOption.features?.find(
-      (feature: any) => feature.id === "file-upload"
-    )?.enabled
-    const hasPdfProcessing = modelOption.features?.find(
-      (feature: any) => feature.id === "pdf-processing"
-    )?.enabled
-    const hasReasoning = modelOption.features?.find(
-      (feature: any) => feature.id === "reasoning"
-    )?.enabled
-    const hasWebSearch = modelOption.features?.find(
-      (feature: any) => feature.id === "web-search"
-    )?.enabled
-    const hasImageGeneration = modelOption.features?.find(
-      (feature: any) => feature.id === "image-generation"
-    )?.enabled
+  const renderModelOption = (modelOption: EnrichedModel) => {
+    const providerOption = modelOption.providerInfo;
+    // Optimized feature flags using pre-computed featuresMap
+    const hasFileUpload = modelOption.featuresMap["file-upload"];
+    const hasPdfProcessing = modelOption.featuresMap["pdf-processing"];
+    const hasReasoning = modelOption.featuresMap["reasoning"];
+    const hasWebSearch = modelOption.featuresMap["web-search"];
+    const hasImageGeneration = modelOption.featuresMap["image-generation"];
 
     // --- Style Definitions based on the provided HTML ---
     const iconWrapperBaseClasses =

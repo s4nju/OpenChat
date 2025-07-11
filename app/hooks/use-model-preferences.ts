@@ -7,52 +7,123 @@ import { useUser } from '../providers/user-provider';
 
 export function useModelPreferences() {
   const { user } = useUser();
-  const updateUserProfile = useMutation(api.users.updateUserProfile);
+  const toggleFavoriteModelMutation = useMutation(
+    api.users.toggleFavoriteModel
+  ).withOptimisticUpdate((localStore, { modelId }) => {
+    const currentUser = localStore.getQuery(api.users.getCurrentUser, {});
+    if (!currentUser?.favoriteModels) {
+      return;
+    }
+
+    const favorites = currentUser.favoriteModels;
+    const isFavorite = favorites.includes(modelId);
+
+    // Don't remove last favorite
+    if (isFavorite && favorites.length <= 1) {
+      return;
+    }
+
+    const newFavorites = isFavorite
+      ? favorites.filter((id) => id !== modelId)
+      : [...favorites, modelId];
+
+    localStore.setQuery(
+      api.users.getCurrentUser,
+      {},
+      {
+        ...currentUser,
+        favoriteModels: newFavorites,
+      }
+    );
+  });
+
+  const bulkSetFavoriteModelsMutation = useMutation(
+    api.users.bulkSetFavoriteModels
+  ).withOptimisticUpdate((localStore, { modelIds }) => {
+    const currentUser = localStore.getQuery(api.users.getCurrentUser, {});
+    if (!currentUser) {
+      return;
+    }
+
+    const currentDisabled = currentUser.disabledModels ?? [];
+    const newFavorites = [...new Set(modelIds)];
+
+    // Remove favorite models from disabled list (auto-enable favorites)
+    const newDisabled = currentDisabled.filter(
+      (id) => !newFavorites.includes(id)
+    );
+
+    localStore.setQuery(
+      api.users.getCurrentUser,
+      {},
+      {
+        ...currentUser,
+        favoriteModels: newFavorites,
+        disabledModels: newDisabled,
+      }
+    );
+  });
 
   const favoriteModels = useMemo(
     () => user?.favoriteModels ?? [],
     [user?.favoriteModels]
   );
 
+  const favoriteModelsSet = useMemo(
+    () => new Set(favoriteModels),
+    [favoriteModels]
+  );
+
   const toggleFavoriteModel = useCallback(
     async (modelId: string) => {
       if (!user) {
-        return;
+        throw new Error('User not authenticated');
       }
 
-      const currentFavorites = user.favoriteModels ?? [];
-      const isFavorite = currentFavorites.includes(modelId);
+      const isFavorite = favoriteModels.includes(modelId);
 
-      // Prevent removing the last favorite model
-      if (isFavorite && currentFavorites.length <= 1) {
-        return;
+      // Prevent removing the last favorite model (business rule check)
+      if (isFavorite && favoriteModels.length <= 1) {
+        throw new Error('Cannot remove the last favorite model');
       }
 
-      let newFavorites: string[];
-      let newDisabled = user.disabledModels ?? [];
-
-      if (isFavorite) {
-        // Remove from favorites
-        newFavorites = currentFavorites.filter((id) => id !== modelId);
-      } else {
-        // Add to favorites and ensure it's enabled
-        newFavorites = [...currentFavorites, modelId];
-        // Remove from disabled models if it was disabled
-        newDisabled = newDisabled.filter((id) => id !== modelId);
+      try {
+        await toggleFavoriteModelMutation({ modelId });
+      } catch (error) {
+        throw new Error(
+          `Failed to ${isFavorite ? 'unpin' : 'pin'} model: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
-
-      await updateUserProfile({
-        updates: {
-          favoriteModels: newFavorites,
-          disabledModels: newDisabled,
-        },
-      });
     },
-    [user, updateUserProfile]
+    [user, favoriteModels, toggleFavoriteModelMutation]
+  );
+
+  const bulkSetFavoriteModels = useCallback(
+    async (modelIds: string[]) => {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Ensure at least one favorite model is provided
+      if (modelIds.length === 0) {
+        throw new Error('At least one favorite model must be provided');
+      }
+
+      try {
+        await bulkSetFavoriteModelsMutation({ modelIds });
+      } catch (error) {
+        throw new Error(
+          `Failed to set favorite models: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    [user, bulkSetFavoriteModelsMutation]
   );
 
   return {
     favoriteModels,
+    favoriteModelsSet,
     toggleFavoriteModel,
+    bulkSetFavoriteModels,
   };
 }

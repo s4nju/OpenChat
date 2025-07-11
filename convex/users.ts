@@ -1,28 +1,28 @@
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   calculateRateLimit,
   type RateLimitConfig,
-} from '@convex-dev/rate-limiter';
-import { v } from 'convex/values';
-import { RECOMMENDED_MODELS } from '../lib/config';
-import type { Id } from './_generated/dataModel';
-import { mutation, query } from './_generated/server';
-import { RATE_LIMITS } from './lib/rateLimitConstants';
-import { polar } from './polar';
-import { rateLimiter } from './rateLimiter';
-import { User } from './schema/user';
+} from "@convex-dev/rate-limiter";
+import { v } from "convex/values";
+import { RECOMMENDED_MODELS } from "../lib/config";
+import type { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { RATE_LIMITS } from "./lib/rateLimitConstants";
+import { polar } from "./polar";
+import { rateLimiter } from "./rateLimiter";
+import { User } from "./schema/user";
 
-const MODEL_DEFAULT = 'gemini-2.0-flash';
+const MODEL_DEFAULT = "gemini-2.0-flash";
 
 export const getCurrentUser = query({
   args: {},
   returns: v.union(
     v.null(),
     v.object({
-      _id: v.id('users'),
+      _id: v.id("users"),
       _creationTime: v.number(),
       ...User.fields,
-    })
+    }),
   ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
@@ -44,7 +44,7 @@ export const userHasPremium = query({
 
     try {
       const subscription = await polar.getCurrentSubscription(ctx, { userId });
-      return subscription?.status === 'active';
+      return subscription?.status === "active";
     } catch {
       return false;
     }
@@ -113,7 +113,7 @@ export const storeCurrentUser = mutation({
     // We keep track of whether this results in a *new* document so we can
     // report it back to the caller.
     // ---------------------------------------------------------------------
-    let targetUserId: Id<'users'> | null = null;
+    let targetUserId: Id<"users"> | null = null;
     let isNew = false;
 
     const existing = await ctx.db.get(userId);
@@ -132,14 +132,14 @@ export const storeCurrentUser = mutation({
         await ctx.db.patch(userId, patch);
       }
 
-      targetUserId = userId as Id<'users'>;
+      targetUserId = userId as Id<"users">;
       // If the record did *not* previously have `isAnonymous` set at all we
       // treat this as a first-time initialisation from the application's
       // perspective (e.g. an auto-created anonymous account).
       isNew = existing.isAnonymous === undefined;
     } else {
       // ---- New user: insert with defaults ----
-      targetUserId = await ctx.db.insert('users', {
+      targetUserId = await ctx.db.insert("users", {
         isAnonymous,
         ...initializeUserFields(),
       });
@@ -157,29 +157,29 @@ export const storeCurrentUser = mutation({
 
       if (!isPremium) {
         const dailyLimitName = isAnonymous
-          ? 'anonymousDaily'
-          : 'authenticatedDaily';
+          ? "anonymousDaily"
+          : "authenticatedDaily";
         rateLimitPromises.push(
           rateLimiter.limit(ctx, dailyLimitName, {
             key: targetUserId,
             count: 0,
-          })
+          }),
         );
       }
 
       rateLimitPromises.push(
-        rateLimiter.limit(ctx, 'standardMonthly', {
+        rateLimiter.limit(ctx, "standardMonthly", {
           key: targetUserId,
           count: 0,
-        })
+        }),
       );
 
       // Initialize premium credits counter for all users (will only be used by premium users)
       rateLimitPromises.push(
-        rateLimiter.limit(ctx, 'premiumMonthly', {
+        rateLimiter.limit(ctx, "premiumMonthly", {
           key: targetUserId,
           count: 0,
-        })
+        }),
       );
 
       await Promise.all(rateLimitPromises);
@@ -222,6 +222,194 @@ export const updateUserProfile = mutation({
   },
 });
 
+export const toggleFavoriteModel = mutation({
+  args: { modelId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { modelId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentFavorites = user.favoriteModels ?? [];
+    const currentDisabled = user.disabledModels ?? [];
+    const isFavorite = currentFavorites.includes(modelId);
+
+    let newFavorites: string[];
+    let newDisabled: string[];
+
+    if (isFavorite) {
+      // Removing from favorites - ensure at least one remains
+      if (currentFavorites.length <= 1) {
+        return null; // Cannot remove last favorite
+      }
+      newFavorites = currentFavorites.filter((id) => id !== modelId);
+      newDisabled = currentDisabled; // Don't auto-disable when unfavoriting
+    } else {
+      // Adding to favorites - remove from disabled if present (auto-enable)
+      newFavorites = [...new Set([...currentFavorites, modelId])];
+      newDisabled = currentDisabled.filter((id) => id !== modelId);
+    }
+
+    await ctx.db.patch(userId, {
+      favoriteModels: newFavorites,
+      disabledModels: newDisabled,
+    });
+
+    return null;
+  },
+});
+
+export const setModelEnabled = mutation({
+  args: { modelId: v.string(), enabled: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, { modelId, enabled }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Cannot disable MODEL_DEFAULT
+    if (!enabled && modelId === MODEL_DEFAULT) {
+      return null;
+    }
+
+    const currentFavorites = user.favoriteModels ?? [];
+    const currentDisabled = user.disabledModels ?? [];
+    const isCurrentlyDisabled = currentDisabled.includes(modelId);
+
+    let newFavorites = currentFavorites;
+    let newDisabled: string[];
+
+    if (enabled) {
+      // Enabling model - remove from disabled list
+      newDisabled = currentDisabled.filter((id) => id !== modelId);
+    } else {
+      // Disabling model - add to disabled list and remove from favorites
+      newDisabled = isCurrentlyDisabled
+        ? currentDisabled
+        : [...new Set([...currentDisabled, modelId])];
+      newFavorites = currentFavorites.filter((id) => id !== modelId);
+
+      // Ensure at least one favorite remains
+      if (newFavorites.length === 0 && currentFavorites.length > 0) {
+        // Keep the first favorite and remove it from disabled list
+        const firstFavorite = currentFavorites[0];
+        newFavorites = [firstFavorite];
+        newDisabled = newDisabled.filter((id) => id !== firstFavorite);
+      }
+    }
+
+    await ctx.db.patch(userId, {
+      favoriteModels: newFavorites,
+      disabledModels: newDisabled,
+    });
+
+    return null;
+  },
+});
+
+export const bulkSetModelsDisabled = mutation({
+  args: { modelIds: v.array(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, { modelIds }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentFavorites = user.favoriteModels ?? [];
+    const currentDisabled = user.disabledModels ?? [];
+
+    // Filter out MODEL_DEFAULT from the models to disable
+    const modelsToDisable = modelIds.filter((id) => id !== MODEL_DEFAULT);
+
+    let newFavorites: string[];
+    let newDisabled: string[];
+
+    if (modelsToDisable.length === 0) {
+      // Unselect all: enable all models
+      newDisabled = [];
+      newFavorites = currentFavorites;
+    } else {
+      // Remove disabled models from favorites
+      newFavorites = currentFavorites.filter(
+        (id) => !modelsToDisable.includes(id),
+      );
+      // Merge with existing disabled models (fix critical bug)
+      newDisabled = [...new Set([...currentDisabled, ...modelsToDisable])];
+
+      // Ensure at least one favorite remains
+      if (newFavorites.length === 0 && currentFavorites.length > 0) {
+        // Keep the first favorite and remove it from disabled list
+        const firstFavorite = currentFavorites[0];
+        newFavorites = [firstFavorite];
+        newDisabled = newDisabled.filter((id) => id !== firstFavorite);
+      }
+    }
+
+    await ctx.db.patch(userId, {
+      favoriteModels: newFavorites,
+      disabledModels: newDisabled,
+    });
+
+    return null;
+  },
+});
+
+export const bulkSetFavoriteModels = mutation({
+  args: { modelIds: v.array(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, { modelIds }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Ensure at least one favorite model is provided
+    if (modelIds.length === 0) {
+      throw new Error("At least one favorite model must be provided");
+    }
+
+    const currentDisabled = user.disabledModels ?? [];
+
+    // Set new favorites to the provided model IDs
+    const newFavorites = [...new Set(modelIds)]; // Remove duplicates
+
+    // Remove favorite models from disabled list (auto-enable favorites)
+    const newDisabled = currentDisabled.filter(
+      (id) => !newFavorites.includes(id),
+    );
+
+    await ctx.db.patch(userId, {
+      favoriteModels: newFavorites,
+      disabledModels: newDisabled,
+    });
+
+    return null;
+  },
+});
+
 export const incrementMessageCount = mutation({
   args: {
     usesPremiumCredits: v.optional(v.boolean()),
@@ -230,23 +418,23 @@ export const incrementMessageCount = mutation({
   handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
       userId: user._id,
     });
-    const isPremium = subscription?.status === 'active';
+    const isPremium = subscription?.status === "active";
     const isAnonymous = user.isAnonymous ?? false;
 
     // For premium users using premium models, deduct from premium credits
     if (isPremium && usesPremiumCredits) {
-      await rateLimiter.limit(ctx, 'premiumMonthly', {
+      await rateLimiter.limit(ctx, "premiumMonthly", {
         key: userId,
         throws: true,
       });
@@ -256,8 +444,8 @@ export const incrementMessageCount = mutation({
       // CONSUME daily limits for non-premium users
       if (!isPremium) {
         const dailyLimitName = isAnonymous
-          ? 'anonymousDaily'
-          : 'authenticatedDaily';
+          ? "anonymousDaily"
+          : "authenticatedDaily";
         await rateLimiter.limit(ctx, dailyLimitName, {
           key: userId,
           throws: true,
@@ -265,7 +453,7 @@ export const incrementMessageCount = mutation({
       }
 
       // CONSUME monthly limits for all users
-      await rateLimiter.limit(ctx, 'standardMonthly', {
+      await rateLimiter.limit(ctx, "standardMonthly", {
         key: userId,
         throws: true,
       });
@@ -282,27 +470,27 @@ export const assertNotOverLimit = mutation({
   handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
       userId: user._id,
     });
-    const isPremium = subscription?.status === 'active';
+    const isPremium = subscription?.status === "active";
     const isAnonymous = user.isAnonymous ?? false;
 
     // For premium users using premium models, check premium credits
     if (isPremium && usesPremiumCredits) {
-      const premiumStatus = await rateLimiter.check(ctx, 'premiumMonthly', {
+      const premiumStatus = await rateLimiter.check(ctx, "premiumMonthly", {
         key: userId,
       });
       if (!premiumStatus.ok) {
-        throw new Error('PREMIUM_LIMIT_REACHED');
+        throw new Error("PREMIUM_LIMIT_REACHED");
       }
     } else {
       // For non-premium models or non-premium users, check standard credits
@@ -312,20 +500,20 @@ export const assertNotOverLimit = mutation({
       // CHECK daily limits for non-premium users (don't consume yet)
       if (!isPremium) {
         const dailyLimitName = isAnonymous
-          ? 'anonymousDaily'
-          : 'authenticatedDaily';
+          ? "anonymousDaily"
+          : "authenticatedDaily";
         checkPromises.push(
           rateLimiter.check(ctx, dailyLimitName, {
             key: userId,
-          })
+          }),
         );
       }
 
       // CHECK monthly limits for all users (don't consume yet)
       checkPromises.push(
-        rateLimiter.check(ctx, 'standardMonthly', {
+        rateLimiter.check(ctx, "standardMonthly", {
           key: userId,
-        })
+        }),
       );
 
       const results = await Promise.all(checkPromises);
@@ -334,14 +522,14 @@ export const assertNotOverLimit = mutation({
       if (!isPremium && results.length > 1) {
         const dailyStatus = results[0] as { ok: boolean };
         if (!dailyStatus.ok) {
-          throw new Error('DAILY_LIMIT_REACHED');
+          throw new Error("DAILY_LIMIT_REACHED");
         }
       }
 
       // Check monthly limit result (always the last promise)
       const monthlyStatus = results.at(-1) as { ok: boolean };
       if (!monthlyStatus.ok) {
-        throw new Error('MONTHLY_LIMIT_REACHED');
+        throw new Error("MONTHLY_LIMIT_REACHED");
       }
     }
   },
@@ -387,20 +575,20 @@ export const getRateLimitStatus = query({
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
       userId: user._id,
     });
-    const isPremium = subscription?.status === 'active';
+    const isPremium = subscription?.status === "active";
     const isAnonymous = user.isAnonymous ?? false;
     const now = Date.now();
 
     // Determine daily limit name for non-premium users
     const dailyLimitName = isAnonymous
-      ? 'anonymousDaily'
-      : 'authenticatedDaily';
+      ? "anonymousDaily"
+      : "authenticatedDaily";
 
     // Parallel fetching of all rate limit data
     const [
@@ -417,13 +605,13 @@ export const getRateLimitStatus = query({
       isPremium
         ? Promise.resolve(null)
         : rateLimiter.getValue(ctx, dailyLimitName, { key: userId }),
-      rateLimiter.check(ctx, 'standardMonthly', { key: userId }),
-      rateLimiter.getValue(ctx, 'standardMonthly', { key: userId }),
+      rateLimiter.check(ctx, "standardMonthly", { key: userId }),
+      rateLimiter.getValue(ctx, "standardMonthly", { key: userId }),
       isPremium
-        ? rateLimiter.check(ctx, 'premiumMonthly', { key: userId })
+        ? rateLimiter.check(ctx, "premiumMonthly", { key: userId })
         : Promise.resolve(null),
       isPremium
-        ? rateLimiter.getValue(ctx, 'premiumMonthly', { key: userId })
+        ? rateLimiter.getValue(ctx, "premiumMonthly", { key: userId })
         : Promise.resolve(null),
     ]);
 
@@ -445,7 +633,7 @@ export const getRateLimitStatus = query({
         { value: dailyConfig.value, ts: dailyConfig.ts },
         dailyConfig.config,
         now,
-        0 // Don't consume tokens, just calculate
+        0, // Don't consume tokens, just calculate
       );
 
       // For fixed windows, the next reset is the end of the current window
@@ -466,7 +654,7 @@ export const getRateLimitStatus = query({
       { value: monthlyConfig.value, ts: monthlyConfig.ts },
       monthlyConfig.config,
       now,
-      0 // Don't consume tokens, just calculate
+      0, // Don't consume tokens, just calculate
     );
 
     // For fixed windows, the next reset is the end of the current window
@@ -493,7 +681,7 @@ export const getRateLimitStatus = query({
         { value: premiumConfig.value, ts: premiumConfig.ts },
         premiumConfig.config,
         now,
-        0 // Don't consume tokens, just calculate
+        0, // Don't consume tokens, just calculate
       );
 
       // For fixed windows, the next reset is the end of the current window
@@ -527,7 +715,7 @@ export const getRateLimitStatus = query({
 });
 
 export const mergeAnonymousToGoogleAccount = mutation({
-  args: { previousAnonymousUserId: v.id('users') },
+  args: { previousAnonymousUserId: v.id("users") },
   returns: v.null(),
   handler: async (ctx, { previousAnonymousUserId }) => {
     const currentId = await getAuthUserId(ctx);
@@ -546,16 +734,16 @@ export const mergeAnonymousToGoogleAccount = mutation({
     // --- Step 1: Fetch all data in parallel ---
     const [anonChats, anonMessages, anonAttachments] = await Promise.all([
       ctx.db
-        .query('chats')
-        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
+        .query("chats")
+        .withIndex("by_user", (q) => q.eq("userId", previousAnonymousUserId))
         .collect(),
       ctx.db
-        .query('messages')
-        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
+        .query("messages")
+        .withIndex("by_user", (q) => q.eq("userId", previousAnonymousUserId))
         .collect(),
       ctx.db
-        .query('chat_attachments')
-        .withIndex('by_userId', (q) => q.eq('userId', previousAnonymousUserId))
+        .query("chat_attachments")
+        .withIndex("by_userId", (q) => q.eq("userId", previousAnonymousUserId))
         .collect(),
     ]);
 
@@ -563,10 +751,10 @@ export const mergeAnonymousToGoogleAccount = mutation({
     await Promise.all([
       ...anonChats.map((chat) => ctx.db.patch(chat._id, { userId: currentId })),
       ...anonMessages.map((message) =>
-        ctx.db.patch(message._id, { userId: currentId })
+        ctx.db.patch(message._id, { userId: currentId }),
       ),
       ...anonAttachments.map((attachment) =>
-        ctx.db.patch(attachment._id, { userId: currentId })
+        ctx.db.patch(attachment._id, { userId: currentId }),
       ),
     ]);
 
@@ -588,7 +776,7 @@ export const deleteAccount = mutation({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     // --- Step 1: Fetch all documents that need to be deleted in parallel ---
@@ -602,32 +790,32 @@ export const deleteAccount = mutation({
       authSessions,
     ] = await Promise.all([
       ctx.db
-        .query('chat_attachments')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .query("chat_attachments")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('messages')
-        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .query("messages")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('chats')
-        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .query("chats")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('feedback')
-        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .query("feedback")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('usage_history')
-        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .query("usage_history")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('authAccounts')
-        .withIndex('userIdAndProvider', (q) => q.eq('userId', userId))
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
-        .query('authSessions')
-        .withIndex('userId', (q) => q.eq('userId', userId))
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", userId))
         .collect(),
     ]);
 
@@ -637,14 +825,14 @@ export const deleteAccount = mutation({
     // Delete attachments and their files
     for (const att of attachments) {
       deletionPromises.push(
-        ctx.storage.delete(att.fileId as Id<'_storage'>).catch(() => {
+        ctx.storage.delete(att.fileId as Id<"_storage">).catch(() => {
           // Silently handle storage deletion errors
-        })
+        }),
       );
       deletionPromises.push(
         ctx.db.delete(att._id).catch(() => {
           // Silently handle database deletion errors
-        })
+        }),
       );
     }
 
@@ -662,14 +850,16 @@ export const deleteAccount = mutation({
 
     // Delete auth accounts
     deletionPromises.push(
-      ...authAccounts.map((acc) => ctx.db.delete(acc._id as Id<'authAccounts'>))
+      ...authAccounts.map((acc) =>
+        ctx.db.delete(acc._id as Id<"authAccounts">),
+      ),
     );
 
     // Delete auth sessions
     deletionPromises.push(
       ...authSessions.map((sess) =>
-        ctx.db.delete(sess._id as Id<'authSessions'>)
-      )
+        ctx.db.delete(sess._id as Id<"authSessions">),
+      ),
     );
 
     // Execute all deletions concurrently
@@ -684,11 +874,11 @@ export const deleteAccount = mutation({
 // React hook API functions for rate limiting
 export const { getRateLimit: getRateLimitHook, getServerTime } =
   rateLimiter.hookAPI(
-    'authenticatedDaily', // Default rate limit
+    "authenticatedDaily", // Default rate limit
     {
       key: async (ctx) => {
         const userId = await getAuthUserId(ctx);
-        return userId || 'anonymous';
+        return userId || "anonymous";
       },
-    }
+    },
   );
