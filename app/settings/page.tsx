@@ -78,7 +78,10 @@ export default function AccountSettingsPage() {
   const renderSubscriptionButton = useCallback(() => {
     if (hasPremium) {
       return (
-        <Button className="w-full md:w-64" onClick={handleManageSubscription}>
+        <Button
+          className="w-full cursor-pointer md:w-64"
+          onClick={handleManageSubscription}
+        >
           Manage Subscription
         </Button>
       );
@@ -86,7 +89,10 @@ export default function AccountSettingsPage() {
 
     if (products?.premium?.id) {
       return (
-        <Button className="w-full md:w-64" onClick={handleUpgrade}>
+        <Button
+          className="w-full cursor-pointer md:w-64"
+          onClick={handleUpgrade}
+        >
           Upgrade to Premium - $15/month
         </Button>
       );

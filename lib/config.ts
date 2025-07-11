@@ -339,7 +339,7 @@ export const MODELS_DATA = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: false,
-    description: `Baseline Gemini model with fast inference.\nGreat for general tasks and web search.`,
+    description: `Enhanced Gemini model with reasoning capabilities.\nIdeal for complex problem-solving and analysis.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.5-flash"),
     features: [
@@ -483,7 +483,7 @@ export const MODELS_DATA = [
     provider: "deepseek",
     premium: true,
     usesPremiumCredits: false,
-    description: `Stable release with reasoning enabled.\nRecommended for developers exploring new features.`,
+    description: `Llama-distilled variant with enhanced reasoning.\nOptimized for efficiency while maintaining quality.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },

@@ -368,7 +368,7 @@ export function ModelSelector({
                           /month
                         </span>
                       </div>
-                      <Button size="sm" onClick={handleUpgrade}>
+                      <Button className="cursor-pointer" size="sm" onClick={handleUpgrade}>
                         Upgrade now
                       </Button>
                     </div>

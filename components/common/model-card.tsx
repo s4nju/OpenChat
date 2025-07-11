@@ -144,7 +144,11 @@ export function ModelCard({
 
   const shortDescription = model.description?.split(".")[0]
   if (shortDescription) {
-    tooltipContentParts.push(<span key="desc">{shortDescription}</span>)
+    // Limit description length for tooltip display
+    const truncated = shortDescription.length > 100
+      ? shortDescription.substring(0, 97) + "..."
+      : shortDescription
+    tooltipContentParts.push(<span key="desc">{truncated}</span>)
   }
 
   const tooltipDisplay = (
