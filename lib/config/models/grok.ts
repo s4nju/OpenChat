@@ -8,7 +8,7 @@ export const GROK_MODELS = [
     provider: "xai",
     premium: true,
     usesPremiumCredits: true,
-    description: `High-performance model for fast responses.\\nUseful for a wide range of tasks.`,
+    description: `xAI's flagship model.\\nFeatures real-time X data access.`,
     api_sdk: xai("grok-3-latest"),
     features: [
       FILE_UPLOAD_FEATURE,
@@ -22,7 +22,7 @@ export const GROK_MODELS = [
     provider: "xai",
     premium: true,
     usesPremiumCredits: false,
-    description: `Efficient and fast model with reasoning capabilities.\\nOptimized for cost-effective performance.`,
+    description: `Cost-efficient reasoning model from xAI.\\nExcels at STEM tasks requiring less world knowledge.`,
     api_sdk: xai("grok-3-mini"),
     features: [
       FILE_UPLOAD_FEATURE,

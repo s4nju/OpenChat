@@ -8,7 +8,7 @@ export const META_MODELS = [
     provider: "meta",
     premium: false,
     usesPremiumCredits: false,
-    description: `Meta's efficient open model for experimentation.\\nProvides image support with good speed.`,
+    description: `Meta's first natively multimodal model with 400B parameters.\\nOffers industry-leading 10M token context window.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -23,7 +23,7 @@ export const META_MODELS = [
     provider: "meta",
     premium: false,
     usesPremiumCredits: false,
-    description: `Optimized for lower resource usage.\\nA good fit for cost-effective deployments.`,
+    description: `Efficient multimodal model fitting on single H100 GPU.\\nBest-in-class performance with 17B active parameters.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,

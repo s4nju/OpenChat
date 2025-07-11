@@ -40,7 +40,7 @@ const FILE_UPLOAD_MODELS = [
   'claude-4-opus',
   'claude-4-sonnet',
   'claude-4-sonnet-reasoning',
-  
+
   // OpenAI models
   'gpt-4o',
   'gpt-4o-mini',
@@ -51,7 +51,7 @@ const FILE_UPLOAD_MODELS = [
   'gpt-4.1-mini',
   'gpt-4.1-nano',
   'gpt-4.5',
-  
+
   // Google models
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
@@ -60,14 +60,14 @@ const FILE_UPLOAD_MODELS = [
   'gemini-2.5-flash-lite-preview-06-17',
   'gemini-2.5-flash-lite-preview-06-17-thinking',
   'gemini-2.5-pro',
-  
+
   // Meta models
   'meta-llama/llama-4-maverick:free',
   'meta-llama/llama-4-scout:free',
-  
+
   // Mistral models
   'pixtral-large-latest',
-  
+
   // Grok models
   'grok-3',
   'grok-3-mini',

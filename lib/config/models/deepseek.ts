@@ -17,7 +17,7 @@ export const DEEPSEEK_MODELS = [
     provider: "deepseek",
     premium: false,
     usesPremiumCredits: false,
-    description: `Early DeepSeek release for experimentation.\\nFocuses on research-friendly output.`,
+    description: `DeepSeek's experimental chat model for research exploration.\\nProvides cost-effective access to DeepSeek capabilities.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: openrouter("deepseek/deepseek-chat-v3-0324:free"),
     features: [
@@ -30,7 +30,7 @@ export const DEEPSEEK_MODELS = [
     provider: "deepseek",
     premium: false,
     usesPremiumCredits: false,
-    description: `Stable release with reasoning enabled.\\nRecommended for developers exploring new features.`,
+    description: `Reasoning model which rocked the world.\\nExcels at mathematical reasoning and competitive programming.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },
@@ -45,7 +45,7 @@ export const DEEPSEEK_MODELS = [
     provider: "deepseek",
     premium: true,
     usesPremiumCredits: false,
-    description: `Llama-distilled variant with enhanced reasoning.\\nOptimized for efficiency while maintaining quality.`,
+    description: `Llama-distilled reasoning model optimized for efficiency.\\nCombines DeepSeek R1 capabilities with improved performance.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       { id: "file-upload", enabled: false },
