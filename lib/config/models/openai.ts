@@ -8,7 +8,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
-    description: `OpenAI's flagship multimodal model.\\nProcesses text, images, and audio with fast, versatile performance.`,
+    description: `OpenAI's flagship multimodal model.\nProcesses text, images, and audio with fast, versatile performance.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -23,7 +23,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
-    description: `Cost-efficient model with fast inference speed.\\nPerfect for high-volume tasks and quick interactions.`,
+    description: `Cost-efficient model with fast inference speed.\nPerfect for high-volume tasks and quick interactions.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -38,7 +38,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
-    description: `Reasoning-focused model with 93% on AIME 2025.\\nExcels at math, coding, and visual tasks at lower cost.`,
+    description: `Reasoning-focused model with 93% on AIME 2025.\nExcels at math, coding, and visual tasks at lower cost.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -53,7 +53,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: true,
-    description: `Advanced reasoning model with 20% fewer errors than o1.\\nExcels at programming, consulting, and creative tasks.`,
+    description: `Advanced reasoning model with 20% fewer errors than o1.\nExcels at programming, consulting, and creative tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -68,7 +68,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
-    description: `Premium reasoning model with enhanced capabilities.\\nDesigned for research-level and professional applications.`,
+    description: `Premium reasoning model with enhanced capabilities.\nDesigned for research-level and professional applications.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -83,7 +83,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: true,
-    description: `Specialized image generation model from OpenAI.\\nCreates high-quality visuals from detailed text prompts.`,
+    description: `Specialized image generation model from OpenAI.\nCreates high-quality visuals from detailed text prompts.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       IMAGE_GENERATION_FEATURE,
@@ -96,7 +96,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: true,
     usesPremiumCredits: false,
-    description: `Enhanced GPT-4 with 55% on SWE-bench Verified.\\nDelivers major improvements in coding and instruction following.`,
+    description: `Enhanced GPT-4 with 55% on SWE-bench Verified.\nDelivers major improvements in coding and instruction following.`,
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
@@ -110,7 +110,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
-    description: `Efficient model balancing speed and capability.\\nIdeal for everyday conversations and quick tasks.`,
+    description: `Efficient model balancing speed and capability.\nIdeal for everyday conversations and quick tasks.`,
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
@@ -124,7 +124,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
-    description: `Ultra-lightweight model with minimal latency.\\nOptimized for resource-constrained environments.`,
+    description: `Ultra-lightweight model with minimal latency.\nOptimized for resource-constrained environments.`,
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
@@ -138,7 +138,7 @@ export const OPENAI_MODELS = [
     provider: "openai",
     premium: false,
     usesPremiumCredits: false,
-    description: `General-purpose model with enhanced understanding.\\nOffers better nuance, creativity, and aesthetic intuition.`,
+    description: `General-purpose model with enhanced understanding.\nOffers better nuance, creativity, and aesthetic intuition.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       FILE_UPLOAD_FEATURE,

@@ -9,7 +9,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
-    description: `Google's fast multimodal model with native tool use.\\nExcels at general tasks, web search, and real-time applications.`,
+    description: `Google's fast multimodal model with native tool use.\nExcels at general tasks, web search, and real-time applications.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.0-flash"),
     features: [
@@ -25,7 +25,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
-    description: `Most cost-efficient Gemini model with fast responses.\\nIdeal for high-volume, latency-sensitive applications.`,
+    description: `Most cost-efficient Gemini model with fast responses.\nIdeal for high-volume, latency-sensitive applications.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.0-flash-lite"),
     features: [
@@ -41,7 +41,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
-    description: `Google's flagship light model.\\nExcels at agentic use cases and large-scale processing.`,
+    description: `Google's flagship light model.\nExcels at agentic use cases and large-scale processing.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.5-flash"),
     features: [
@@ -57,7 +57,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: false,
-    description: `Gemini flagship light model with reasoning capabilities enabled.\\nFeatures visible thought process for complex problem-solving with thinking.`,
+    description: `Gemini flagship light model with reasoning capabilities enabled.\nFeatures visible thought process for complex problem-solving with thinking.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.5-flash"),
     features: [
@@ -73,7 +73,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
-    description: `Most cost-efficient and fastest model with lowest latency.\\nIdeal for high-volume classification and summarization tasks.`,
+    description: `Most cost-efficient and fastest model with lowest latency.\nIdeal for high-volume classification and summarization tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.5-flash-lite-preview-06-17"),
     features: [
@@ -89,7 +89,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: false,
-    description: `Flash Lite with adjustable thinking budget for reasoning.\\nCombines cost-efficiency with controllable thinking capabilities.`,
+    description: `Flash Lite with adjustable thinking budget for reasoning.\nCombines cost-efficiency with controllable thinking capabilities.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     api_sdk: google("gemini-2.5-flash-lite-preview-06-17"),
     features: [
@@ -105,7 +105,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: true,
-    description: `Google's state-of-the-art model leading math and science benchmarks.\\nExcels at creating web apps and agentic code applications.`,
+    description: `Google's state-of-the-art model leading math and science benchmarks.\nExcels at creating web apps and agentic code applications.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -121,7 +121,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: true,
-    description: `Google's flagship text-to-image model with superior text rendering.\\nCreates photorealistic images with precise instruction following.`,
+    description: `Google's flagship text-to-image model with superior text rendering.\nCreates photorealistic images with precise instruction following.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       IMAGE_GENERATION_FEATURE,
@@ -134,7 +134,7 @@ export const GOOGLE_MODELS = [
     provider: "gemini",
     premium: true,
     usesPremiumCredits: true,
-    description: `Ultra-precise image generation model with enhanced prompt adherence.\\nDesigned for professional applications requiring exact specifications.`,
+    description: `Ultra-precise image generation model with enhanced prompt adherence.\nDesigned for professional applications requiring exact specifications.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       IMAGE_GENERATION_FEATURE,

@@ -23,7 +23,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
-    description: `First hybrid reasoning model with visible thinking process.\\nDelivers enhanced coding and math performance with step-by-step reasoning.`,
+    description: `First hybrid reasoning model with visible thinking process.\nDelivers enhanced coding and math performance with step-by-step reasoning.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -38,7 +38,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
-    description: `Claude 3.7 with thinking capabilities enabled.\\nProvides deeper reasoning for complex analytical and coding tasks.`,
+    description: `Claude 3.7 with thinking capabilities enabled.\nProvides deeper reasoning for complex analytical and coding tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -53,7 +53,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: false,
     usesPremiumCredits: false,
-    description: `World's best coding model with 73% on SWE-bench.\\nExcels at sustained performance on complex, long-running tasks.`,
+    description: `World's best coding model with 73% on SWE-bench.\nExcels at sustained performance on complex, long-running tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: true },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -68,7 +68,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
-    description: `Anthropic's flagship multimodal model which excels at coding.\\nDelivers precise instruction following and enhanced problem-solving.`,
+    description: `Anthropic's flagship multimodal model which excels at coding.\nDelivers precise instruction following and enhanced problem-solving.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
@@ -83,7 +83,7 @@ export const ANTHROPIC_MODELS = [
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
-    description: `Claude 4 Sonnet with thinking capabilities.\\nOptimal for complex reasoning, coding, and agentic workflows.`,
+    description: `Claude 4 Sonnet with thinking capabilities.\nOptimal for complex reasoning, coding, and agentic workflows.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,

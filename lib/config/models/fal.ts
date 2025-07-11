@@ -8,7 +8,7 @@ export const FAL_MODELS = [
     provider: "fal",
     premium: true,
     usesPremiumCredits: true,
-    description: `Ultra-fast text-to-image model with sub-second generation.\\nDelivers high-quality visuals optimized for speed and efficiency.`,
+    description: `Ultra-fast text-to-image model with sub-second generation.\nDelivers high-quality visuals optimized for speed and efficiency.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       IMAGE_GENERATION_FEATURE,
