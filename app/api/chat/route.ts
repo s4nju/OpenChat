@@ -20,8 +20,8 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import {
   buildMetadataFromResponse,
+  type ConvexMessagePart,
   convertAttachmentsToFileParts,
-  createPartsFromAIResponse,
 } from '@/lib/ai-sdk-utils';
 import { MODELS_MAP } from '@/lib/config';
 import {
@@ -858,126 +858,87 @@ export async function POST(req: Request) {
                 //   }))
                 // });
 
-                // Combine all assistant messages and extract tool results
+                // Process messages sequentially and build parts
+                const messageParts: ConvexMessagePart[] = [];
                 let combinedTextContent = '';
-                let combinedReasoningText: string | undefined;
-                const allToolInvocations: Array<{
-                  toolCallId: string;
-                  toolName: string;
-                  args?: unknown;
-                  result?: unknown;
-                  state: 'call' | 'result' | 'partial-call';
-                }> = [];
 
-                // First pass: extract tool calls from assistant messages
                 for (const msg of responseData.messages) {
                   if (msg.role === 'assistant') {
                     if (Array.isArray(msg.content)) {
-                      // Extract text content
-                      const textParts = msg.content.filter(
-                        (p) => p.type === 'text'
-                      );
-                      const textContent = textParts.map((p) => p.text).join('');
-                      if (textContent.trim()) {
-                        combinedTextContent += textContent;
-                      }
-
-                      // Extract reasoning
-                      const reasoningPart = msg.content.find(
-                        (p) => p.type === 'reasoning'
-                      );
-                      if (reasoningPart?.text && !combinedReasoningText) {
-                        combinedReasoningText = reasoningPart.text;
-                      }
-
-                      // Extract tool calls
-                      const toolCalls = msg.content.filter(
-                        (p) => p.type === 'tool-call'
-                      );
-                      for (const call of toolCalls as Array<{
-                        toolCallId: string;
-                        toolName: string;
-                        args: unknown;
-                      }>) {
-                        allToolInvocations.push({
-                          toolCallId: call.toolCallId,
-                          toolName: call.toolName,
-                          args: call.args,
-                          result: undefined,
-                          state: 'call',
-                        });
+                      for (const part of msg.content) {
+                        switch (part.type) {
+                          case 'text':
+                            if (part.text.trim()) {
+                              messageParts.push({
+                                type: 'text',
+                                text: part.text,
+                              });
+                              combinedTextContent += part.text;
+                            }
+                            break;
+                          case 'reasoning':
+                            if (part.text) {
+                              messageParts.push({
+                                type: 'reasoning',
+                                reasoning: part.text,
+                              });
+                            }
+                            break;
+                          case 'tool-call':
+                            messageParts.push({
+                              type: 'tool-invocation',
+                              toolInvocation: {
+                                toolCallId: part.toolCallId,
+                                toolName: part.toolName,
+                                args: part.args,
+                                result: undefined,
+                                state: 'call',
+                              },
+                            });
+                            break;
+                          default:
+                            // Ignore other part types
+                            break;
+                        }
                       }
                     } else if (
                       typeof msg.content === 'string' &&
                       msg.content.trim()
                     ) {
+                      // Handle string content from assistant messages
+                      messageParts.push({ type: 'text', text: msg.content });
                       combinedTextContent += msg.content;
                     }
                   }
-                }
 
-                // Second pass: extract tool results from tool messages
-                for (const msg of responseData.messages) {
                   if (msg.role === 'tool' && Array.isArray(msg.content)) {
-                    for (const part of msg.content as Array<{
-                      type: string;
-                      toolCallId: string;
-                      toolName?: string;
-                      result: unknown;
-                    }>) {
+                    for (const part of msg.content) {
                       if (part.type === 'tool-result') {
-                        // Find the matching tool call and add the result
-                        const matchingInvocation = allToolInvocations.find(
-                          (inv) => inv.toolCallId === part.toolCallId
+                        const matchingInvocation = messageParts.find(
+                          (
+                            p
+                          ): p is Extract<
+                            ConvexMessagePart,
+                            { type: 'tool-invocation' }
+                          > =>
+                            p.type === 'tool-invocation' &&
+                            p.toolInvocation.toolCallId === part.toolCallId
                         );
                         if (matchingInvocation) {
-                          matchingInvocation.result = part.result;
-                          matchingInvocation.state = 'result';
-                        } else {
-                          // Create new invocation if no matching call found
-                          allToolInvocations.push({
-                            toolCallId: part.toolCallId,
-                            toolName: part.toolName || 'unknown',
-                            args: undefined,
-                            result: part.result,
-                            state: 'result',
-                          });
+                          matchingInvocation.toolInvocation.result =
+                            part.result;
+                          matchingInvocation.toolInvocation.state = 'result';
                         }
                       }
                     }
                   }
                 }
 
-                // console.log("DEBUG: Combined message processing:", {
-                //   combinedTextContent: combinedTextContent.substring(0, 100) + "...",
-                //   combinedReasoningText: combinedReasoningText?.substring(0, 50) + "...",
-                //   toolInvocationsCount: allToolInvocations.length,
-                //   toolInvocations: allToolInvocations.map(inv => ({
-                //     toolName: inv.toolName,
-                //     state: inv.state,
-                //     hasResult: !!inv.result,
-                //     resultPreview: inv.result ? JSON.stringify(inv.result).substring(0, 100) + "..." : "none"
-                //   }))
-                // });
-
                 if (!userMsgId) {
                   throw new Error(
                     'Missing parent userMsgId when saving assistant message.'
                   );
                 }
-
-                // Create parts array including tool invocations
-                const messageParts = createPartsFromAIResponse(
-                  combinedTextContent,
-                  combinedReasoningText,
-                  allToolInvocations
-                );
-
-                // console.log("DEBUG: Final message parts:", {
-                //   partsCount: messageParts.length,
-                //   partTypes: messageParts.map(p => p.type),
-                //   hasToolInvocations: messageParts.some(p => p.type === "tool-invocation")
-                // });
 
                 // Build metadata from response with human-readable model name
                 const metadata = buildMetadataFromResponse(

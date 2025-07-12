@@ -2,7 +2,7 @@ import { Doc } from "@/convex/_generated/dataModel"
 import type { Message } from "ai"
 
 // Infer types from Convex schema validators
-type ConvexMessagePart = {
+export type ConvexMessagePart = {
   type: "text"
   text: string
 } | {
