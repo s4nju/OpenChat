@@ -20,9 +20,7 @@ export const DEEPSEEK_MODELS = [
     description: `DeepSeek's experimental chat model for research exploration.\nProvides cost-effective access to DeepSeek capabilities.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: openrouter("deepseek/deepseek-chat-v3-0324:free"),
-    features: [
-      { id: "file-upload", enabled: false },
-    ],
+    features: [],
   },
   {
     id: "deepseek-r1-0528",
@@ -33,8 +31,6 @@ export const DEEPSEEK_MODELS = [
     description: `Reasoning model which rocked the world.\nExcels at mathematical reasoning and competitive programming.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      { id: "file-upload", enabled: false },
-      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
       REASONING_FEATURE_BASIC,
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
@@ -48,8 +44,6 @@ export const DEEPSEEK_MODELS = [
     description: `Llama-distilled reasoning model optimized for efficiency.\nCombines DeepSeek R1 capabilities with improved performance.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      { id: "file-upload", enabled: false },
-      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
       REASONING_FEATURE_BASIC,
     ],
     api_sdk: openrouter("deepseek/deepseek-r1-distill-llama-70b:free"),

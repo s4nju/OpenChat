@@ -1,5 +1,5 @@
 import { openrouter } from "@openrouter/ai-sdk-provider"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED } from "../features"
+import { FILE_UPLOAD_FEATURE } from "../features"
 
 export const META_MODELS = [
   {
@@ -12,8 +12,6 @@ export const META_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
-      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
-      REASONING_FEATURE_DISABLED,
     ],
     api_sdk: openrouter("meta-llama/llama-4-maverick:free"),
   },
@@ -27,8 +25,6 @@ export const META_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
-      { id: "pdf-processing", enabled: false, label: "Supports PDF uploads and analysis" },
-      REASONING_FEATURE_DISABLED,
     ],
     api_sdk: openrouter("meta-llama/llama-4-scout:free"),
   },
