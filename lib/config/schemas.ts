@@ -15,6 +15,7 @@ export const ApiKeyUsageSchema = z.object({
 export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
+  subName: z.string().optional(),
   provider: z.string(),
   api_sdk: z.any().optional(),
   premium: z.boolean(),

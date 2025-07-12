@@ -3,7 +3,7 @@ import { FILE_UPLOAD_FEATURE } from "../features"
 
 export const META_MODELS = [
   {
-    id: "meta-llama/llama-4-maverick:free",
+    id: "meta-llama/llama-4-maverick",
     name: "Llama 4 Maverick",
     provider: "meta",
     premium: false,
@@ -16,7 +16,7 @@ export const META_MODELS = [
     api_sdk: openrouter("meta-llama/llama-4-maverick:free"),
   },
   {
-    id: "meta-llama/llama-4-scout:free",
+    id: "meta-llama/llama-4-scout",
     name: "Llama 4 Scout",
     provider: "meta",
     premium: false,

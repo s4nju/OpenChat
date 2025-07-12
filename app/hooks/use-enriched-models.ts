@@ -8,6 +8,7 @@ import { useModelPreferences } from './use-model-preferences';
 export type EnrichedModel = {
   id: string;
   name: string;
+  subName?: string;
   provider: string;
   premium: boolean;
   usesPremiumCredits: boolean;

@@ -53,7 +53,8 @@ export const GOOGLE_MODELS = [
   },
   {
     id: "gemini-2.5-flash-thinking",
-    name: "Gemini 2.5 Flash (Thinking)",
+    name: "Gemini 2.5 Flash",
+    subName: "Thinking",
     provider: "gemini",
     premium: true,
     usesPremiumCredits: false,
@@ -85,7 +86,8 @@ export const GOOGLE_MODELS = [
   },
   {
     id: "gemini-2.5-flash-lite-preview-06-17-thinking",
-    name: "Gemini 2.5 Flash Lite (Thinking)",
+    name: "Gemini 2.5 Flash Lite",
+    subName: "Thinking",
     provider: "gemini",
     premium: true,
     usesPremiumCredits: false,

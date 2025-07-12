@@ -34,7 +34,8 @@ export const ANTHROPIC_MODELS = [
   },
   {
     id: "claude-3-7-sonnet-reasoning",
-    name: "Claude 3.7 Sonnet (Reasoning)",
+    name: "Claude 3.7 Sonnet",
+    subName: "Reasoning",
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,
@@ -79,7 +80,8 @@ export const ANTHROPIC_MODELS = [
   },
   {
     id: "claude-4-sonnet-reasoning",
-    name: "Claude 4 Sonnet (Reasoning)",
+    name: "Claude 4 Sonnet",
+    subName: "Reasoning",
     provider: "anthropic",
     premium: true,
     usesPremiumCredits: true,

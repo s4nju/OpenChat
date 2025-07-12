@@ -69,6 +69,11 @@ export function ModelSelector({
   // Determine if extended mode should be shown
   const isExtended = searchQuery.length > 0 || isExtendedMode
 
+  // Helper function to format display name with subName
+  const getDisplayName = (modelName: string, subName?: string) => {
+    return subName ? `${modelName} (${subName})` : modelName
+  }
+
   // Optimized model filtering using pre-computed enriched models
   const { normalModeModels, favoritesModels, othersModels } = React.useMemo(() => {
     let favorites = categorizedModels.favorites;
@@ -77,9 +82,11 @@ export function ModelSelector({
     // Apply search filter if needed
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = (model: EnrichedModel) => 
-        model.name.toLowerCase().includes(query) ||
-        model.provider.toLowerCase().includes(query);
+      const matchesSearch = (model: EnrichedModel) => {
+        const displayName = getDisplayName(model.name, model.subName);
+        return displayName.toLowerCase().includes(query) ||
+               model.provider.toLowerCase().includes(query);
+      };
       
       favorites = favorites.filter(matchesSearch);
       others = others.filter(matchesSearch);
@@ -136,21 +143,6 @@ export function ModelSelector({
     [model]
   )
 
-  // Helper function to parse model name and extract reasoning info
-  const parseModelName = (name: string) => {
-    const reasoningMatch = name.match(/^(.+?)\s*\(reasoning\)$/i)
-    if (reasoningMatch) {
-      return {
-        baseName: reasoningMatch[1].trim(),
-        hasReasoningInName: true,
-      }
-    }
-    return {
-      baseName: name,
-      hasReasoningInName: false,
-    }
-  }
-
   const renderModelOption = (modelOption: EnrichedModel) => {
     const providerOption = modelOption.providerInfo;
     // Optimized feature flags using pre-computed featuresMap
@@ -192,7 +184,7 @@ export function ModelSelector({
             <ProviderIcon provider={providerOption} className="size-5" />
           )}
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium">{modelOption.name}</span>
+            <span className="text-sm font-medium">{getDisplayName(modelOption.name, modelOption.subName)}</span>
             {modelOption.usesPremiumCredits && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -320,16 +312,16 @@ export function ModelSelector({
               {isMobile ? (
                 <div className="flex flex-col items-start">
                   <span className="text-sm leading-tight">
-                    {parseModelName(model?.name ?? "Select Model").baseName}
+                    {model?.name ?? "Select Model"}
                   </span>
-                  {model && parseModelName(model.name).hasReasoningInName && (
+                  {model?.subName && (
                     <span className="text-xs text-muted-foreground leading-tight">
-                      Reasoning
+                      {model.subName}
                     </span>
                   )}
                 </div>
               ) : (
-                <span>{model?.name ?? "Select Model"}</span>
+                <span>{model ? getDisplayName(model.name, model.subName) : "Select Model"}</span>
               )}
             </div>
             <CaretDownIcon className="size-4 opacity-50" />

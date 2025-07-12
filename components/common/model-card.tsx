@@ -21,6 +21,7 @@ import { ProviderIcon } from "@/app/components/common/provider-icon"
 type Model = {
   id: string
   name: string
+  subName?: string
   provider: string
   premium: boolean
   usesPremiumCredits: boolean
@@ -104,23 +105,14 @@ export function ModelCard({
     onToggleFavorite(model.id)
   }
 
-  // Parse model name for display
-  const parseModelName = (name: string) => {
-    const reasoningMatch = name.match(/^(.+?)\s*\(reasoning\)$/i)
-    if (reasoningMatch) {
-      return {
-        baseName: reasoningMatch[1].trim(),
-        hasReasoningInName: true,
-      }
-    }
-    return {
-      baseName: name,
-      hasReasoningInName: false,
-    }
+  // Helper function to format display name with subName
+  const getDisplayName = (modelName: string, subName?: string) => {
+    return subName ? `${modelName} (${subName})` : modelName
   }
 
-  const { baseName } = parseModelName(model.name)
-  const nameParts = baseName.split(" ")
+  // Use the full display name including subName
+  const displayName = getDisplayName(model.name, model.subName)
+  const nameParts = displayName.split(" ")
   const firstName = nameParts[0] || ""
   const restName = nameParts.slice(1).join(" ")
 

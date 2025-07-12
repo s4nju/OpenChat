@@ -99,6 +99,11 @@ export default function ModelsPage() {
   const { disabledModelsSet, setModelEnabled, bulkSetModelsDisabled } =
     useModelSettings();
   const { bulkSetFavoriteModels } = useModelPreferences();
+
+  // Helper function to format display name with subName
+  const getDisplayName = (modelName: string, subName?: string) => {
+    return subName ? `${modelName} (${subName})` : modelName;
+  };
   const [disabled, setDisabled] = useState<Set<string>>(disabledModelsSet);
   const [filters, setFilters] = useState<Set<string>>(new Set());
   const [freeOnly, setFreeOnly] = useState(false);
@@ -422,7 +427,9 @@ export default function ModelsPage() {
                   <div className="flex flex-1 flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap items-center gap-1">
-                        <h3 className="font-medium">{model.name}</h3>
+                        <h3 className="font-medium">
+                          {getDisplayName(model.name, model.subName)}
+                        </h3>
                         {model.usesPremiumCredits && (
                           <Tooltip>
                             <TooltipTrigger asChild>

@@ -37,7 +37,8 @@ export const DEEPSEEK_MODELS = [
   },
   {
     id: "deepseek/deepseek-r1-distill-llama-70b:free",
-    name: "DeepSeek R1 (Llama Distilled)",
+    name: "DeepSeek R1",
+    subName: "Llama Distilled",
     provider: "deepseek",
     premium: true,
     usesPremiumCredits: false,
