@@ -17,6 +17,7 @@ import {
 import { PROVIDERS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
 import { ProviderIcon } from "@/app/components/common/provider-icon"
+import { useMemo } from "react"
 
 type Model = {
   id: string
@@ -59,22 +60,20 @@ export function ModelCard({
   const provider = PROVIDERS_OPTIONS.find(p => p.id === model.provider)
 
   // Feature flags
-  const hasFileUpload = model.features?.find(
-    feature => feature.id === "file-upload"
-  )?.enabled
-  const hasPdfProcessing = model.features?.find(
-    feature => feature.id === "pdf-processing"
-  )?.enabled
-  const hasReasoning = model.features?.find(
-    feature => feature.id === "reasoning"
-  )?.enabled
-  const hasWebSearch = model.features?.find(
-    feature => feature.id === "web-search"
-  )?.enabled
-  const hasImageGeneration = model.features?.find(
-    feature => feature.id === "image-generation"
-  )?.enabled
+  // Pre-compute features map for O(1) lookups
+  const featuresMap = useMemo(() => {
+    return model.features?.reduce((acc, feature) => {
+      acc[feature.id] = feature.enabled;
+      return acc;
+    }, {} as Record<string, boolean>) || {};
+  }, [model.features]);
 
+  // Feature flags - O(1) lookups
+  const hasFileUpload = featuresMap["file-upload"];
+  const hasPdfProcessing = featuresMap["pdf-processing"];
+  const hasReasoning = featuresMap["reasoning"];
+  const hasWebSearch = featuresMap["web-search"];
+  const hasImageGeneration = featuresMap["image-generation"];
   // Style definitions for feature icons
   const iconWrapperBaseClasses =
     "relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-md cursor-help"

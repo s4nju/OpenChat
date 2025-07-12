@@ -1,5 +1,5 @@
 import { xai } from "@ai-sdk/xai"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED, REASONING_FEATURE } from "../features"
+import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED, REASONING_FEATURE_BASIC, WEB_SEARCH_FEATURE } from "../features"
 
 export const GROK_MODELS = [
   {
@@ -11,8 +11,6 @@ export const GROK_MODELS = [
     description: `xAI's flagship model.\nFeatures real-time X data access.`,
     api_sdk: xai("grok-3-latest"),
     features: [
-      FILE_UPLOAD_FEATURE,
-      PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
     ],
   },
@@ -25,9 +23,8 @@ export const GROK_MODELS = [
     description: `Cost-efficient reasoning model from xAI.\nExcels at STEM tasks requiring less world knowledge.`,
     api_sdk: xai("grok-3-mini"),
     features: [
-      FILE_UPLOAD_FEATURE,
-      PDF_PROCESSING_FEATURE,
-      REASONING_FEATURE,
+      REASONING_FEATURE_BASIC,
+      WEB_SEARCH_FEATURE
     ],
   },
 ]
