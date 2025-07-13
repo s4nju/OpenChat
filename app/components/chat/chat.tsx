@@ -3,7 +3,7 @@
 import { type Message, useChat } from '@ai-sdk/react';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
-import { useAction, useConvex, useMutation } from 'convex/react';
+import { useConvex } from 'convex/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,24 +11,36 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Conversation } from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
+import { useChatOperations } from '@/app/hooks/use-chat-operations';
+import { useChatValidation } from '@/app/hooks/use-chat-validation';
 import { useDocumentTitle } from '@/app/hooks/use-document-title';
+import { useFileHandling } from '@/app/hooks/use-file-handling';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
-import type { Doc, Id } from '@/convex/_generated/dataModel';
-import { convertConvexToAISDK } from '@/lib/ai-sdk-utils';
+import type { Id } from '@/convex/_generated/dataModel';
+import { createChatErrorHandler } from '@/lib/chat-error-utils';
+import { MODEL_DEFAULT } from '@/lib/config';
 import {
-  MESSAGE_MAX_LENGTH,
-  MODEL_DEFAULT,
-  MODELS,
-  MODELS_MAP,
-  REMAINING_QUERY_ALERT_THRESHOLD,
-} from '@/lib/config';
-import { classifyError, shouldShowAsToast } from '@/lib/error-utils';
+  createPlaceholderId,
+  createTempMessageId,
+  mapMessage,
+  validateInput,
+} from '@/lib/message-utils';
+import {
+  createModelValidator,
+  supportsReasoningEffort,
+} from '@/lib/model-utils';
 import { API_ROUTE_CHAT } from '@/lib/routes';
+import {
+  getDisplayName,
+  getUserTimezone,
+  isUserAuthenticated,
+} from '@/lib/user-utils';
 import { cn } from '@/lib/utils';
 
+// Schema for chat body
 const ChatBodySchema = z.object({
   chatId: z.string(),
   model: z.string(),
@@ -44,119 +56,11 @@ const ChatBodySchema = z.object({
 
 type ChatBody = z.infer<typeof ChatBodySchema>;
 
+// Dynamic imports
 const DialogAuth = dynamic(
   () => import('./dialog-auth').then((mod) => mod.DialogAuth),
   { ssr: false }
 );
-
-// Helper to map Convex message doc to AI SDK message type
-const mapMessage = (msg: Doc<'messages'>): Message => convertConvexToAISDK(msg);
-
-// Map backend error codes to user-friendly messages
-function humaniseUploadError(err: unknown): string {
-  if (!(err instanceof Error)) {
-    return 'Error uploading file';
-  }
-  const msg = err.message;
-  if (msg.includes('ERR_UNSUPPORTED_MODEL')) {
-    return 'File uploads are not supported for the selected model.';
-  }
-  if (msg.includes('ERR_BAD_MIME')) {
-    return 'Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.';
-  }
-  if (msg.includes('ERR_FILE_TOO_LARGE')) {
-    return 'Files can be at most 10 MB.';
-  }
-  return 'Error uploading file';
-}
-
-// Helper to check if a model supports configurable reasoning effort
-function supportsReasoningEffort(modelId: string): boolean {
-  const model = MODELS.find((m) => m.id === modelId);
-  if (!model?.features) {
-    return false;
-  }
-  const reasoningFeature = model.features.find((f) => f.id === 'reasoning');
-  return (
-    reasoningFeature?.enabled === true &&
-    reasoningFeature?.supportsEffort === true
-  );
-}
-
-// Helper function to extract first name from full name
-const getFirstName = (fullName?: string): string | null => {
-  if (!fullName) {
-    return null;
-  }
-  return fullName.split(' ')[0];
-};
-
-// Get the display name - prefer preferredName over extracted first name
-const getDisplayName = (user: Doc<'users'> | null): string | null => {
-  if (user?.preferredName) {
-    return user.preferredName;
-  }
-  return getFirstName(user?.name);
-};
-
-// Helper function to process branch error
-const processBranchError = (branchError: unknown): string => {
-  const errorMsg =
-    branchError instanceof Error ? branchError.message : String(branchError);
-  if (errorMsg.includes('Can only branch from assistant messages')) {
-    return 'You can only branch from assistant messages';
-  }
-  if (errorMsg.includes('not found')) {
-    return 'Message not found or chat unavailable';
-  }
-  if (errorMsg.includes('unauthorized')) {
-    return "You don't have permission to branch this chat";
-  }
-  return 'Failed to branch chat';
-};
-
-// Helper function to send a message without files. This is extracted to be
-// reusable by both the main `submit` handler and the search URL handler.
-const sendInitialMessageHelper = (
-  messageContent: string,
-  chatId: string,
-  model: string,
-  persona: string | undefined,
-  reasoning: 'low' | 'medium' | 'high',
-  appendFn: (
-    message: Message,
-    options?: { body?: ChatBody }
-  ) => Promise<string | null | undefined>,
-  opts?: { body?: { enableSearch?: boolean } }
-) => {
-  const isReasoningModel = supportsReasoningEffort(model);
-  try {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const body: ChatBody = {
-      chatId,
-      model,
-      personaId: persona,
-      ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
-        ? { enableSearch: opts.body.enableSearch }
-        : {}),
-      ...(isReasoningModel ? { reasoningEffort: reasoning } : {}),
-      ...(timezone ? { userInfo: { timezone } } : {}),
-    };
-
-    appendFn(
-      {
-        id: `temp-${Date.now()}`,
-        role: 'user',
-        content: messageContent,
-      },
-      { body }
-    ).catch(() => {
-      toast({ title: 'Failed to send message', status: 'error' });
-    });
-  } catch {
-    toast({ title: 'Failed to send message', status: 'error' });
-  }
-};
 
 export default function Chat() {
   const { chatId, isDeleting, setIsDeleting } = useChatSession();
@@ -169,7 +73,44 @@ export default function Chat() {
     hasApiKey,
     isApiKeysLoading,
   } = useUser();
+
+  // Initialize utilities
+  const getValidModel = useMemo(() => createModelValidator(), []);
+  const _convex = useConvex();
+
+  // Custom hooks
+  const {
+    handleCreateChat,
+    handleModelChange: handleModelUpdate,
+    handleBranch,
+    handleDeleteMessage,
+  } = useChatOperations();
+
+  const { checkRateLimits, validateModelAccess, validateSearchQuery } =
+    useChatValidation();
+
+  const {
+    files,
+    addFiles,
+    removeFile,
+    clearFiles,
+    processFiles,
+    createOptimisticFiles,
+    hasFiles,
+  } = useFileHandling();
+
+  // Local state
+  const [hasDialogAuth, setHasDialogAuth] = useState(false);
+  const [reasoningEffort, setReasoningEffort] = useState<
+    'low' | 'medium' | 'high'
+  >('low');
+  const [tempPersonaId, setTempPersonaId] = useState<string | undefined>();
+  const [tempSelectedModel, setTempSelectedModel] = useState<
+    string | undefined
+  >();
   const processedUrl = useRef(false);
+
+  // Data queries
   const { data: messagesFromDB } = useTanStackQuery({
     ...convexQuery(
       api.messages.getMessagesForChat,
@@ -177,6 +118,7 @@ export default function Chat() {
     ),
     enabled: !!chatId,
   });
+
   const { data: currentChat } = useTanStackQuery({
     ...convexQuery(
       api.chats.getChat,
@@ -184,58 +126,12 @@ export default function Chat() {
     ),
     enabled: !!chatId,
   });
-  const createChat = useMutation(api.chats.createChat);
-  const updateChatModel = useMutation(api.chats.updateChatModel);
-  const branchChat = useMutation(api.chats.branchChat);
-  const deleteMessage = useMutation(api.messages.deleteMessageAndDescendants);
-  const generateUploadUrl = useAction(api.files.generateUploadUrl);
-  const saveFileAttachment = useAction(api.files.saveFileAttachment);
-  const convex = useConvex();
 
-  // --- Local State ---
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBranching, setIsBranching] = useState(false);
-  const [hasDialogAuth, setHasDialogAuth] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  // Optimized model validation with memoized lookup
-  const validModels = useMemo(() => new Set(MODELS.map((m) => m.id)), []);
-
-  const getValidModel = useCallback(
-    (preferredModel: string, disabledModels: string[] = []) => {
-      // Check if model exists and is not disabled
-      if (!validModels.has(preferredModel)) {
-        return MODEL_DEFAULT;
-      }
-
-      // Check if model is disabled by user
-      const disabledSet = new Set(disabledModels);
-      if (disabledSet.has(preferredModel)) {
-        return MODEL_DEFAULT;
-      }
-
-      return preferredModel;
-    },
-    [validModels]
-  );
-
-  const [reasoningEffort, setReasoningEffort] = useState<
-    'low' | 'medium' | 'high'
-  >('low');
-
-  // Store temporary selections for new chats
-  const [tempPersonaId, setTempPersonaId] = useState<string | undefined>();
-  const [tempSelectedModel, setTempSelectedModel] = useState<
-    string | undefined
-  >();
-
-  // Derived state: compute selectedModel based on current context
+  // Derived state
   const selectedModel = useMemo(() => {
-    // For existing chats: use chat's model (validated)
     if (currentChat?.model) {
       return getValidModel(currentChat.model, user?.disabledModels);
     }
-
-    // For new chats: use temporary selection or user preference (validated)
     const preferredModel =
       tempSelectedModel ?? user?.preferredModel ?? MODEL_DEFAULT;
     return getValidModel(preferredModel, user?.disabledModels);
@@ -247,54 +143,33 @@ export default function Chat() {
     getValidModel,
   ]);
 
-  // Derived state: personaId comes from currentChat or temp selection for new chats
   const personaId = currentChat?.personaId ?? tempPersonaId;
+  const isAuthenticated = isUserAuthenticated(user);
 
-  const isAuthenticated = !!user && !user.isAnonymous;
-
-  // --- Vercel AI SDK useChat Hook ---
+  // Enhanced useChat hook with AI SDK best practices
   const { messages, status, reload, stop, setMessages, append } = useChat({
     api: API_ROUTE_CHAT,
-    // initialMessages are now set via useEffect
-    onResponse: () => {
-      // console.log("onResponse", response)
+    // Global configuration
+    headers: {
+      'Content-Type': 'application/json',
     },
-    onFinish: () => {
-      // console.log("onFinish", message)
+    // AI SDK error handling
+    onError: createChatErrorHandler(),
+    // Completion callback
+    onFinish: (_message, { usage: _usage, finishReason: _finishReason }) => {
+      // Optional: Add analytics or logging here
+      // console.log('Chat completed:', { usage, finishReason });
     },
-    onError: (error) => {
-      if (shouldShowAsToast(error)) {
-        const classified = classifyError(error);
-        toast({
-          title: classified.userFriendlyMessage,
-          status: 'error',
-        });
+    // Response callback for custom handling
+    onResponse: (response) => {
+      // Optional: Handle response headers or status
+      if (!response.ok) {
+        // console.warn('Chat response not OK:', response.status);
       }
     },
   });
 
-  // --- Effects for State Synchronization ---
-
-  // useEffect(() => {
-  //   console.log("Chat component mounted", chatId)
-  //   return () => {
-  //     console.log("Chat component unmounted", chatId)
-  //   }
-  // }, [])
-
-  // useEffect(() => {
-  //   console.log("useChat status:", status)
-  //   console.log("useChat messages:", messages)
-  // }, [status, messages])
-
-  // Sync messages from DB to AI SDK state ensuring IDs from Convex are merged
-  // into the client state. We avoid the flash by:
-  // 1. Replacing the entire list only when DB has >= messages.length
-  // 2. When DB has fewer messages (likely because the latest user message
-  //    hasn't persisted yet), we merge IDs/metadata for the overlap without
-  //    dropping optimistic messages.
-  // 3. While a delete operation is in flight (isDeleting), we skip syncing to
-  //    prevent the just-deleted message from reappearing.
+  // Message synchronization effect - optimized to prevent infinite re-renders
   useEffect(() => {
     if (
       (status !== 'ready' && status !== 'error') ||
@@ -306,41 +181,54 @@ export default function Chat() {
 
     const mappedDb = messagesFromDB.map(mapMessage);
 
-    if (mappedDb.length >= messages.length) {
-      // DB is up-to-date or ahead – merge to ensure we keep streaming-only
-      // properties (e.g. `parts`) that are not yet persisted in the DB.
-      const merged = mappedDb.map((dbMsg: Message, idx: number) => {
-        const prev = messages[idx];
-        if (prev?.parts && !dbMsg.parts) {
-          return { ...dbMsg, parts: prev.parts };
-        }
-        return dbMsg;
-      });
-      setMessages(merged);
-    } else if (mappedDb.length > 0) {
-      // DB is behind: merge IDs for the portion we have *without* dropping
-      // recent optimistic messages (e.g., the just-streamed assistant reply).
-      // We still update canonical IDs/metadata for the overlapping range so
-      // that once the DB catches up the local state is already aligned.
-      const merged = messages.map((msg, idx) => {
-        if (idx < mappedDb.length) {
-          const dbMsg = mappedDb[idx];
-          return {
-            ...msg,
-            id: dbMsg.id,
-            experimental_attachments: dbMsg.experimental_attachments,
-            parts: msg.parts ?? dbMsg.parts,
-          };
-        }
-        // Keep optimistic messages beyond the DB length untouched to avoid
-        // momentary disappearance in the UI.
-        return msg;
-      });
-      setMessages(merged);
-    }
-  }, [messagesFromDB, status, messages, setMessages, isDeleting]);
+    // Use functional update to access current messages without creating a dependency
+    setMessages((currentMessages) => {
+      // Early return if DB is empty
+      if (mappedDb.length === 0) {
+        return currentMessages;
+      }
 
-  // If we're in a brand-new chat (no chatId yet) ensure local state stays empty.
+      // Check if we need to update at all by comparing lengths and IDs
+      if (
+        mappedDb.length === currentMessages.length &&
+        mappedDb.every((dbMsg, idx) => dbMsg.id === currentMessages[idx]?.id)
+      ) {
+        return currentMessages; // No change needed - prevents unnecessary re-renders
+      }
+
+      if (mappedDb.length >= currentMessages.length) {
+        // DB is up-to-date or ahead – merge to preserve streaming properties
+        const merged = mappedDb.map((dbMsg: Message, idx: number) => {
+          const prev = currentMessages[idx];
+          if (prev?.parts && !dbMsg.parts) {
+            return { ...dbMsg, parts: prev.parts };
+          }
+          return dbMsg;
+        });
+        return merged;
+      }
+      if (mappedDb.length > 0) {
+        // DB is behind: merge IDs for the portion we have without dropping optimistic messages
+        const merged = currentMessages.map((msg, idx) => {
+          if (idx < mappedDb.length) {
+            const dbMsg = mappedDb[idx];
+            return {
+              ...msg,
+              id: dbMsg.id,
+              experimental_attachments: dbMsg.experimental_attachments,
+              parts: msg.parts ?? dbMsg.parts,
+            };
+          }
+          return msg;
+        });
+        return merged;
+      }
+
+      return currentMessages;
+    });
+  }, [messagesFromDB, status, setMessages, isDeleting]);
+
+  // Reset state for new chats
   useEffect(() => {
     if ((status === 'ready' || status === 'error') && !chatId) {
       setMessages([]);
@@ -349,6 +237,98 @@ export default function Chat() {
     }
   }, [status, chatId, setMessages]);
 
+  // Core message sending function
+  const sendMessage = useCallback(
+    async (
+      inputMessage: string,
+      currentChatId?: string,
+      options?: { enableSearch?: boolean }
+    ) => {
+      const chatIdToUse = currentChatId || chatId;
+      if (!chatIdToUse) {
+        return;
+      }
+
+      const isReasoningModel = supportsReasoningEffort(selectedModel);
+      const timezone = getUserTimezone();
+
+      const body: ChatBody = {
+        chatId: chatIdToUse,
+        model: selectedModel,
+        personaId,
+        ...(typeof options?.enableSearch !== 'undefined'
+          ? { enableSearch: options.enableSearch }
+          : {}),
+        ...(isReasoningModel ? { reasoningEffort } : {}),
+        ...(timezone ? { userInfo: { timezone } } : {}),
+      };
+
+      // Handle files if present
+      let attachments:
+        | Array<{ name: string; contentType: string; url: string }>
+        | undefined;
+      if (hasFiles) {
+        const optimisticAttachments = createOptimisticFiles();
+        const placeholderId = createPlaceholderId();
+
+        // Add optimistic message
+        setMessages((cur) => [
+          ...cur,
+          {
+            id: placeholderId,
+            role: 'user' as const,
+            content: inputMessage,
+            createdAt: new Date(),
+            experimental_attachments:
+              optimisticAttachments.length > 0
+                ? optimisticAttachments
+                : undefined,
+          },
+        ]);
+
+        try {
+          attachments = await processFiles(chatIdToUse as Id<'chats'>);
+          // Remove placeholder
+          setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
+        } catch {
+          setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
+          toast({ title: 'Failed to upload files', status: 'error' });
+          return;
+        }
+      }
+
+      // Send message with AI SDK
+      try {
+        await append(
+          {
+            id: createTempMessageId(),
+            role: 'user',
+            content: inputMessage,
+            experimental_attachments: attachments,
+          },
+          {
+            body,
+            experimental_attachments: attachments,
+          }
+        );
+      } catch {
+        toast({ title: 'Failed to send message', status: 'error' });
+      }
+    },
+    [
+      chatId,
+      selectedModel,
+      personaId,
+      reasoningEffort,
+      hasFiles,
+      createOptimisticFiles,
+      processFiles,
+      append,
+      setMessages,
+    ]
+  );
+
+  // URL parameter processing
   useEffect(() => {
     if (isUserLoading || isApiKeysLoading || !user || processedUrl.current) {
       return;
@@ -359,68 +339,28 @@ export default function Chat() {
 
     if (modelId && query) {
       processedUrl.current = true;
-      const model = MODELS_MAP[modelId];
 
-      if (!model) {
-        toast({ title: 'Model not found', status: 'error' });
+      const trimmedQuery = validateSearchQuery(query);
+      if (!trimmedQuery) {
         return;
       }
 
-      // Trim whitespace and validate length of the incoming query parameter.
-      const trimmedQuery = query.trim();
-      if (trimmedQuery.length === 0) {
-        toast({ title: 'Query cannot be empty', status: 'error' });
-        return;
-      }
-      if (trimmedQuery.length > MESSAGE_MAX_LENGTH) {
-        toast({
-          title: `Query is too long (max ${MESSAGE_MAX_LENGTH} characters).`,
-          status: 'error',
-        });
-        return;
-      }
-
-      if (user.disabledModels?.includes(modelId)) {
-        toast({
-          title: 'This model is disabled in your settings',
-          status: 'error',
-        });
-        return;
-      }
-
-      if (model.premium && !hasPremium) {
-        toast({
-          title: 'This is a premium model. Please upgrade to use it.',
-          status: 'error',
-        });
-        return;
-      }
-
-      if (model.apiKeyUsage.userKeyOnly && !hasApiKey.get(model.provider)) {
-        toast({
-          title: `This model requires an API key for ${model.provider}`,
-          status: 'error',
-        });
+      if (!validateModelAccess(modelId, user, hasPremium, hasApiKey)) {
         return;
       }
 
       const startChat = async () => {
         try {
-          const { chatId: newChatId } = await createChat({
-            title: trimmedQuery,
-            model: modelId,
-          });
-          window.history.pushState(null, '', `/c/${newChatId}`);
-          sendInitialMessageHelper(
+          const newChatId = await handleCreateChat(
             trimmedQuery,
-            newChatId,
             modelId,
-            personaId,
-            reasoningEffort,
-            append,
-            { body: { enableSearch: false } }
+            personaId
           );
-        } catch (_err) {
+          if (newChatId) {
+            window.history.pushState(null, '', `/c/${newChatId}`);
+            await sendMessage(trimmedQuery, newChatId, { enableSearch: false });
+          }
+        } catch {
           toast({ title: 'Failed to create chat', status: 'error' });
         }
       };
@@ -434,63 +374,65 @@ export default function Chat() {
     searchParams,
     hasPremium,
     hasApiKey,
-    createChat,
-    append,
+    handleCreateChat,
     personaId,
-    reasoningEffort,
+    validateSearchQuery,
+    validateModelAccess,
+    sendMessage,
   ]);
 
-  // --- Core Logic Handlers ---
-
-  const checkLimitsAndNotify = async (): Promise<boolean> => {
-    try {
-      const rateData = await convex.query(api.users.getRateLimitStatus, {});
-      const remaining = rateData.effectiveRemaining;
-      const plural = remaining === 1 ? 'query' : 'queries';
-
-      if (remaining === 0 && !isAuthenticated) {
-        setHasDialogAuth(true);
-        return false;
+  // Main submit handler
+  const submit = useCallback(
+    async (
+      inputMessage: string,
+      opts?: { body?: { enableSearch?: boolean } }
+    ) => {
+      if (!validateInput(inputMessage, files.length, user?._id)) {
+        return;
       }
 
-      if (remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
-        toast({
-          title: `Only ${remaining} ${plural} remaining today.`,
-          status: 'info',
-        });
+      const allowed = await checkRateLimits(isAuthenticated, setHasDialogAuth);
+      if (!allowed) {
+        return;
       }
 
-      return true;
-    } catch {
-      // Rate limit check failed - log silently and allow the request to proceed
-      return false;
-    }
-  };
+      let currentChatId = chatId;
 
-  const ensureChatExists = async (inputMessage: string) => {
-    if (messages.length === 0 && inputMessage) {
-      try {
-        const result = await createChat({
-          title: inputMessage.substring(0, 50), // Create a title from the first message
-          model: selectedModel, // This now includes tempSelectedModel via derived state
-          personaId, // This now includes tempPersonaId via derived state
-        });
-        const newChatId = result.chatId;
-        window.history.pushState(null, '', `/c/${newChatId}`);
+      // Create chat if needed
+      if (!currentChatId && messages.length === 0 && inputMessage) {
+        currentChatId = await handleCreateChat(
+          inputMessage,
+          selectedModel,
+          personaId
+        );
+        if (!currentChatId) {
+          return;
+        }
 
-        // Clear temporary selections since we now have a real chat
+        window.history.pushState(null, '', `/c/${currentChatId}`);
         setTempSelectedModel(undefined);
         setTempPersonaId(undefined);
-
-        return newChatId;
-      } catch {
-        toast({ title: 'Failed to create new chat.', status: 'error' });
-        return null;
       }
-    }
-    return chatId;
-  };
 
+      clearFiles();
+      await sendMessage(inputMessage, currentChatId || undefined, opts?.body);
+    },
+    [
+      files.length,
+      user?._id,
+      checkRateLimits,
+      isAuthenticated,
+      chatId,
+      messages.length,
+      handleCreateChat,
+      selectedModel,
+      personaId,
+      clearFiles,
+      sendMessage,
+    ]
+  );
+
+  // Model change handler
   const handleModelChange = useCallback(
     async (model: string) => {
       if (!user || user.isAnonymous) {
@@ -498,352 +440,50 @@ export default function Chat() {
       }
 
       if (!chatId) {
-        // For new chats, store the model selection temporarily
-        // It will be used when creating the chat and reflected in selectedModel immediately
         setTempSelectedModel(model);
         return;
       }
 
-      // For existing chats, update the chat's model
-      try {
-        await updateChatModel({ chatId: chatId as Id<'chats'>, model });
-        // selectedModel will automatically update via derived state when currentChat updates
-      } catch {
-        toast({ title: 'Failed to update chat model', status: 'error' });
-      }
+      await handleModelUpdate(chatId, model, user);
     },
-    [chatId, user, updateChatModel]
+    [chatId, user, handleModelUpdate]
   );
 
-  const handlePersonaSelect = useCallback((id: string) => {
-    setTempPersonaId(id);
-  }, []);
-
-  const uploadAndSaveFile = async (
-    file: File,
-    chatIdForUpload: Id<'chats'>
-  ) => {
-    try {
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-      const { storageId } = await response.json();
-      return await saveFileAttachment({
-        storageId,
-        chatId: chatIdForUpload,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-      });
-    } catch (uploadError) {
-      const friendly = humaniseUploadError(uploadError);
-      toast({ title: friendly, status: 'error' });
-      return null;
-    }
-  };
-
-  // Helper function to validate input
-  const validateInput = (inputMessage: string): boolean => {
-    if (!inputMessage.trim() && files.length === 0) {
-      return false;
-    }
-
-    if (!user?._id) {
-      toast({ title: 'User not found. Please sign in.', status: 'error' });
-      return false;
-    }
-
-    if (inputMessage.length > MESSAGE_MAX_LENGTH) {
-      toast({
-        title: `Message is too long (max ${MESSAGE_MAX_LENGTH} chars).`,
-        status: 'error',
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  // Helper function to send message without files
-  const sendMessageWithoutFiles = (
-    inputMessage: string,
-    currentChatId: string,
-    opts?: { body?: { enableSearch?: boolean } }
-  ) => {
-    setIsSubmitting(true);
-    sendInitialMessageHelper(
-      inputMessage,
-      currentChatId,
-      selectedModel,
-      personaId,
-      reasoningEffort,
-      append,
-      opts
-    );
-    setIsSubmitting(false);
-  };
-
-  // Helper function to handle file uploads
-  const uploadFilesInParallel = async (
-    filesToUpload: File[],
-    currentChatId: Id<'chats'>
-  ) => {
-    const vercelAiAttachments: Array<{
-      name: string;
-      contentType: string;
-      url: string;
-      storageId: string;
-    }> = [];
-
-    const uploadPromises = filesToUpload.map((file) =>
-      uploadAndSaveFile(file, currentChatId)
-    );
-    const uploadResults = await Promise.all(uploadPromises);
-
-    // Process upload results sequentially to avoid await in loop
-    const urlPromises = uploadResults.map(async (attachment) => {
-      if (!attachment) {
-        return null;
-      }
-
-      try {
-        const url = await convex.query(api.files.getStorageUrl, {
-          storageId: attachment.storageId,
-        });
-        if (url) {
-          return {
-            name: attachment.fileName,
-            contentType: attachment.fileType,
-            url,
-            storageId: attachment.storageId,
-          };
-        }
-      } catch {
-        // Failed to generate URL for this attachment
-        return null;
-      }
-
-      return null;
-    });
-
-    const urlResults = await Promise.all(urlPromises);
-
-    for (const attachment of urlResults) {
-      if (attachment) {
-        vercelAiAttachments.push(attachment);
-      }
-    }
-
-    return vercelAiAttachments;
-  };
-
-  // Helper function to send message with files
-  const sendMessageWithFiles = async (
-    inputMessage: string,
-    currentChatId: string,
-    filesToUpload: File[],
-    opts?: { body?: { enableSearch?: boolean } }
-  ) => {
-    // Create optimistic attachments using blob URLs
-    const optimisticAttachments = filesToUpload.map((file) => ({
-      name: file.name,
-      contentType: file.type,
-      url: URL.createObjectURL(file),
-    }));
-
-    // Generate a simple placeholder ID based on timestamp
-    const placeholderId = `placeholder-${Date.now()}`;
-
-    // Insert optimistic placeholder message so UI doesn't look empty
-    setMessages((cur) => [
-      ...cur,
-      {
-        id: placeholderId,
-        role: 'user' as const,
-        content: inputMessage,
-        createdAt: new Date(),
-        experimental_attachments:
-          optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
-      },
-    ]);
-
-    setIsSubmitting(true);
-
-    try {
-      const vercelAiAttachments = await uploadFilesInParallel(
-        filesToUpload,
-        currentChatId as Id<'chats'>
-      );
-
-      const isReasoningModel = supportsReasoningEffort(selectedModel);
-      const options = {
-        body: {
-          chatId: currentChatId,
-          model: selectedModel,
-          personaId,
-          ...(opts?.body && typeof opts.body.enableSearch !== 'undefined'
-            ? { enableSearch: opts.body.enableSearch }
-            : {}),
-          ...(isReasoningModel ? { reasoningEffort } : {}),
-        },
-        experimental_attachments:
-          vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
-      };
-
-      // Remove placeholder before sending real message
-      setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
-
-      append(
-        {
-          role: 'user',
-          content: inputMessage,
-          experimental_attachments:
-            vercelAiAttachments.length > 0 ? vercelAiAttachments : undefined,
-        },
-        options
-      ).catch(() => {
-        toast({ title: 'Failed to send message', status: 'error' });
-      });
-    } catch {
-      toast({ title: 'Failed to send message', status: 'error' });
-      // Remove placeholder on error as well
-      setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
-    }
-
-    setIsSubmitting(false);
-  };
-
-  const submit = async (
-    inputMessage: string,
-    opts?: { body?: { enableSearch?: boolean } }
-  ) => {
-    if (!validateInput(inputMessage)) {
-      return;
-    }
-
-    const allowed = await checkLimitsAndNotify();
-    if (!allowed) {
-      return;
-    }
-
-    const currentChatId = await ensureChatExists(inputMessage);
-    if (!currentChatId) {
-      return;
-    }
-
-    // Save reference to files before clearing
-    const filesToUpload = [...files];
-
-    // Clear files immediately for better UX
-    setFiles([]);
-
-    // If no files, send message immediately
-    if (filesToUpload.length === 0) {
-      sendMessageWithoutFiles(inputMessage, currentChatId, opts);
-      return;
-    }
-
-    // Path WITH file uploads
-    await sendMessageWithFiles(
-      inputMessage,
-      currentChatId,
-      filesToUpload,
-      opts
-    );
-  };
-
-  // Optimized callbacks using useRef to avoid dependency on messages array
+  // Message handlers
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
-  const handleBranch = useCallback(
-    async (messageId: string) => {
-      if (!(chatId && user?._id)) {
-        toast({
-          title: 'Unable to branch chat. Please try again.',
-          status: 'error',
-        });
-        return;
-      }
-
-      if (isBranching) {
-        return;
-      }
-
-      setIsBranching(true);
-
-      try {
-        const result = await branchChat({
-          originalChatId: chatId as Id<'chats'>,
-          branchFromMessageId: messageId as Id<'messages'>,
-        });
-
-        // Navigate to the new branched chat
-        router.push(`/c/${result.chatId}`);
-
-        toast({
-          title: 'Chat branched successfully',
-          status: 'success',
-        });
-      } catch (branchError: unknown) {
-        const errorMessage = processBranchError(branchError);
-        toast({
-          title: errorMessage,
-          status: 'error',
-        });
-      } finally {
-        setIsBranching(false);
-      }
-    },
-    [chatId, user, branchChat, router, isBranching]
-  );
-
   const handleDelete = useCallback(
     async (id: string) => {
-      // Build an optimistically updated list that mimics server deletion of the
-      // target message *and* ALL subsequent messages (matching backend behavior).
-      const buildOptimisticList = (
-        msgList: typeof messages,
-        targetId: string
-      ) => {
-        const idx = msgList.findIndex((m) => m.id === targetId);
-        if (idx === -1) {
-          return msgList; // fallback – shouldn't happen
-        }
-
-        // Remove the target message and ALL subsequent messages
-        // This matches the backend deleteMessageAndDescendants behavior
-        return msgList.slice(0, idx);
-      };
-
       const currentMessages = messagesRef.current;
       const originalMessages = [...currentMessages];
-      const filteredMessages = buildOptimisticList(originalMessages, id);
-      setMessages(filteredMessages); // Optimistic update (user + assistant)
+      const idx = originalMessages.findIndex((m) => m.id === id);
+
+      if (idx === -1) {
+        return;
+      }
+
+      const filteredMessages = originalMessages.slice(0, idx);
+      setMessages(filteredMessages);
       setIsDeleting(true);
 
       try {
-        const result = await deleteMessage({ messageId: id as Id<'messages'> });
-        if (result.chatDeleted) {
+        const result = await handleDeleteMessage(id);
+        if (result?.chatDeleted) {
           router.push('/');
         } else {
           setIsDeleting(false);
         }
       } catch {
-        setMessages(originalMessages); // Rollback on error
-        toast({ title: 'Failed to delete message', status: 'error' });
+        setMessages(originalMessages);
         setIsDeleting(false);
       }
     },
-    [deleteMessage, router, setIsDeleting, setMessages]
+    [handleDeleteMessage, router, setIsDeleting, setMessages]
   );
 
   const handleEdit = useCallback(
     (id: string, newText: string) => {
-      // This is a client-side only edit for now, as there's no backend mutation for it yet.
       const currentMessages = messagesRef.current;
       setMessages(
         currentMessages.map((message) =>
@@ -860,28 +500,23 @@ export default function Chat() {
         return;
       }
 
-      // 1. Optimistically remove all messages that come *after* the one being reloaded so
-      //    they disappear from the UI immediately.
       const currentMessages = messagesRef.current;
       const originalMessages = [...currentMessages];
       const targetIdx = originalMessages.findIndex((m) => m.id === messageId);
+
       if (targetIdx === -1) {
         return;
       }
+
       const trimmedMessages = originalMessages.slice(0, targetIdx + 1);
       setMessages(trimmedMessages);
 
-      // 2. Persist the deletion of the following messages in the DB by invoking the existing
-      //    deleteMessageAndDescendants mutation on the first message *after* the target (if any).
       const firstFollowing = originalMessages[targetIdx + 1];
       if (firstFollowing) {
         setIsDeleting(true);
         try {
-          await deleteMessage({
-            messageId: firstFollowing.id as Id<'messages'>,
-          });
+          await handleDeleteMessage(firstFollowing.id);
         } catch {
-          // Roll back optimistic update if the deletion fails
           setMessages(originalMessages);
           toast({
             title: 'Failed to delete messages for reload',
@@ -892,16 +527,20 @@ export default function Chat() {
         }
       }
 
-      // 3. Trigger the assistant reload once the slate after the target message is clean.
+      const isReasoningModel = supportsReasoningEffort(selectedModel);
+      const timezone = getUserTimezone();
+
       const options = {
         body: {
           chatId,
           model: selectedModel,
           personaId,
           reloadAssistantMessageId: messageId,
-          ...(opts && typeof opts.enableSearch !== 'undefined'
+          ...(typeof opts?.enableSearch !== 'undefined'
             ? { enableSearch: opts.enableSearch }
             : {}),
+          ...(isReasoningModel ? { reasoningEffort } : {}),
+          ...(timezone ? { userInfo: { timezone } } : {}),
         },
       };
       reload(options);
@@ -909,26 +548,27 @@ export default function Chat() {
     [
       user,
       chatId,
-      setMessages,
-      deleteMessage,
       selectedModel,
       personaId,
-      reload,
+      reasoningEffort,
+      setMessages,
+      handleDeleteMessage,
       setIsDeleting,
+      reload,
     ]
   );
 
-  // Silent fallback redirect if chat somehow becomes inaccessible after initial
-  // server validation (e.g., the chat is deleted in another tab).
+  // Chat redirect effect
   useEffect(() => {
     if (!isUserLoading && chatId && currentChat === null && !isDeleting) {
       router.replace('/');
     }
   }, [chatId, currentChat, isUserLoading, router, isDeleting]);
 
-  // Update document title when chat changes
+  // Document title update
   useDocumentTitle(currentChat?.title, chatId || undefined);
 
+  // Message scrolling
   const targetMessageId = searchParams.get('m');
   const hasScrolledRef = useRef(false);
 
@@ -949,8 +589,9 @@ export default function Chat() {
     }
   }, [targetMessageId, messages]);
 
+  // Early return for redirect
   if (currentChat === null && chatId) {
-    return null; // Render nothing while redirecting
+    return null;
   }
 
   return (
@@ -960,6 +601,7 @@ export default function Chat() {
       )}
     >
       <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} />
+
       <AnimatePresence initial={false} mode="popLayout">
         {!chatId && messages.length === 0 ? (
           <motion.div
@@ -986,7 +628,9 @@ export default function Chat() {
             autoScroll={!targetMessageId}
             key="conversation"
             messages={messages}
-            onBranch={handleBranch}
+            onBranch={(messageId) =>
+              chatId && handleBranch(chatId, messageId, user)
+            }
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
@@ -995,6 +639,7 @@ export default function Chat() {
           />
         )}
       </AnimatePresence>
+
       <motion.div
         className={cn(
           'relative inset-x-0 bottom-0 z-50 mx-auto w-full max-w-3xl'
@@ -1007,17 +652,13 @@ export default function Chat() {
           files={files}
           hasSuggestions={!chatId && messages.length === 0}
           isReasoningModel={supportsReasoningEffort(selectedModel)}
-          isSubmitting={isSubmitting || status === 'streaming'}
+          isSubmitting={status === 'streaming'}
           isUserAuthenticated={isAuthenticated}
-          onFileRemoveAction={(file: File) =>
-            setFiles((prev) => prev.filter((f) => f !== file))
-          }
-          onFileUploadAction={(newFiles: File[]) =>
-            setFiles((prev) => [...prev, ...newFiles])
-          }
+          onFileRemoveAction={removeFile}
+          onFileUploadAction={addFiles}
           onSelectModelAction={handleModelChange}
           onSelectReasoningEffortAction={setReasoningEffort}
-          onSelectSystemPromptAction={handlePersonaSelect}
+          onSelectSystemPromptAction={(id: string) => setTempPersonaId(id)}
           onSendAction={(
             message: string,
             { enableSearch }: { enableSearch: boolean }
