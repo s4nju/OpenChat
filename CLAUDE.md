@@ -34,11 +34,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Follow Next.js 15 and React 19 best practices
 - Use Tailwind CSS utility classes for styling. Avoid inline styles.
 - Use Bun for all package management and scripts (`bun install`).
-- Follow Convex guidelines in `convex_rules.md`.
+- Follow Convex guidelines in `agent_rules/convex_rules.md`.
 - Use Shadcn UI and Prompt-kit components as documented. Do not modify library code directly. Prefer composition over modification.
 - Use Biome for all linting and formatting. Run Biome (`bun run lint`) before committing. Follow all rules specified in `biome.jsonc`. Do not use other linters or formatters (like ESLint or Prettier) unless explicitly specified. Check `biome.jsonc` for custom or overridden rules. Biome extends the `ultracite` ruleset for this project.
 - Lint and format code before committing. Fix all Biome lint errors before moving on. Do not commit code with unused variables, imports, or unreachable code.
-- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `ultracite.md`.
+- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `agent_rules/ultracite.md`.
 - Do not use `console` statements in production code.
 - Do not use TypeScript enums or namespaces.
 - Do not use `any` or `unknown` as type constraints.
@@ -96,7 +96,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run typecheck` - Run Typecheck
 
 # **Testing and Quality**
-- Run `bun run lint` before committing to ensure code quality
+- Run `bun run format` and then `bun run lint` before committing to ensure code quality
 - All TypeScript errors must be resolved
 - Follow accessibility guidelines from `ultracite.md`
 - Test responsive design on mobile and desktop

@@ -224,17 +224,25 @@ export default function Chat() {
   const isAuthenticated = !!user && !user.isAnonymous;
 
   // --- Vercel AI SDK useChat Hook ---
-  const { messages, status, error, reload, stop, setMessages, append } =
-    useChat({
-      api: API_ROUTE_CHAT,
-      // initialMessages are now set via useEffect
-      onResponse: () => {
-        // console.log("onResponse", response)
-      },
-      onFinish: () => {
-        // console.log("onFinish", message)
-      },
-    });
+  const { messages, status, reload, stop, setMessages, append } = useChat({
+    api: API_ROUTE_CHAT,
+    // initialMessages are now set via useEffect
+    onResponse: () => {
+      // console.log("onResponse", response)
+    },
+    onFinish: () => {
+      // console.log("onFinish", message)
+    },
+    onError: (error) => {
+      if (shouldShowAsToast(error)) {
+        const classified = classifyError(error);
+        toast({
+          title: classified.userFriendlyMessage,
+          status: 'error',
+        });
+      }
+    },
+  });
 
   // --- Effects for State Synchronization ---
 
@@ -327,17 +335,6 @@ export default function Chat() {
       setSelectedModel(validModel);
     }
   }, [user, selectedModel, getValidModel]);
-
-  // --- Error Handling ---
-  useEffect(() => {
-    if (error && shouldShowAsToast(error)) {
-      const classified = classifyError(error);
-      toast({
-        title: classified.userFriendlyMessage,
-        status: 'error',
-      });
-    }
-  }, [error]);
 
   useEffect(() => {
     if (isUserLoading || isApiKeysLoading || !user || processedUrl.current) {
