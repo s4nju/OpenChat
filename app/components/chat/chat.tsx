@@ -7,7 +7,7 @@ import { useAction, useConvex, useMutation } from 'convex/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Conversation } from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
@@ -197,29 +197,58 @@ export default function Chat() {
   const [isBranching, setIsBranching] = useState(false);
   const [hasDialogAuth, setHasDialogAuth] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  // Helper function to get a valid model ID based on preferred model and disabled models
-  // NOTE: We do not filter out disabled models here; we only check if the preferred model is enabled.
-  // Filtering of disabled models is handled elsewhere in the UI.
+  // Optimized model validation with memoized lookup
+  const validModels = useMemo(() => new Set(MODELS.map((m) => m.id)), []);
+
   const getValidModel = useCallback(
     (preferredModel: string, disabledModels: string[] = []) => {
-      // biome-ignore lint/correctness/noUnusedVariables: <above>
+      // Check if model exists and is not disabled
+      if (!validModels.has(preferredModel)) {
+        return MODEL_DEFAULT;
+      }
+
+      // Check if model is disabled by user
       const disabledSet = new Set(disabledModels);
-      const enabled = MODELS.map((m) => m.id); // No filtering of disabled models here
-      return enabled.includes(preferredModel) ? preferredModel : MODEL_DEFAULT;
+      if (disabledSet.has(preferredModel)) {
+        return MODEL_DEFAULT;
+      }
+
+      return preferredModel;
     },
-    []
+    [validModels]
   );
 
-  const [selectedModel, setSelectedModel] = useState(() => {
-    return getValidModel(
-      user?.preferredModel ?? MODEL_DEFAULT,
-      user?.disabledModels
-    );
-  });
   const [reasoningEffort, setReasoningEffort] = useState<
     'low' | 'medium' | 'high'
   >('low');
-  const [personaId, setPersonaId] = useState<string | undefined>();
+
+  // Store temporary selections for new chats
+  const [tempPersonaId, setTempPersonaId] = useState<string | undefined>();
+  const [tempSelectedModel, setTempSelectedModel] = useState<
+    string | undefined
+  >();
+
+  // Derived state: compute selectedModel based on current context
+  const selectedModel = useMemo(() => {
+    // For existing chats: use chat's model (validated)
+    if (currentChat?.model) {
+      return getValidModel(currentChat.model, user?.disabledModels);
+    }
+
+    // For new chats: use temporary selection or user preference (validated)
+    const preferredModel =
+      tempSelectedModel ?? user?.preferredModel ?? MODEL_DEFAULT;
+    return getValidModel(preferredModel, user?.disabledModels);
+  }, [
+    currentChat?.model,
+    tempSelectedModel,
+    user?.preferredModel,
+    user?.disabledModels,
+    getValidModel,
+  ]);
+
+  // Derived state: personaId comes from currentChat or temp selection for new chats
+  const personaId = currentChat?.personaId ?? tempPersonaId;
 
   const isAuthenticated = !!user && !user.isAnonymous;
 
@@ -315,26 +344,10 @@ export default function Chat() {
   useEffect(() => {
     if ((status === 'ready' || status === 'error') && !chatId) {
       setMessages([]);
-      setPersonaId(undefined);
+      setTempPersonaId(undefined);
+      setTempSelectedModel(undefined);
     }
   }, [status, chatId, setMessages]);
-
-  // Sync chat settings from DB to local state
-  useEffect(() => {
-    if (currentChat) {
-      const chatModel = currentChat.model || MODEL_DEFAULT;
-      setSelectedModel(getValidModel(chatModel, user?.disabledModels));
-      setPersonaId(currentChat.personaId);
-    }
-  }, [currentChat, user, getValidModel]);
-
-  // Ensure selected model stays valid when user settings change
-  useEffect(() => {
-    const validModel = getValidModel(selectedModel, user?.disabledModels);
-    if (validModel !== selectedModel) {
-      setSelectedModel(validModel);
-    }
-  }, [user, selectedModel, getValidModel]);
 
   useEffect(() => {
     if (isUserLoading || isApiKeysLoading || !user || processedUrl.current) {
@@ -398,7 +411,6 @@ export default function Chat() {
             model: modelId,
           });
           window.history.pushState(null, '', `/c/${newChatId}`);
-          setSelectedModel(modelId);
           sendInitialMessageHelper(
             trimmedQuery,
             newChatId,
@@ -460,11 +472,16 @@ export default function Chat() {
       try {
         const result = await createChat({
           title: inputMessage.substring(0, 50), // Create a title from the first message
-          model: selectedModel,
-          personaId,
+          model: selectedModel, // This now includes tempSelectedModel via derived state
+          personaId, // This now includes tempPersonaId via derived state
         });
         const newChatId = result.chatId;
         window.history.pushState(null, '', `/c/${newChatId}`);
+
+        // Clear temporary selections since we now have a real chat
+        setTempSelectedModel(undefined);
+        setTempPersonaId(undefined);
+
         return newChatId;
       } catch {
         toast({ title: 'Failed to create new chat.', status: 'error' });
@@ -479,24 +496,27 @@ export default function Chat() {
       if (!user || user.isAnonymous) {
         return;
       }
+
       if (!chatId) {
-        setSelectedModel(model);
+        // For new chats, store the model selection temporarily
+        // It will be used when creating the chat and reflected in selectedModel immediately
+        setTempSelectedModel(model);
         return;
       }
-      const oldModel = selectedModel;
-      setSelectedModel(model);
+
+      // For existing chats, update the chat's model
       try {
         await updateChatModel({ chatId: chatId as Id<'chats'>, model });
+        // selectedModel will automatically update via derived state when currentChat updates
       } catch {
-        setSelectedModel(oldModel);
         toast({ title: 'Failed to update chat model', status: 'error' });
       }
     },
-    [chatId, selectedModel, user, updateChatModel]
+    [chatId, user, updateChatModel]
   );
 
   const handlePersonaSelect = useCallback((id: string) => {
-    setPersonaId(id);
+    setTempPersonaId(id);
   }, []);
 
   const uploadAndSaveFile = async (
@@ -905,15 +925,6 @@ export default function Chat() {
       router.replace('/');
     }
   }, [chatId, currentChat, isUserLoading, router, isDeleting]);
-
-  // Use user's preferred model when starting a brand-new chat
-  useEffect(() => {
-    if (!chatId && user) {
-      setSelectedModel(
-        getValidModel(user.preferredModel ?? MODEL_DEFAULT, user.disabledModels)
-      );
-    }
-  }, [user, chatId, getValidModel]);
 
   // Update document title when chat changes
   useDocumentTitle(currentChat?.title, chatId || undefined);
