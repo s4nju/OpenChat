@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
   },
   eslint: {
     // @todo: remove before going live
-    ignoreDuringBuilds: true,
+    // ignoreDuringBuilds: true,
   },
   images: {
     domains: [],

@@ -49,6 +49,7 @@ import {
   MorphingDialogImage,
   MorphingDialogTrigger,
 } from '@/components/motion-primitives/morphing-dialog';
+import { SearchQueryDisplay } from './search-query-display';
 import { SourcesList } from './sources-list';
 
 interface Source {
@@ -198,6 +199,41 @@ const extractSourcesFromParts = (
     .flatMap(extractSourcesFromToolInvocation);
 
   return [...sourcesFromParts, ...sourcesFromToolInvocations];
+};
+
+// Helper function to extract search queries from tool invocations
+const extractSearchQueries = (
+  combinedParts: MessageType['parts']
+): Array<{ query: string; toolName: string }> => {
+  if (!combinedParts) {
+    return [];
+  }
+
+  return combinedParts
+    .filter(
+      (part): part is ToolInvocationUIPart => part.type === 'tool-invocation'
+    )
+    .map((part) => {
+      const inv = part.toolInvocation as {
+        toolName?: string;
+        toolCallId?: string;
+        args?: Record<string, unknown>;
+      };
+
+      // Handle different search tool argument structures
+      if (inv.toolName === 'search' && inv.args) {
+        // New unified search tool
+        return { query: inv.args.query as string, toolName: inv.toolName };
+      }
+
+      return null;
+    })
+    .filter(
+      (item): item is { query: string; toolName: string } =>
+        item !== null &&
+        typeof item.query === 'string' &&
+        item.query.trim().length > 0
+    );
 };
 
 // File part type for rendering
@@ -385,7 +421,8 @@ const renderReasoningSection = (
   showReasoning: boolean,
   setShowReasoning: (show: (prev: boolean) => boolean) => void,
   combinedReasoningMarkdown: string,
-  id: string
+  id: string,
+  combinedParts: MessageType['parts'] = []
 ) => {
   if (reasoningParts.length === 0 && !reasoning_text) {
     return null;
@@ -449,14 +486,70 @@ const renderReasoningSection = (
             key="reasoning"
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
-            {combinedReasoningMarkdown && (
-              <Markdown
-                className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
-                id={`${id}-reasoning`}
-              >
-                {combinedReasoningMarkdown}
-              </Markdown>
-            )}
+            {/* Render parts in order */}
+            {combinedParts && combinedParts.length > 0
+              ? (() => {
+                  const elements: React.ReactNode[] = [];
+                  let consecutiveSearchQueries: Array<{
+                    query: string;
+                    toolName: string;
+                  }> = [];
+
+                  const flushSearchQueries = () => {
+                    if (consecutiveSearchQueries.length > 0) {
+                      elements.push(
+                        <SearchQueryDisplay
+                          key={`${id}-search-group-${elements.length}`}
+                          queries={consecutiveSearchQueries}
+                        />
+                      );
+                      consecutiveSearchQueries = [];
+                    }
+                  };
+
+                  combinedParts.forEach((part, index) => {
+                    if (part.type === 'reasoning') {
+                      // Flush any pending search queries before adding reasoning
+                      flushSearchQueries();
+
+                      elements.push(
+                        <Markdown
+                          className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
+                          id={`${id}-reasoning-${index}`}
+                          key={`${id}-reasoning-${index}-${part.reasoning.substring(0, 20)}`}
+                        >
+                          {part.reasoning}
+                        </Markdown>
+                      );
+                    } else if (part.type === 'tool-invocation') {
+                      const inv = part.toolInvocation as {
+                        toolName?: string;
+                        args?: Record<string, unknown>;
+                      };
+                      // Collect consecutive search queries
+                      if (inv.toolName === 'search' && inv.args) {
+                        consecutiveSearchQueries.push({
+                          query: inv.args.query as string,
+                          toolName: inv.toolName,
+                        });
+                      }
+                    }
+                  });
+
+                  // Flush any remaining search queries at the end
+                  flushSearchQueries();
+
+                  return elements;
+                })()
+              : // Fallback to original behavior when no combinedParts
+                combinedReasoningMarkdown && (
+                  <Markdown
+                    className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
+                    id={`${id}-reasoning`}
+                  >
+                    {combinedReasoningMarkdown}
+                  </Markdown>
+                )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -569,6 +662,7 @@ function MessageAssistantInner({
   const errorParts = extractErrorParts(combinedParts);
   const sources = extractSourcesFromParts(combinedParts);
   const fileParts = extractFileParts(combinedParts);
+  const searchQueries = extractSearchQueries(combinedParts);
   const toolInvocationsInProgress = getToolInvocationsInProgress(combinedParts);
   const isSearching = toolInvocationsInProgress.length > 0;
 
@@ -594,12 +688,20 @@ function MessageAssistantInner({
           showReasoning,
           setShowReasoning,
           combinedReasoningMarkdown,
-          id
+          id,
+          combinedParts
         )}
 
         {renderErrorParts(errorParts)}
 
         {renderSearchSpinner(isSearching)}
+
+        {/* Display search queries when search tools were executed - only show outside reasoning block if no reasoning parts exist */}
+        {searchQueries.length > 0 &&
+          !isSearching &&
+          reasoningParts.length === 0 && (
+            <SearchQueryDisplay queries={searchQueries} />
+          )}
 
         {/* Render text content only if it's not empty */}
         {children.trim() && (

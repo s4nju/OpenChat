@@ -9,6 +9,7 @@ import { AnimatePresence, motion, type Transition } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { SearchQueryDisplay } from './search-query-display';
 import { SearchResults } from './search-result';
 
 type CustomToolInvocation =
@@ -125,6 +126,41 @@ function parseResultData(result: unknown): {
 
   // Fallback – return raw object stringified for display
   return { parsed: JSON.stringify(result), error: null };
+}
+
+// Helper function to extract search queries from tool arguments
+function extractSearchQueries(
+  toolInvocations: CustomToolInvocationUIPart[]
+): Array<{ query: string; toolName: string }> {
+  return toolInvocations
+    .map((item) => {
+      const { toolInvocation } = item;
+      const { toolName, args } = toolInvocation as CustomToolInvocation;
+
+      // Handle different search tool argument structures
+      if (toolName === 'search' && args) {
+        // New unified search tool
+        return { query: args.query as string, toolName };
+      }
+
+      if (toolName === 'duckDuckGo' && args) {
+        // Legacy duckDuckGo tool
+        return { query: args.query as string, toolName };
+      }
+
+      if (toolName === 'exaSearch' && args) {
+        // Legacy exaSearch tool
+        return { query: args.query as string, toolName };
+      }
+
+      return null;
+    })
+    .filter(
+      (item): item is { query: string; toolName: string } =>
+        item !== null &&
+        typeof item.query === 'string' &&
+        item.query.trim().length > 0
+    );
 }
 
 // Helper renderers split to keep individual functions simple
@@ -292,8 +328,17 @@ export function ToolInvocation({
     );
   }
 
+  // Extract search queries for multi-tool view
+  const allSearchQueries = extractSearchQueries(toolInvocations);
+
   return (
     <div className="mb-10">
+      {/* Search queries display for multi-tool view */}
+      {allSearchQueries.length > 0 && (
+        <div className="mb-3">
+          <SearchQueryDisplay queries={allSearchQueries} />
+        </div>
+      )}
       <div className="flex flex-col gap-0 overflow-hidden rounded-md border border-border">
         <button
           className="flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors hover:bg-accent"
@@ -427,6 +472,10 @@ function SingleToolView({
 
   const renderedResults = renderParsedResults(toolName, parsedResult);
 
+  // Extract search queries for display
+  const searchQueries = extractSearchQueries(data);
+  const isSearchTool = ['search', 'duckDuckGo', 'exaSearch'].includes(toolName);
+
   return (
     <div
       className={cn(
@@ -434,6 +483,12 @@ function SingleToolView({
         className
       )}
     >
+      {/* Search queries display - shown above the tool when it's a search tool */}
+      {isSearchTool && searchQueries.length > 0 && (
+        <div className="px-3 pt-3 pb-0">
+          <SearchQueryDisplay queries={searchQueries} />
+        </div>
+      )}
       <button
         className="flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors hover:bg-accent"
         onClick={() => setIsExpanded(!isExpanded)}
