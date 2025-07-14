@@ -48,7 +48,7 @@ type ModelCardProps = {
   onToggleFavorite: (modelId: string) => void
 }
 
-export function ModelCard({
+export const ModelCard = React.memo(function ModelCard({
   model,
   isSelected,
   isFavorite,
@@ -88,13 +88,13 @@ export function ModelCard({
   const webSearchColorClasses = "text-blue-600 dark:text-blue-400"
   const imageGenerationColorClasses = "text-orange-600 dark:text-orange-400"
 
-  const handleCardClick = () => {
+  const handleCardClick = React.useCallback(() => {
     if (!isDisabled) {
       onSelect(model.id)
     }
-  }
+  }, [isDisabled, onSelect, model.id])
 
-  const handleToggleFavorite = (e: React.MouseEvent) => {
+  const handleToggleFavorite = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     // Prevent unpinning if this is the last favorite
@@ -102,58 +102,66 @@ export function ModelCard({
       return
     }
     onToggleFavorite(model.id)
-  }
+  }, [isFavorite, isLastFavorite, onToggleFavorite, model.id])
 
   // Helper function to format display name with subName
-  const getDisplayName = (modelName: string, subName?: string) => {
+  const getDisplayName = React.useCallback((modelName: string, subName?: string) => {
     return subName ? `${modelName} (${subName})` : modelName
-  }
+  }, [])
 
-  // Use the full display name including subName
-  const displayName = getDisplayName(model.name, model.subName)
-  const nameParts = displayName.split(" ")
-  const firstName = nameParts[0] || ""
-  const restName = nameParts.slice(1).join(" ")
+  // Use the full display name including subName - memoized
+  const { displayName, firstName, restName } = React.useMemo(() => {
+    const displayName = getDisplayName(model.name, model.subName)
+    const nameParts = displayName.split(" ")
+    const firstName = nameParts[0] || ""
+    const restName = nameParts.slice(1).join(" ")
+    return { displayName, firstName, restName }
+  }, [model.name, model.subName, getDisplayName])
 
-  const tooltipContentParts: React.ReactNode[] = []
-  if (model.usesPremiumCredits) {
-    tooltipContentParts.push(
-      <span key="premium" className="flex items-center gap-1">
-        <SketchLogoIcon weight="regular" className="size-3" />
-        Premium
-      </span>
+  // Memoized tooltip content
+  const { tooltipContentParts, tooltipDisplay } = React.useMemo(() => {
+    const tooltipContentParts: React.ReactNode[] = []
+    if (model.usesPremiumCredits) {
+      tooltipContentParts.push(
+        <span key="premium" className="flex items-center gap-1">
+          <SketchLogoIcon weight="regular" className="size-3" />
+          Premium
+        </span>
+      )
+    }
+    if (model.apiKeyUsage.userKeyOnly) {
+      tooltipContentParts.push(
+        <span key="apikey" className="flex items-center gap-1">
+          <Key className="size-3" />
+          Requires API Key
+        </span>
+      )
+    }
+
+    const shortDescription = model.description?.split(".")[0]
+    if (shortDescription) {
+      // Limit description length for tooltip display
+      const truncated = shortDescription.length > 100
+        ? shortDescription.substring(0, 97) + "..."
+        : shortDescription
+      tooltipContentParts.push(<span key="desc">{truncated}</span>)
+    }
+
+    const tooltipDisplay = (
+      <div className="flex items-center gap-1.5 text-xs font-medium text-primary-foreground">
+        {tooltipContentParts.map((part, i) => (
+          <React.Fragment key={i}>
+            {part}
+            {i < tooltipContentParts.length - 1 && (
+              <span className="text-muted-foreground">·</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
     )
-  }
-  if (model.apiKeyUsage.userKeyOnly) {
-    tooltipContentParts.push(
-      <span key="apikey" className="flex items-center gap-1">
-        <Key className="size-3" />
-        Requires API Key
-      </span>
-    )
-  }
-
-  const shortDescription = model.description?.split(".")[0]
-  if (shortDescription) {
-    // Limit description length for tooltip display
-    const truncated = shortDescription.length > 100
-      ? shortDescription.substring(0, 97) + "..."
-      : shortDescription
-    tooltipContentParts.push(<span key="desc">{truncated}</span>)
-  }
-
-  const tooltipDisplay = (
-    <div className="flex items-center gap-1.5 text-xs font-medium text-primary-foreground">
-      {tooltipContentParts.map((part, i) => (
-        <React.Fragment key={i}>
-          {part}
-          {i < tooltipContentParts.length - 1 && (
-            <span className="text-muted-foreground">·</span>
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  )
+    
+    return { tooltipContentParts, tooltipDisplay }
+  }, [model.usesPremiumCredits, model.apiKeyUsage.userKeyOnly, model.description])
 
   return (
     <div className="group relative" data-state="closed">
@@ -353,4 +361,4 @@ export function ModelCard({
       </div>
     </div>
   )
-}
+})

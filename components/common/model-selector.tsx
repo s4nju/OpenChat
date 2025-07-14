@@ -72,9 +72,9 @@ const { categorizedModels } = useEnrichedModels()
   const isExtended = searchQuery.length > 0 || isExtendedMode
 
   // Helper function to format display name with subName
-  const getDisplayName = (modelName: string, subName?: string) => {
+  const getDisplayName = React.useCallback((modelName: string, subName?: string) => {
     return subName ? `${modelName} (${subName})` : modelName
-  }
+  }, [])
 
   // Optimized model filtering using pre-computed enriched models
   const { normalModeModels, favoritesModels, othersModels, disabledModels } = React.useMemo(() => {
@@ -103,7 +103,7 @@ return {
       othersModels: others,
       disabledModels: disabled,
     };
-  }, [categorizedModels, searchQuery, disabledModelsSet])
+  }, [categorizedModels, searchQuery, disabledModelsSet, getDisplayName])
 
 
   // Handle toggle between normal and extended mode
@@ -149,7 +149,7 @@ return {
     [model]
   )
 
-  const renderModelOption = (modelOption: EnrichedModel) => {
+  const renderModelOption = React.useCallback((modelOption: EnrichedModel) => {
     const providerOption = modelOption.providerInfo;
     // Optimized feature flags using pre-computed featuresMap
     const hasFileUpload = modelOption.featuresMap["file-upload"];
@@ -299,7 +299,7 @@ return {
         </div>
       </DropdownMenuItem>
     )
-  }
+  }, [selectedModelId, handleSelect, getDisplayName])
 
   return (
     <TooltipProvider>
