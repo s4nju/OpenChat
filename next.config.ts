@@ -26,7 +26,6 @@ const nextConfig: NextConfig = {
       '@ridemountainpig/svgl-react',
     ],
     reactCompiler: true,
-    // nodeMiddleware: true,
   },
   eslint: {
     // @todo: remove before going live
