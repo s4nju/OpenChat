@@ -128,7 +128,7 @@ export function ModelCard({
     tooltipContentParts.push(
       <span key="apikey" className="flex items-center gap-1">
         <Key className="size-3" />
-        Requires Key
+        Requires API Key
       </span>
     )
   }

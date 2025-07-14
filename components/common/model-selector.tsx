@@ -19,6 +19,7 @@ import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useUser } from "@/app/providers/user-provider"
 import { useModelPreferences } from "@/app/hooks/use-model-preferences"
+import { useModelSettings } from "@/app/hooks/use-model-settings"
 import { useEnrichedModels, type EnrichedModel } from "@/app/hooks/use-enriched-models"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
@@ -30,7 +31,7 @@ import {
   GlobeIcon,
   SketchLogoIcon,
 } from "@phosphor-icons/react"
-import { Key, ImagePlus, Pin } from "lucide-react"
+import { Key, ImagePlus, Pin, EyeOff } from "lucide-react"
 import { ProviderIcon } from "@/app/components/common/provider-icon"
 import { ModelCard } from "./model-card"
 import { ModelSelectorSearchHeader } from "./model-selector-search-header"
@@ -49,7 +50,8 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const { hasPremium, products } = useUser()
   const { favoriteModelsSet, toggleFavoriteModel } = useModelPreferences()
-  const { categorizedModels } = useEnrichedModels()
+const { categorizedModels } = useEnrichedModels()
+  const { disabledModelsSet } = useModelSettings()
   const isMobile = useBreakpoint(768) // Use 768px as the breakpoint
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink)
   
@@ -75,9 +77,11 @@ export function ModelSelector({
   }
 
   // Optimized model filtering using pre-computed enriched models
-  const { normalModeModels, favoritesModels, othersModels } = React.useMemo(() => {
-    let favorites = categorizedModels.favorites;
-    let others = categorizedModels.others;
+  const { normalModeModels, favoritesModels, othersModels, disabledModels } = React.useMemo(() => {
+let favorites = categorizedModels.favorites;
+    let others = categorizedModels.others.filter(model => !disabledModelsSet.has(model.id));
+    // Get disabled models from settings (not unavailable models)
+    let disabled = categorizedModels.all.filter(model => disabledModelsSet.has(model.id));
 
     // Apply search filter if needed
     if (searchQuery) {
@@ -90,14 +94,16 @@ export function ModelSelector({
       
       favorites = favorites.filter(matchesSearch);
       others = others.filter(matchesSearch);
+      disabled = disabled.filter(matchesSearch);
     }
 
-    return {
+return {
       normalModeModels: favorites, // Normal mode shows only favorites
       favoritesModels: favorites,
       othersModels: others,
+      disabledModels: disabled,
     };
-  }, [categorizedModels, searchQuery])
+  }, [categorizedModels, searchQuery, disabledModelsSet])
 
 
   // Handle toggle between normal and extended mode
@@ -392,10 +398,10 @@ export function ModelSelector({
                       />
                     ))}
                   </>
-                )}
+    )}
 
-                {/* Others Section */}
-                {othersModels.length > 0 && (
+            {/* Others Section */}
+            {othersModels.length > 0 && (
                   <>
                     <div className="-mb-2 ml-2 mt-1 w-full select-none text-color-heading">
                       Others
@@ -414,6 +420,28 @@ export function ModelSelector({
                     ))}
                   </>
                 )}
+
+            {/* Disabled Section */}
+            {disabledModels.length > 0 && (
+              <>
+                <div className="-mb-2 ml-2 mt-1 w-full select-none items-center justify-start gap-1.5 text-color-heading flex">
+                  <EyeOff className="mt-px size-4" />
+                  Disabled
+                </div>
+                {disabledModels.map(modelOption => (
+                  <ModelCard
+                    key={modelOption.id}
+                    model={modelOption}
+                    isSelected={selectedModelId === modelOption.id}
+                    isFavorite={false}
+                    isLastFavorite={false}
+                    isDisabled={true}
+                    onSelect={handleSelect}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </>
+            )}
               </div>
             ) : (
               normalModeModels.map(modelOption => renderModelOption(modelOption))
