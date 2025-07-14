@@ -42,7 +42,7 @@ export function useChatValidation() {
         }
 
         return true;
-      } catch (error) {
+      } catch (_error) {
         toast({
           title: 'Failed to check rate limits',
           status: 'error',
