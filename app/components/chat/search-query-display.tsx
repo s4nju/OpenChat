@@ -25,7 +25,7 @@ export const SearchQueryDisplay = memo<SearchQueryDisplayProps>(
       return queries.map((searchQuery, index) => (
         <Badge
           className="flex max-w-full items-center gap-1.5 border-border/50 bg-muted/30 px-2.5 py-1 text-foreground text-sm transition-colors hover:bg-muted/50"
-          key={`${searchQuery.toolName}-${searchQuery.query}-${index}`}
+          key={`${searchQuery.toolName || 'search'}-${searchQuery.query}-${index}`}
           variant="outline"
         >
           <MagnifyingGlassIcon className="size-3.5 flex-shrink-0 text-muted-foreground" />

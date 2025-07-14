@@ -42,8 +42,11 @@ export function useChatValidation() {
         }
 
         return true;
-      } catch {
-        // Rate limit check failed - allow the request to proceed
+      } catch (error) {
+        toast({
+          title: 'Failed to check rate limits',
+          status: 'error',
+        });
         return false;
       }
     },

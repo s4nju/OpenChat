@@ -44,6 +44,11 @@ export async function uploadAndSaveFile(
       headers: { 'Content-Type': file.type },
       body: file,
     });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed with status ${response.status}`);
+    }
+
     const { storageId } = await response.json() as { storageId: Id<'_storage'> };
     
     return await saveFileAttachment({
