@@ -38,11 +38,14 @@ docs*
 
 # vscode
 .vscode
+
+# ai rules
 .clinerules
 .open-next
 .roo
 .windsurf
 .claude
+.kiro
 
 .env.local
 .agent.md
