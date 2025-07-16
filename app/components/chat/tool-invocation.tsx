@@ -3,7 +3,7 @@
 import type {
   ToolInvocation as BaseToolInvocation,
   ToolInvocationUIPart,
-} from '@ai-sdk/ui-utils';
+} from 'ai';
 import { CaretDown, Code, Link, Nut, Spinner } from '@phosphor-icons/react';
 import { AnimatePresence, motion, type Transition } from 'framer-motion';
 import type { ReactNode } from 'react';

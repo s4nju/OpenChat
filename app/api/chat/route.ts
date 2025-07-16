@@ -8,7 +8,7 @@ import {
   createDataStreamResponse,
   experimental_generateImage as generateImage,
   type JSONValue,
-  type Message as MessageAISDK,
+  type UIMessage as MessageAISDK,
   smoothStream,
   streamText,
 } from 'ai';
@@ -437,7 +437,10 @@ function handleImageGeneration({
         }
 
         // Stream the response
-        dataStream.writeData('Generated image successfully');
+        dataStream.write({
+          'type': 'data',
+          'value': ['Generated image successfully']
+        });
       } catch (error) {
         if (currentUserMsgId && token) {
           await saveErrorMessage(
@@ -880,7 +883,7 @@ export async function POST(req: Request) {
                             if (part.text) {
                               messageParts.push({
                                 type: 'reasoning',
-                                reasoning: part.text,
+                                reasoningText: part.text,
                               });
                             }
                             break;

@@ -1,4 +1,4 @@
-import type { Message as MessageType } from '@ai-sdk/react';
+import type { UIMessage as MessageType } from '@ai-sdk/react';
 import React, { useRef } from 'react';
 import { ScrollButton } from '@/components/motion-primitives/scroll-button';
 import { ChatContainer } from '@/components/prompt-kit/chat-container';

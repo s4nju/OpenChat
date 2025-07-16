@@ -3,7 +3,7 @@
  * Helper functions for message handling, validation, and processing
  */
 
-import type { Message } from '@ai-sdk/react';
+import type { UIMessage } from '@ai-sdk/react';
 import { toast } from '@/components/ui/toast';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { convertConvexToAISDK } from '@/lib/ai-sdk-utils';
@@ -12,7 +12,7 @@ import { MESSAGE_MAX_LENGTH } from '@/lib/config';
 /**
  * Maps Convex message doc to AI SDK message type
  */
-export function mapMessage(msg: Doc<'messages'>): Message {
+export function mapMessage(msg: Doc<'messages'>): UIMessage {
   return convertConvexToAISDK(msg);
 }
 

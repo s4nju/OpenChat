@@ -5,7 +5,7 @@ import type {
   ReasoningUIPart,
   SourceUIPart,
   ToolInvocationUIPart,
-} from '@ai-sdk/ui-utils';
+} from 'ai';
 import { Loader } from '@/components/prompt-kit/loader';
 import {
   Message,
@@ -516,9 +516,9 @@ const renderReasoningSection = (
                         <Markdown
                           className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
                           id={`${id}-reasoning-${index}`}
-                          key={`${id}-reasoning-${index}-${part.reasoning.substring(0, 20)}`}
+                          key={`${id}-reasoning-${index}-${part.reasoningText.substring(0, 20)}`}
                         >
-                          {part.reasoning}
+                          {part.reasoningText}
                         </Markdown>
                       );
                     } else if (part.type === 'tool-invocation') {
@@ -669,7 +669,7 @@ function MessageAssistantInner({
   // Combine reasoning parts into a single markdown string
   const combinedReasoningMarkdown =
     reasoningParts.length > 0
-      ? reasoningParts.map((p) => p.reasoning).join('')
+      ? reasoningParts.map((p) => p.reasoningText).join('')
       : (reasoning_text ?? '');
 
   return (

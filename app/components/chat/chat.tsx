@@ -1,6 +1,6 @@
 'use client';
 
-import { type Message, useChat } from '@ai-sdk/react';
+import { type UIMessage, useChat } from '@ai-sdk/react';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useConvex } from 'convex/react';
@@ -147,7 +147,7 @@ export default function Chat() {
   const isAuthenticated = isUserAuthenticated(user);
 
   // Enhanced useChat hook with AI SDK best practices
-  const { messages, status, reload, stop, setMessages, append } = useChat({
+  const { messages, status, regenerate, stop, setMessages, append } = useChat({
     api: API_ROUTE_CHAT,
     // Global configuration
     headers: {
@@ -155,11 +155,6 @@ export default function Chat() {
     },
     // AI SDK error handling
     onError: createChatErrorHandler(),
-    // Completion callback
-    onFinish: (_message, { usage: _usage, finishReason: _finishReason }) => {
-      // Optional: Add analytics or logging here
-      // console.log('Chat completed:', { usage, finishReason });
-    },
     // Response callback for custom handling
     onResponse: (response) => {
       // Optional: Handle response headers or status
@@ -198,7 +193,7 @@ export default function Chat() {
 
       if (mappedDb.length >= currentMessages.length) {
         // DB is up-to-date or ahead – merge to preserve streaming properties
-        const merged = mappedDb.map((dbMsg: Message, idx: number) => {
+        const merged = mappedDb.map((dbMsg: UIMessage, idx: number) => {
           const prev = currentMessages[idx];
           if (prev?.parts && !dbMsg.parts) {
             return { ...dbMsg, parts: prev.parts };
@@ -543,7 +538,7 @@ export default function Chat() {
           ...(timezone ? { userInfo: { timezone } } : {}),
         },
       };
-      reload(options);
+      regenerate(options);
     },
     [
       user,
@@ -554,7 +549,7 @@ export default function Chat() {
       setMessages,
       handleDeleteMessage,
       setIsDeleting,
-      reload,
+      regenerate,
     ]
   );
 

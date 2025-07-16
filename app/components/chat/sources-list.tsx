@@ -1,6 +1,6 @@
 'use client';
 
-import type { SourceUIPart } from '@ai-sdk/ui-utils';
+import type { SourceUIPart } from 'ai';
 import { CaretDown, Globe, Link } from '@phosphor-icons/react';
 import { AnimatePresence, motion, type Transition } from 'framer-motion';
 import Image from 'next/image';

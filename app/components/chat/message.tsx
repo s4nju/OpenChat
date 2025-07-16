@@ -1,4 +1,4 @@
-import type { Message as MessageType } from '@ai-sdk/react';
+import type { UIMessage as MessageType } from '@ai-sdk/react';
 import React, { useState } from 'react';
 import type { MessageMetadata } from '@/lib/ai-sdk-utils';
 import { MessageAssistant } from './message-assistant';

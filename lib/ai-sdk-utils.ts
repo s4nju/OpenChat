@@ -1,5 +1,5 @@
 import { Doc } from "@/convex/_generated/dataModel"
-import type { Message } from "ai"
+import type { UIMessage } from "ai"
 
 // Infer types from Convex schema validators
 export type ConvexMessagePart = {
@@ -11,7 +11,7 @@ export type ConvexMessagePart = {
   mimeType: string
 } | {
   type: "reasoning"
-  reasoning: string
+  reasoningText: string
   signature?: string
   duration?: number
   details?: Array<{
@@ -57,8 +57,8 @@ export interface Attachment {
 export interface MessageMetadata {
   modelId?: string
   modelName?: string
-  promptTokens?: number
-  completionTokens?: number
+  inputTokens?: number
+  outputTokens?: number
   reasoningTokens?: number
   serverDurationMs?: number
   includeSearch?: boolean
@@ -68,7 +68,7 @@ export interface MessageMetadata {
 /**
  * Convert Convex message document to AI SDK format
  */
-export function convertConvexToAISDK(msg: Doc<"messages">): Message {
+export function convertConvexToAISDK(msg: Doc<"messages">): UIMessage {
   // Ensure reasoning parts have proper details field to prevent iteration errors
   const normalizedParts = msg.parts?.map(part => {
     if (part.type === "reasoning") {
@@ -83,13 +83,10 @@ export function convertConvexToAISDK(msg: Doc<"messages">): Message {
   return {
     id: msg._id,
     role: msg.role as "user" | "assistant" | "system",
-    content: msg.content, // Keep as fallback for text-only display
-    createdAt: new Date(msg._creationTime),
-    parts: (normalizedParts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
-    experimental_attachments: extractAttachmentsFromParts(msg.parts),
+    parts: (normalizedParts as UIMessage["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
     // Pass the entire metadata object for easier access to any metadata property
     ...(msg.metadata && { metadata: msg.metadata as MessageMetadata }),
-  }
+  };
 }
 
 /**
@@ -138,12 +135,12 @@ export function convertAttachmentsToFileParts(attachments: Attachment[]): Convex
 /**
  * Extract reasoning text from AI SDK response parts
  */
-export function extractReasoningFromResponse(responseParts: Array<{ type: string; reasoning?: string; text?: string }>): string | undefined {
+export function extractReasoningFromResponse(responseParts: Array<{ type: string; reasoningText?: string; text?: string }>): string | undefined {
   if (!responseParts) return undefined
   
   const reasoningText = responseParts
     .filter(part => part.type === "reasoning")
-    .map(part => part.reasoning || part.text)
+    .map(part => part.reasoningText || part.text)
     .join("\n")
   
   return reasoningText || undefined
@@ -153,7 +150,7 @@ export function extractReasoningFromResponse(responseParts: Array<{ type: string
  * Build metadata object from AI SDK usage, response and model info
  */
 export function buildMetadataFromResponse(
-  usage: { promptTokens?: number; completionTokens?: number; reasoningTokens?: number }, 
+  usage: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number }, 
   response: { modelId?: string }, 
   modelId: string,
   modelName: string,
@@ -164,13 +161,13 @@ export function buildMetadataFromResponse(
   return {
     modelId,
     modelName: modelName || response.modelId || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
-    promptTokens: usage?.promptTokens || 0,
-    completionTokens: usage?.completionTokens || 0,
+    inputTokens: usage?.inputTokens || 0,
+    outputTokens: usage?.outputTokens || 0,
     reasoningTokens: usage?.reasoningTokens || 0, // Default to 0 instead of undefined/NaN
     serverDurationMs: Date.now() - startTime,
     includeSearch: includeSearch || false,
     reasoningEffort: reasoningEffort || "none"
-  }
+  };
 }
 
 /**
@@ -183,7 +180,7 @@ export function extractReasoningFromParts(parts?: ConvexMessagePart[]): string |
     part.type === "reasoning"
   )
   
-  return reasoningPart?.reasoning
+  return reasoningPart?.reasoningText;
 }
 
 /**
@@ -214,7 +211,7 @@ export function createPartsFromAIResponse(
   if (reasoningText) {
     parts.push({ 
       type: "reasoning", 
-      reasoning: reasoningText,
+      reasoningText: reasoningText,
       details: [] // Initialize details as empty array to prevent iteration errors
     })
   }
@@ -243,7 +240,7 @@ export function createPartsFromAIResponse(
  */
 export function isConvexStorageId(value: string): boolean {
   // Convex storage IDs are typically 32-character hex strings
-  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:') && !value.startsWith('blob:')
+  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:') && !value.startsWith('blob:');
 }
 
 /**
