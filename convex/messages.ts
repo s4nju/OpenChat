@@ -53,20 +53,20 @@ async function cleanupMessageAttachments(
 async function cleanupSingleAttachment(
   ctx: MutationCtx,
   chatId: Id<'chats'>,
-  fileId: string,
+  fileName: string,
   userId: Id<'users'>
 ) {
   try {
-    // This uses .filter() correctly - first narrows by index (by_chatId), then filters by fileId
+    // This uses .filter() correctly - first narrows by index (by_chatId), then filters by fileName
     // See: https://docs.convex.dev/database/indexes/ - "For all other filtering you can use the .filter method"
     const attachment = await ctx.db
       .query('chat_attachments')
       .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
-      .filter((q) => q.eq(q.field('fileId'), fileId))
+      .filter((q) => q.eq(q.field('fileName'), fileName))
       .first();
 
     if (attachment && attachment.userId === userId) {
-      await ctx.storage.delete(attachment.fileId as Id<'_storage'>);
+      await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
       await ctx.db.delete(attachment._id);
     }
   } catch (_error) {
@@ -115,7 +115,7 @@ async function cleanupOrphanedAttachments(
   const cleanupPromises = orphanedAttachments.map(
     async (attachment: Doc<'chat_attachments'>) => {
       try {
-        await ctx.storage.delete(attachment.fileId as Id<'_storage'>);
+        await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
         await ctx.db.delete(attachment._id);
       } catch (_error) {
         // Silently continue with other cleanup
@@ -251,41 +251,11 @@ export const getMessagesForChat = query({
       return [];
     }
 
-    const messages = await ctx.db
+    return await ctx.db
       .query('messages')
       .withIndex('by_chat_and_created', (q) => q.eq('chatId', chatId))
       .order('asc')
       .collect();
-
-    // Generate URLs on-the-fly for file parts containing storage IDs
-    return Promise.all(
-      messages.map(async (message) => {
-        if (!message.parts) {
-          return message;
-        }
-
-        const resolvedParts = await Promise.all(
-          message.parts.map(async (part) => {
-            if (
-              part.type === 'file' &&
-              part.data &&
-              isConvexStorageId(part.data)
-            ) {
-              try {
-                // Generate fresh URL from storage ID
-                const url = await ctx.storage.getUrl(part.data);
-                return { ...part, url: url || undefined }; // Use undefined instead of null for TypeScript compatibility
-              } catch (_error) {
-                return part; // Return part without URL if generation fails
-              }
-            }
-            return part;
-          })
-        );
-
-        return { ...message, parts: resolvedParts };
-      })
-    );
   },
 });
 
