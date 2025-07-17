@@ -7,4 +7,5 @@ export const ChatAttachment = v.object({
   fileType: v.string(),
   fileSize: v.number(),
   isGenerated: v.optional(v.boolean()), // Indicates if this is an AI-generated image
+  url: v.optional(v.string()), // Permanent public storage URL
 });

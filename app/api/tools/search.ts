@@ -37,7 +37,7 @@ export const processResults = (results: SearchResult[]): SearchResult[] => {
 export const searchTool = tool({
   description:
     'Search the web for current information and facts. Use this when you need to verify current facts, find recent events, or get real-time data.',
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe('The search query'),
     maxResults: z
       .number()

@@ -825,7 +825,7 @@ export const deleteAccount = mutation({
     // Delete attachments and their files
     for (const att of attachments) {
       deletionPromises.push(
-        ctx.storage.delete(att.fileId as Id<'_storage'>).catch(() => {
+        ctx.storage.delete(att.fileName as Id<'_storage'>).catch(() => {
           // Silently handle storage deletion errors
         })
       );
