@@ -5,12 +5,14 @@ import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 import { withTracing } from '@posthog/ai';
 import {
-  createDataStreamResponse,
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  type FileUIPart,
   experimental_generateImage as generateImage,
   type JSONValue,
-  type UIMessage as MessageAISDK,
-  smoothStream,
+  stepCountIs,
   streamText,
+  type UIMessage,
 } from 'ai';
 import { checkBotId } from 'botid/server';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
@@ -18,11 +20,8 @@ import { PostHog } from 'posthog-node';
 import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
-import {
-  buildMetadataFromResponse,
-  type ConvexMessagePart,
-  convertAttachmentsToFileParts,
-} from '@/lib/ai-sdk-utils';
+import { Message } from '@/convex/schema/message';
+import { buildMetadataFromResponse } from '@/lib/ai-sdk-utils';
 import { MODELS_MAP } from '@/lib/config';
 import {
   classifyError,
@@ -137,7 +136,7 @@ type SupportedProvider =
  * Helper function to save user message to chat if not in reload mode
  */
 async function saveUserMessage(
-  messages: MessageAISDK[],
+  messages: UIMessage[],
   chatId: Id<'chats'>,
   token: string | undefined,
   reloadAssistantMessageId?: Id<'messages'>
@@ -145,25 +144,21 @@ async function saveUserMessage(
   if (!reloadAssistantMessageId && token) {
     const userMessage = messages.at(-1);
     if (userMessage && userMessage.role === 'user') {
-      // Convert experimental_attachments to FileParts before saving
-      const fileParts = userMessage.experimental_attachments
-        ? convertAttachmentsToFileParts(userMessage.experimental_attachments)
-        : [];
+      // Use parts directly since schema now matches AI SDK v5
+      const userParts = userMessage.parts || [];
 
-      const userParts = [
-        {
-          type: 'text' as const,
-          text: sanitizeUserInput(userMessage.content as string),
-        },
-        ...fileParts,
-      ];
+      // Extract text content for backwards compatibility
+      const textContent = userParts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join('');
 
       const { messageId } = await fetchMutation(
         api.messages.sendUserMessageToChat,
         {
           chatId,
           role: 'user',
-          content: sanitizeUserInput(userMessage.content as string),
+          content: sanitizeUserInput(textContent),
           parts: userParts,
           metadata: {}, // Empty metadata for user messages
         },
@@ -201,7 +196,7 @@ const REASONING_MODELS = {
 } as const;
 
 type ChatRequest = {
-  messages: MessageAISDK[];
+  messages: UIMessage[];
   chatId: Id<'chats'>;
   model: string;
   personaId?: string;
@@ -297,33 +292,35 @@ function handleImageGeneration({
   userMsgId,
   token,
 }: {
-  messages: MessageAISDK[];
+  messages: UIMessage[];
   chatId: Id<'chats'>;
   selectedModel: (typeof MODELS_MAP)[string];
   userMsgId: Id<'messages'> | null;
   token?: string;
 }) {
-  return createDataStreamResponse({
-    execute: async (dataStream) => {
+  return createUIMessageStreamResponse({
+    execute: async ({ writer }) => {
       let currentUserMsgId: Id<'messages'> | null = userMsgId;
 
       // Save user message first
       if (!currentUserMsgId && token) {
         const userMessage = messages.at(-1);
         if (userMessage && userMessage.role === 'user') {
-          const userParts = [
-            {
-              type: 'text' as const,
-              text: sanitizeUserInput(userMessage.content as string),
-            },
-          ];
+          // Use existing parts array from v5 message
+          const userParts = userMessage.parts || [];
+
+          // Extract text content for backwards compatibility
+          const textContent = userParts
+            .filter((part) => part.type === 'text')
+            .map((part) => part.text)
+            .join('');
 
           const { messageId } = await fetchMutation(
             api.messages.sendUserMessageToChat,
             {
               chatId,
               role: 'user',
-              content: sanitizeUserInput(userMessage.content as string),
+              content: sanitizeUserInput(textContent),
               parts: userParts,
               metadata: {},
             },
@@ -334,10 +331,13 @@ function handleImageGeneration({
       }
 
       try {
-        // Extract the prompt from the last user message
+        // Extract the prompt from the last user message parts
         const lastMessage = messages.at(-1);
         // console.log(lastMessage);
-        const prompt = (lastMessage?.content as string) || 'A beautiful image';
+        const textPart = lastMessage?.parts?.find(
+          (part) => part.type === 'text'
+        );
+        const prompt = textPart?.text || 'A beautiful image';
 
         // Generate the image using built-in API key
         // Use different parameters based on provider (OpenAI uses size, Google uses aspectRatio)
@@ -380,17 +380,13 @@ function handleImageGeneration({
 
         const { storageId } = await uploadResponse.json();
 
-        // Generate a single filename to ensure consistency
-        const fileName = `generated-image-${Date.now()}.png`;
-
         // Save generated image to attachments table
         if (token) {
           await fetchAction(
             api.files.saveGeneratedImage,
             {
-              storageId,
+              fileName: storageId,
               chatId,
-              fileName,
               fileType: 'image/png',
               fileSize: imageBuffer.length,
             },
@@ -399,11 +395,11 @@ function handleImageGeneration({
         }
 
         // Create file part for the generated image
-        const filePart = {
-          type: 'file' as const,
-          data: storageId,
-          filename: fileName,
-          mimeType: 'image/png',
+        const filePart: FileUIPart = {
+          type: 'file',
+          filename: storageId,
+          mediaType: 'image/png',
+          url: uploadResponse.url,
         };
 
         // Save assistant message with image
@@ -437,9 +433,9 @@ function handleImageGeneration({
         }
 
         // Stream the response
-        dataStream.write({
-          'type': 'data',
-          'value': ['Generated image successfully']
+        writer.write({
+          type: 'data',
+          value: ['Generated image successfully'],
         });
       } catch (error) {
         if (currentUserMsgId && token) {
@@ -680,8 +676,8 @@ export async function POST(req: Request) {
 
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
 
-    return createDataStreamResponse({
-      execute: async (dataStream) => {
+    return createUIMessageStreamResponse({
+      execute: async ({ writer }) => {
         let userMsgId: Id<'messages'> | null = null;
 
         // --- Reload Logic (Delete and Recreate) ---
@@ -708,57 +704,6 @@ export async function POST(req: Request) {
             reloadAssistantMessageId
           );
         }
-
-        // Helper to convert storage IDs to fresh URLs for AI models
-        const resolveAttachmentUrls = async (
-          messagesToResolve: MessageAISDK[]
-        ): Promise<MessageAISDK[]> => {
-          return await Promise.all(
-            messagesToResolve.map(async (message) => {
-              if (!message.experimental_attachments) {
-                return message;
-              }
-
-              const resolvedAttachments = await Promise.all(
-                message.experimental_attachments.map(async (attachment) => {
-                  // Check if URL is actually a storage ID
-                  const isStorageId =
-                    attachment.url &&
-                    !attachment.url.startsWith('http') &&
-                    !attachment.url.startsWith('data:') &&
-                    !attachment.url.startsWith('blob:');
-
-                  if (isStorageId) {
-                    try {
-                      // Generate fresh URL from storage ID for AI model
-                      const freshUrl = await fetchQuery(
-                        api.files.getStorageUrl,
-                        { storageId: attachment.url },
-                        { token }
-                      );
-                      return { ...attachment, url: freshUrl || attachment.url };
-                    } catch (_error) {
-                      // console.warn(
-                      //   `Failed to resolve storage URL for ${attachment.url}:`,
-                      //   error
-                      // );
-                      return attachment; // Return as-is if resolution fails
-                    }
-                  }
-                  return attachment;
-                })
-              );
-
-              return {
-                ...message,
-                experimental_attachments: resolvedAttachments,
-              };
-            })
-          );
-        };
-
-        // Resolve storage IDs to fresh URLs for AI consumption
-        const resolvedMessages = await resolveAttachmentUrls(messages);
 
         const makeOptions = (useUser: boolean) => {
           const key = useUser ? userApiKey : undefined;
@@ -811,16 +756,12 @@ export async function POST(req: Request) {
                 })
               : selectedModel.api_sdk,
             system: finalSystemPrompt,
-            messages: resolvedMessages,
+            messages: convertToModelMessages(messages),
             tools: enableSearch ? { search: searchTool } : undefined,
-            maxSteps: 5,
+            stopWhen: stepCountIs(5),
             providerOptions: makeOptions(useUser) as
               | Record<string, Record<string, JSONValue>>
               | undefined,
-            experimental_transform: smoothStream({
-              delayInMs: 10,
-              chunking: 'word',
-            }),
             onError: async (error) => {
               // Save conversation errors as messages
               if (shouldShowInConversation(error) && token) {
@@ -844,99 +785,8 @@ export async function POST(req: Request) {
                 throw new Error(JSON.stringify(streamingError.errorPayload));
               }
             },
-            async onFinish({ usage, response }) {
+            async onFinish({ usage, messages, response }) {
               try {
-                // Get the actual response data
-                const responseData = response;
-
-                // console.log("DEBUG: Response structure:", {
-                //   messageCount: responseData.messages.length,
-                //   messages: responseData.messages.map((msg, idx) => ({
-                //     index: idx,
-                //     role: msg.role,
-                //     contentType: Array.isArray(msg.content) ? 'array' : typeof msg.content,
-                //     contentLength: Array.isArray(msg.content) ? msg.content.length : msg.content?.length || 0,
-                //     contentTypes: Array.isArray(msg.content) ? msg.content.map(p => p.type) : [],
-                //     content: Array.isArray(msg.content) ? msg.content : msg.content
-                //   }))
-                // });
-
-                // Process messages sequentially and build parts
-                const messageParts: ConvexMessagePart[] = [];
-                let combinedTextContent = '';
-
-                for (const msg of responseData.messages) {
-                  if (msg.role === 'assistant') {
-                    if (Array.isArray(msg.content)) {
-                      for (const part of msg.content) {
-                        switch (part.type) {
-                          case 'text':
-                            if (part.text.trim()) {
-                              messageParts.push({
-                                type: 'text',
-                                text: part.text,
-                              });
-                              combinedTextContent += part.text;
-                            }
-                            break;
-                          case 'reasoning':
-                            if (part.text) {
-                              messageParts.push({
-                                type: 'reasoning',
-                                reasoningText: part.text,
-                              });
-                            }
-                            break;
-                          case 'tool-call':
-                            messageParts.push({
-                              type: 'tool-invocation',
-                              toolInvocation: {
-                                toolCallId: part.toolCallId,
-                                toolName: part.toolName,
-                                args: part.args,
-                                result: undefined,
-                                state: 'call',
-                              },
-                            });
-                            break;
-                          default:
-                            // Ignore other part types
-                            break;
-                        }
-                      }
-                    } else if (
-                      typeof msg.content === 'string' &&
-                      msg.content.trim()
-                    ) {
-                      // Handle string content from assistant messages
-                      messageParts.push({ type: 'text', text: msg.content });
-                      combinedTextContent += msg.content;
-                    }
-                  }
-
-                  if (msg.role === 'tool' && Array.isArray(msg.content)) {
-                    for (const part of msg.content) {
-                      if (part.type === 'tool-result') {
-                        const matchingInvocation = messageParts.find(
-                          (
-                            p
-                          ): p is Extract<
-                            ConvexMessagePart,
-                            { type: 'tool-invocation' }
-                          > =>
-                            p.type === 'tool-invocation' &&
-                            p.toolInvocation.toolCallId === part.toolCallId
-                        );
-                        if (matchingInvocation) {
-                          matchingInvocation.toolInvocation.result =
-                            part.result;
-                          matchingInvocation.toolInvocation.state = 'result';
-                        }
-                      }
-                    }
-                  }
-                }
-
                 if (!userMsgId) {
                   throw new Error(
                     'Missing parent userMsgId when saving assistant message.'
@@ -959,9 +809,9 @@ export async function POST(req: Request) {
                   {
                     chatId,
                     role: 'assistant',
-                    content: combinedTextContent,
+                    content: messages.content || '',
                     parentMessageId: userMsgId,
-                    parts: messageParts,
+                    parts: messages.part,
                     metadata,
                   },
                   { token }
@@ -1068,8 +918,6 @@ export async function POST(req: Request) {
             throw streamError;
           }
         }
-
-        result.mergeIntoDataStream(dataStream, { sendReasoning: true });
       },
       onError: (error) => {
         const errorMsg = error instanceof Error ? error.message : String(error);

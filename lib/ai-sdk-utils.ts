@@ -65,29 +65,6 @@ export interface MessageMetadata {
   reasoningEffort?: string
 }
 
-/**
- * Convert Convex message document to AI SDK format
- */
-export function convertConvexToAISDK(msg: Doc<"messages">): UIMessage {
-  // Ensure reasoning parts have proper details field to prevent iteration errors
-  const normalizedParts = msg.parts?.map(part => {
-    if (part.type === "reasoning") {
-      return {
-        ...part,
-        details: part.details || [] // Ensure details is always an array
-      }
-    }
-    return part
-  })
-
-  return {
-    id: msg._id,
-    role: msg.role as "user" | "assistant" | "system",
-    parts: (normalizedParts as UIMessage["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
-    // Pass the entire metadata object for easier access to any metadata property
-    ...(msg.metadata && { metadata: msg.metadata as MessageMetadata }),
-  };
-}
 
 /**
  * Extract attachment objects from FileParts for AI SDK experimental_attachments

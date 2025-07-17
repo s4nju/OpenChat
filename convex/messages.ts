@@ -4,7 +4,6 @@ import type { Doc, Id } from './_generated/dataModel';
 import { type MutationCtx, mutation, query } from './_generated/server';
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
-import { MessagePart } from './schema/parts';
 
 /**
  * Regex to detect Convex storage IDs (32-character hex strings)
@@ -137,7 +136,7 @@ export const sendUserMessageToChat = mutation({
     ),
     content: v.string(),
     parentMessageId: v.optional(v.id('messages')),
-    parts: v.optional(v.array(MessagePart)),
+    parts: v.optional(v.any()), // Allow any type for parts
     metadata: v.optional(
       v.object({
         modelId: v.optional(v.string()),
@@ -181,7 +180,7 @@ export const saveAssistantMessage = mutation({
     ),
     content: v.string(),
     parentMessageId: v.optional(v.id('messages')),
-    parts: v.optional(v.array(MessagePart)),
+    parts: v.optional(v.any()),
     metadata: v.optional(
       v.object({
         modelId: v.optional(v.string()),
@@ -230,7 +229,7 @@ export const getMessagesForChat = query({
       ),
       content: v.string(),
       createdAt: v.optional(v.number()),
-      parts: v.optional(v.array(MessagePart)),
+      parts: v.optional(v.any()),
       parentMessageId: v.optional(v.id('messages')),
       metadata: v.object({
         modelId: v.optional(v.string()),

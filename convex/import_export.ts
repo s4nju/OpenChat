@@ -2,7 +2,6 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { mutation } from './_generated/server';
-import { MessagePart } from './schema/parts';
 
 export const bulkImportChat = mutation({
   args: {
@@ -19,7 +18,7 @@ export const bulkImportChat = mutation({
           v.literal('system')
         ),
         content: v.string(),
-        parts: v.optional(v.array(MessagePart)),
+        parts: v.optional(v.array(v.any())), // Use any to allow any part structure
         metadata: v.optional(
           v.object({
             modelId: v.optional(v.string()),
