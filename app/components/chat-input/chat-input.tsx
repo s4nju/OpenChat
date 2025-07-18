@@ -228,13 +228,16 @@ export function ChatInput({
                 aria-label="Send message"
                 className="origin-right scale-90 transform rounded-full transition-all duration-300 ease-out sm:scale-100"
                 disabled={
-                  !value.trim() && files.length === 0 && status !== 'streaming'
+                  !value.trim() &&
+                  files.length === 0 &&
+                  status !== 'streaming' &&
+                  status !== 'submitted'
                 }
                 onClick={handleMainClick}
                 size="sm"
                 type="button"
               >
-                {status === 'streaming' ? (
+                {status === 'streaming' || status === 'submitted' ? (
                   <Stop className="size-4" />
                 ) : (
                   <ArrowUp className="size-4" />

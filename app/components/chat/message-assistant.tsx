@@ -1,10 +1,11 @@
 'use client';
 
-import type { Message as MessageType } from '@ai-sdk/react';
+import type { UIMessage as MessageType } from '@ai-sdk/react';
 import type {
+  FileUIPart,
   ReasoningUIPart,
-  SourceUIPart,
-  ToolInvocationUIPart,
+  SourceUrlUIPart,
+  ToolUIPart,
 } from 'ai';
 import { Loader } from '@/components/prompt-kit/loader';
 import {
@@ -52,13 +53,6 @@ import {
 import { SearchQueryDisplay } from './search-query-display';
 import { SourcesList } from './sources-list';
 
-interface Source {
-  id: string;
-  url: string;
-  title: string;
-  sourceType: 'url';
-}
-
 // Helper function to format model display with reasoning effort
 const formatModelDisplayText = (modelName: string, effort?: string) => {
   if (!effort || effort === 'none') {
@@ -67,138 +61,50 @@ const formatModelDisplayText = (modelName: string, effort?: string) => {
   return `${modelName} (${effort})`;
 };
 
-// Helper function to process search tool results
-const processSearchToolResult = (
-  inv: { toolCallId?: string; result?: unknown },
-  toolCallId?: string
-): Source[] => {
-  if (!inv.result || typeof inv.result !== 'object' || inv.result === null) {
-    return [];
-  }
-
-  const searchResult = inv.result as {
-    success?: boolean;
-    results?: Array<{ url?: string; title?: string }>;
-  };
-
-  if (!(searchResult.success && Array.isArray(searchResult.results))) {
-    return [];
-  }
-
-  return searchResult.results
-    .filter((item) => item?.url && item?.title)
-    .map((item, idx: number) => ({
-      id: toolCallId ? `${toolCallId}-${idx}` : `search-${idx}`,
-      url: item.url ?? '',
-      title: item.title ?? '',
-      sourceType: 'url' as const,
-    }));
-};
-
-// Helper function to process legacy duckDuckGo results
-const processDuckDuckGoResult = (
-  result: unknown,
-  toolCallId?: string
-): Source[] => {
-  if (!Array.isArray(result)) {
-    return [];
-  }
-
-  return (
-    result as Array<{
-      id?: string;
-      url?: string;
-      title?: string;
-    }>
-  )
-    .filter((item) => item?.url && item?.title)
-    .map((item, idx: number) => ({
-      id: item.id ?? (toolCallId ? `${toolCallId}-${idx}` : `tmp-${idx}`),
-      url: item.url ?? '',
-      title: item.title ?? '',
-      sourceType: 'url' as const,
-    }));
-};
-
-// Helper function to process legacy exaSearch results
-const processExaSearchResult = (
-  result: unknown,
-  toolCallId?: string
-): Source[] => {
-  if (!result || typeof result !== 'object' || result === null) {
-    return [];
-  }
-
-  const exaResult = result as { results?: unknown };
-  if (!Array.isArray(exaResult.results)) {
-    return [];
-  }
-
-  return (
-    exaResult.results as Array<{
-      id?: string;
-      url?: string;
-      title?: string;
-    }>
-  )
-    .filter((item) => item?.url && item?.title)
-    .map((item, idx: number) => ({
-      id: item.id ?? `${toolCallId}-exa-${idx}`,
-      url: item.url ?? '',
-      title: item.title ?? '',
-      sourceType: 'url' as const,
-    }));
-};
-
-// Helper function to extract sources from a single tool invocation
-const extractSourcesFromToolInvocation = (
-  part: ToolInvocationUIPart
-): Source[] => {
-  const inv = part.toolInvocation as {
-    toolName?: string;
-    toolCallId?: string;
-    result?: unknown;
-  };
-
-  // New unified search tool
-  if (inv.toolName === 'search') {
-    return processSearchToolResult(inv, inv.toolCallId);
-  }
-
-  // Legacy duckDuckGo: result is array
-  if (inv.toolName === 'duckDuckGo') {
-    return processDuckDuckGoResult(inv.result, inv.toolCallId);
-  }
-
-  // Legacy exaSearch: result is object with results array
-  if (inv.toolName === 'exaSearch') {
-    return processExaSearchResult(inv.result, inv.toolCallId);
-  }
-
-  return [];
-};
-
 // Helper function to extract sources from parts
 const extractSourcesFromParts = (
   combinedParts: MessageType['parts']
-): Source[] => {
+): SourceUrlUIPart[] => {
   if (!combinedParts) {
     return [];
   }
 
-  // Extract sources from source parts
-  const sourcesFromParts: Source[] = combinedParts
-    .filter((part): part is SourceUIPart => part.type === 'source')
-    .map((part) => part.source as Source);
+  // Process both 'source-url' and 'tool-search' parts
+  return combinedParts.flatMap((part): SourceUrlUIPart[] => {
+    // Handle standard source URLs
+    if (part.type === 'source-url') {
+      return [part];
+    }
 
-  // Extract sources from tool-invocation results
-  const sourcesFromToolInvocations: Source[] = combinedParts
-    .filter(
-      (part): part is ToolInvocationUIPart => part.type === 'tool-invocation'
-    )
-    .flatMap(extractSourcesFromToolInvocation);
+    // Handle search results from the search tool
+    if (
+      part.type === 'tool-search' &&
+      'state' in part &&
+      part.state === 'output-available' &&
+      'output' in part &&
+      part.output &&
+      typeof part.output === 'object' &&
+      'results' in part.output &&
+      Array.isArray((part.output as { results: unknown }).results)
+    ) {
+      // Type assertion for safety
+      const toolPart = part as ToolUIPart & {
+        output: { results: Array<{ url: string; title: string }> };
+      };
 
-  return [...sourcesFromParts, ...sourcesFromToolInvocations];
+      // console.log('Tool search results:', toolPart.output.results[0].title);
+
+      return toolPart.output.results.map((result) => ({
+        sourceId: result.url, // Use URL as sourceId
+        type: 'source-url',
+        url: result.url,
+        title: result.title, // Use title for display
+      }));
+    }
+
+    // Return empty for other part types
+    return [];
+  });
 };
 
 // Helper function to extract search queries from tool invocations
@@ -211,13 +117,23 @@ const extractSearchQueries = (
 
   return combinedParts
     .filter(
-      (part): part is ToolInvocationUIPart => part.type === 'tool-invocation'
+      (part): part is ToolUIPart =>
+        part !== undefined &&
+        typeof part === 'object' &&
+        part !== null &&
+        'type' in part &&
+        typeof (part as { type?: unknown }).type === 'string' &&
+        (part as { type: string }).type.startsWith('tool-')
     )
     .map((part) => {
-      const inv = part.toolInvocation as {
-        toolName?: string;
-        toolCallId?: string;
-        args?: Record<string, unknown>;
+      // Extract tool name from part.type (e.g., 'tool-search' -> 'search')
+      const toolName = part.type.replace('tool-', '');
+
+      // Direct property access
+      const inv = {
+        toolName,
+        toolCallId: part.toolCallId,
+        args: part.input as Record<string, unknown> | undefined,
       };
 
       // Handle different search tool argument structures
@@ -234,15 +150,6 @@ const extractSearchQueries = (
         typeof item.query === 'string' &&
         item.query.trim().length > 0
     );
-};
-
-// File part type for rendering
-type FileUIPart = {
-  type: 'file';
-  data: string;
-  filename?: string;
-  mimeType?: string;
-  url?: string;
 };
 
 // Helper function to extract file parts
@@ -262,19 +169,13 @@ const extractFileParts = (
   );
 };
 
-// Helper function to get text from data URL
-const getTextFromDataUrl = (dataUrl: string) => {
-  const base64 = dataUrl.split(',')[1];
-  return base64;
-};
-
 // Helper function to render different file types
 const renderFilePart = (filePart: FileUIPart, index: number) => {
-  const displayUrl = filePart.url || filePart.data;
+  const displayUrl = filePart.url;
   const filename = filePart.filename || `file-${index}`;
-  const mimeType = filePart.mimeType || 'application/octet-stream';
+  const mediaType = filePart.mediaType || 'application/octet-stream';
 
-  if (mimeType.startsWith('image')) {
+  if (mediaType.startsWith('image')) {
     return (
       <MorphingDialog
         key={`file-${index}`}
@@ -308,18 +209,38 @@ const renderFilePart = (filePart: FileUIPart, index: number) => {
     );
   }
 
-  if (mimeType.startsWith('text')) {
+  if (mediaType.startsWith('text')) {
     return (
-      <div
-        className="mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-primary text-xs"
+      <a
+        aria-label={`Download text file: ${filename}`}
+        className="mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 bg-muted px-4 py-2 shadow-sm transition-colors hover:bg-muted/80 focus:bg-muted/70 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-700"
+        download={filename}
+        href={displayUrl}
         key={`file-${index}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            (e.currentTarget as HTMLAnchorElement).click();
+          }
+        }}
+        rel="noopener noreferrer"
+        style={{ minWidth: 0, minHeight: 64 }}
+        tabIndex={0}
+        target="_blank"
       >
-        {getTextFromDataUrl(displayUrl)}
-      </div>
+        <div className="flex items-center gap-2">
+          <span
+            className="overflow-hidden truncate whitespace-nowrap font-medium text-gray-900 text-sm dark:text-gray-100"
+            style={{ maxWidth: 'calc(100% - 28px)' }}
+            title={filename}
+          >
+            {filename}
+          </span>
+        </div>
+      </a>
     );
   }
 
-  if (mimeType === 'application/pdf') {
+  if (mediaType === 'application/pdf') {
     return (
       <a
         aria-label={`Download PDF: ${filename}`}
@@ -402,21 +323,27 @@ const extractErrorParts = (
 // Helper function to check if any tool invocations are in progress
 const getToolInvocationsInProgress = (
   combinedParts: MessageType['parts']
-): ToolInvocationUIPart[] => {
+): ToolUIPart[] => {
   if (!combinedParts) {
     return [];
   }
 
   return combinedParts.filter(
-    (part): part is ToolInvocationUIPart =>
-      part.type === 'tool-invocation' && part.toolInvocation.state !== 'result'
+    (part): part is ToolUIPart =>
+      part !== undefined &&
+      typeof part === 'object' &&
+      part !== null &&
+      'type' in part &&
+      typeof (part as { type?: unknown }).type === 'string' &&
+      (part as { type: string }).type.startsWith('tool-') &&
+      'state' in part &&
+      (part as { state?: unknown }).state !== 'output-available'
   );
 };
 
 // Helper function to render reasoning section
 const renderReasoningSection = (
   reasoningParts: ReasoningUIPart[],
-  reasoning_text: string | undefined,
   status: string | undefined,
   showReasoning: boolean,
   setShowReasoning: (show: (prev: boolean) => boolean) => void,
@@ -424,7 +351,7 @@ const renderReasoningSection = (
   id: string,
   combinedParts: MessageType['parts'] = []
 ) => {
-  if (reasoningParts.length === 0 && !reasoning_text) {
+  if (reasoningParts.length === 0) {
     return null;
   }
 
@@ -516,22 +443,27 @@ const renderReasoningSection = (
                         <Markdown
                           className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
                           id={`${id}-reasoning-${index}`}
-                          key={`${id}-reasoning-${index}-${part.reasoningText.substring(0, 20)}`}
+                          key={`${id}-reasoning-${index}-${part.text.substring(0, 20)}`}
                         >
-                          {part.reasoningText}
+                          {part.text}
                         </Markdown>
                       );
-                    } else if (part.type === 'tool-invocation') {
-                      const inv = part.toolInvocation as {
-                        toolName?: string;
-                        args?: Record<string, unknown>;
-                      };
-                      // Collect consecutive search queries
-                      if (inv.toolName === 'search' && inv.args) {
-                        consecutiveSearchQueries.push({
-                          query: inv.args.query as string,
-                          toolName: inv.toolName,
-                        });
+                    } else if (part.type.startsWith('tool-')) {
+                      // Extract tool name from part.type
+                      const toolName = part.type.replace('tool-', '');
+                      // Type guard to ensure we have a ToolUIPart
+                      if ('input' in part) {
+                        const args = part.input as
+                          | Record<string, unknown>
+                          | undefined;
+
+                        // Collect consecutive search queries
+                        if (toolName === 'search' && args) {
+                          consecutiveSearchQueries.push({
+                            query: args.query as string,
+                            toolName,
+                          });
+                        }
                       }
                     }
                   });
@@ -592,7 +524,6 @@ const renderSearchSpinner = (isSearching: boolean) => {
 };
 
 type MessageAssistantProps = {
-  children: string;
   isLast?: boolean;
   hasScrollAnchor?: boolean;
   copied?: boolean;
@@ -601,9 +532,7 @@ type MessageAssistantProps = {
   onBranch?: () => void;
   model?: string;
   parts?: MessageType['parts'];
-  attachments?: MessageType['experimental_attachments'];
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
-  reasoning_text?: string;
   id: string;
   metadata?: MessageMetadata;
 };
@@ -614,7 +543,6 @@ const Markdown = dynamic(
 );
 
 function MessageAssistantInner({
-  children,
   isLast,
   hasScrollAnchor,
   copied,
@@ -623,12 +551,16 @@ function MessageAssistantInner({
   onBranch,
   model,
   parts,
-  attachments,
   status,
-  reasoning_text,
   id,
   metadata,
 }: MessageAssistantProps) {
+  // Extract text content from parts
+  const textContent =
+    parts
+      ?.filter((part) => part.type === 'text')
+      .map((part) => part.text)
+      .join('') || '';
   const [showReasoning, setShowReasoning] = useState(status === 'streaming');
   const prevStatusRef = useRef(status);
   const [isTouch, setIsTouch] = useState(false);
@@ -653,9 +585,7 @@ function MessageAssistantInner({
   }, [status]);
 
   // Prefer `parts` prop, but fall back to `attachments` if `parts` is undefined.
-  const combinedParts = (parts ?? attachments) as
-    | MessageType['parts']
-    | undefined;
+  const combinedParts = parts || [];
 
   // Extract different types of parts using helper functions
   const reasoningParts = extractReasoningParts(combinedParts);
@@ -667,10 +597,7 @@ function MessageAssistantInner({
   const isSearching = toolInvocationsInProgress.length > 0;
 
   // Combine reasoning parts into a single markdown string
-  const combinedReasoningMarkdown =
-    reasoningParts.length > 0
-      ? reasoningParts.map((p) => p.reasoningText).join('')
-      : (reasoning_text ?? '');
+  const combinedReasoningMarkdown = reasoningParts.map((p) => p.text).join('');
 
   return (
     <Message
@@ -683,7 +610,6 @@ function MessageAssistantInner({
       <div className={cn('flex w-full flex-col gap-2', isLast && 'pb-8')}>
         {renderReasoningSection(
           reasoningParts,
-          reasoning_text,
           status,
           showReasoning,
           setShowReasoning,
@@ -704,13 +630,13 @@ function MessageAssistantInner({
           )}
 
         {/* Render text content only if it's not empty */}
-        {children.trim() && (
+        {textContent.trim() && (
           <MessageContent
             className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
             id={id}
             markdown={true}
           >
-            {children}
+            {textContent}
           </MessageContent>
         )}
 
