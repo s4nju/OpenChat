@@ -3,24 +3,19 @@
  * Helper functions for file uploads, validation, and attachment handling
  */
 
+import type { FileUIPart } from 'ai';
 import type { Id } from '@/convex/_generated/dataModel';
 import { api } from '@/convex/_generated/api';
 import { humaniseUploadError } from './chat-error-utils';
 import { toast } from '@/components/ui/toast';
 
 export interface FileAttachment {
-  storageId: string;
-  fileName: string;
+  fileName: string; // This is the storage ID
   fileType: string;
   fileSize: number;
 }
 
-export interface VercelAiAttachment {
-  name: string;
-  contentType: string;
-  url: string;
-  storageId: string;
-}
+// Use FileUIPart from AI SDK instead of custom interface
 
 /**
  * Uploads a single file and saves attachment metadata
@@ -30,9 +25,8 @@ export async function uploadAndSaveFile(
   chatId: Id<'chats'>,
   generateUploadUrl: () => Promise<string>,
   saveFileAttachment: (attachment: {
-    storageId: Id<'_storage'>;
     chatId: Id<'chats'>;
-    fileName: string;
+    fileName: Id<'_storage'>;
     fileType: string;
     fileSize: number;
   }) => Promise<FileAttachment>
@@ -52,9 +46,8 @@ export async function uploadAndSaveFile(
     const { storageId } = await response.json() as { storageId: Id<'_storage'> };
     
     return await saveFileAttachment({
-      storageId,
       chatId,
-      fileName: file.name,
+      fileName: storageId,
       fileType: file.type,
       fileSize: file.size,
     });
@@ -66,22 +59,21 @@ export async function uploadAndSaveFile(
 }
 
 /**
- * Uploads multiple files in parallel and creates Vercel AI attachments
+ * Uploads multiple files in parallel and creates FileUIPart attachments
  */
 export async function uploadFilesInParallel(
   files: File[],
   chatId: Id<'chats'>,
   generateUploadUrl: () => Promise<string>,
   saveFileAttachment: (attachment: {
-    storageId: Id<'_storage'>;
     chatId: Id<'chats'>;
-    fileName: string;
+    fileName: Id<'_storage'>;
     fileType: string;
     fileSize: number;
   }) => Promise<FileAttachment>,
   getStorageUrl: (storageId: string) => Promise<string | null>
-): Promise<VercelAiAttachment[]> {
-  const vercelAiAttachments: VercelAiAttachment[] = [];
+): Promise<FileUIPart[]> {
+  const fileAttachments: FileUIPart[] = [];
 
   // Upload all files in parallel
   const uploadPromises = files.map((file) =>
@@ -96,14 +88,14 @@ export async function uploadFilesInParallel(
     }
 
     try {
-      const url = await getStorageUrl(attachment.storageId);
+      const url = await getStorageUrl(attachment.fileName);
       if (url) {
         return {
-          name: attachment.fileName,
-          contentType: attachment.fileType,
+          type: 'file',
+          filename: attachment.fileName, // This is the storage ID
+          mediaType: attachment.fileType,
           url,
-          storageId: attachment.storageId,
-        };
+        } satisfies FileUIPart;
       }
     } catch {
       // Failed to generate URL for this attachment
@@ -118,20 +110,21 @@ export async function uploadFilesInParallel(
   // Collect successful attachments
   for (const attachment of urlResults) {
     if (attachment) {
-      vercelAiAttachments.push(attachment);
+      fileAttachments.push(attachment);
     }
   }
 
-  return vercelAiAttachments;
+  return fileAttachments;
 }
 
 /**
  * Creates optimistic attachments for immediate UI feedback
  */
-export function createOptimisticAttachments(files: File[]) {
+export function createOptimisticAttachments(files: File[]): FileUIPart[] {
   return files.map((file) => ({
-    name: file.name,
-    contentType: file.type,
+    type: 'file' as const,
+    filename: file.name,
+    mediaType: file.type,
     url: URL.createObjectURL(file),
   }));
 }

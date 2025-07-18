@@ -1,7 +1,7 @@
 'use client';
 
-import type { SourceUIPart } from 'ai';
 import { CaretDown, Globe, Link } from '@phosphor-icons/react';
+import type { SourceUrlUIPart } from 'ai';
 import { AnimatePresence, motion, type Transition } from 'framer-motion';
 import Image from 'next/image';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -13,7 +13,7 @@ const PROTOCOL_REGEX = /^https?:\/\//;
 const TRAILING_SLASH_REGEX = /\/$/;
 
 type SourcesListProps = {
-  sources: SourceUIPart['source'][];
+  sources: SourceUrlUIPart[];
   className?: string;
 };
 
@@ -103,7 +103,7 @@ export const SourcesList = memo<SourcesListProps>(
                     alt={`Favicon for ${source.title}`}
                     className="h-4 w-4 rounded-full border-2 border-background"
                     height={16}
-                    key={source.id}
+                    key={source.sourceId}
                     loader={({ src }) => src}
                     src={source.faviconUrl}
                     unoptimized
@@ -142,7 +142,7 @@ export const SourcesList = memo<SourcesListProps>(
                           animate={{ opacity: 1, scale: 1 }}
                           className="w-64 flex-shrink-0"
                           initial={{ opacity: 0, scale: 0.95 }}
-                          key={source.id}
+                          key={source.sourceId}
                           transition={{ duration: 0.2 }}
                         >
                           <a
@@ -154,7 +154,7 @@ export const SourcesList = memo<SourcesListProps>(
                             <div className="overflow-hidden rounded-lg border bg-background transition-colors hover:bg-accent/50">
                               {/* OpenGraph Image */}
                               <div className="relative h-32 w-full overflow-hidden bg-muted">
-                                {imageErrors.has(source.id) ? (
+                                {imageErrors.has(source.sourceId) ? (
                                   <div className="flex h-full w-full items-center justify-center">
                                     <Globe className="h-8 w-8 text-muted-foreground" />
                                   </div>
@@ -165,7 +165,9 @@ export const SourcesList = memo<SourcesListProps>(
                                     className="scale-110 object-cover transition-transform hover:scale-115"
                                     fill
                                     loading="lazy"
-                                    onError={() => handleImageError(source.id)}
+                                    onError={() =>
+                                      handleImageError(source.sourceId)
+                                    }
                                     placeholder="blur"
                                     src={source.openGraphUrl}
                                     // Remove unoptimized to enable Next.js optimization
@@ -236,7 +238,7 @@ export const SourcesList = memo<SourcesListProps>(
     return prevProps.sources.every((source, index) => {
       const nextSource = nextProps.sources[index];
       return (
-        source.id === nextSource?.id &&
+        source.sourceId === nextSource?.sourceId &&
         source.url === nextSource?.url &&
         source.title === nextSource?.title
       );

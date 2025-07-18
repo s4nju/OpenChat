@@ -119,6 +119,7 @@ export const saveGeneratedImage = action({
     fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<SavedAttachment> => {
     const attachmentId = await ctx.runMutation(
@@ -194,6 +195,7 @@ export const internalSaveGenerated = mutation({
     fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -219,6 +221,7 @@ export const internalSaveGenerated = mutation({
       fileType: args.fileType,
       fileSize: args.fileSize,
       isGenerated: true, // Mark as AI-generated
+      url: args.url,
     });
   },
 });
@@ -281,7 +284,7 @@ export const getAttachmentsForUser = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: await ctx.storage.getUrl(attachment.fileName),
+        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
       }))
     );
   },
@@ -344,7 +347,7 @@ export const getAttachmentsForChat = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: await ctx.storage.getUrl(attachment.fileName),
+        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
       }))
     );
   },
