@@ -7,9 +7,7 @@ import { MessageUser } from './message-user';
 export type MessageProps = {
   variant: MessageType['role'];
   model?: string;
-  children: string;
   id: string;
-  attachments?: MessageType['experimental_attachments'];
   isLast?: boolean;
   onDelete: (id: string) => void;
   onEdit: (id: string, newText: string) => void;
@@ -18,16 +16,13 @@ export type MessageProps = {
   hasScrollAnchor?: boolean;
   parts?: MessageType['parts'];
   status?: 'streaming' | 'ready' | 'submitted' | 'error'; // Add status prop
-  reasoning_text?: string;
   metadata?: MessageMetadata;
 };
 
 function MessageComponent({
   variant,
   model,
-  children,
   id,
-  attachments,
   isLast,
   onDelete,
   onEdit,
@@ -36,13 +31,18 @@ function MessageComponent({
   hasScrollAnchor,
   parts,
   status, // Receive status prop
-  reasoning_text,
   metadata,
 }: MessageProps) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(children);
+    // Extract text content from parts for copying
+    const textContent =
+      parts
+        ?.filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join('') || '';
+    navigator.clipboard.writeText(textContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 500);
   };
@@ -50,7 +50,6 @@ function MessageComponent({
   if (variant === 'user') {
     return (
       <MessageUser
-        attachments={attachments}
         copied={copied}
         copyToClipboard={copyToClipboard}
         hasScrollAnchor={hasScrollAnchor}
@@ -58,17 +57,15 @@ function MessageComponent({
         onDelete={onDelete}
         onEdit={onEdit}
         onReload={onReload}
+        parts={parts}
         status={status}
-      >
-        {children}
-      </MessageUser>
+      />
     );
   }
 
   if (variant === 'assistant') {
     return (
       <MessageAssistant
-        attachments={attachments}
         copied={copied}
         copyToClipboard={copyToClipboard}
         hasScrollAnchor={hasScrollAnchor}
@@ -79,11 +76,8 @@ function MessageComponent({
         onBranch={onBranch}
         onReload={onReload}
         parts={parts}
-        reasoning_text={reasoning_text}
         status={status}
-      >
-        {children}
-      </MessageAssistant>
+      />
     );
   }
 

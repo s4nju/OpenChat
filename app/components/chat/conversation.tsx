@@ -1,4 +1,4 @@
-import type { UIMessage as MessageType } from '@ai-sdk/react';
+import type { UIMessage } from '@ai-sdk/react';
 import React, { useRef } from 'react';
 import { ScrollButton } from '@/components/motion-primitives/scroll-button';
 import { ChatContainer } from '@/components/prompt-kit/chat-container';
@@ -8,14 +8,13 @@ import type { MessageMetadata } from '@/lib/ai-sdk-utils';
 import { MODELS_MAP } from '@/lib/config';
 import { Message } from './message';
 
-type MessageWithReasoning = MessageType & {
-  reasoning_text?: string;
+export type MessageWithExtras = UIMessage & {
   model?: string;
   metadata?: MessageMetadata;
 };
 
 type ConversationProps = {
-  messages: MessageWithReasoning[];
+  messages: MessageWithExtras[];
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
   onDelete: (id: string) => void;
   onEdit: (id: string, newText: string) => void;
@@ -50,6 +49,8 @@ const Conversation = React.memo(
       return <div className="h-full w-full" />;
     }
 
+    // console.log('Rendering messages:', messages);
+
     return (
       <div className="relative flex h-full w-full flex-col items-center overflow-y-auto overflow-x-hidden">
         <ChatContainer
@@ -68,24 +69,20 @@ const Conversation = React.memo(
 
             return (
               <Message
-                attachments={message.experimental_attachments}
                 hasScrollAnchor={hasScrollAnchor}
                 id={message.id}
                 isLast={isLast}
                 key={message.id}
-                metadata={message.metadata}
+                metadata={message.metadata as MessageMetadata}
                 model={message.model}
                 onBranch={() => onBranch(message.id)}
                 onDelete={onDelete}
                 onEdit={onEdit}
                 onReload={() => onReload(message.id)}
                 parts={message.parts}
-                reasoning_text={message.reasoning_text}
                 status={status}
                 variant={message.role}
-              >
-                {message.content}
-              </Message>
+              />
             );
           })}
           {((status === 'submitted' &&
@@ -96,7 +93,9 @@ const Conversation = React.memo(
               messages.length > 0 &&
               (messages.at(-1)?.role === 'user' ||
                 (messages.at(-1)?.role === 'assistant' &&
-                  !messages.at(-1)?.experimental_attachments)))) && (
+                  !messages
+                    .at(-1)
+                    ?.parts?.some((part) => part.type === 'file'))))) && (
             <div className="group flex min-h-scroll-anchor w-full max-w-3xl flex-col items-start gap-2 px-6 pb-2">
               {isImageGenerationModel ? (
                 <ImageSkeleton height={300} width={300} />
