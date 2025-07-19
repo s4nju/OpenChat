@@ -146,7 +146,7 @@ async function saveUserMessage(
     const userMessage = messages.at(-1);
     if (userMessage && userMessage.role === 'user') {
       // Use parts directly since schema now matches AI SDK v5
-      const userParts = userMessage.parts || [];
+      const userParts = (userMessage.parts || []).map((p) => p.type === 'text' ? { ...p, text: sanitizeUserInput(p.text) } : p);
 
       // Extract text content for backwards compatibility
       const textContent = userParts
