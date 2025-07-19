@@ -147,7 +147,7 @@ function MessageUserInner({
   const textContent =
     parts
       ?.filter((part) => part.type === 'text')
-      .map((part) => part.text)
+      .map((part) => ('text' in part ? part.text : ''))
       .join('') || '';
 
   const [editInput, setEditInput] = useState(textContent);

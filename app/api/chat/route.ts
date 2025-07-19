@@ -304,30 +304,7 @@ async function handleImageGeneration({
   try {
     // Save user message first
     if (!currentUserMsgId && token) {
-      const userMessage = messages.at(-1);
-      if (userMessage && userMessage.role === 'user') {
-        // Use existing parts array from v5 message
-        const userParts = userMessage.parts || [];
-
-        // Extract text content for backwards compatibility
-        const textContent = userParts
-          .filter((part) => part.type === 'text')
-          .map((part) => part.text)
-          .join('');
-
-        const { messageId } = await fetchMutation(
-          api.messages.sendUserMessageToChat,
-          {
-            chatId,
-            role: 'user',
-            content: sanitizeUserInput(textContent),
-            parts: userParts,
-            metadata: {},
-          },
-          { token }
-        );
-        currentUserMsgId = messageId;
-      }
+      currentUserMsgId = await saveUserMessage(messages, chatId, token);
     }
     // Extract the prompt from the last user message parts
     const lastMessage = messages.at(-1);
