@@ -13,7 +13,6 @@ import {
   streamText,
   type UIMessage,
 } from 'ai';
-import { checkBotId } from 'botid/server';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
 import { ConvexError } from 'convex/values';
 import { PostHog } from 'posthog-node';
@@ -416,12 +415,6 @@ async function handleImageGeneration({
 }
 
 export async function POST(req: Request) {
-  // Verify the request using Vercel BotID. If identified as a bot, block early.
-  const { isBot } = await checkBotId();
-  if (isBot) {
-    return new Response('Access denied', { status: 403 });
-  }
-
   req.signal.addEventListener('abort', () => {
     // Request aborted by client
   });

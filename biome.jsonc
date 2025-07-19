@@ -1,6 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
-  "extends": ["ultracite"],
+  "extends": [
+    "ultracite"
+  ],
   "files": {
     "includes": [
       "**",
@@ -9,7 +11,8 @@
       "!hooks/**",
       "!node_modules/**",
       "!convex/_generated/**",
-      "!app/globals.css"
+      "!app/globals.css",
+      "!*.lock"
     ]
   },
   "linter": {

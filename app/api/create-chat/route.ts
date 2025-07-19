@@ -1,5 +1,4 @@
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
-import { checkBotId } from 'botid/server';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { PostHog } from 'posthog-node';
 import { z } from 'zod';
@@ -7,11 +6,6 @@ import { api } from '@/convex/_generated/api';
 import { createErrorResponse } from '@/lib/error-utils';
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId();
-  if (isBot) {
-    return new Response('Access denied', { status: 403 });
-  }
-
   try {
     // --- Validate request body ---
     const body = await request.json();
