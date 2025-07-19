@@ -1,5 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
+import { ERROR_CODES } from '../lib/error-codes';
 import { mutation, query } from './_generated/server';
 
 const API_KEY_SECRET = process.env.API_KEY_SECRET;
@@ -212,7 +213,7 @@ export const saveApiKey = mutation({
   handler: async (ctx, { provider, key, mode }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     const [encrypted, existing] = await Promise.all([
       encrypt(key, userId),
@@ -263,7 +264,7 @@ export const deleteApiKey = mutation({
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     const existing = await ctx.db
       .query('user_api_keys')
@@ -295,7 +296,7 @@ export const updateApiKeyMode = mutation({
   handler: async (ctx, { provider, mode }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     const existing = await ctx.db
       .query('user_api_keys')
@@ -325,7 +326,7 @@ export const getDecryptedKey = query({
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     const existing = await ctx.db
       .query('user_api_keys')
@@ -350,7 +351,7 @@ export const incrementUserApiKeyUsage = mutation({
   handler: async (ctx, { provider }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     const existing = await ctx.db
       .query('user_api_keys')

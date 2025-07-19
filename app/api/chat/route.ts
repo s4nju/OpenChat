@@ -15,6 +15,7 @@ import {
 } from 'ai';
 import { checkBotId } from 'botid/server';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
+import { ConvexError } from 'convex/values';
 import { PostHog } from 'posthog-node';
 import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
@@ -24,6 +25,7 @@ import {
   type MessageMetadata,
 } from '@/lib/ai-sdk-utils';
 import { MODELS_MAP } from '@/lib/config';
+import { ERROR_CODES } from '@/lib/error-codes';
 import {
   classifyError,
   createErrorPart,
@@ -64,41 +66,16 @@ async function saveErrorMessage(
 ) {
   try {
     if (!userMsgId) {
-      // console.warn('Cannot save error message: no parent user message ID');
       return null;
     }
 
     const classified = classifyError(error);
-
-    // Extract raw error message for backend debugging
-    let rawErrorMessage = classified.message;
-    if (classified.originalError) {
-      if (classified.originalError instanceof Error) {
-        rawErrorMessage = classified.originalError.message;
-      } else if (
-        classified.originalError &&
-        typeof classified.originalError === 'object' &&
-        'error' in classified.originalError
-      ) {
-        // Handle nested error structure like { error: Error, cause: ... }
-        const nestedError = (classified.originalError as { error: unknown })
-          .error;
-        rawErrorMessage =
-          nestedError instanceof Error
-            ? nestedError.message
-            : String(nestedError);
-      } else {
-        rawErrorMessage = String(classified.originalError);
-      }
-    }
-
     const errorPart = createErrorPart(
       classified.code,
       classified.userFriendlyMessage,
-      rawErrorMessage
+      classified.message
     );
 
-    const parts = [errorPart];
     const { messageId } = await fetchMutation(
       api.messages.saveAssistantMessage,
       {
@@ -106,7 +83,7 @@ async function saveErrorMessage(
         role: 'assistant',
         content: '', // Empty content to avoid duplication and search pollution
         parentMessageId: userMsgId,
-        parts,
+        parts: [errorPart],
         metadata: {
           modelId: modelId || 'error',
           modelName: modelName || 'Error',
@@ -119,7 +96,6 @@ async function saveErrorMessage(
 
     return messageId;
   } catch (_err) {
-    // console.error('Failed to save error message:', err);
     return null;
   }
 }
@@ -521,8 +497,11 @@ export async function POST(req: Request) {
       } catch (e) {
         // console.error('Failed to decrypt user API key:', e);
         // If this is a critical error (auth failure), we should return early
-        if (e instanceof Error && e.message.includes('Not authenticated')) {
-          return createErrorResponse(new Error('Not authenticated'));
+        if (
+          e instanceof ConvexError &&
+          e.data === ERROR_CODES.NOT_AUTHENTICATED
+        ) {
+          return createErrorResponse(e);
         }
       }
     }
@@ -588,16 +567,20 @@ export async function POST(req: Request) {
           { token }
         );
       } catch (error) {
-        if (
-          error instanceof Error &&
-          (error.message.includes('DAILY_LIMIT_REACHED') ||
-            error.message.includes('MONTHLY_LIMIT_REACHED') ||
-            error.message.includes('PREMIUM_LIMIT_REACHED'))
-        ) {
-          rateLimitError = error;
-          // Don't throw yet - let user message save first
+        if (error instanceof ConvexError) {
+          const errorCode = error.data;
+          if (
+            errorCode === ERROR_CODES.DAILY_LIMIT_REACHED ||
+            errorCode === ERROR_CODES.MONTHLY_LIMIT_REACHED ||
+            errorCode === ERROR_CODES.PREMIUM_LIMIT_REACHED
+          ) {
+            rateLimitError = error;
+            // Don't throw yet - let user message save first
+          } else {
+            throw error; // Re-throw non-rate-limit errors
+          }
         } else {
-          throw error; // Re-throw non-rate-limit errors
+          throw error; // Re-throw non-ConvexError errors
         }
       }
     }

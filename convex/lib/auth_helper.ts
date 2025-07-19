@@ -1,4 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { ConvexError } from 'convex/values';
+import { ERROR_CODES } from '../../lib/error-codes';
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 
@@ -14,7 +16,7 @@ export async function ensureAuthenticated(
 ): Promise<Id<'users'>> {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
-    throw new Error('Not authenticated');
+    throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
   }
   return userId;
 }
@@ -35,7 +37,7 @@ export async function ensureChatAccess(
   const chat = await ctx.db.get(chatId);
 
   if (!chat || chat.userId !== userId) {
-    throw new Error('Chat not found or unauthorized');
+    throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
   }
 
   return { chat, userId };
@@ -82,12 +84,12 @@ export async function ensureMessageAccess(
   const message = await ctx.db.get(messageId);
 
   if (!message) {
-    throw new Error('Message not found');
+    throw new ConvexError(ERROR_CODES.MESSAGE_NOT_FOUND);
   }
 
   const chat = await ctx.db.get(message.chatId);
   if (!chat || chat.userId !== userId) {
-    throw new Error('Chat not found or unauthorized');
+    throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
   }
 
   return { message, chat, userId };
@@ -126,7 +128,7 @@ export async function getCurrentUserOrThrow(
   const user = await ctx.db.get(userId);
 
   if (!user) {
-    throw new Error('User not found');
+    throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
   }
 
   return user;

@@ -1,5 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
+import { ERROR_CODES } from '../lib/error-codes';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import { action, mutation, query } from './_generated/server';
@@ -13,7 +14,7 @@ export const generateUploadUrl = action({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
     return await ctx.storage.generateUploadUrl();
   },
@@ -103,7 +104,7 @@ export const saveFileAttachment = action({
       attachmentId,
     });
     if (!attachment) {
-      throw new Error('Attachment not found');
+      throw new ConvexError(ERROR_CODES.FILE_NOT_FOUND);
     }
     // Return storage ID instead of temporary URL - URLs will be generated on-demand
     return { ...attachment, fileName: attachment.fileName };
@@ -130,7 +131,7 @@ export const saveGeneratedImage = action({
       attachmentId,
     });
     if (!attachment) {
-      throw new Error('Attachment not found');
+      throw new ConvexError(ERROR_CODES.FILE_NOT_FOUND);
     }
     // Return storage ID instead of temporary URL - URLs will be generated on-demand
     return { ...attachment, fileName: attachment.fileName };
@@ -147,7 +148,7 @@ export const internalSave = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     // Verify ownership of the chat before attaching the file
@@ -155,7 +156,7 @@ export const internalSave = mutation({
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
       await ctx.storage.delete(args.fileName);
-      throw new ConvexError('Chat not found or unauthorized');
+      throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
 
     // Check that the chat's model can accept file uploads
@@ -164,19 +165,19 @@ export const internalSave = mutation({
       !(modelName && FILE_UPLOAD_MODELS.includes(modelName as FileUploadModel))
     ) {
       await ctx.storage.delete(args.fileName);
-      throw new ConvexError('ERR_UNSUPPORTED_MODEL');
+      throw new ConvexError(ERROR_CODES.UNSUPPORTED_MODEL);
     }
 
     // Enforce MIME type allow-list
     if (!ALLOWED_FILE_MIME_TYPES.includes(args.fileType as AllowedMimeType)) {
       await ctx.storage.delete(args.fileName);
-      throw new ConvexError('ERR_BAD_MIME');
+      throw new ConvexError(ERROR_CODES.UNSUPPORTED_FILE_TYPE);
     }
 
     // Enforce maximum size
     if (args.fileSize > MAX_FILE_SIZE) {
       await ctx.storage.delete(args.fileName);
-      throw new ConvexError('ERR_FILE_TOO_LARGE');
+      throw new ConvexError(ERROR_CODES.FILE_TOO_LARGE);
     }
 
     return await ctx.db.insert('chat_attachments', {
@@ -200,7 +201,7 @@ export const internalSaveGenerated = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     // Verify ownership of the chat before attaching the file
@@ -208,7 +209,7 @@ export const internalSaveGenerated = mutation({
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
       await ctx.storage.delete(args.fileName);
-      throw new Error('Chat not found or unauthorized');
+      throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
 
     // Generated images don't need model validation since they're created by our system
@@ -231,12 +232,12 @@ export const getAttachment = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const attachment = await ctx.db.get(args.attachmentId);
     if (!attachment || attachment.userId !== userId) {
-      throw new Error('Attachment not found or unauthorized');
+      throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
     return attachment;
   },
@@ -251,7 +252,7 @@ export const getStorageUrl = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     try {
@@ -272,7 +273,7 @@ export const getAttachmentsForUser = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const attachments = await ctx.db
@@ -295,7 +296,7 @@ export const deleteAttachments = mutation({
   handler: async (ctx, { attachmentIds }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     // Create a Set for O(1) lookup of attachment IDs to delete
@@ -330,13 +331,13 @@ export const getAttachmentsForChat = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     // Verify ownership of the chat
     const chat = await ctx.db.get(args.chatId);
     if (!chat || chat.userId !== userId) {
-      throw new Error('Chat not found or unauthorized');
+      throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
 
     const attachments = await ctx.db

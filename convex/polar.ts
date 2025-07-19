@@ -1,4 +1,6 @@
 import { Polar } from '@convex-dev/polar';
+import { ConvexError } from 'convex/values';
+import { ERROR_CODES } from '../lib/error-codes';
 import { api, components } from './_generated/api';
 
 export const polar = new Polar(components.polar, {
@@ -7,7 +9,7 @@ export const polar = new Polar(components.polar, {
   ): Promise<{ userId: string; email: string; name?: string }> => {
     const user = await ctx.runQuery(api.users.getCurrentUser);
     if (!user?.email) {
-      throw new Error('User not found or no email');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     // Get the user's display name (preferredName > name > fallback)
@@ -23,9 +25,7 @@ export const polar = new Polar(components.polar, {
     premium:
       process.env.POLAR_PREMIUM_PRODUCT_ID ||
       (() => {
-        throw new Error(
-          'POLAR_PREMIUM_PRODUCT_ID environment variable is required'
-        );
+        throw new ConvexError(ERROR_CODES.MISSING_REQUIRED_FIELD);
       })(),
   },
 });

@@ -5,6 +5,7 @@ import {
 } from '@convex-dev/rate-limiter';
 import { ConvexError, v } from 'convex/values';
 import { RECOMMENDED_MODELS } from '../lib/config';
+import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { RATE_LIMITS } from './lib/rateLimitConstants';
@@ -228,12 +229,12 @@ export const toggleFavoriteModel = mutation({
   handler: async (ctx, { modelId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     const currentFavorites = user.favoriteModels ?? [];
@@ -271,12 +272,12 @@ export const setModelEnabled = mutation({
   handler: async (ctx, { modelId, enabled }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     // Cannot disable MODEL_DEFAULT
@@ -325,12 +326,12 @@ export const bulkSetModelsDisabled = mutation({
   handler: async (ctx, { modelIds }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     const currentFavorites = user.favoriteModels ?? [];
@@ -378,17 +379,17 @@ export const bulkSetFavoriteModels = mutation({
   handler: async (ctx, { modelIds }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     // Ensure at least one favorite model is provided
     if (modelIds.length === 0) {
-      throw new Error('At least one favorite model must be provided');
+      throw new ConvexError(ERROR_CODES.MISSING_REQUIRED_FIELD);
     }
 
     const currentDisabled = user.disabledModels ?? [];
@@ -418,12 +419,12 @@ export const incrementMessageCount = mutation({
   handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('User not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
@@ -470,12 +471,12 @@ export const assertNotOverLimit = mutation({
   handler: async (ctx, { usesPremiumCredits }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
@@ -490,7 +491,7 @@ export const assertNotOverLimit = mutation({
         key: userId,
       });
       if (!premiumStatus.ok) {
-        throw new Error('PREMIUM_LIMIT_REACHED');
+        throw new ConvexError(ERROR_CODES.PREMIUM_LIMIT_REACHED);
       }
     } else {
       // For non-premium models or non-premium users, check standard credits
@@ -522,14 +523,14 @@ export const assertNotOverLimit = mutation({
       if (!isPremium && results.length > 1) {
         const dailyStatus = results[0] as { ok: boolean };
         if (!dailyStatus.ok) {
-          throw new ConvexError('DAILY_LIMIT_REACHED');
+          throw new ConvexError(ERROR_CODES.DAILY_LIMIT_REACHED);
         }
       }
 
       // Check monthly limit result (always the last promise)
       const monthlyStatus = results.at(-1) as { ok: boolean };
       if (!monthlyStatus.ok) {
-        throw new ConvexError('MONTHLY_LIMIT_REACHED');
+        throw new ConvexError(ERROR_CODES.MONTHLY_LIMIT_REACHED);
       }
     }
   },
@@ -575,7 +576,7 @@ export const getRateLimitStatus = query({
 
     const user = await ctx.db.get(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     const subscription = await polar.getCurrentSubscription(ctx, {
@@ -776,7 +777,7 @@ export const deleteAccount = mutation({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('Not authenticated');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     // --- Step 1: Fetch all documents that need to be deleted in parallel ---
