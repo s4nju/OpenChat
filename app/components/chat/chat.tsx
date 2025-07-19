@@ -376,7 +376,7 @@ export default function Chat() {
         return;
       }
 
-      const allowed = await checkRateLimits(isAuthenticated, setHasDialogAuth);
+      const allowed = checkRateLimits(isAuthenticated, setHasDialogAuth);
       if (!allowed) {
         return;
       }

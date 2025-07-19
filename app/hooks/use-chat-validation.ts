@@ -3,10 +3,9 @@
  * Handles rate limiting, model validation, and permission checks
  */
 
-import { useConvex } from 'convex/react';
 import { useCallback } from 'react';
+import { useUser } from '@/app/providers/user-provider';
 import { toast } from '@/components/ui/toast';
-import { api } from '@/convex/_generated/api';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { MODELS_MAP, REMAINING_QUERY_ALERT_THRESHOLD } from '@/lib/config';
 import { validateQueryParam } from '@/lib/message-utils';
@@ -17,16 +16,20 @@ import {
 } from '@/lib/model-utils';
 
 export function useChatValidation() {
-  const convex = useConvex();
+  const { rateLimitStatus } = useUser();
 
   const checkRateLimits = useCallback(
-    async (
-      isAuthenticated: boolean,
-      setHasDialogAuth: (value: boolean) => void
-    ) => {
+    (isAuthenticated: boolean, setHasDialogAuth: (value: boolean) => void) => {
       try {
-        const rateData = await convex.query(api.users.getRateLimitStatus, {});
-        const remaining = rateData.effectiveRemaining;
+        if (!rateLimitStatus) {
+          toast({
+            title: 'Failed to check rate limits',
+            status: 'error',
+          });
+          return false;
+        }
+
+        const remaining = rateLimitStatus.effectiveRemaining;
         const plural = remaining === 1 ? 'query' : 'queries';
 
         if (remaining === 0 && !isAuthenticated) {
@@ -50,7 +53,7 @@ export function useChatValidation() {
         return false;
       }
     },
-    [convex]
+    [rateLimitStatus]
   );
 
   const validateModelAccess = useCallback(
