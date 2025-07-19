@@ -1,5 +1,5 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 // Import helper functions
@@ -171,12 +171,14 @@ export const branchChat = mutation({
     // Verify the branch message exists and belongs to the chat
     const branchMessage = await ctx.db.get(args.branchFromMessageId);
     if (!branchMessage || branchMessage.chatId !== args.originalChatId) {
-      throw new Error("Branch message not found or doesn't belong to the chat");
+      throw new ConvexError(
+        "Branch message not found or doesn't belong to the chat"
+      );
     }
 
     // Only allow branching from assistant messages
     if (branchMessage.role !== 'assistant') {
-      throw new Error('Can only branch from assistant messages');
+      throw new ConvexError('Can only branch from assistant messages');
     }
 
     // Get the branch message creation time for filtering

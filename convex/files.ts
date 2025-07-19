@@ -1,5 +1,5 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import { action, mutation, query } from './_generated/server';
@@ -155,7 +155,7 @@ export const internalSave = mutation({
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
       await ctx.storage.delete(args.fileName);
-      throw new Error('Chat not found or unauthorized');
+      throw new ConvexError('Chat not found or unauthorized');
     }
 
     // Check that the chat's model can accept file uploads
@@ -164,19 +164,19 @@ export const internalSave = mutation({
       !(modelName && FILE_UPLOAD_MODELS.includes(modelName as FileUploadModel))
     ) {
       await ctx.storage.delete(args.fileName);
-      throw new Error('ERR_UNSUPPORTED_MODEL');
+      throw new ConvexError('ERR_UNSUPPORTED_MODEL');
     }
 
     // Enforce MIME type allow-list
     if (!ALLOWED_FILE_MIME_TYPES.includes(args.fileType as AllowedMimeType)) {
       await ctx.storage.delete(args.fileName);
-      throw new Error('ERR_BAD_MIME');
+      throw new ConvexError('ERR_BAD_MIME');
     }
 
     // Enforce maximum size
     if (args.fileSize > MAX_FILE_SIZE) {
       await ctx.storage.delete(args.fileName);
-      throw new Error('ERR_FILE_TOO_LARGE');
+      throw new ConvexError('ERR_FILE_TOO_LARGE');
     }
 
     return await ctx.db.insert('chat_attachments', {

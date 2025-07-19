@@ -3,7 +3,7 @@ import {
   calculateRateLimit,
   type RateLimitConfig,
 } from '@convex-dev/rate-limiter';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { RECOMMENDED_MODELS } from '../lib/config';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
@@ -522,14 +522,14 @@ export const assertNotOverLimit = mutation({
       if (!isPremium && results.length > 1) {
         const dailyStatus = results[0] as { ok: boolean };
         if (!dailyStatus.ok) {
-          throw new Error('DAILY_LIMIT_REACHED');
+          throw new ConvexError('DAILY_LIMIT_REACHED');
         }
       }
 
       // Check monthly limit result (always the last promise)
       const monthlyStatus = results.at(-1) as { ok: boolean };
       if (!monthlyStatus.ok) {
-        throw new Error('MONTHLY_LIMIT_REACHED');
+        throw new ConvexError('MONTHLY_LIMIT_REACHED');
       }
     }
   },

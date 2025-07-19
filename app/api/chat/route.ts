@@ -146,7 +146,9 @@ async function saveUserMessage(
     const userMessage = messages.at(-1);
     if (userMessage && userMessage.role === 'user') {
       // Use parts directly since schema now matches AI SDK v5
-      const userParts = (userMessage.parts || []).map((p) => p.type === 'text' ? { ...p, text: sanitizeUserInput(p.text) } : p);
+      const userParts = (userMessage.parts || []).map((p) =>
+        p.type === 'text' ? { ...p, text: sanitizeUserInput(p.text) } : p
+      );
 
       // Extract text content for backwards compatibility
       const textContent = userParts
@@ -906,8 +908,8 @@ export async function POST(req: Request) {
         );
       },
     });
-  } catch (err: unknown) {
-    // console.error('Unhandled error in chat API:', err);
+  } catch (err) {
+    // console.log('Unhandled error in chat API:', err);
     return createErrorResponse(err);
   }
 }
