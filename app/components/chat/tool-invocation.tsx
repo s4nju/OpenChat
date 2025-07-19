@@ -1,10 +1,8 @@
 'use client';
 
-import type {
-  ToolInvocation as BaseToolInvocation,
-  ToolInvocationUIPart,
-} from '@ai-sdk/ui-utils';
 import { CaretDown, Code, Link, Nut, Spinner } from '@phosphor-icons/react';
+// Note: AI SDK v5 uses ToolUIPart instead of ToolInvocationUIPart
+// We'll use custom types that work with the existing component structure
 import { AnimatePresence, motion, type Transition } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -12,22 +10,17 @@ import { cn } from '@/lib/utils';
 import { SearchQueryDisplay } from './search-query-display';
 import { SearchResults } from './search-result';
 
-type CustomToolInvocation =
-  | BaseToolInvocation
-  | ({
-      state: 'requested';
-      step?: number;
-      toolCallId: string;
-      toolName: string;
-      args?: Record<string, unknown>;
-    } & {
-      result?: unknown;
-    });
+type CustomToolInvocation = {
+  state: 'requested' | 'result';
+  step?: number;
+  toolCallId: string;
+  toolName: string;
+  args?: Record<string, unknown>;
+  result?: unknown;
+};
 
-type CustomToolInvocationUIPart = Omit<
-  ToolInvocationUIPart,
-  'toolInvocation'
-> & {
+type CustomToolInvocationUIPart = {
+  type: 'tool-invocation';
   toolInvocation: CustomToolInvocation;
 };
 

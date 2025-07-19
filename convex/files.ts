@@ -81,11 +81,9 @@ type SavedAttachment = {
   _creationTime: number;
   userId: Id<'users'>;
   chatId: Id<'chats'>;
-  fileId: Id<'_storage'>;
-  fileName: string;
+  fileName: Id<'_storage'>; // Storage ID for the file
   fileType: string;
   fileSize: number;
-  storageId: Id<'_storage'>;
 };
 
 /**
@@ -94,9 +92,8 @@ type SavedAttachment = {
  */
 export const saveFileAttachment = action({
   args: {
-    storageId: v.id('_storage'),
     chatId: v.id('chats'),
-    fileName: v.string(),
+    fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
   },
@@ -109,7 +106,7 @@ export const saveFileAttachment = action({
       throw new Error('Attachment not found');
     }
     // Return storage ID instead of temporary URL - URLs will be generated on-demand
-    return { ...attachment, storageId: attachment.fileId };
+    return { ...attachment, fileName: attachment.fileName };
   },
 });
 
@@ -118,11 +115,11 @@ export const saveFileAttachment = action({
  */
 export const saveGeneratedImage = action({
   args: {
-    storageId: v.id('_storage'),
     chatId: v.id('chats'),
-    fileName: v.string(),
+    fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<SavedAttachment> => {
     const attachmentId = await ctx.runMutation(
@@ -136,15 +133,14 @@ export const saveGeneratedImage = action({
       throw new Error('Attachment not found');
     }
     // Return storage ID instead of temporary URL - URLs will be generated on-demand
-    return { ...attachment, storageId: attachment.fileId };
+    return { ...attachment, fileName: attachment.fileName };
   },
 });
 
 export const internalSave = mutation({
   args: {
-    storageId: v.id('_storage'),
     chatId: v.id('chats'),
-    fileName: v.string(),
+    fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
   },
@@ -158,7 +154,7 @@ export const internalSave = mutation({
     const chat = await ctx.db.get(args.chatId);
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
-      await ctx.storage.delete(args.storageId);
+      await ctx.storage.delete(args.fileName);
       throw new Error('Chat not found or unauthorized');
     }
 
@@ -167,26 +163,25 @@ export const internalSave = mutation({
     if (
       !(modelName && FILE_UPLOAD_MODELS.includes(modelName as FileUploadModel))
     ) {
-      await ctx.storage.delete(args.storageId);
+      await ctx.storage.delete(args.fileName);
       throw new Error('ERR_UNSUPPORTED_MODEL');
     }
 
     // Enforce MIME type allow-list
     if (!ALLOWED_FILE_MIME_TYPES.includes(args.fileType as AllowedMimeType)) {
-      await ctx.storage.delete(args.storageId);
+      await ctx.storage.delete(args.fileName);
       throw new Error('ERR_BAD_MIME');
     }
 
     // Enforce maximum size
     if (args.fileSize > MAX_FILE_SIZE) {
-      await ctx.storage.delete(args.storageId);
+      await ctx.storage.delete(args.fileName);
       throw new Error('ERR_FILE_TOO_LARGE');
     }
 
     return await ctx.db.insert('chat_attachments', {
       userId,
       chatId: args.chatId,
-      fileId: args.storageId,
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
@@ -196,11 +191,11 @@ export const internalSave = mutation({
 
 export const internalSaveGenerated = mutation({
   args: {
-    storageId: v.id('_storage'),
     chatId: v.id('chats'),
-    fileName: v.string(),
+    fileName: v.id('_storage'),
     fileType: v.string(),
     fileSize: v.number(),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -212,7 +207,7 @@ export const internalSaveGenerated = mutation({
     const chat = await ctx.db.get(args.chatId);
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
-      await ctx.storage.delete(args.storageId);
+      await ctx.storage.delete(args.fileName);
       throw new Error('Chat not found or unauthorized');
     }
 
@@ -222,11 +217,11 @@ export const internalSaveGenerated = mutation({
     return await ctx.db.insert('chat_attachments', {
       userId,
       chatId: args.chatId,
-      fileId: args.storageId,
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
       isGenerated: true, // Mark as AI-generated
+      url: args.url,
     });
   },
 });
@@ -289,7 +284,7 @@ export const getAttachmentsForUser = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: await ctx.storage.getUrl(attachment.fileId),
+        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
       }))
     );
   },
@@ -318,13 +313,13 @@ export const deleteAttachments = mutation({
     );
 
     // Delete files from storage and database records in parallel
-    const fileIdsToDelete = validAttachments.map(
-      (a) => a.fileId as Id<'_storage'>
+    const fileNamesToDelete = validAttachments.map(
+      (a) => a.fileName as Id<'_storage'>
     );
     const docIdsToDelete = validAttachments.map((a) => a._id);
 
     await Promise.all([
-      ...fileIdsToDelete.map((id) => ctx.storage.delete(id)),
+      ...fileNamesToDelete.map((id) => ctx.storage.delete(id)),
       ...docIdsToDelete.map((id) => ctx.db.delete(id)),
     ]);
   },
@@ -352,7 +347,7 @@ export const getAttachmentsForChat = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: await ctx.storage.getUrl(attachment.fileId),
+        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
       }))
     );
   },

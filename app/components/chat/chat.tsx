@@ -1,15 +1,19 @@
 'use client';
 
-import { type Message, useChat } from '@ai-sdk/react';
+import { type UIMessage, useChat } from '@ai-sdk/react';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
+import { DefaultChatTransport, type FileUIPart } from 'ai';
 import { useConvex } from 'convex/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
-import { Conversation } from '@/app/components/chat/conversation';
+import {
+  Conversation,
+  type MessageWithExtras,
+} from '@/app/components/chat/conversation';
 import { ChatInput } from '@/app/components/chat-input/chat-input';
 import { useChatOperations } from '@/app/hooks/use-chat-operations';
 import { useChatValidation } from '@/app/hooks/use-chat-validation';
@@ -24,7 +28,6 @@ import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
 import {
   createPlaceholderId,
-  createTempMessageId,
   mapMessage,
   validateInput,
 } from '@/lib/message-utils';
@@ -147,27 +150,18 @@ export default function Chat() {
   const isAuthenticated = isUserAuthenticated(user);
 
   // Enhanced useChat hook with AI SDK best practices
-  const { messages, status, reload, stop, setMessages, append } = useChat({
-    api: API_ROUTE_CHAT,
-    // Global configuration
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    // AI SDK error handling
-    onError: createChatErrorHandler(),
-    // Completion callback
-    onFinish: (_message, { usage: _usage, finishReason: _finishReason }) => {
-      // Optional: Add analytics or logging here
-      // console.log('Chat completed:', { usage, finishReason });
-    },
-    // Response callback for custom handling
-    onResponse: (response) => {
-      // Optional: Handle response headers or status
-      if (!response.ok) {
-        // console.warn('Chat response not OK:', response.status);
-      }
-    },
-  });
+  const { messages, status, regenerate, stop, setMessages, sendMessage } =
+    useChat({
+      transport: new DefaultChatTransport({
+        api: API_ROUTE_CHAT,
+        // Global configuration
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+      // AI SDK error handling
+      onError: createChatErrorHandler(),
+    });
 
   // Message synchronization effect - optimized to prevent infinite re-renders
   useEffect(() => {
@@ -198,7 +192,7 @@ export default function Chat() {
 
       if (mappedDb.length >= currentMessages.length) {
         // DB is up-to-date or ahead – merge to preserve streaming properties
-        const merged = mappedDb.map((dbMsg: Message, idx: number) => {
+        const merged = mappedDb.map((dbMsg: UIMessage, idx: number) => {
           const prev = currentMessages[idx];
           if (prev?.parts && !dbMsg.parts) {
             return { ...dbMsg, parts: prev.parts };
@@ -215,7 +209,6 @@ export default function Chat() {
             return {
               ...msg,
               id: dbMsg.id,
-              experimental_attachments: dbMsg.experimental_attachments,
               parts: msg.parts ?? dbMsg.parts,
             };
           }
@@ -238,7 +231,7 @@ export default function Chat() {
   }, [status, chatId, setMessages]);
 
   // Core message sending function
-  const sendMessage = useCallback(
+  const sendMessageHelper = useCallback(
     async (
       inputMessage: string,
       currentChatId?: string,
@@ -264,9 +257,7 @@ export default function Chat() {
       };
 
       // Handle files if present
-      let attachments:
-        | Array<{ name: string; contentType: string; url: string }>
-        | undefined;
+      let attachments: FileUIPart[] | undefined;
       if (hasFiles) {
         const optimisticAttachments = createOptimisticFiles();
         const placeholderId = createPlaceholderId();
@@ -277,12 +268,10 @@ export default function Chat() {
           {
             id: placeholderId,
             role: 'user' as const,
-            content: inputMessage,
-            createdAt: new Date(),
-            experimental_attachments:
-              optimisticAttachments.length > 0
-                ? optimisticAttachments
-                : undefined,
+            parts: [
+              { type: 'text', text: inputMessage },
+              ...optimisticAttachments,
+            ],
           },
         ]);
 
@@ -299,18 +288,12 @@ export default function Chat() {
 
       // Send message with AI SDK
       try {
-        await append(
-          {
-            id: createTempMessageId(),
-            role: 'user',
-            content: inputMessage,
-            experimental_attachments: attachments,
-          },
-          {
-            body,
-            experimental_attachments: attachments,
-          }
-        );
+        const messageParts = [
+          { type: 'text' as const, text: inputMessage },
+          ...(attachments || []),
+        ];
+
+        await sendMessage({ parts: messageParts, role: 'user' }, { body });
       } catch {
         toast({ title: 'Failed to send message', status: 'error' });
       }
@@ -323,7 +306,7 @@ export default function Chat() {
       hasFiles,
       createOptimisticFiles,
       processFiles,
-      append,
+      sendMessage,
       setMessages,
     ]
   );
@@ -358,7 +341,9 @@ export default function Chat() {
           );
           if (newChatId) {
             window.history.pushState(null, '', `/c/${newChatId}`);
-            await sendMessage(trimmedQuery, newChatId, { enableSearch: false });
+            await sendMessageHelper(trimmedQuery, newChatId, {
+              enableSearch: false,
+            });
           }
         } catch {
           toast({ title: 'Failed to create chat', status: 'error' });
@@ -378,7 +363,7 @@ export default function Chat() {
     personaId,
     validateSearchQuery,
     validateModelAccess,
-    sendMessage,
+    sendMessageHelper,
   ]);
 
   // Main submit handler
@@ -415,7 +400,11 @@ export default function Chat() {
       }
 
       clearFiles();
-      await sendMessage(inputMessage, currentChatId || undefined, opts?.body);
+      await sendMessageHelper(
+        inputMessage,
+        currentChatId || undefined,
+        opts?.body
+      );
     },
     [
       files.length,
@@ -428,7 +417,7 @@ export default function Chat() {
       selectedModel,
       personaId,
       clearFiles,
-      sendMessage,
+      sendMessageHelper,
     ]
   );
 
@@ -543,7 +532,7 @@ export default function Chat() {
           ...(timezone ? { userInfo: { timezone } } : {}),
         },
       };
-      reload(options);
+      regenerate(options);
     },
     [
       user,
@@ -554,7 +543,7 @@ export default function Chat() {
       setMessages,
       handleDeleteMessage,
       setIsDeleting,
-      reload,
+      regenerate,
     ]
   );
 
@@ -627,7 +616,7 @@ export default function Chat() {
           <Conversation
             autoScroll={!targetMessageId}
             key="conversation"
-            messages={messages}
+            messages={messages as MessageWithExtras[]}
             onBranch={(messageId) =>
               chatId && handleBranch(chatId, messageId, user)
             }
@@ -664,7 +653,7 @@ export default function Chat() {
             { enableSearch }: { enableSearch: boolean }
           ) => submit(message, { body: { enableSearch } })}
           onSuggestionAction={(suggestion: string) =>
-            append({ role: 'user', content: suggestion })
+            sendMessage({ text: suggestion })
           }
           reasoningEffort={reasoningEffort}
           selectedModel={selectedModel}

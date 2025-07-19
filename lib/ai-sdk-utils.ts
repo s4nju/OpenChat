@@ -1,49 +1,8 @@
 import { Doc } from "@/convex/_generated/dataModel"
-import type { Message } from "ai"
+import type { UIMessage, FileUIPart, TextUIPart, ReasoningUIPart, ToolUIPart, SourceUrlUIPart } from "ai"
 
-// Infer types from Convex schema validators
-export type ConvexMessagePart = {
-  type: "text"
-  text: string
-} | {
-  type: "image"
-  image: string
-  mimeType: string
-} | {
-  type: "reasoning"
-  reasoning: string
-  signature?: string
-  duration?: number
-  details?: Array<{
-    type: "text" | "redacted"
-    text?: string
-    data?: string
-    signature?: string
-  }>
-} | {
-  type: "file"
-  data: string
-  filename?: string
-  mimeType?: string
-  url?: string // Generated URL for display (not persisted)
-} | {
-  type: "error"
-  error: {
-    code: string
-    message: string
-    rawError?: string
-  }
-} | {
-  type: "tool-invocation"
-  toolInvocation: {
-    state: "call" | "result" | "partial-call"
-    args?: unknown
-    result?: unknown
-    toolCallId: string
-    toolName: string
-    step?: number
-  }
-}
+// Type alias for message parts array
+type MessageParts = Array<TextUIPart | ReasoningUIPart | ToolUIPart | SourceUrlUIPart | FileUIPart>
 
 // AI SDK Attachment type
 export interface Attachment {
@@ -57,80 +16,42 @@ export interface Attachment {
 export interface MessageMetadata {
   modelId?: string
   modelName?: string
-  promptTokens?: number
-  completionTokens?: number
+  inputTokens?: number
+  outputTokens?: number
   reasoningTokens?: number
   serverDurationMs?: number
   includeSearch?: boolean
   reasoningEffort?: string
 }
 
-/**
- * Convert Convex message document to AI SDK format
- */
-export function convertConvexToAISDK(msg: Doc<"messages">): Message {
-  // Ensure reasoning parts have proper details field to prevent iteration errors
-  const normalizedParts = msg.parts?.map(part => {
-    if (part.type === "reasoning") {
-      return {
-        ...part,
-        details: part.details || [] // Ensure details is always an array
-      }
-    }
-    return part
-  })
-
-  return {
-    id: msg._id,
-    role: msg.role as "user" | "assistant" | "system",
-    content: msg.content, // Keep as fallback for text-only display
-    createdAt: new Date(msg._creationTime),
-    parts: (normalizedParts as Message["parts"]) || [{ type: "text", text: msg.content }], // Use normalized parts or fallback to text
-    experimental_attachments: extractAttachmentsFromParts(msg.parts),
-    // Pass the entire metadata object for easier access to any metadata property
-    ...(msg.metadata && { metadata: msg.metadata as MessageMetadata }),
-  }
-}
 
 /**
- * Extract attachment objects from FileParts for AI SDK experimental_attachments
+ * Extract attachment objects from FileParts  
  * Handles both storage IDs and generated URLs from queries
  */
-export function extractAttachmentsFromParts(parts?: ConvexMessagePart[]): Attachment[] | undefined {
+export function extractAttachmentsFromParts(parts?: MessageParts): Attachment[] | undefined {
   if (!parts) return undefined
   
   const attachments = parts
-    .filter((part): part is Extract<ConvexMessagePart, { type: "file" }> => part.type === "file")
-    .filter(validateFilePart) // Filter out invalid parts
-    .map(part => {
-      // Check if part has a generated URL field (added by queries)
-      const partWithUrl = part as ConvexMessagePart & { url?: string }
-      const hasGeneratedUrl = partWithUrl.url && typeof partWithUrl.url === 'string'
-      
-      // Use helper function to detect storage IDs
-      const isStorageId = isConvexStorageId(part.data)
-      
-      return {
-        name: part.filename,
-        contentType: part.mimeType,
-        // Use generated URL if available, otherwise use data field (for backwards compatibility)
-        url: hasGeneratedUrl ? partWithUrl.url! : part.data,
-        storageId: isStorageId ? part.data : undefined
-      }
-    })
+    .filter((part): part is FileUIPart => part.type === "file")
+    .map(part => ({
+      name: part.filename,
+      contentType: part.mediaType,
+      url: part.url,
+      storageId: isConvexStorageId(part.url) ? part.url : undefined
+    }))
   
   return attachments.length > 0 ? attachments : undefined
 }
 
 /**
  * Convert uploaded file attachments to FileParts for storage
- * Stores storage ID instead of URL for permanent reference
  */
-export function convertAttachmentsToFileParts(attachments: Attachment[]): ConvexMessagePart[] {
+export function convertAttachmentsToFileParts(attachments: Attachment[]): FileUIPart[] {
   return attachments.map(att => ({
     type: "file" as const,
-    data: att.storageId || att.url, // Use storage ID if available, fallback to URL for backwards compatibility
-    mimeType: att.contentType || "application/octet-stream",
+    url: att.storageId || att.url, // Use storage ID if available, fallback to URL for backwards compatibility
+    mediaType: att.contentType || "application/octet-stream",
     filename: att.name
   }))
 }
@@ -138,12 +59,12 @@ export function convertAttachmentsToFileParts(attachments: Attachment[]): Convex
 /**
  * Extract reasoning text from AI SDK response parts
  */
-export function extractReasoningFromResponse(responseParts: Array<{ type: string; reasoning?: string; text?: string }>): string | undefined {
+export function extractReasoningFromResponse(responseParts: MessageParts): string | undefined {
   if (!responseParts) return undefined
   
   const reasoningText = responseParts
-    .filter(part => part.type === "reasoning")
-    .map(part => part.reasoning || part.text)
+    .filter((part): part is ReasoningUIPart => part.type === "reasoning")
+    .map(part => part.text)
     .join("\n")
   
   return reasoningText || undefined
@@ -153,8 +74,7 @@ export function extractReasoningFromResponse(responseParts: Array<{ type: string
  * Build metadata object from AI SDK usage, response and model info
  */
 export function buildMetadataFromResponse(
-  usage: { promptTokens?: number; completionTokens?: number; reasoningTokens?: number }, 
-  response: { modelId?: string }, 
+  usage: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number }, 
   modelId: string,
   modelName: string,
   startTime: number,
@@ -163,27 +83,27 @@ export function buildMetadataFromResponse(
 ): MessageMetadata {
   return {
     modelId,
-    modelName: modelName || response.modelId || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
-    promptTokens: usage?.promptTokens || 0,
-    completionTokens: usage?.completionTokens || 0,
+    modelName: modelName || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
+    inputTokens: usage?.inputTokens || 0,
+    outputTokens: usage?.outputTokens || 0,
     reasoningTokens: usage?.reasoningTokens || 0, // Default to 0 instead of undefined/NaN
     serverDurationMs: Date.now() - startTime,
     includeSearch: includeSearch || false,
     reasoningEffort: reasoningEffort || "none"
-  }
+  };
 }
 
 /**
  * Extract reasoning text from parts array (for backward compatibility display)
  */
-export function extractReasoningFromParts(parts?: ConvexMessagePart[]): string | undefined {
+export function extractReasoningFromParts(parts?: MessageParts): string | undefined {
   if (!parts) return undefined
   
-  const reasoningPart = parts.find((part): part is Extract<ConvexMessagePart, { type: "reasoning" }> => 
+  const reasoningPart = parts.find((part): part is ReasoningUIPart => 
     part.type === "reasoning"
   )
   
-  return reasoningPart?.reasoning
+  return reasoningPart?.text;
 }
 
 /**
@@ -206,16 +126,15 @@ export function createPartsFromAIResponse(
     result?: unknown
     state: "call" | "result" | "partial-call"
   }>
-): ConvexMessagePart[] {
-  const parts: ConvexMessagePart[] = [
+): MessageParts {
+  const parts: MessageParts = [
     { type: "text", text: textContent }
   ]
   
   if (reasoningText) {
     parts.push({ 
       type: "reasoning", 
-      reasoning: reasoningText,
-      details: [] // Initialize details as empty array to prevent iteration errors
+      text: reasoningText
     })
   }
   
@@ -223,15 +142,12 @@ export function createPartsFromAIResponse(
   if (toolInvocations && toolInvocations.length > 0) {
     toolInvocations.forEach((invocation) => {
       parts.push({
-        type: "tool-invocation",
-        toolInvocation: {
-          state: invocation.state,
-          args: invocation.args,
-          result: invocation.result,
-          toolCallId: invocation.toolCallId,
-          toolName: invocation.toolName
-        }
-      })
+        type: `tool-${invocation.toolName}` as `tool-${string}`,
+        toolCallId: invocation.toolCallId,
+        state: invocation.state,
+        input: invocation.args,
+        output: invocation.result,
+      } as unknown as ToolUIPart)
     })
   }
   
@@ -243,15 +159,19 @@ export function createPartsFromAIResponse(
  */
 export function isConvexStorageId(value: string): boolean {
   // Convex storage IDs are typically 32-character hex strings
-  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:') && !value.startsWith('blob:')
+  return /^[a-z0-9]{32}$/.test(value) && !value.startsWith('http') && !value.startsWith('data:') && !value.startsWith('blob:');
 }
 
+
 /**
- * Helper to validate file part data
+ * Convert Convex message document to AI SDK UIMessage format
  */
-export function validateFilePart(part: ConvexMessagePart): boolean {
-  if (part.type !== "file") return false
-  if (!part.data || typeof part.data !== "string") return false
-  if (!part.mimeType) return false
-  return true
-} 
+export function convertConvexToAISDK(msg: Doc<'messages'>): UIMessage {
+  // console.log("Converting Convex message to AI SDK format:", msg);
+  return {
+    id: msg._id,
+    role: msg.role,
+    parts: msg.parts || [],
+    metadata: msg.metadata,
+  };
+}

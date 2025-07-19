@@ -3,6 +3,7 @@
  * Manages file uploads and attachment processing for chat
  */
 
+import type { FileUIPart } from 'ai';
 import { useAction, useConvex } from 'convex/react';
 import { useCallback, useState } from 'react';
 import { api } from '@/convex/_generated/api';
@@ -10,7 +11,6 @@ import type { Id } from '@/convex/_generated/dataModel';
 import {
   createOptimisticAttachments,
   uploadFilesInParallel,
-  type VercelAiAttachment,
 } from '@/lib/file-upload-utils';
 
 export function useFileHandling() {
@@ -32,7 +32,7 @@ export function useFileHandling() {
   }, []);
 
   const processFiles = useCallback(
-    async (chatId: Id<'chats'>): Promise<VercelAiAttachment[]> => {
+    async (chatId: Id<'chats'>): Promise<FileUIPart[]> => {
       if (files.length === 0) {
         return [];
       }

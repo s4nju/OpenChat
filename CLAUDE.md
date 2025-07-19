@@ -3,6 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 # **Global Rules**
+
 - You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved.
 - If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
 - You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls. DO NOT do this entire process by making function calls only, as this can impair your ability to solve the problem and think insightfully.
@@ -13,8 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Do not assume anything. Use the docs from context7 tool.
 - If there is a lint error (bun run lint), fix it before moving on.
 - Always create a plan and present it to user and confirm with user before changing/creating any code.
+- Use @agent_rules/commit.md for commit instructions.
 
 # **Project Details**
+
 - Bun as the package manager
 - Tailwind CSS for styling
 - TypeScript for type safety
@@ -25,20 +28,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Next.js 15 and React 19 for the framework
 - Convex for authentication, Database, File storage and serverless functions
 
-
-- Update the Project Details whenever the stack changes.
-
 # **Code Standards**
+
 - Use TypeScript with strict mode enabled. Avoid `any` and `unknown` types. Prefer explicit types and interfaces. Do not use `@ts-ignore` or disable type checks.
 - Use functional React components. Always use hooks at the top level. Do not use default exports for components or functions.
 - Follow Next.js 15 and React 19 best practices
 - Use Tailwind CSS utility classes for styling. Avoid inline styles.
 - Use Bun for all package management and scripts (`bun install`).
-- Follow Convex guidelines in `agent_rules/convex_rules.md`.
+- Follow Convex guidelines in `@agent_rules/convex_rules.md`.
 - Use Shadcn UI and Prompt-kit components as documented. Do not modify library code directly. Prefer composition over modification.
 - Use Biome for all linting and formatting. Run Biome (`bun run lint`) before committing. Follow all rules specified in `biome.jsonc`. Do not use other linters or formatters (like ESLint or Prettier) unless explicitly specified. Check `biome.jsonc` for custom or overridden rules. Biome extends the `ultracite` ruleset for this project.
 - Lint and format code before committing. Fix all Biome lint errors before moving on. Do not commit code with unused variables, imports, or unreachable code.
-- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `agent_rules/ultracite.md`.
+- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `@agent_rules/ultracite.md`.
 - Do not use `console` statements in production code.
 - Do not use TypeScript enums or namespaces.
 - Do not use `any` or `unknown` as type constraints.
@@ -48,29 +49,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # **Architecture Overview**
 
 ## Frontend Architecture
+
 - **Next.js App Router**: Uses the modern App Router with layout nesting. Main layout at `app/layout.tsx` with nested layouts for settings (`app/settings/layout.tsx`).
-- **Component Structure**: 
+- **Component Structure**:
   - `app/components/`: React components organized by feature (chat, layout, history, etc.)
   - `components/`: Reusable UI components (shadcn/ui, prompt-kit, motion primitives)
   - Components are functional with TypeScript interfaces for props
-- **State Management**: 
+- **State Management**:
   - React Context providers in `app/providers/` for global state
   - Convex queries/mutations for server state
   - Local state with React hooks
 - **Styling**: Tailwind CSS with custom themes and animations
 
 ## Backend Architecture (Convex)
+
 - **Real-time Database**: Convex provides real-time updates across all clients
 - **Authentication**: Convex Auth with Google OAuth integration
 - **File Storage**: Built-in file storage for attachments and images
 - **Schema**: Defined in `convex/schema/` with modular table definitions
-- **API Functions**: 
+- **API Functions**:
   - Queries for reading data (`convex/*.ts`)
-  - Mutations for writing data 
+  - Mutations for writing data
   - Actions for external API calls (AI models, web search)
   - Internal functions for server-side logic
 
 ## AI Integration
+
 - **Multi-model Support**: Supports OpenAI, Anthropic, Google, Mistral, Together AI, and more
 - **Vercel AI SDK v4**: Handles streaming, tool calling, and model switching
 - **Model Selection**: Dynamic model switching with per-chat preferences
@@ -78,6 +82,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Web Search**: Integrated Exa, Tavily, and Brave search APIs
 
 ## Key Features
+
 - **Real-time Chat**: Live message streaming with Convex subscriptions
 - **Multi-modal**: Text, images, and reasoning model support
 - **Chat Management**: Pinning, branching, export/import, time-based organization
@@ -86,6 +91,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Responsive Design**: Mobile-first with drawer navigation
 
 # **Development Commands**
+
 - `bun install` - Install dependencies
 - `bun dev` - Start development server with Turbopack
 - `bun build` - Build for production
@@ -96,6 +102,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run typecheck` - Run Typecheck
 
 # **Testing and Quality**
+
 - Run `bun run format` and then `bun run lint` before committing to ensure code quality
 - All TypeScript errors must be resolved
 - Follow accessibility guidelines from `ultracite.md`
@@ -103,10 +110,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Verify real-time features work across multiple clients
 
 # **Files to read**
+
 - Read convex_rules.md for convex guidelines.
 - Read ultracite.md for general code rules (Always read this to avoid lint error)
+
 # important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

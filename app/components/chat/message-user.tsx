@@ -1,7 +1,7 @@
 'use client';
 
-import type { Message as MessageType } from '@ai-sdk/react';
 import { Check, Copy, FilePdf, Trash } from '@phosphor-icons/react';
+import type { FileUIPart, UIMessage as MessageType } from 'ai';
 import Image from 'next/image';
 import type React from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
@@ -27,11 +27,9 @@ const getTextFromDataUrl = (dataUrl: string) => {
   return base64;
 };
 
-// Helper function to render different attachment types
-const renderAttachment = (
-  attachment: NonNullable<MessageType['experimental_attachments']>[0]
-) => {
-  if (attachment.contentType?.startsWith('image')) {
+// Helper function to render different file parts
+const renderFilePart = (filePart: FileUIPart) => {
+  if (filePart.mediaType?.startsWith('image')) {
     return (
       <MorphingDialog
         transition={{
@@ -43,20 +41,20 @@ const renderAttachment = (
       >
         <MorphingDialogTrigger className="z-10">
           <Image
-            alt={attachment.name ?? ''}
+            alt={filePart.filename ?? ''}
             className="mb-1 rounded-md"
             height={160}
-            key={attachment.name}
-            src={attachment.url}
+            key={filePart.filename}
+            src={filePart.url}
             width={160}
           />
         </MorphingDialogTrigger>
         <MorphingDialogContainer>
           <MorphingDialogContent className="relative rounded-lg">
             <MorphingDialogImage
-              alt={attachment.name || ''}
+              alt={filePart.filename || ''}
               className="max-h-[90vh] max-w-[90vw] object-contain"
-              src={attachment.url}
+              src={filePart.url}
             />
           </MorphingDialogContent>
           <MorphingDialogClose className="text-primary" />
@@ -65,21 +63,21 @@ const renderAttachment = (
     );
   }
 
-  if (attachment.contentType?.startsWith('text')) {
+  if (filePart.mediaType?.startsWith('text')) {
     return (
       <div className="mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-primary text-xs">
-        {getTextFromDataUrl(attachment.url)}
+        {getTextFromDataUrl(filePart.url)}
       </div>
     );
   }
 
-  if (attachment.contentType === 'application/pdf') {
+  if (filePart.mediaType === 'application/pdf') {
     return (
       <a
-        aria-label={`Download PDF: ${attachment.name}`}
+        aria-label={`Download PDF: ${filePart.filename}`}
         className="mb-2 flex w-35 cursor-pointer flex-col justify-between rounded-lg border border-gray-200 bg-muted px-4 py-2 shadow-sm transition-colors hover:bg-muted/80 focus:bg-muted/70 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-700"
-        download={attachment.name}
-        href={attachment.url}
+        download={filePart.filename}
+        href={filePart.url}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             (e.currentTarget as HTMLAnchorElement).click();
@@ -110,9 +108,9 @@ const renderAttachment = (
           <span
             className="overflow-hidden truncate whitespace-nowrap font-medium text-gray-900 text-sm dark:text-gray-100"
             style={{ maxWidth: 'calc(100% - 28px)' }}
-            title={attachment.name}
+            title={filePart.filename}
           >
-            {attachment.name}
+            {filePart.filename}
           </span>
         </div>
       </a>
@@ -124,8 +122,7 @@ const renderAttachment = (
 
 export type MessageUserProps = {
   hasScrollAnchor?: boolean;
-  attachments?: MessageType['experimental_attachments'];
-  children: string;
+  parts?: MessageType['parts'];
   copied: boolean;
   copyToClipboard: () => void;
   onEdit: (id: string, newText: string) => void;
@@ -137,8 +134,7 @@ export type MessageUserProps = {
 
 function MessageUserInner({
   hasScrollAnchor,
-  attachments,
-  children,
+  parts,
   copied,
   copyToClipboard,
   onEdit,
@@ -147,11 +143,18 @@ function MessageUserInner({
   id,
   status,
 }: MessageUserProps): React.ReactElement {
-  const [editInput, setEditInput] = useState(children);
+  // Extract text content from parts
+  const textContent =
+    parts
+      ?.filter((part) => part.type === 'text')
+      .map((part) => ('text' in part ? part.text : ''))
+      .join('') || '';
+
+  const [editInput, setEditInput] = useState(textContent);
   const [isEditing, setIsEditing] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const displayContent = children.replace(/\n{2,}/g, '\n\n');
+  const displayContent = textContent.replace(/\n{2,}/g, '\n\n');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -159,9 +162,16 @@ function MessageUserInner({
     }
   }, []);
 
+  // Update editInput when textContent changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditInput(textContent);
+    }
+  }, [textContent, isEditing]);
+
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditInput(children);
+    setEditInput(textContent);
   };
 
   const handleSave = () => {
@@ -184,14 +194,16 @@ function MessageUserInner({
       )}
       id={id}
     >
-      {attachments?.map((attachment, index) => (
-        <div
-          className="flex flex-row gap-2"
-          key={`${attachment.name}-${index}`}
-        >
-          {renderAttachment(attachment)}
-        </div>
-      ))}
+      {parts
+        ?.filter((part): part is FileUIPart => part.type === 'file')
+        .map((filePart, index) => (
+          <div
+            className="flex flex-row gap-2"
+            key={`${filePart.filename}-${index}`}
+          >
+            {renderFilePart(filePart)}
+          </div>
+        ))}
       {isEditing ? (
         <div
           className="relative flex min-w-[180px] flex-col gap-2 rounded-3xl bg-accent px-5 py-2.5"

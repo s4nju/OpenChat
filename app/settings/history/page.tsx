@@ -57,8 +57,8 @@ const ImportSchema = z
                 .object({
                   modelName: z.string().optional(),
                   modelId: z.string().optional(),
-                  promptTokens: z.union([z.number(), z.nan()]).optional(),
-                  completionTokens: z.union([z.number(), z.nan()]).optional(),
+                  inputTokens: z.union([z.number(), z.nan()]).optional(),
+                  outputTokens: z.union([z.number(), z.nan()]).optional(),
                   reasoningTokens: z.union([z.number(), z.nan()]).optional(),
                   serverDurationMs: z.number().optional(),
                 })

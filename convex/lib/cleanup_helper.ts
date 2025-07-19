@@ -46,7 +46,7 @@ export async function deleteAttachmentsForChat(
     attachments.map(async (attachment) => {
       try {
         // Delete the actual file from storage first
-        await ctx.storage.delete(attachment.fileId as Id<'_storage'>);
+        await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
       } catch {
         // Silently handle storage deletion errors
         // Continue with DB cleanup even if storage deletion fails

@@ -3,14 +3,15 @@ import type { AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
-import { withTracing } from '@posthog/ai';
+// import { withTracing } from '@posthog/ai';
 import {
-  createDataStreamResponse,
+  convertToModelMessages,
+  type FileUIPart,
   experimental_generateImage as generateImage,
   type JSONValue,
-  type Message as MessageAISDK,
-  smoothStream,
+  stepCountIs,
   streamText,
+  type UIMessage,
 } from 'ai';
 import { checkBotId } from 'botid/server';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
@@ -20,8 +21,7 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import {
   buildMetadataFromResponse,
-  type ConvexMessagePart,
-  convertAttachmentsToFileParts,
+  type MessageMetadata,
 } from '@/lib/ai-sdk-utils';
 import { MODELS_MAP } from '@/lib/config';
 import {
@@ -137,7 +137,7 @@ type SupportedProvider =
  * Helper function to save user message to chat if not in reload mode
  */
 async function saveUserMessage(
-  messages: MessageAISDK[],
+  messages: UIMessage[],
   chatId: Id<'chats'>,
   token: string | undefined,
   reloadAssistantMessageId?: Id<'messages'>
@@ -145,25 +145,21 @@ async function saveUserMessage(
   if (!reloadAssistantMessageId && token) {
     const userMessage = messages.at(-1);
     if (userMessage && userMessage.role === 'user') {
-      // Convert experimental_attachments to FileParts before saving
-      const fileParts = userMessage.experimental_attachments
-        ? convertAttachmentsToFileParts(userMessage.experimental_attachments)
-        : [];
+      // Use parts directly since schema now matches AI SDK v5
+      const userParts = (userMessage.parts || []).map((p) => p.type === 'text' ? { ...p, text: sanitizeUserInput(p.text) } : p);
 
-      const userParts = [
-        {
-          type: 'text' as const,
-          text: sanitizeUserInput(userMessage.content as string),
-        },
-        ...fileParts,
-      ];
+      // Extract text content for backwards compatibility
+      const textContent = userParts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join('');
 
       const { messageId } = await fetchMutation(
         api.messages.sendUserMessageToChat,
         {
           chatId,
           role: 'user',
-          content: sanitizeUserInput(userMessage.content as string),
+          content: sanitizeUserInput(textContent),
           parts: userParts,
           metadata: {}, // Empty metadata for user messages
         },
@@ -201,7 +197,7 @@ const REASONING_MODELS = {
 } as const;
 
 type ChatRequest = {
-  messages: MessageAISDK[];
+  messages: UIMessage[];
   chatId: Id<'chats'>;
   model: string;
   personaId?: string;
@@ -290,173 +286,155 @@ const buildAnthropicProviderOptions = (
 /**
  * Handle image generation for image generation models
  */
-function handleImageGeneration({
+async function handleImageGeneration({
   messages,
   chatId,
   selectedModel,
   userMsgId,
   token,
 }: {
-  messages: MessageAISDK[];
+  messages: UIMessage[];
   chatId: Id<'chats'>;
   selectedModel: (typeof MODELS_MAP)[string];
   userMsgId: Id<'messages'> | null;
   token?: string;
 }) {
-  return createDataStreamResponse({
-    execute: async (dataStream) => {
-      let currentUserMsgId: Id<'messages'> | null = userMsgId;
+  let currentUserMsgId: Id<'messages'> | null = userMsgId;
 
-      // Save user message first
-      if (!currentUserMsgId && token) {
-        const userMessage = messages.at(-1);
-        if (userMessage && userMessage.role === 'user') {
-          const userParts = [
-            {
-              type: 'text' as const,
-              text: sanitizeUserInput(userMessage.content as string),
-            },
-          ];
+  try {
+    // Save user message first
+    if (!currentUserMsgId && token) {
+      currentUserMsgId = await saveUserMessage(messages, chatId, token);
+    }
+    // Extract the prompt from the last user message parts
+    const lastMessage = messages.at(-1);
+    // console.log(lastMessage);
+    const textPart = lastMessage?.parts?.find((part) => part.type === 'text');
+    const prompt = textPart?.text || 'A beautiful image';
 
-          const { messageId } = await fetchMutation(
-            api.messages.sendUserMessageToChat,
-            {
-              chatId,
-              role: 'user',
-              content: sanitizeUserInput(userMessage.content as string),
-              parts: userParts,
-              metadata: {},
-            },
-            { token }
-          );
-          currentUserMsgId = messageId;
-        }
-      }
+    // Generate the image using built-in API key
+    // Use different parameters based on provider (OpenAI uses size, Google uses aspectRatio)
+    const { image } =
+      selectedModel.provider === 'openai'
+        ? await generateImage({
+            model: selectedModel.api_sdk,
+            prompt,
+            size: '1024x1024',
+          })
+        : await generateImage({
+            model: selectedModel.api_sdk,
+            prompt,
+            aspectRatio: '1:1',
+          });
 
-      try {
-        // Extract the prompt from the last user message
-        const lastMessage = messages.at(-1);
-        // console.log(lastMessage);
-        const prompt = (lastMessage?.content as string) || 'A beautiful image';
+    // console.log(image);
 
-        // Generate the image using built-in API key
-        // Use different parameters based on provider (OpenAI uses size, Google uses aspectRatio)
-        const { image } =
-          selectedModel.provider === 'openai'
-            ? await generateImage({
-                model: selectedModel.api_sdk,
-                prompt,
-                size: '1024x1024',
-              })
-            : await generateImage({
-                model: selectedModel.api_sdk,
-                prompt,
-                aspectRatio: '1:1',
-              });
+    // Upload image to Convex storage
+    const imageBuffer = image.uint8Array;
+    const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
 
-        // console.log(image);
+    const uploadUrl = await fetchAction(
+      api.files.generateUploadUrl,
+      {},
+      { token }
+    );
 
-        // Upload image to Convex storage
-        const imageBuffer = image.uint8Array;
-        const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: imageBlob,
+      headers: {
+        'Content-Type': 'image/png',
+      },
+    });
 
-        const uploadUrl = await fetchAction(
-          api.files.generateUploadUrl,
-          {},
-          { token }
-        );
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload generated image');
+    }
 
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          body: imageBlob,
-          headers: {
-            'Content-Type': 'image/png',
+    const { storageId } = await uploadResponse.json();
+
+    // Generate the proper public storage URL
+    const properStorageUrl = await fetchQuery(
+      api.files.getStorageUrl,
+      { storageId },
+      { token }
+    );
+
+    if (!properStorageUrl) {
+      throw new Error('Failed to generate storage URL for uploaded image');
+    }
+
+    // Save generated image to attachments table
+    if (token) {
+      await fetchAction(
+        api.files.saveGeneratedImage,
+        {
+          fileName: storageId,
+          chatId,
+          fileType: 'image/png',
+          fileSize: imageBuffer.length,
+          url: properStorageUrl,
+        },
+        { token }
+      );
+    }
+
+    // Create file part for the generated image
+    const filePart: FileUIPart = {
+      type: 'file',
+      filename: storageId,
+      mediaType: 'image/png',
+      url: properStorageUrl,
+    };
+
+    // Save assistant message with image
+    if (currentUserMsgId && token) {
+      await fetchMutation(
+        api.messages.saveAssistantMessage,
+        {
+          chatId,
+          role: 'assistant',
+          content: '', // Empty content - let the image speak for itself
+          parentMessageId: currentUserMsgId,
+          parts: [filePart], // Only include the file part, no redundant text
+          metadata: {
+            modelId: selectedModel.id,
+            modelName: selectedModel.name,
+            includeSearch: false,
+            reasoningEffort: 'none',
           },
-        });
+        },
+        { token }
+      );
+    }
 
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload generated image');
-        }
+    // Increment premium credits usage since image generation uses premium credits
+    if (token) {
+      await fetchMutation(
+        api.users.incrementMessageCount,
+        { usesPremiumCredits: true },
+        { token }
+      );
+    }
 
-        const { storageId } = await uploadResponse.json();
-
-        // Generate a single filename to ensure consistency
-        const fileName = `generated-image-${Date.now()}.png`;
-
-        // Save generated image to attachments table
-        if (token) {
-          await fetchAction(
-            api.files.saveGeneratedImage,
-            {
-              storageId,
-              chatId,
-              fileName,
-              fileType: 'image/png',
-              fileSize: imageBuffer.length,
-            },
-            { token }
-          );
-        }
-
-        // Create file part for the generated image
-        const filePart = {
-          type: 'file' as const,
-          data: storageId,
-          filename: fileName,
-          mimeType: 'image/png',
-        };
-
-        // Save assistant message with image
-        if (currentUserMsgId && token) {
-          await fetchMutation(
-            api.messages.saveAssistantMessage,
-            {
-              chatId,
-              role: 'assistant',
-              content: '', // Empty content - let the image speak for itself
-              parentMessageId: currentUserMsgId,
-              parts: [filePart], // Only include the file part, no redundant text
-              metadata: {
-                modelId: selectedModel.id,
-                modelName: selectedModel.name,
-                includeSearch: false,
-                reasoningEffort: 'none',
-              },
-            },
-            { token }
-          );
-        }
-
-        // Increment premium credits usage since image generation uses premium credits
-        if (token) {
-          await fetchMutation(
-            api.users.incrementMessageCount,
-            { usesPremiumCredits: true },
-            { token }
-          );
-        }
-
-        // Stream the response
-        dataStream.writeData('Generated image successfully');
-      } catch (error) {
-        if (currentUserMsgId && token) {
-          await saveErrorMessage(
-            chatId,
-            currentUserMsgId,
-            error,
-            token,
-            selectedModel.id,
-            selectedModel.name
-          );
-        }
-        throw error;
-      }
-    },
-    onError: (error) => {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      return errorMsg;
-    },
-  });
+    // Return success response
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    if (currentUserMsgId && token) {
+      await saveErrorMessage(
+        chatId,
+        currentUserMsgId,
+        error,
+        token,
+        selectedModel.id,
+        selectedModel.name
+      );
+    }
+    return createErrorResponse(error);
+  }
 }
 
 export async function POST(req: Request) {
@@ -521,7 +499,7 @@ export async function POST(req: Request) {
         : Promise.resolve(false),
     ]);
 
-    const userId = user?._id;
+    // const userId = user?._id;
 
     // --- API Key and Model Configuration ---
     const { apiKeyUsage } = selectedModel;
@@ -677,339 +655,197 @@ export async function POST(req: Request) {
 
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
 
-    return createDataStreamResponse({
-      execute: async (dataStream) => {
-        let userMsgId: Id<'messages'> | null = null;
+    // --- Reload Logic (Delete and Recreate) ---
+    let userMsgId: Id<'messages'> | null = null;
+    if (reloadAssistantMessageId) {
+      const details = await fetchQuery(
+        api.messages.getMessageDetails,
+        { messageId: reloadAssistantMessageId },
+        { token }
+      );
+      userMsgId = details?.parentMessageId ?? null;
+      await fetchMutation(
+        api.messages.deleteMessageAndDescendants,
+        { messageId: reloadAssistantMessageId },
+        { token }
+      );
+    }
 
-        // --- Reload Logic (Delete and Recreate) ---
-        if (reloadAssistantMessageId) {
-          const details = await fetchQuery(
-            api.messages.getMessageDetails,
-            { messageId: reloadAssistantMessageId },
-            { token }
-          );
-          userMsgId = details?.parentMessageId ?? null;
-          await fetchMutation(
-            api.messages.deleteMessageAndDescendants,
-            { messageId: reloadAssistantMessageId },
-            { token }
-          );
-        }
+    // --- Insert User Message (if not a reload) ---
+    if (!userMsgId) {
+      userMsgId = await saveUserMessage(
+        messages,
+        chatId,
+        token,
+        reloadAssistantMessageId
+      );
+    }
 
-        // --- Insert User Message (if not a reload) ---
-        if (!userMsgId) {
-          userMsgId = await saveUserMessage(
-            messages,
-            chatId,
-            token,
-            reloadAssistantMessageId
-          );
-        }
+    const makeOptions = (useUser: boolean) => {
+      const key = useUser ? userApiKey : undefined;
 
-        // Helper to convert storage IDs to fresh URLs for AI models
-        const resolveAttachmentUrls = async (
-          messagesToResolve: MessageAISDK[]
-        ): Promise<MessageAISDK[]> => {
-          return await Promise.all(
-            messagesToResolve.map(async (message) => {
-              if (!message.experimental_attachments) {
-                return message;
-              }
-
-              const resolvedAttachments = await Promise.all(
-                message.experimental_attachments.map(async (attachment) => {
-                  // Check if URL is actually a storage ID
-                  const isStorageId =
-                    attachment.url &&
-                    !attachment.url.startsWith('http') &&
-                    !attachment.url.startsWith('data:') &&
-                    !attachment.url.startsWith('blob:');
-
-                  if (isStorageId) {
-                    try {
-                      // Generate fresh URL from storage ID for AI model
-                      const freshUrl = await fetchQuery(
-                        api.files.getStorageUrl,
-                        { storageId: attachment.url },
-                        { token }
-                      );
-                      return { ...attachment, url: freshUrl || attachment.url };
-                    } catch (_error) {
-                      // console.warn(
-                      //   `Failed to resolve storage URL for ${attachment.url}:`,
-                      //   error
-                      // );
-                      return attachment; // Return as-is if resolution fails
-                    }
-                  }
-                  return attachment;
-                })
-              );
-
-              return {
-                ...message,
-                experimental_attachments: resolvedAttachments,
-              };
-            })
-          );
+      if (selectedModel.provider === 'gemini') {
+        return {
+          google: {
+            ...buildGoogleProviderOptions(selectedModel.id, reasoningEffort),
+            apiKey: key,
+          },
         };
-
-        // Resolve storage IDs to fresh URLs for AI consumption
-        const resolvedMessages = await resolveAttachmentUrls(messages);
-
-        const makeOptions = (useUser: boolean) => {
-          const key = useUser ? userApiKey : undefined;
-
-          if (selectedModel.provider === 'gemini') {
-            return {
-              google: {
-                ...buildGoogleProviderOptions(
-                  selectedModel.id,
-                  reasoningEffort
-                ),
-                apiKey: key,
-              },
-            };
-          }
-          if (selectedModel.provider === 'openai') {
-            return {
-              openai: {
-                ...buildOpenAIProviderOptions(
-                  selectedModel.id,
-                  reasoningEffort
-                ),
-                apiKey: key,
-              },
-            };
-          }
-          if (selectedModel.provider === 'anthropic') {
-            return {
-              anthropic: {
-                ...buildAnthropicProviderOptions(
-                  selectedModel.id,
-                  reasoningEffort
-                ),
-                apiKey: key,
-              },
-            };
-          }
-          return;
+      }
+      if (selectedModel.provider === 'openai') {
+        return {
+          openai: {
+            ...buildOpenAIProviderOptions(selectedModel.id, reasoningEffort),
+            apiKey: key,
+          },
         };
+      }
+      if (selectedModel.provider === 'anthropic') {
+        return {
+          anthropic: {
+            ...buildAnthropicProviderOptions(selectedModel.id, reasoningEffort),
+            apiKey: key,
+          },
+        };
+      }
+      return;
+    };
 
-        const startTime = Date.now();
-        const runStream = (useUser: boolean) =>
-          streamText({
-            model: phClient
-              ? withTracing(selectedModel.api_sdk, phClient, {
-                  posthogDistinctId: userId?.toString(),
-                  posthogProperties: {
-                    conversation_id: chatId,
-                  },
-                })
-              : selectedModel.api_sdk,
-            system: finalSystemPrompt,
-            messages: resolvedMessages,
-            tools: enableSearch ? { search: searchTool } : undefined,
-            maxSteps: 5,
-            providerOptions: makeOptions(useUser) as
-              | Record<string, Record<string, JSONValue>>
-              | undefined,
-            experimental_transform: smoothStream({
-              delayInMs: 10,
-              chunking: 'word',
-            }),
-            onError: async (error) => {
-              // Save conversation errors as messages
-              if (shouldShowInConversation(error) && token) {
-                try {
-                  await saveErrorMessage(
-                    chatId,
-                    userMsgId,
-                    error,
-                    token,
-                    selectedModel.id,
-                    selectedModel.name,
-                    enableSearch,
-                    reasoningEffort
-                  );
-                } catch (_saveError) {
-                  // console.error('Failed to save error message:', saveError);
-                }
+    const startTime = Date.now();
+    let capturedText = '';
+    let capturedMetadata: MessageMetadata = {};
 
-                // Create standardized streaming error for client
-                const streamingError = createStreamingError(error);
-                throw new Error(JSON.stringify(streamingError.errorPayload));
-              }
-            },
-            async onFinish({ usage, response }) {
-              try {
-                // Get the actual response data
-                const responseData = response;
-
-                // console.log("DEBUG: Response structure:", {
-                //   messageCount: responseData.messages.length,
-                //   messages: responseData.messages.map((msg, idx) => ({
-                //     index: idx,
-                //     role: msg.role,
-                //     contentType: Array.isArray(msg.content) ? 'array' : typeof msg.content,
-                //     contentLength: Array.isArray(msg.content) ? msg.content.length : msg.content?.length || 0,
-                //     contentTypes: Array.isArray(msg.content) ? msg.content.map(p => p.type) : [],
-                //     content: Array.isArray(msg.content) ? msg.content : msg.content
-                //   }))
-                // });
-
-                // Process messages sequentially and build parts
-                const messageParts: ConvexMessagePart[] = [];
-                let combinedTextContent = '';
-
-                for (const msg of responseData.messages) {
-                  if (msg.role === 'assistant') {
-                    if (Array.isArray(msg.content)) {
-                      for (const part of msg.content) {
-                        switch (part.type) {
-                          case 'text':
-                            if (part.text.trim()) {
-                              messageParts.push({
-                                type: 'text',
-                                text: part.text,
-                              });
-                              combinedTextContent += part.text;
-                            }
-                            break;
-                          case 'reasoning':
-                            if (part.text) {
-                              messageParts.push({
-                                type: 'reasoning',
-                                reasoning: part.text,
-                              });
-                            }
-                            break;
-                          case 'tool-call':
-                            messageParts.push({
-                              type: 'tool-invocation',
-                              toolInvocation: {
-                                toolCallId: part.toolCallId,
-                                toolName: part.toolName,
-                                args: part.args,
-                                result: undefined,
-                                state: 'call',
-                              },
-                            });
-                            break;
-                          default:
-                            // Ignore other part types
-                            break;
-                        }
-                      }
-                    } else if (
-                      typeof msg.content === 'string' &&
-                      msg.content.trim()
-                    ) {
-                      // Handle string content from assistant messages
-                      messageParts.push({ type: 'text', text: msg.content });
-                      combinedTextContent += msg.content;
-                    }
-                  }
-
-                  if (msg.role === 'tool' && Array.isArray(msg.content)) {
-                    for (const part of msg.content) {
-                      if (part.type === 'tool-result') {
-                        const matchingInvocation = messageParts.find(
-                          (
-                            p
-                          ): p is Extract<
-                            ConvexMessagePart,
-                            { type: 'tool-invocation' }
-                          > =>
-                            p.type === 'tool-invocation' &&
-                            p.toolInvocation.toolCallId === part.toolCallId
-                        );
-                        if (matchingInvocation) {
-                          matchingInvocation.toolInvocation.result =
-                            part.result;
-                          matchingInvocation.toolInvocation.state = 'result';
-                        }
-                      }
-                    }
-                  }
-                }
-
-                if (!userMsgId) {
-                  throw new Error(
-                    'Missing parent userMsgId when saving assistant message.'
-                  );
-                }
-
-                // Build metadata from response with human-readable model name
-                const metadata = buildMetadataFromResponse(
-                  usage,
-                  response,
-                  selectedModel.id,
-                  selectedModel.name,
-                  startTime,
-                  enableSearch,
-                  reasoningEffort
-                );
-
-                await fetchMutation(
-                  api.messages.saveAssistantMessage,
-                  {
-                    chatId,
-                    role: 'assistant',
-                    content: combinedTextContent,
-                    parentMessageId: userMsgId,
-                    parts: messageParts,
-                    metadata,
-                  },
-                  { token }
-                );
-
-                if (useUser) {
-                  await fetchMutation(
-                    api.api_keys.incrementUserApiKeyUsage,
-                    { provider: selectedModel.provider },
-                    { token }
-                  );
-                } else {
-                  // Check if the selected model uses premium credits
-                  const usesPremiumCredits =
-                    selectedModel.usesPremiumCredits === true;
-
-                  await fetchMutation(
-                    api.users.incrementMessageCount,
-                    { usesPremiumCredits },
-                    { token }
-                  );
-                }
-              } catch (_err) {
-                // console.error(
-                //   'Error in onFinish while saving assistant messages:',
-                //   err
-                // );
-              } finally {
-                // Fire-and-forget PostHog shutdown to avoid blocking response completion
-                if (phClient) {
-                  phClient.shutdown().catch((_error) => {
-                    // console.error('PostHog shutdown failed:', error);
-                    // PostHog shutdown failures are non-critical for user experience
-                  });
-                }
-              }
-            },
-          });
-
-        let result: ReturnType<typeof runStream>;
-        if (apiKeyUsage?.allowUserKey) {
-          const primaryIsUserKey = useUserKey;
-          try {
-            result = runStream(primaryIsUserKey);
-          } catch (primaryError) {
-            // Save conversation errors as messages
-            if (shouldShowInConversation(primaryError) && token) {
+    // Create reusable streamText function with shared logic
+    const createStreamTextCall = (useUser: boolean) => {
+      return streamText({
+        model: selectedModel.api_sdk,
+        system: finalSystemPrompt,
+        messages: convertToModelMessages(messages),
+        tools: enableSearch ? { search: searchTool } : undefined,
+        stopWhen: stepCountIs(5),
+        providerOptions: makeOptions(useUser) as
+          | Record<string, Record<string, JSONValue>>
+          | undefined,
+        onError: async (error) => {
+          // Save conversation errors as messages
+          if (shouldShowInConversation(error) && token) {
+            try {
               await saveErrorMessage(
                 chatId,
                 userMsgId,
-                primaryError,
+                error,
+                token,
+                selectedModel.id,
+                selectedModel.name,
+                enableSearch,
+                reasoningEffort
+              );
+            } catch (_saveError) {
+              // console.error('Failed to save error message:', saveError);
+            }
+
+            // Create standardized streaming error for client
+            const streamingError = createStreamingError(error);
+            throw new Error(JSON.stringify(streamingError.errorPayload));
+          }
+        },
+        async onFinish({ usage, text }) {
+          // console.log(usage, text, response);
+          try {
+            // console.log('onFinish called with response:', response);
+            if (!userMsgId) {
+              throw new Error(
+                'Missing parent userMsgId when saving assistant message.'
+              );
+            }
+
+            // Build metadata from response with human-readable model name
+            const metadata = buildMetadataFromResponse(
+              usage,
+              selectedModel.id,
+              selectedModel.name,
+              startTime,
+              enableSearch,
+              reasoningEffort
+            );
+            // Extract content from the first assistant message in response.messages
+            // console.log('Response messages:', response.messages);
+            // Collect all parts from all assistant messages in response
+            // const parts = response.messages;
+            capturedText = text;
+            capturedMetadata = metadata;
+
+            if (useUser) {
+              await fetchMutation(
+                api.api_keys.incrementUserApiKeyUsage,
+                { provider: selectedModel.provider },
+                { token }
+              );
+            } else {
+              // Check if the selected model uses premium credits
+              const usesPremiumCredits =
+                selectedModel.usesPremiumCredits === true;
+
+              await fetchMutation(
+                api.users.incrementMessageCount,
+                { usesPremiumCredits },
+                { token }
+              );
+            }
+          } catch (_err) {
+            // console.error(
+            //   'Error in onFinish while saving assistant messages:',
+            //   err
+            // );
+          } finally {
+            // Fire-and-forget PostHog shutdown to avoid blocking response completion
+            if (phClient) {
+              phClient.shutdown().catch((_error) => {
+                // console.error('PostHog shutdown failed:', error);
+                // PostHog shutdown failures are non-critical for user experience
+              });
+            }
+          }
+        },
+      });
+    };
+
+    // Try to get the result using the appropriate API key configuration
+    let result: ReturnType<typeof createStreamTextCall>;
+
+    if (apiKeyUsage?.allowUserKey) {
+      const primaryIsUserKey = useUserKey;
+      try {
+        result = createStreamTextCall(primaryIsUserKey);
+      } catch (primaryError) {
+        // Save conversation errors as messages
+        if (shouldShowInConversation(primaryError) && token) {
+          await saveErrorMessage(
+            chatId,
+            userMsgId,
+            primaryError,
+            token,
+            selectedModel.id,
+            selectedModel.name,
+            enableSearch,
+            reasoningEffort
+          );
+        }
+
+        const fallbackIsPossible =
+          primaryIsUserKey || (!primaryIsUserKey && !!userApiKey);
+
+        if (fallbackIsPossible) {
+          const fallbackIsUserKey = !primaryIsUserKey;
+          try {
+            result = createStreamTextCall(fallbackIsUserKey);
+          } catch (fallbackError) {
+            // Save conversation errors as messages for fallback error too
+            if (shouldShowInConversation(fallbackError) && token) {
+              await saveErrorMessage(
+                chatId,
+                userMsgId,
+                fallbackError,
                 token,
                 selectedModel.id,
                 selectedModel.name,
@@ -1017,60 +853,57 @@ export async function POST(req: Request) {
                 reasoningEffort
               );
             }
-
-            const fallbackIsPossible =
-              primaryIsUserKey || (!primaryIsUserKey && !!userApiKey);
-
-            if (fallbackIsPossible) {
-              const fallbackIsUserKey = !primaryIsUserKey;
-              try {
-                result = runStream(fallbackIsUserKey);
-              } catch (fallbackError) {
-                // Save conversation errors as messages for fallback error too
-                if (shouldShowInConversation(fallbackError) && token) {
-                  await saveErrorMessage(
-                    chatId,
-                    userMsgId,
-                    fallbackError,
-                    token,
-                    selectedModel.id,
-                    selectedModel.name,
-                    enableSearch,
-                    reasoningEffort
-                  );
-                }
-                throw fallbackError;
-              }
-            } else {
-              throw primaryError;
-            }
+            throw fallbackError;
           }
         } else {
-          try {
-            result = runStream(false);
-          } catch (streamError) {
-            // Save conversation errors as messages
-            if (shouldShowInConversation(streamError) && token) {
-              await saveErrorMessage(
-                chatId,
-                userMsgId,
-                streamError,
-                token,
-                selectedModel.id,
-                selectedModel.name,
-                enableSearch,
-                reasoningEffort
-              );
-            }
-            throw streamError;
-          }
+          throw primaryError;
         }
+      }
+    } else {
+      try {
+        result = createStreamTextCall(false);
+      } catch (streamError) {
+        // Save conversation errors as messages
+        if (shouldShowInConversation(streamError) && token) {
+          await saveErrorMessage(
+            chatId,
+            userMsgId,
+            streamError,
+            token,
+            selectedModel.id,
+            selectedModel.name,
+            enableSearch,
+            reasoningEffort
+          );
+        }
+        throw streamError;
+      }
+    }
 
-        result.mergeIntoDataStream(dataStream, { sendReasoning: true });
-      },
-      onError: (error) => {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        return errorMsg;
+    // consume the stream to ensure it runs to completion & triggers onFinish
+    // even when the client response is aborted:
+    result.consumeStream(); // no await
+
+    // Return the new toUIMessageStreamResponse with simplified message persistence
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      sendReasoning: true,
+      sendSources: true,
+      onFinish: async (Messages) => {
+        // console.log('Whole messages:', Messages.responseMessage.parts);
+        // Save the final assistant message with all parts
+        await fetchMutation(
+          api.messages.saveAssistantMessage,
+          {
+            chatId,
+            role: 'assistant',
+            content: capturedText,
+            parentMessageId: userMsgId || undefined,
+            parts: Messages.responseMessage.parts,
+            metadata: capturedMetadata,
+          },
+          { token }
+        );
       },
     });
   } catch (err: unknown) {
