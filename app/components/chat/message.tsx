@@ -1,6 +1,7 @@
 import type { UIMessage as MessageType } from '@ai-sdk/react';
+import type { Infer } from 'convex/values';
 import React, { useState } from 'react';
-import type { MessageMetadata } from '@/lib/ai-sdk-utils';
+import type { Message as MessageSchema } from '@/convex/schema/message';
 import { MessageAssistant } from './message-assistant';
 import { MessageUser } from './message-user';
 
@@ -16,7 +17,7 @@ export type MessageProps = {
   hasScrollAnchor?: boolean;
   parts?: MessageType['parts'];
   status?: 'streaming' | 'ready' | 'submitted' | 'error'; // Add status prop
-  metadata?: MessageMetadata;
+  metadata?: Infer<typeof MessageSchema>['metadata'];
 };
 
 function MessageComponent({

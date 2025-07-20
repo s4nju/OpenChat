@@ -5,6 +5,7 @@ import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 // import { withTracing } from '@posthog/ai';
 import {
+  consumeStream,
   convertToModelMessages,
   type FileUIPart,
   experimental_generateImage as generateImage,
@@ -14,15 +15,11 @@ import {
   type UIMessage,
 } from 'ai';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
-import { ConvexError } from 'convex/values';
-import { PostHog } from 'posthog-node';
+import { ConvexError, type Infer } from 'convex/values';
 import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
-import {
-  buildMetadataFromResponse,
-  type MessageMetadata,
-} from '@/lib/ai-sdk-utils';
+import type { Message } from '@/convex/schema/message';
 import { MODELS_MAP } from '@/lib/config';
 import { ERROR_CODES } from '@/lib/error-codes';
 import {
@@ -34,18 +31,6 @@ import {
 } from '@/lib/error-utils';
 import { buildSystemPrompt, PERSONAS_MAP } from '@/lib/prompt_config';
 import { sanitizeUserInput } from '@/lib/sanitize';
-
-// Initialize PostHog client at module level for efficiency
-let phClient: PostHog | null = null;
-if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-  try {
-    phClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-      host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-    });
-  } catch (_error) {
-    // console.error('Failed to initialize PostHog client:', error);
-  }
-}
 
 // Maximum allowed duration for streaming (in seconds)
 export const maxDuration = 120;
@@ -690,8 +675,20 @@ export async function POST(req: Request) {
     };
 
     const startTime = Date.now();
-    let capturedText = '';
-    let capturedMetadata: MessageMetadata = {};
+    // Pre-build the base metadata object before the stream starts
+    const baseMetadata = {
+      modelId: selectedModel.id,
+      modelName: selectedModel.name,
+      includeSearch: enableSearch,
+      reasoningEffort: reasoningEffort || 'none',
+    };
+    let finalUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      totalTokens: 0,
+      cachedInputTokens: 0,
+    };
 
     // Create reusable streamText function with shared logic
     const createStreamTextCall = (useUser: boolean) => {
@@ -701,6 +698,22 @@ export async function POST(req: Request) {
         messages: convertToModelMessages(messages),
         tools: enableSearch ? { search: searchTool } : undefined,
         stopWhen: stepCountIs(5),
+        // COMMENTED OUT: abortSignal: req.signal
+        //
+        // Why we don't forward client abort signals to AI provider:
+        // 1. Page reloads/navigation send abort signals that we don't want to forward to AI
+        // 2. We use result.consumeStream() below to ensure completion even on client disconnect
+        // 3. Client disconnects (page reload, tab close) should NOT stop AI generation on server
+        // 4. Server should complete the generation and save full response to database
+        // 5. Only intentional user "stop" actions should abort AI generation (handled separately)
+        //
+        // Current behavior with this commented out:
+        // - Page reload during streaming: AI continues on server, full response saved
+        // - User clicks stop: Client stops receiving updates, server completes in background
+        // - Browser/tab close: AI continues on server, full response saved
+        //
+        // This follows AI SDK v5 best practices for handling client disconnects
+        // abortSignal: req.signal,
         providerOptions: makeOptions(useUser) as
           | Record<string, Record<string, JSONValue>>
           | undefined,
@@ -727,73 +740,28 @@ export async function POST(req: Request) {
             throw new Error(JSON.stringify(streamingError.errorPayload));
           }
         },
-        async onFinish({ usage, text }) {
-          // console.log(usage, text, response);
-          try {
-            // console.log('onFinish called with response:', response);
-            if (!userMsgId) {
-              throw new Error(
-                'Missing parent userMsgId when saving assistant message.'
-              );
-            }
-
-            // Build metadata from response with human-readable model name
-            const metadata = buildMetadataFromResponse(
-              usage,
-              selectedModel.id,
-              selectedModel.name,
-              startTime,
-              enableSearch,
-              reasoningEffort
-            );
-            // Extract content from the first assistant message in response.messages
-            // console.log('Response messages:', response.messages);
-            // Collect all parts from all assistant messages in response
-            // const parts = response.messages;
-            capturedText = text;
-            capturedMetadata = metadata;
-
-            if (useUser) {
-              await fetchMutation(
-                api.api_keys.incrementUserApiKeyUsage,
-                { provider: selectedModel.provider },
-                { token }
-              );
-            } else {
-              // Check if the selected model uses premium credits
-              const usesPremiumCredits =
-                selectedModel.usesPremiumCredits === true;
-
-              await fetchMutation(
-                api.users.incrementMessageCount,
-                { usesPremiumCredits },
-                { token }
-              );
-            }
-          } catch (_err) {
-            // console.error(
-            //   'Error in onFinish while saving assistant messages:',
-            //   err
-            // );
-          } finally {
-            // Fire-and-forget PostHog shutdown to avoid blocking response completion
-            if (phClient) {
-              phClient.shutdown().catch((_error) => {
-                // console.error('PostHog shutdown failed:', error);
-                // PostHog shutdown failures are non-critical for user experience
-              });
-            }
-          }
+        onFinish({ usage }) {
+          // This only runs on successful completion.
+          // Just capture the usage data here.
+          finalUsage = {
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+            reasoningTokens: usage.reasoningTokens || 0,
+            totalTokens: usage.totalTokens || 0,
+            cachedInputTokens: usage.cachedInputTokens || 0,
+          };
         },
       });
     };
 
     // Try to get the result using the appropriate API key configuration
     let result: ReturnType<typeof createStreamTextCall>;
+    let wasUserKeyUsed: boolean;
 
     if (apiKeyUsage?.allowUserKey) {
       const primaryIsUserKey = useUserKey;
       try {
+        wasUserKeyUsed = primaryIsUserKey;
         result = createStreamTextCall(primaryIsUserKey);
       } catch (primaryError) {
         // Save conversation errors as messages
@@ -816,6 +784,7 @@ export async function POST(req: Request) {
         if (fallbackIsPossible) {
           const fallbackIsUserKey = !primaryIsUserKey;
           try {
+            wasUserKeyUsed = fallbackIsUserKey;
             result = createStreamTextCall(fallbackIsUserKey);
           } catch (fallbackError) {
             // Save conversation errors as messages for fallback error too
@@ -838,6 +807,7 @@ export async function POST(req: Request) {
         }
       }
     } else {
+      wasUserKeyUsed = false;
       try {
         result = createStreamTextCall(false);
       } catch (streamError) {
@@ -868,8 +838,23 @@ export async function POST(req: Request) {
       sendReasoning: true,
       sendSources: true,
       onFinish: async (Messages) => {
-        // console.log('Whole messages:', Messages.responseMessage.parts);
+        // This callback ALWAYS runs, even on abort.
+        // Construct the final metadata here.
+        const finalMetadata: Infer<typeof Message>['metadata'] = {
+          ...baseMetadata,
+          serverDurationMs: Date.now() - startTime,
+          inputTokens: finalUsage.inputTokens,
+          outputTokens: finalUsage.outputTokens,
+          totalTokens: finalUsage.totalTokens,
+          reasoningTokens: finalUsage.reasoningTokens,
+          cachedInputTokens: finalUsage.cachedInputTokens,
+        };
+
         // Save the final assistant message with all parts
+        const capturedText = Messages.responseMessage.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => part.text)
+          .join('');
         await fetchMutation(
           api.messages.saveAssistantMessage,
           {
@@ -878,11 +863,28 @@ export async function POST(req: Request) {
             content: capturedText,
             parentMessageId: userMsgId || undefined,
             parts: Messages.responseMessage.parts,
-            metadata: capturedMetadata,
+            metadata: finalMetadata,
           },
           { token }
         );
+        if (wasUserKeyUsed) {
+          await fetchMutation(
+            api.api_keys.incrementUserApiKeyUsage,
+            { provider: selectedModel.provider },
+            { token }
+          );
+        } else {
+          // Check if the selected model uses premium credits
+          const usesPremiumCredits = selectedModel.usesPremiumCredits === true;
+
+          await fetchMutation(
+            api.users.incrementMessageCount,
+            { usesPremiumCredits },
+            { token }
+          );
+        }
       },
+      consumeSseStream: consumeStream,
     });
   } catch (err) {
     // console.log('Unhandled error in chat API:', err);

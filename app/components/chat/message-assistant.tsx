@@ -7,6 +7,7 @@ import type {
   SourceUrlUIPart,
   ToolUIPart,
 } from 'ai';
+import type { Infer } from 'convex/values';
 import { Loader } from '@/components/prompt-kit/loader';
 import {
   Message,
@@ -14,7 +15,7 @@ import {
   MessageActions,
   MessageContent,
 } from '@/components/prompt-kit/message';
-import type { MessageMetadata } from '@/lib/ai-sdk-utils';
+import type { Message as MessageSchema } from '@/convex/schema/message';
 import { cn } from '@/lib/utils';
 
 // Error part type for rendering
@@ -534,7 +535,7 @@ type MessageAssistantProps = {
   parts?: MessageType['parts'];
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
   id: string;
-  metadata?: MessageMetadata;
+  metadata?: Infer<typeof MessageSchema>['metadata'];
 };
 
 const Markdown = dynamic(

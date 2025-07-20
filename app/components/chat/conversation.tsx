@@ -1,16 +1,17 @@
 import type { UIMessage } from '@ai-sdk/react';
+import type { Infer } from 'convex/values';
 import React, { useRef } from 'react';
 import { ScrollButton } from '@/components/motion-primitives/scroll-button';
 import { ChatContainer } from '@/components/prompt-kit/chat-container';
 import { ImageSkeleton } from '@/components/prompt-kit/image-skeleton';
 import { Loader } from '@/components/prompt-kit/loader';
-import type { MessageMetadata } from '@/lib/ai-sdk-utils';
+import type { Message as MessageSchema } from '@/convex/schema/message';
 import { MODELS_MAP } from '@/lib/config';
 import { Message } from './message';
 
 export type MessageWithExtras = UIMessage & {
   model?: string;
-  metadata?: MessageMetadata;
+  metadata?: Infer<typeof MessageSchema>['metadata'];
 };
 
 type ConversationProps = {
@@ -73,7 +74,7 @@ const Conversation = React.memo(
                 id={message.id}
                 isLast={isLast}
                 key={message.id}
-                metadata={message.metadata as MessageMetadata}
+                metadata={message.metadata}
                 model={message.model}
                 onBranch={() => onBranch(message.id)}
                 onDelete={onDelete}

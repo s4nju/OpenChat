@@ -12,17 +12,6 @@ export interface Attachment {
   storageId?: string
 }
 
-// AI SDK Message metadata type
-export interface MessageMetadata {
-  modelId?: string
-  modelName?: string
-  inputTokens?: number
-  outputTokens?: number
-  reasoningTokens?: number
-  serverDurationMs?: number
-  includeSearch?: boolean
-  reasoningEffort?: string
-}
 
 
 /**
@@ -71,29 +60,6 @@ export function extractReasoningFromResponse(responseParts: MessageParts): strin
 }
 
 /**
- * Build metadata object from AI SDK usage, response and model info
- */
-export function buildMetadataFromResponse(
-  usage: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number }, 
-  modelId: string,
-  modelName: string,
-  startTime: number,
-  includeSearch?: boolean,
-  reasoningEffort?: string
-): MessageMetadata {
-  return {
-    modelId,
-    modelName: modelName || modelId, // Use provided modelName first, then response.modelId, then fallback to modelId
-    inputTokens: usage?.inputTokens || 0,
-    outputTokens: usage?.outputTokens || 0,
-    reasoningTokens: usage?.reasoningTokens || 0, // Default to 0 instead of undefined/NaN
-    serverDurationMs: Date.now() - startTime,
-    includeSearch: includeSearch || false,
-    reasoningEffort: reasoningEffort || "none"
-  };
-}
-
-/**
  * Extract reasoning text from parts array (for backward compatibility display)
  */
 export function extractReasoningFromParts(parts?: MessageParts): string | undefined {
@@ -106,12 +72,6 @@ export function extractReasoningFromParts(parts?: MessageParts): string | undefi
   return reasoningPart?.text;
 }
 
-/**
- * Extract model name from metadata (for backward compatibility display)
- */
-export function extractModelFromMetadata(metadata?: MessageMetadata): string | undefined {
-  return metadata?.modelName || metadata?.modelId
-}
 
 /**
  * Create parts from AI response content including tool invocations
