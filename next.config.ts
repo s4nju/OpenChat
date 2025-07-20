@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
       '@phosphor-icons/react',
       'lucide-react',
       '@ridemountainpig/svgl-react',
+      '@lobehub/icons',
     ],
     reactCompiler: true,
   },
