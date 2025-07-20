@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
 import { APP_BASE_URL, APP_DESCRIPTION, APP_NAME } from '@/lib/config';
 import { AuthGuard } from './components/auth/auth-guard';
@@ -72,7 +74,11 @@ export default function RootLayout({
         <LayoutClient />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
-            <AuthGuard>{children}</AuthGuard>
+            <AuthGuard>
+              {children}
+              <Analytics />
+              <SpeedInsights />
+            </AuthGuard>
           </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>
       </body>
