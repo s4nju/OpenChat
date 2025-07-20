@@ -1,7 +1,7 @@
 import { xai } from "@ai-sdk/xai"
 import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED, REASONING_FEATURE_BASIC, WEB_SEARCH_FEATURE } from "../features"
 
-export const GROK_MODELS = [
+export const XAI_MODELS = [
   {
     id: "grok-3",
     name: "Grok 3",

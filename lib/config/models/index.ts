@@ -4,17 +4,18 @@ import { ModelSchema } from "../schemas"
 import { OPENAI_MODELS } from "./openai"
 import { ANTHROPIC_MODELS } from "./anthropic"
 import { GOOGLE_MODELS } from "./google"
-import { GROK_MODELS } from "./grok"
+import { XAI_MODELS } from "./xai"
 import { META_MODELS } from "./meta"
 import { MISTRAL_MODELS } from "./mistral"
 import { DEEPSEEK_MODELS } from "./deepseek"
 import { FAL_MODELS } from "./fal"
+import { MOONSHOT_MODELS } from "./moonshot"
 
 const reasoningMiddleware = extractReasoningMiddleware({ tagName: "think" })
 
 // Combine all models from different providers
 export const MODELS_DATA = [
-  ...GROK_MODELS,
+  ...XAI_MODELS,
   ...OPENAI_MODELS,
   ...ANTHROPIC_MODELS,
   ...GOOGLE_MODELS,
@@ -22,6 +23,7 @@ export const MODELS_DATA = [
   ...MISTRAL_MODELS,
   ...DEEPSEEK_MODELS,
   ...FAL_MODELS,
+  ...MOONSHOT_MODELS,
 ]
 
 export const MODELS_RAW = z.array(ModelSchema).parse(MODELS_DATA)

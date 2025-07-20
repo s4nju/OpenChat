@@ -1,5 +1,6 @@
 import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
 import { DetectiveIcon } from "@phosphor-icons/react/dist/ssr"
+import { Moonshot } from '@lobehub/icons';
 
 export type Provider = {
   id: string
@@ -61,6 +62,11 @@ export const PROVIDERS = [
     id: "Qwen",
     name: "Qwen",
     icon: QwenLight,
+  },
+  {
+    id: "moonshotai",
+    name: "Moonshot AI",
+    icon: Moonshot,
   },
 ] as Provider[]
 
