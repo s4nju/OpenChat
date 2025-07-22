@@ -46,6 +46,7 @@ docs*
 .windsurf
 .claude
 .kiro
+.github
 
 .env.local
 .agent.md
