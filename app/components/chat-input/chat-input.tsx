@@ -122,16 +122,25 @@ export function ChatInput({
 
   const handlePaste = useCallback(
     (e: ClipboardEvent) => {
-      if (!isUserAuthenticated) {
-        e.preventDefault();
-        return;
-      }
-
       const items = e.clipboardData?.items;
       if (!items) {
         return;
       }
 
+      // Check if there are any file items in the clipboard (not just text)
+      const hasFiles = Array.from(items).some((item) => item.kind === 'file');
+      // If user is not authenticated and trying to paste files, prevent it
+      if (!isUserAuthenticated && hasFiles) {
+        e.preventDefault();
+        return;
+      }
+
+      // If no files or user is authenticated, allow default text paste behavior
+      if (!hasFiles) {
+        return;
+      }
+
+      // Handle image pasting for authenticated users
       const imageFiles: File[] = [];
 
       for (const item of Array.from(items)) {
@@ -185,7 +194,7 @@ export function ChatInput({
       )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
         <PromptInput
-          className="relative z-10 overflow-hidden border border-input bg-popover p-0 pb-2 shadow-xs backdrop-blur-xl"
+          className="relative z-10 bg-popover p-0 pb-2 shadow-xs backdrop-blur-xl"
           maxHeight={200}
           onValueChange={setValue}
           value={value}

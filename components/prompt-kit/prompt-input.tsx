@@ -93,25 +93,23 @@ export type PromptInputTextareaProps = {
   disableAutosize?: boolean
 } & React.ComponentProps<typeof Textarea>
 
-function PromptInputTextarea({
-  className,
-  onKeyDown,
-  disableAutosize = false,
-  ...props
-}: PromptInputTextareaProps) {
-  const { value, setValue, maxHeight, onSubmit, disabled } = usePromptInput()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+const PromptInputTextarea = React.forwardRef<HTMLTextAreaElement, PromptInputTextareaProps>(
+  ({ className, onKeyDown, disableAutosize = false, ...props }, forwardedRef) => {
+    const { value, setValue, maxHeight, onSubmit, disabled } = usePromptInput()
+    const internalRef = useRef<HTMLTextAreaElement>(null)
+    
+    // Use forwarded ref if provided, otherwise use internal ref
+    const textareaRef = (forwardedRef as React.RefObject<HTMLTextAreaElement>) || internalRef
 
   useEffect(() => {
-    if (disableAutosize) return
+    if (disableAutosize || !textareaRef.current) return
 
-    if (!textareaRef.current) return
+    // Reset height to auto first to properly measure scrollHeight
     textareaRef.current.style.height = "auto"
-    textareaRef.current.style.height =
-      typeof maxHeight === "number"
-        ? `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`
-        : `min(${textareaRef.current.scrollHeight}px, ${maxHeight})`
-  }, [value, maxHeight, disableAutosize])
+
+    // Set the height based on content
+    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+  }, [value, disableAutosize])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -121,26 +119,32 @@ function PromptInputTextarea({
     onKeyDown?.(e)
   }
 
-  // Dynamically set maxHeight style and always apply overflow-y-auto
-  const dynamicStyle = typeof maxHeight === "number" ? { maxHeight } : { maxHeight: maxHeight as string }
+  const maxHeightStyle =
+    typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight
 
   return (
     <Textarea
       ref={textareaRef}
+      autoFocus
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "text-primary min-h-[44px] w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto",
+        "text-primary min-h-[44px] w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
+        "overflow-y-auto",
         className
       )}
-      style={dynamicStyle}
+      style={{
+        maxHeight: maxHeightStyle,
+      }}
       rows={1}
       disabled={disabled}
       {...props}
     />
   )
-}
+})
+
+PromptInputTextarea.displayName = "PromptInputTextarea"
 
 type PromptInputActionsProps = React.HTMLAttributes<HTMLDivElement>
 
