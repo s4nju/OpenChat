@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Do not assume anything. Use the docs from context7 tool.
 - If there is a lint error (bun run lint), fix it before moving on.
 - Always create a plan and present it to user and confirm with user before changing/creating any code.
-- Use @agent_rules/commit.md for commit instructions.
+- Use `agent_rules/commit.md` for commit instructions.
 
 # **Project Details**
 
@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Sonner for toast notifications
 - Phosphor Icons, Lucide React for icons
 - Shadcn UI and Prompt-kit for components
-- Vercel AI SDK v4 for AI
+- Vercel AI SDK v5 for AI
 - Next.js 15 and React 19 for the framework
 - Convex for authentication, Database, File storage and serverless functions
 
@@ -35,15 +35,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Follow Next.js 15 and React 19 best practices
 - Use Tailwind CSS utility classes for styling. Avoid inline styles.
 - Use Bun for all package management and scripts (`bun install`).
-- Follow Convex guidelines in `@agent_rules/convex_rules.md`.
+- Follow Convex guidelines in `agent_rules/convex_rules.md`.
 - Use Shadcn UI and Prompt-kit components as documented. Do not modify library code directly. Prefer composition over modification.
 - Use Biome for all linting and formatting. Run Biome (`bun run lint`) before committing. Follow all rules specified in `biome.jsonc`. Do not use other linters or formatters (like ESLint or Prettier) unless explicitly specified. Check `biome.jsonc` for custom or overridden rules. Biome extends the `ultracite` ruleset for this project.
-- Lint and format code before committing. Fix all Biome lint errors before moving on. Do not commit code with unused variables, imports, or unreachable code.
-- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `@agent_rules/ultracite.md`.
-- Do not use `console` statements in production code.
-- Do not use TypeScript enums or namespaces.
-- Do not use `any` or `unknown` as type constraints.
-- Do not use `var` or function declarations outside their block.
+- Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `agent_rules/ultracite.md`.
 - Update this section whenever the stack or tooling changes.
 
 # **Architecture Overview**
@@ -76,7 +71,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## AI Integration
 
 - **Multi-model Support**: Supports OpenAI, Anthropic, Google, Mistral, Together AI, and more
-- **Vercel AI SDK v4**: Handles streaming, tool calling, and model switching
+- **Vercel AI SDK v5**: Handles streaming, tool calling, and model switching
 - **Model Selection**: Dynamic model switching with per-chat preferences
 - **API Key Management**: Secure encryption of user-provided API keys
 - **Web Search**: Integrated Exa, Tavily, and Brave search APIs
@@ -101,18 +96,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bunx convex dev` - Run Convex development server
 - `bun run typecheck` - Run Typecheck
 
-# **Testing and Quality**
+# **Quality Assurance**
 
-- Run `bun run format` and then `bun run lint` before committing to ensure code quality
-- All TypeScript errors must be resolved
-- Follow accessibility guidelines from `ultracite.md`
+- Run `bun run format` and `bun run lint` before committing to ensure code quality
+- All TypeScript errors must be resolved (`bun run typecheck`)
 - Test responsive design on mobile and desktop
 - Verify real-time features work across multiple clients
 
-# **Files to read**
+# **Reference Files**
 
-- Read convex_rules.md for convex guidelines.
-- Read ultracite.md for general code rules (Always read this to avoid lint error)
+- `agent_rules/commit.md` - Commit message conventions and process
+- `agent_rules/convex_rules.md` - Convex-specific development guidelines  
+- `agent_rules/ultracite.md` - Complete linting rules (read to avoid lint errors)
 
 # important-instruction-reminders
 
