@@ -58,8 +58,8 @@ const FILE_UPLOAD_MODELS = [
   'gemini-2.0-flash-lite',
   'gemini-2.5-flash',
   'gemini-2.5-flash-thinking',
-  'gemini-2.5-flash-lite-preview-06-17',
-  'gemini-2.5-flash-lite-preview-06-17-thinking',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash-lite-thinking',
   'gemini-2.5-pro',
 
   // Meta models

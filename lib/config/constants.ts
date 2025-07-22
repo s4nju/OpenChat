@@ -9,10 +9,10 @@ export const APP_DESCRIPTION =
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
 
-export const MODEL_DEFAULT = "gemini-2.0-flash"
+export const MODEL_DEFAULT = "gemini-2.5-flash-lite"
 
 export const RECOMMENDED_MODELS = [
-  'gemini-2.0-flash',
+  'gemini-2.5-flash-lite',
   'gemini-2.5-pro',
   'imagen-4',
   'gpt-4o-mini',

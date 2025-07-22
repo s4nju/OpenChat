@@ -13,7 +13,7 @@ import { polar } from './polar';
 import { rateLimiter } from './rateLimiter';
 import { User } from './schema/user';
 
-const MODEL_DEFAULT = 'gemini-2.0-flash';
+const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
 
 export const getCurrentUser = query({
   args: {},

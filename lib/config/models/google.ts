@@ -69,14 +69,14 @@ export const GOOGLE_MODELS = [
     ],
   },
   {
-    id: "gemini-2.5-flash-lite-preview-06-17",
+    id: "gemini-2.5-flash-lite",
     name: "Gemini 2.5 Flash Lite",
     provider: "gemini",
     premium: false,
     usesPremiumCredits: false,
     description: `Most cost-efficient and fastest model with lowest latency.\nIdeal for high-volume classification and summarization tasks.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
-    api_sdk: google("gemini-2.5-flash-lite-preview-06-17"),
+    api_sdk: google("gemini-2.5-flash-lite"),
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
@@ -85,7 +85,7 @@ export const GOOGLE_MODELS = [
     ],
   },
   {
-    id: "gemini-2.5-flash-lite-preview-06-17-thinking",
+    id: "gemini-2.5-flash-lite-thinking",
     name: "Gemini 2.5 Flash Lite",
     subName: "Thinking",
     provider: "gemini",
@@ -93,7 +93,7 @@ export const GOOGLE_MODELS = [
     usesPremiumCredits: false,
     description: `Flash Lite with adjustable thinking budget for reasoning.\nCombines cost-efficiency with controllable thinking capabilities.`,
     apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
-    api_sdk: google("gemini-2.5-flash-lite-preview-06-17"),
+    api_sdk: google("gemini-2.5-flash-lite"),
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,

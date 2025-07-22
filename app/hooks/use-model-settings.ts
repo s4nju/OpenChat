@@ -29,7 +29,7 @@ export function useModelSettings() {
       newDisabled = currentDisabled.filter((id) => id !== modelId);
     } else {
       // Disabling model - add to disabled list and remove from favorites
-      const MODEL_DEFAULT = 'gemini-2.0-flash';
+      const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
       if (modelId === MODEL_DEFAULT) {
         return; // Cannot disable default model
       }
@@ -66,7 +66,7 @@ export function useModelSettings() {
       return;
     }
 
-    const MODEL_DEFAULT = 'gemini-2.0-flash';
+    const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
     const currentFavorites = currentUser.favoriteModels ?? [];
     const currentDisabled = currentUser.disabledModels ?? [];
 
