@@ -173,6 +173,43 @@ export function ChatInput({
     return () => el.removeEventListener('paste', handlePaste);
   }, [handlePaste]);
 
+  // Auto-focus on typing: focus the textarea when user starts typing
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't interfere if input is already focused or disabled
+      if (isSubmitting || !textareaRef.current) {
+        return;
+      }
+
+      // Don't steal focus if another input element is already focused
+      const activeElement = document.activeElement;
+      if (
+        activeElement?.tagName === 'INPUT' ||
+        activeElement?.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      // Don't focus on modifier keys, function keys, or special keys
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
+      // Only focus on printable characters (exclude special keys)
+      const isPrintableChar =
+        e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+
+      if (isPrintableChar) {
+        // Focus the textarea and let the character be typed normally
+        textareaRef.current.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isSubmitting]);
+
   // Compute tooltip text without nested ternary expressions
   let tooltipText = 'Send';
   if (status === 'streaming') {
