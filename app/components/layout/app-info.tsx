@@ -72,38 +72,10 @@ export function AppInfo({ trigger = defaultTrigger }: AppInfoProps) {
 
   if (isMobile) {
     return (
-      <>
-        <Drawer>
-          <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-          <DrawerContent className="border-border bg-background">
-            <DrawerHeader>
-              <Image
-                alt={`calm paint generate by ${APP_NAME}`}
-                className="h-32 w-full object-cover"
-                height={128}
-                src="/banner_ocean.jpg"
-                width={400}
-              />
-              <DrawerTitle className="hidden">{APP_NAME}</DrawerTitle>
-              <DrawerDescription className="hidden">
-                Your minimalist AI chat companion
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="px-4 pb-6">
-              <InfoContent />
-            </div>
-          </DrawerContent>
-        </Drawer>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Dialog>
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-        <DialogContent className="gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:bg-background [&>button:last-child]:p-1">
-          <DialogHeader className="p-0">
+      <Drawer>
+        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+        <DrawerContent className="border-border bg-background">
+          <DrawerHeader>
             <Image
               alt={`calm paint generate by ${APP_NAME}`}
               className="h-32 w-full object-cover"
@@ -111,16 +83,40 @@ export function AppInfo({ trigger = defaultTrigger }: AppInfoProps) {
               src="/banner_ocean.jpg"
               width={400}
             />
-            <DialogTitle className="hidden">{APP_NAME}</DialogTitle>
-            <DialogDescription className="hidden">
+            <DrawerTitle className="hidden">{APP_NAME}</DrawerTitle>
+            <DrawerDescription className="hidden">
               Your minimalist AI chat companion
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4">
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
             <InfoContent />
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="gap-0 overflow-hidden rounded-3xl p-0 shadow-xs sm:max-w-md [&>button:last-child]:rounded-full [&>button:last-child]:bg-background [&>button:last-child]:p-1">
+        <DialogHeader className="p-0">
+          <Image
+            alt={`calm paint generate by ${APP_NAME}`}
+            className="h-32 w-full object-cover"
+            height={128}
+            src="/banner_ocean.jpg"
+            width={400}
+          />
+          <DialogTitle className="hidden">{APP_NAME}</DialogTitle>
+          <DialogDescription className="hidden">
+            Your minimalist AI chat companion
+          </DialogDescription>
+        </DialogHeader>
+        <div className="p-4">
+          <InfoContent />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
