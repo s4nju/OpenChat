@@ -2,6 +2,7 @@ import { authTables } from '@convex-dev/auth/server';
 import { defineSchema, defineTable } from 'convex/server';
 import { Chat } from './schema/chat';
 import { ChatAttachment } from './schema/chat_attachment';
+import { Connector } from './schema/connectors';
 import { Feedback } from './schema/feedback';
 import { Message } from './schema/message';
 import { UsageHistory } from './schema/usage_history';
@@ -29,4 +30,7 @@ export default defineSchema({
     'userId',
     'provider',
   ]),
+  connectors: defineTable(Connector)
+    .index('by_user', ['userId'])
+    .index('by_user_and_type', ['userId', 'type']),
 });

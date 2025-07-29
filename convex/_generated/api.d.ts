@@ -11,6 +11,7 @@
 import type * as api_keys from "../api_keys.js";
 import type * as auth from "../auth.js";
 import type * as chats from "../chats.js";
+import type * as connectors from "../connectors.js";
 import type * as feedback from "../feedback.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
@@ -23,6 +24,7 @@ import type * as polar from "../polar.js";
 import type * as rateLimiter from "../rateLimiter.js";
 import type * as schema_chat from "../schema/chat.js";
 import type * as schema_chat_attachment from "../schema/chat_attachment.js";
+import type * as schema_connectors from "../schema/connectors.js";
 import type * as schema_feedback from "../schema/feedback.js";
 import type * as schema_index from "../schema/index.js";
 import type * as schema_message from "../schema/message.js";
@@ -50,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   api_keys: typeof api_keys;
   auth: typeof auth;
   chats: typeof chats;
+  connectors: typeof connectors;
   feedback: typeof feedback;
   files: typeof files;
   http: typeof http;
@@ -62,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   rateLimiter: typeof rateLimiter;
   "schema/chat": typeof schema_chat;
   "schema/chat_attachment": typeof schema_chat_attachment;
+  "schema/connectors": typeof schema_connectors;
   "schema/feedback": typeof schema_feedback;
   "schema/index": typeof schema_index;
   "schema/message": typeof schema_message;
