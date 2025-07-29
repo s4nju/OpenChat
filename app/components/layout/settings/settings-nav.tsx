@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { name: 'History & Sync', href: '/settings/history' },
   { name: 'Models', href: '/settings/models' },
   { name: 'API Keys', href: '/settings/api-keys' },
+  { name: 'Connectors', href: '/settings/connectors' },
   { name: 'Attachments', href: '/settings/attachments' },
 ] as const;
 

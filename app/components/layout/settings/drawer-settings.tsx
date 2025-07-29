@@ -45,6 +45,10 @@ const ModelsPage = dynamic(
   () => import('@/app/settings/models/page').then((m) => m.default),
   { ssr: false }
 );
+const ConnectorsPage = dynamic(
+  () => import('@/app/settings/connectors/page').then((m) => m.default),
+  { ssr: false }
+);
 
 const NAV_ITEMS = [
   { key: 'account', name: 'Account' },
@@ -52,6 +56,7 @@ const NAV_ITEMS = [
   { key: 'history', name: 'History & Sync' },
   { key: 'models', name: 'Models' },
   { key: 'api-keys', name: 'API Keys' },
+  { key: 'connectors', name: 'Connectors' },
   { key: 'attachments', name: 'Attachments' },
 ] as const;
 
@@ -117,6 +122,9 @@ export function DrawerSettings({
               </TabsContent>
               <TabsContent value="api-keys">
                 <ApiKeysPage />
+              </TabsContent>
+              <TabsContent value="connectors">
+                <ConnectorsPage />
               </TabsContent>
               <TabsContent value="attachments">
                 <AttachmentsPage />
