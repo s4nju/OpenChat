@@ -20,6 +20,7 @@ import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';
+import { getComposioTools, listConnectedAccounts } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
 import { ERROR_CODES } from '@/lib/error-codes';
 import {
@@ -690,13 +691,37 @@ export async function POST(req: Request) {
       cachedInputTokens: 0,
     };
 
+    // Get Composio tools for connected accounts
+    let composioTools = {};
+    try {
+      if (user) {
+        const connectedAccounts = await listConnectedAccounts(user._id);
+        const connectedToolkitSlugs = connectedAccounts
+          .filter((account) => account.status === 'ACTIVE')
+          .map((account) => account.toolkit.slug);
+
+        if (connectedToolkitSlugs.length > 0) {
+          composioTools = await getComposioTools(
+            user._id,
+            connectedToolkitSlugs
+          );
+        }
+      }
+    } catch {
+      // If Composio tools fail to load, continue without them
+    }
+
+    // console.log('DEBUG: composioTools', composioTools);
     // Create reusable streamText function with shared logic
     const createStreamTextCall = (useUser: boolean) => {
       return streamText({
         model: selectedModel.api_sdk,
         system: finalSystemPrompt,
         messages: convertToModelMessages(messages),
-        tools: enableSearch ? { search: searchTool } : undefined,
+        tools: {
+          ...(enableSearch ? { search: searchTool } : {}),
+          ...composioTools,
+        },
         stopWhen: stepCountIs(5),
         // COMMENTED OUT: abortSignal: req.signal
         //
