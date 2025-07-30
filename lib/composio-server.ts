@@ -159,7 +159,7 @@ export const getComposioTools = async (userId: string, toolkitSlugs: string[]) =
     return { ...acc, ...tools };
   }, {});
   
-  console.log('Fetched Composio tools:', mergedTools);
+  // console.log('Fetched Composio tools:', mergedTools);
   return mergedTools;
 };
 
