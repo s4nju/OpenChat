@@ -1,5 +1,5 @@
 import { groq } from "@ai-sdk/groq"
-import { WEB_SEARCH_FEATURE } from "../features"
+import { TOOL_CALLING_FEATURE } from "../features"
 
 export const MOONSHOT_MODELS = [
   {
@@ -11,7 +11,7 @@ export const MOONSHOT_MODELS = [
     description: `Moonshot AI's Kimi K2 model.\nOffers agentic tools capabilities for various tasks.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
-      WEB_SEARCH_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: groq("moonshotai/kimi-k2-instruct"),
   },

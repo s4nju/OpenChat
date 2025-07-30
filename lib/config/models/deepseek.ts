@@ -1,6 +1,6 @@
 import { openrouter } from "@openrouter/ai-sdk-provider"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import { REASONING_FEATURE_BASIC } from "../features"
+import { REASONING_FEATURE_BASIC, TOOL_CALLING_FEATURE } from "../features"
 
 const nim = createOpenAICompatible({
   name: "nim",
@@ -20,7 +20,9 @@ export const DEEPSEEK_MODELS = [
     description: `DeepSeek's experimental chat model for research exploration.\nProvides cost-effective access to DeepSeek capabilities.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     api_sdk: openrouter("deepseek/deepseek-chat-v3-0324:free"),
-    features: [],
+    features: [
+      TOOL_CALLING_FEATURE,
+    ],
   },
   {
     id: "deepseek-r1-0528",
@@ -32,6 +34,7 @@ export const DEEPSEEK_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       REASONING_FEATURE_BASIC,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
@@ -46,6 +49,7 @@ export const DEEPSEEK_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       REASONING_FEATURE_BASIC,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openrouter("deepseek/deepseek-r1-distill-llama-70b:free"),
   },

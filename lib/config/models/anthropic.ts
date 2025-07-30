@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE, REASONING_FEATURE_DISABLED } from "../features"
+import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE, REASONING_FEATURE_DISABLED, TOOL_CALLING_FEATURE } from "../features"
 
 export const ANTHROPIC_MODELS = [
   {
@@ -14,6 +14,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-3-5-sonnet-20241022"),
   },
@@ -29,6 +30,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
@@ -45,6 +47,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-3-7-sonnet-20250219"),
   },
@@ -60,6 +63,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-opus-4-20250514"),
   },
@@ -75,6 +79,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-sonnet-4-20250514"),
   },
@@ -91,6 +96,7 @@ export const ANTHROPIC_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: anthropic("claude-sonnet-4-20250514"),
   },

@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE, REASONING_FEATURE_DISABLED, IMAGE_GENERATION_FEATURE } from "../features"
+import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE, REASONING_FEATURE_DISABLED, IMAGE_GENERATION_FEATURE, TOOL_CALLING_FEATURE } from "../features"
 
 export const OPENAI_MODELS = [
   {
@@ -14,6 +14,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4o"),
   },
@@ -29,6 +30,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4o-mini"),
   },
@@ -44,6 +46,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("o4-mini"),
   },
@@ -59,6 +62,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("o3"),
   },
@@ -74,6 +78,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("o3-pro"),
   },
@@ -101,6 +106,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4.1"),
   },
@@ -115,6 +121,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4.1-mini"),
   },
@@ -129,6 +136,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4.1-nano"),
   },
@@ -144,6 +152,7 @@ export const OPENAI_MODELS = [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
       REASONING_FEATURE_DISABLED,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openai("gpt-4.5"),
   },

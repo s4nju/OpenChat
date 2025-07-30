@@ -1,5 +1,5 @@
 import { mistral } from "@ai-sdk/mistral"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE } from "../features"
+import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, TOOL_CALLING_FEATURE } from "../features"
 
 export const MISTRAL_MODELS = [
   {
@@ -13,6 +13,7 @@ export const MISTRAL_MODELS = [
     features: [
       FILE_UPLOAD_FEATURE,
       PDF_PROCESSING_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: mistral("pixtral-large-latest"),
   },
@@ -24,7 +25,9 @@ export const MISTRAL_MODELS = [
     usesPremiumCredits: false,
     description: `Mistral's flagship text-focused model for general tasks.\nDelivers reliable performance across diverse applications.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    features: [],
+    features: [
+      TOOL_CALLING_FEATURE,
+    ],
     api_sdk: mistral("mistral-large-latest"),
   },
 ]

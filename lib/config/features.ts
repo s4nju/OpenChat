@@ -5,4 +5,4 @@ export const REASONING_FEATURE        = { id: "reasoning",    enabled: true,  su
 export const REASONING_FEATURE_BASIC  = { id: "reasoning",   enabled: true,  supportsEffort: false, label: "Supports reasoning capabilities" }
 export const REASONING_FEATURE_DISABLED = { id: "reasoning",  enabled: false, label: "Supports reasoning capabilities" }
 export const IMAGE_GENERATION_FEATURE = { id: "image-generation", enabled: true, label: "Generates images from text prompts" }
-export const WEB_SEARCH_FEATURE = { id: "web-search", enabled: true, label: "Supports web search" }
+export const TOOL_CALLING_FEATURE = { id: "tool-calling", enabled: true, label: "Supports tool calling (web search & connectors)" }

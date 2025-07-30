@@ -1,5 +1,5 @@
 import { groq } from "@ai-sdk/groq"
-import { FILE_UPLOAD_FEATURE } from "../features"
+import { FILE_UPLOAD_FEATURE, TOOL_CALLING_FEATURE } from "../features"
 
 export const META_MODELS = [
   {
@@ -12,6 +12,7 @@ export const META_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: groq("meta-llama/llama-4-maverick-17b-128e-instruct"),
   },
@@ -25,6 +26,7 @@ export const META_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       FILE_UPLOAD_FEATURE,
+      TOOL_CALLING_FEATURE,
     ],
     api_sdk: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
   },

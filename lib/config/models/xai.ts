@@ -1,5 +1,5 @@
 import { xai } from "@ai-sdk/xai"
-import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED, REASONING_FEATURE_BASIC, WEB_SEARCH_FEATURE } from "../features"
+import { FILE_UPLOAD_FEATURE, PDF_PROCESSING_FEATURE, REASONING_FEATURE_DISABLED, REASONING_FEATURE_BASIC, TOOL_CALLING_FEATURE } from "../features"
 
 export const XAI_MODELS = [
   {
@@ -24,7 +24,7 @@ export const XAI_MODELS = [
     api_sdk: xai("grok-3-mini"),
     features: [
       REASONING_FEATURE_BASIC,
-      WEB_SEARCH_FEATURE
+      TOOL_CALLING_FEATURE
     ],
   },
 ]
