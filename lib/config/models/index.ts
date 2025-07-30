@@ -10,6 +10,7 @@ import { MISTRAL_MODELS } from "./mistral"
 import { DEEPSEEK_MODELS } from "./deepseek"
 import { FAL_MODELS } from "./fal"
 import { MOONSHOT_MODELS } from "./moonshot"
+import { ZAI_MODELS } from "./zai"
 
 const reasoningMiddleware = extractReasoningMiddleware({ tagName: "think" })
 
@@ -24,6 +25,7 @@ export const MODELS_DATA = [
   ...DEEPSEEK_MODELS,
   ...FAL_MODELS,
   ...MOONSHOT_MODELS,
+  ...ZAI_MODELS,
 ]
 
 export const MODELS_RAW = z.array(ModelSchema).parse(MODELS_DATA)
