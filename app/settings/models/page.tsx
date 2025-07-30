@@ -4,10 +4,9 @@ import {
   BrainIcon,
   EyeIcon,
   FilePdfIcon,
-  GlobeIcon,
   SketchLogoIcon,
 } from '@phosphor-icons/react';
-import { Check, ImagePlus, Key, Link as LinkIcon } from 'lucide-react';
+import { Check, ImagePlus, Key, Link as LinkIcon, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
@@ -67,9 +66,9 @@ const FEATURE_INFO: Record<string, FeatureInfo> = {
     label: 'Reasoning',
     icon: BrainIcon,
   },
-  'web-search': {
-    label: 'Web Search',
-    icon: GlobeIcon,
+  'tool-calling': {
+    label: 'Tool Calling',
+    icon: Wrench,
   },
   'image-generation': {
     label: 'Image Generation',
@@ -86,7 +85,7 @@ const getFeatureColorClasses = (featureId: string) => {
       return 'text-indigo-600 dark:text-indigo-400';
     case 'reasoning':
       return 'text-pink-600 dark:text-pink-400';
-    case 'web-search':
+    case 'tool-calling':
       return 'text-blue-600 dark:text-blue-400';
     case 'image-generation':
       return 'text-orange-600 dark:text-orange-400';
