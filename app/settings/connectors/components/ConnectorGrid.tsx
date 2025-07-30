@@ -1,8 +1,8 @@
 'use client';
 
 import type { Id } from '@/convex/_generated/dataModel';
-import type { ConnectorType } from '@/lib/composio-utils';
 import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 import { ConnectorCard } from './ConnectorCard';
 
 interface ConnectorData {

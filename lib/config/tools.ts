@@ -1,7 +1,7 @@
 import { Gmail, GoogleDrive, Notion } from '@ridemountainpig/svgl-react';
 import type { ComponentType } from 'react';
 import { GoogleCalendarIcon } from '@/components/icons/google-calendar';
-import type { ConnectorType } from '@/lib/composio-utils';
+import type { ConnectorType } from '@/lib/types';
 
 export interface ConnectorConfig {
   type: ConnectorType;
@@ -57,4 +57,47 @@ export const getConnectorConfig = (type: ConnectorType): ConnectorConfig => {
     throw new Error(`Unknown connector type: ${type}`);
   }
   return config;
+};
+
+// Connector tool detection configuration
+export const CONNECTOR_TOOL_NAMES = SUPPORTED_CONNECTORS;
+
+/**
+ * Check if a tool name corresponds to a connector tool
+ */
+export const isConnectorTool = (toolName: string): boolean => {
+  const lowerToolName = toolName.toLowerCase();
+
+  // Check for specific patterns that indicate connector tools
+  return (
+    lowerToolName.includes('gmail') ||
+    lowerToolName.includes('calendar') ||
+    lowerToolName.includes('notion') ||
+    lowerToolName.includes('drive')
+  );
+};
+
+/**
+ * Determine the connector type from a tool name
+ */
+export const getConnectorTypeFromToolName = (
+  toolName: string
+): ConnectorType => {
+  const lowerToolName = toolName.toLowerCase();
+
+  if (lowerToolName.includes('gmail')) {
+    return 'gmail';
+  }
+  if (lowerToolName.includes('calendar')) {
+    return 'googlecalendar';
+  }
+  if (lowerToolName.includes('notion')) {
+    return 'notion';
+  }
+  if (lowerToolName.includes('drive')) {
+    return 'googledrive';
+  }
+
+  // Default fallback - this should not happen if isConnectorTool returns true
+  return 'gmail';
 };

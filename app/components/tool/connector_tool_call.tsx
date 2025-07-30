@@ -3,7 +3,7 @@
 import { CaretDown, Copy, SpinnerGap } from '@phosphor-icons/react';
 import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ConnectorType } from '@/lib/composio-utils';
+import type { ConnectorType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 // Types for connector tool calls

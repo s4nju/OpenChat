@@ -12,8 +12,8 @@ import { toast } from 'sonner';
 import { useUser } from '@/app/providers/user-provider';
 import { Loader } from '@/components/prompt-kit/loader';
 import { api } from '@/convex/_generated/api';
-import type { ConnectorType } from '@/lib/composio-utils';
 import { getConnectorConfig } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 
 type CallbackStatus = 'checking' | 'success' | 'error';
 

@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import type { Id } from '@/convex/_generated/dataModel';
-import type { ConnectorType } from '@/lib/composio-utils';
 import { getConnectorConfig } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 
 interface ConnectorData {
   _id?: Id<'connectors'>;

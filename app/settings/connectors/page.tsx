@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useUser } from '@/app/providers/user-provider';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { ConnectorType } from '@/lib/composio-utils';
 import { getConnectorConfig, SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 import { ConnectorGrid } from './components/ConnectorGrid';
 
 type SimpleConnectionState = {

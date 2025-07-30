@@ -70,7 +70,11 @@ import {
   MorphingDialogImage,
   MorphingDialogTrigger,
 } from '@/components/motion-primitives/morphing-dialog';
-import type { ConnectorType } from '@/lib/composio-utils';
+import {
+  getConnectorTypeFromToolName,
+  isConnectorTool,
+} from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 import { SourcesList } from './sources-list';
 
 // Helper function to format model display with reasoning effort
@@ -437,23 +441,11 @@ const renderToolPart = (part: ToolUIPart, index: number, _id: string) => {
   }
 
   // Handle connector tool calls (Composio tools)
-  const connectorTools = ['gmail', 'googlecalendar', 'notion', 'googledrive'];
-  const isConnectorTool = connectorTools.some((connector) =>
-    toolName.toLowerCase().includes(connector.toLowerCase())
-  );
+  const isConnectorToolCall = isConnectorTool(toolName);
 
-  if (isConnectorTool) {
+  if (isConnectorToolCall) {
     // Determine connector type from tool name
-    let connectorType: ConnectorType = 'gmail'; // Default fallback
-    if (toolName.toLowerCase().includes('gmail')) {
-      connectorType = 'gmail';
-    } else if (toolName.toLowerCase().includes('calendar')) {
-      connectorType = 'googlecalendar';
-    } else if (toolName.toLowerCase().includes('notion')) {
-      connectorType = 'notion';
-    } else if (toolName.toLowerCase().includes('drive')) {
-      connectorType = 'googledrive';
-    }
+    const connectorType = getConnectorTypeFromToolName(toolName);
 
     // Handle different tool states based on AI SDK v5 ToolUIPart states
     if ('state' in part) {
