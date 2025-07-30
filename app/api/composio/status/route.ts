@@ -1,19 +1,6 @@
 import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 import { NextResponse } from 'next/server';
-import composio from '@/lib/composio-server';
-
-// Type for the connection status response
-type ConnectionStatus = {
-  id: string;
-  status: 'INITIALIZING' | 'INITIATED' | 'ACTIVE' | 'FAILED' | 'EXPIRED';
-  authConfig: {
-    id: string;
-    isComposioManaged: boolean;
-    isDisabled: boolean;
-  };
-  data: Record<string, unknown>;
-  params?: Record<string, unknown>;
-};
+import { waitForConnection } from '@/lib/composio-server';
 
 export async function GET(request: Request) {
   try {
@@ -34,15 +21,12 @@ export async function GET(request: Request) {
 
     try {
       // Wait for connection to complete (with timeout)
-      const connection = (await composio.connectedAccounts.waitForConnection(
+      const result = await waitForConnection(
         connectionRequestId,
-        60_000 // 60 seconds timeout
-      )) as ConnectionStatus;
+        60 // 60 seconds timeout
+      );
 
-      return NextResponse.json({
-        connectionId: connection.id,
-        isConnected: connection.status === 'ACTIVE',
-      });
+      return NextResponse.json(result);
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         // Handle Composio specific errors

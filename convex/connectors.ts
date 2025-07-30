@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
 import { internalMutation, mutation, query } from './_generated/server';
+import { ensureAuthenticated } from './lib/auth_helper';
 
 // Type for connector types
 const CONNECTOR_TYPES = v.union(
@@ -10,12 +11,10 @@ const CONNECTOR_TYPES = v.union(
 );
 
 /**
- * List all connectors for a user
+ * List all connectors for the authenticated user
  */
 export const listUserConnectors = query({
-  args: {
-    userId: v.id('users'),
-  },
+  args: {},
   returns: v.array(
     v.object({
       _id: v.id('connectors'),
@@ -27,10 +26,11 @@ export const listUserConnectors = query({
       displayName: v.optional(v.string()),
     })
   ),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const userId = await ensureAuthenticated(ctx);
     const connectors = await ctx.db
       .query('connectors')
-      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user', (q) => q.eq('userId', userId))
       .collect();
 
     return connectors;
@@ -38,11 +38,10 @@ export const listUserConnectors = query({
 });
 
 /**
- * Get a specific connector by user and type
+ * Get a specific connector by type for the authenticated user
  */
 export const getConnectorByType = query({
   args: {
-    userId: v.id('users'),
     type: CONNECTOR_TYPES,
   },
   returns: v.union(
@@ -58,10 +57,11 @@ export const getConnectorByType = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    const userId = await ensureAuthenticated(ctx);
     const connector = await ctx.db
       .query('connectors')
       .withIndex('by_user_and_type', (q) =>
-        q.eq('userId', args.userId).eq('type', args.type)
+        q.eq('userId', userId).eq('type', args.type)
       )
       .unique();
 
@@ -70,22 +70,23 @@ export const getConnectorByType = query({
 });
 
 /**
- * Save a new connection
+ * Save a new connection for the authenticated user
  */
 export const saveConnection = mutation({
   args: {
-    userId: v.id('users'),
     type: CONNECTOR_TYPES,
     connectionId: v.string(),
     displayName: v.optional(v.string()),
   },
   returns: v.id('connectors'),
   handler: async (ctx, args) => {
+    const userId = await ensureAuthenticated(ctx);
+
     // Check if connector already exists
     const existingConnector = await ctx.db
       .query('connectors')
       .withIndex('by_user_and_type', (q) =>
-        q.eq('userId', args.userId).eq('type', args.type)
+        q.eq('userId', userId).eq('type', args.type)
       )
       .unique();
 
@@ -101,7 +102,7 @@ export const saveConnection = mutation({
 
     // Create new connector
     const connectorId = await ctx.db.insert('connectors', {
-      userId: args.userId,
+      userId,
       type: args.type,
       connectionId: args.connectionId,
       isConnected: true,
@@ -113,19 +114,19 @@ export const saveConnection = mutation({
 });
 
 /**
- * Remove a connection
+ * Remove a connection for the authenticated user
  */
 export const removeConnection = mutation({
   args: {
-    userId: v.id('users'),
     type: CONNECTOR_TYPES,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await ensureAuthenticated(ctx);
     const connector = await ctx.db
       .query('connectors')
       .withIndex('by_user_and_type', (q) =>
-        q.eq('userId', args.userId).eq('type', args.type)
+        q.eq('userId', userId).eq('type', args.type)
       )
       .unique();
 
@@ -138,20 +139,20 @@ export const removeConnection = mutation({
 });
 
 /**
- * Update connection status
+ * Update connection status for the authenticated user
  */
 export const updateConnectionStatus = mutation({
   args: {
-    userId: v.id('users'),
     type: CONNECTOR_TYPES,
     isConnected: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await ensureAuthenticated(ctx);
     const connector = await ctx.db
       .query('connectors')
       .withIndex('by_user_and_type', (q) =>
-        q.eq('userId', args.userId).eq('type', args.type)
+        q.eq('userId', userId).eq('type', args.type)
       )
       .unique();
 

@@ -2,7 +2,7 @@
 
 import { CaretDown, Copy, SpinnerGap } from '@phosphor-icons/react';
 import Image from 'next/image';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ConnectorType } from '@/lib/composio-utils';
 import { cn } from '@/lib/utils';
 
@@ -62,16 +62,49 @@ const formatConnectorType = (connectorType: ConnectorType): string => {
 const CopyButton = memo<{ content: string; size?: number }>(
   ({ content, size = 12 }) => {
     const [copied, setCopied] = useState(false);
+    const timeoutRef = useRef<number | null>(null);
 
     const handleCopy = useCallback(async () => {
       try {
         await navigator.clipboard.writeText(content);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+
+        // Clear any existing timeout
+        if (timeoutRef.current !== null) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        // Set new timeout and store reference
+        timeoutRef.current = window.setTimeout(() => {
+          setCopied(false);
+          timeoutRef.current = null;
+        }, 2000);
       } catch (_error) {
         // Silently handle clipboard error
       }
     }, [content]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (timeoutRef.current !== null) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }, []);
+
+    // Get Tailwind size classes based on size prop
+    const getSizeClasses = (sizeValue: number): string => {
+      const sizeMap: Record<number, string> = {
+        12: 'h-3 w-3',
+        16: 'h-4 w-4',
+        20: 'h-5 w-5',
+        24: 'h-6 w-6',
+      };
+      return sizeMap[sizeValue] || 'h-3 w-3'; // fallback to h-3 w-3 for size 12
+    };
+
+    const sizeClasses = getSizeClasses(size);
 
     return (
       <button
@@ -91,18 +124,18 @@ const CopyButton = memo<{ content: string; size?: number }>(
           <div
             className={cn(
               'flex items-center justify-center text-muted-foreground transition-all',
-              copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+              copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100',
+              sizeClasses
             )}
-            style={{ width: `${size}px`, height: `${size}px` }}
           >
             <Copy size={size} />
           </div>
           <div
             className={cn(
               'absolute top-0 left-0 flex items-center justify-center text-muted-foreground transition-all',
-              copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+              copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0',
+              sizeClasses
             )}
-            style={{ width: `${size}px`, height: `${size}px` }}
           >
             <svg
               aria-hidden="true"
@@ -245,10 +278,7 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
                   <div className="shrink-0 whitespace-nowrap text-muted-foreground text-sm leading-tight">
                     {connectorDisplayName}
                   </div>
-                  <div
-                    className={caretClassName}
-                    style={{ width: '16px', height: '16px' }}
-                  >
+                  <div className={cn(caretClassName, 'h-4 w-4')}>
                     <CaretDown size={20} />
                   </div>
                 </>

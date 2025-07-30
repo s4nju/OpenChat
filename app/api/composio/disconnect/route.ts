@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     // Find the connector to get connection ID
     const connectors = await fetchQuery(
       api.connectors.listUserConnectors,
-      { userId: user._id },
+      {},
       { token }
     );
 
@@ -57,7 +57,6 @@ export async function POST(request: Request) {
     await fetchMutation(
       api.connectors.removeConnection,
       {
-        userId: user._id,
         type: connectorType as ConnectorType,
       },
       { token }
