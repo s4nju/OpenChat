@@ -184,6 +184,20 @@ const shouldEnableThinking = (modelId: string): boolean => {
   return reasoningFeature?.enabled === true;
 };
 
+/**
+ * Helper function to check if a model supports tool calling
+ * based on its features configuration
+ */
+const supportsToolCalling = (
+  selectedModel: (typeof MODELS_MAP)[string]
+): boolean => {
+  return (
+    selectedModel.features?.some(
+      (feature) => feature.id === 'tool-calling' && feature.enabled === true
+    ) ?? false
+  );
+};
+
 const buildGoogleProviderOptions = (
   modelId: string,
   reasoningEffort?: ReasoningEffort
@@ -443,18 +457,57 @@ export async function POST(req: Request) {
 
     // --- Optimized Parallel Database Queries ---
     // Run independent queries in parallel to reduce latency
-    const [user, userKeys, isUserPremiumForPremiumModels] = await Promise.all([
-      // Get current user for PostHog tracking and auth
-      fetchQuery(api.users.getCurrentUser, {}, { token }),
-      // Get user API keys if model allows user keys
-      selectedModel.apiKeyUsage?.allowUserKey
-        ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
-        : Promise.resolve([]),
-      // Check premium status for premium models (only if needed)
-      selectedModel.premium
-        ? fetchQuery(api.users.userHasPremium, {}, { token }).catch(() => false)
-        : Promise.resolve(false),
-    ]);
+    const [user, userKeys, isUserPremiumForPremiumModels, composioTools] =
+      await Promise.all([
+        // Get current user for PostHog tracking and auth
+        fetchQuery(api.users.getCurrentUser, {}, { token }),
+        // Get user API keys if model allows user keys
+        selectedModel.apiKeyUsage?.allowUserKey
+          ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
+          : Promise.resolve([]),
+        // Check premium status for premium models (only if needed)
+        selectedModel.premium
+          ? fetchQuery(api.users.userHasPremium, {}, { token }).catch(
+              () => false
+            )
+          : Promise.resolve(false),
+        // Get Composio tools for connected accounts (only if model supports tool calling)
+        (async () => {
+          try {
+            // Only fetch tools if the model supports tool calling
+            if (!supportsToolCalling(selectedModel)) {
+              return {};
+            }
+
+            const currentUser = await fetchQuery(
+              api.users.getCurrentUser,
+              {},
+              { token }
+            );
+            if (!currentUser) {
+              return {};
+            }
+
+            const connectedAccounts = await listConnectedAccounts(
+              currentUser._id
+            );
+            const connectedToolkitSlugs = connectedAccounts
+              .filter((account) => account.status === 'ACTIVE')
+              .map((account) => account.toolkit.slug.toUpperCase());
+
+            if (connectedToolkitSlugs.length > 0) {
+              return await getComposioTools(
+                currentUser._id,
+                connectedToolkitSlugs
+              );
+            }
+            return {};
+          } catch {
+            // If Composio tools fail to load, continue without them
+            return {};
+          }
+        })(),
+      ]);
 
     // const userId = user?._id;
 
@@ -691,27 +744,6 @@ export async function POST(req: Request) {
       cachedInputTokens: 0,
     };
 
-    // Get Composio tools for connected accounts
-    let composioTools = {};
-    try {
-      if (user) {
-        const connectedAccounts = await listConnectedAccounts(user._id);
-        const connectedToolkitSlugs = connectedAccounts
-          .filter((account) => account.status === 'ACTIVE')
-          .map((account) => account.toolkit.slug);
-
-        if (connectedToolkitSlugs.length > 0) {
-          composioTools = await getComposioTools(
-            user._id,
-            connectedToolkitSlugs
-          );
-        }
-      }
-    } catch {
-      // If Composio tools fail to load, continue without them
-    }
-
-    // console.log('DEBUG: composioTools', composioTools);
     // Create reusable streamText function with shared logic
     const createStreamTextCall = (useUser: boolean) => {
       return streamText({
@@ -720,7 +752,7 @@ export async function POST(req: Request) {
         messages: convertToModelMessages(messages),
         tools: {
           ...(enableSearch ? { search: searchTool } : {}),
-          ...composioTools,
+          ...(supportsToolCalling(selectedModel) ? composioTools : {}),
         },
         stopWhen: stepCountIs(5),
         // COMMENTED OUT: abortSignal: req.signal
