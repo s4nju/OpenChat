@@ -38,6 +38,8 @@ const isErrorPart = (part: unknown): part is ErrorUIPart => {
     'error' in part &&
     typeof part.error === 'object' &&
     part.error !== null &&
+    'code' in part.error &&
+    typeof part.error.code === 'string' &&
     'message' in part.error &&
     typeof part.error.message === 'string'
   );
@@ -316,11 +318,11 @@ const renderReasoningPart = (
   id: string,
   showReasoning: boolean,
   toggleReasoning: () => void,
-  status?: string
+  isPartStreaming: boolean
 ) => {
   return (
     <div className="mb-2 w-full" key={`reasoning-${index}`}>
-      {status === 'streaming' ? (
+      {isPartStreaming ? (
         <div className="flex flex-row items-center gap-2">
           <div className="font-medium text-muted-foreground text-sm">
             Reasoning
@@ -587,23 +589,61 @@ function MessageAssistantInner({
 
   // State for reasoning collapse/expand functionality - track each reasoning part individually
   const [reasoningStates, setReasoningStates] = useState<
-    Record<number, boolean>
+    Record<string, boolean>
+  >({});
+  // Track which reasoning parts were initially streaming (to show correct UI)
+  const [reasoningStreamingStates, setReasoningStreamingStates] = useState<
+    Record<string, boolean>
   >({});
   const prevStatusRef = useRef(status);
+  const initialStatusRef = useRef<Record<string, boolean>>({});
   const [isTouch, setIsTouch] = useState(false);
 
-  // Initialize reasoning states based on status
+  // Initialize reasoning states - only run once when reasoning parts are first detected
   useEffect(() => {
     if (combinedParts) {
-      const initialStates: Record<number, boolean> = {};
-      combinedParts.forEach((part, index) => {
-        if (part.type === 'reasoning') {
-          initialStates[index] = status === 'streaming';
-        }
+      setReasoningStates((prevStates) => {
+        const newStates = { ...prevStates };
+        let hasChanges = false;
+
+        combinedParts.forEach((part, index) => {
+          if (part.type === 'reasoning') {
+            const key = `${id}-${index}`;
+            if (!(key in newStates)) {
+              // Check if we have a stored initial status, otherwise use current status
+              const isInitiallyStreaming =
+                initialStatusRef.current[key] ?? status === 'streaming';
+              newStates[key] = isInitiallyStreaming;
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? newStates : prevStates;
       });
-      setReasoningStates(initialStates);
+
+      // Track which reasoning parts were initially streaming
+      setReasoningStreamingStates((prevStreamingStates) => {
+        const newStreamingStates = { ...prevStreamingStates };
+        let hasChanges = false;
+
+        combinedParts.forEach((part, index) => {
+          if (part.type === 'reasoning') {
+            const key = `${id}-${index}`;
+            if (!(key in newStreamingStates)) {
+              const isInitiallyStreaming = status === 'streaming';
+              newStreamingStates[key] = isInitiallyStreaming;
+              // Store the initial status in ref to avoid re-initialization
+              initialStatusRef.current[key] = isInitiallyStreaming;
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? newStreamingStates : prevStreamingStates;
+      });
     }
-  }, [combinedParts, status]);
+  }, [combinedParts, id, status]);
 
   // Extract model from metadata or use direct model prop as fallback
   const modelFromMetadata = metadata?.modelName || metadata?.modelId;
@@ -619,22 +659,37 @@ function MessageAssistantInner({
   // Effect to auto-collapse all reasoning when streaming finishes
   useEffect(() => {
     if (prevStatusRef.current === 'streaming' && status !== 'streaming') {
+      // Collapse reasoning parts for this message
       setReasoningStates((prev) => {
         const newStates = { ...prev };
         for (const key of Object.keys(newStates)) {
-          newStates[Number(key)] = false;
+          if (key.startsWith(`${id}-`)) {
+            newStates[key] = false;
+          }
+        }
+        return newStates;
+      });
+
+      // Clear streaming states for this message (so they show buttons instead of spinners)
+      setReasoningStreamingStates((prev) => {
+        const newStates = { ...prev };
+        for (const key of Object.keys(newStates)) {
+          if (key.startsWith(`${id}-`)) {
+            newStates[key] = false;
+          }
         }
         return newStates;
       });
     }
     prevStatusRef.current = status;
-  }, [status]);
+  }, [status, id]);
 
   // Helper function to toggle individual reasoning part
   const toggleReasoning = (index: number) => {
+    const key = `${id}-${index}`;
     setReasoningStates((prev) => ({
       ...prev,
-      [index]: !prev[index],
+      [key]: !prev[key],
     }));
   };
 
@@ -664,9 +719,9 @@ function MessageAssistantInner({
                 part as ReasoningUIPart,
                 index,
                 id,
-                reasoningStates[index],
+                reasoningStates[`${id}-${index}`],
                 () => toggleReasoning(index),
-                status
+                reasoningStreamingStates[`${id}-${index}`]
               );
 
             case 'file':
