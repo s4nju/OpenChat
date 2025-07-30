@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { Calendar } from 'lucide-react';
 import type { ConnectorType } from '@/lib/composio-utils';
 import { Gmail, Notion, GoogleDrive } from '@ridemountainpig/svgl-react';
+import { GoogleCalendarIcon } from '@/components/icons/google-calendar';
 
 export interface ConnectorConfig {
   type: ConnectorType;
@@ -22,7 +23,7 @@ export const CONNECTOR_CONFIGS: Record<ConnectorType, ConnectorConfig> = {
   googlecalendar: {
     type: 'googlecalendar',
     displayName: 'Google Calendar',
-    icon: Calendar,
+    icon: GoogleCalendarIcon,
     description: 'View and schedule events in your Google Calendar.',
     authConfigId: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_AUTH_CONFIG_ID || 'googlecalendar_oauth',
   },
