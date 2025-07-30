@@ -34,7 +34,6 @@ export const DEEPSEEK_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       REASONING_FEATURE_BASIC,
-      TOOL_CALLING_FEATURE,
     ],
     api_sdk: nim("deepseek-ai/deepseek-r1-0528"),
   },
@@ -49,7 +48,6 @@ export const DEEPSEEK_MODELS = [
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [
       REASONING_FEATURE_BASIC,
-      TOOL_CALLING_FEATURE,
     ],
     api_sdk: openrouter("deepseek/deepseek-r1-distill-llama-70b:free"),
   },
