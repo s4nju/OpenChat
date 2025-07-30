@@ -7,7 +7,7 @@ import {
   useMutation,
 } from 'convex/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useUser } from '@/app/providers/user-provider';
 import { Loader } from '@/components/prompt-kit/loader';
@@ -22,8 +22,31 @@ function AuthenticatedCallback() {
   const searchParams = useSearchParams();
   const { user } = useUser();
   const [status, setStatus] = useState<CallbackStatus>('checking');
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const saveConnection = useMutation(api.connectors.saveConnection);
+
+  // Helper function to handle redirects with proper cleanup
+  const redirectAfterDelay = useCallback(
+    (path: string, delay: number) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        router.push(path);
+      }, delay);
+    },
+    [router]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCallback = useCallback(async () => {
     try {
@@ -32,9 +55,7 @@ function AuthenticatedCallback() {
       if (!connectorType) {
         toast.error('Missing connector type');
         setStatus('error');
-        setTimeout(() => {
-          router.push('/settings/connectors');
-        }, 3000);
+        redirectAfterDelay('/settings/connectors', 3000);
         return;
       }
 
@@ -51,9 +72,7 @@ function AuthenticatedCallback() {
       if (!connectionRequestId) {
         toast.error('Missing connection request ID');
         setStatus('error');
-        setTimeout(() => {
-          router.push('/settings/connectors');
-        }, 3000);
+        redirectAfterDelay('/settings/connectors', 3000);
         return;
       }
 
@@ -71,9 +90,7 @@ function AuthenticatedCallback() {
           .catch(() => ({ error: 'Unknown error' }));
         toast.error(`Failed to verify connection: ${errorData.error}`);
         setStatus('error');
-        setTimeout(() => {
-          router.push('/settings/connectors');
-        }, 3000);
+        redirectAfterDelay('/settings/connectors', 3000);
         return;
       }
 
@@ -94,15 +111,11 @@ function AuthenticatedCallback() {
         setStatus('success');
 
         // Redirect back to connectors page after 2 seconds
-        setTimeout(() => {
-          router.push('/settings/connectors');
-        }, 2000);
+        redirectAfterDelay('/settings/connectors', 2000);
       } else {
         toast.error('Connection verification failed');
         setStatus('error');
-        setTimeout(() => {
-          router.push('/settings/connectors');
-        }, 3000);
+        redirectAfterDelay('/settings/connectors', 3000);
       }
     } catch {
       // Only show failed for genuine errors (like network failures, timeouts, etc.)
@@ -110,11 +123,9 @@ function AuthenticatedCallback() {
       setStatus('error');
 
       // Redirect back after 3 seconds
-      setTimeout(() => {
-        router.push('/settings/connectors');
-      }, 3000);
+      redirectAfterDelay('/settings/connectors', 3000);
     }
-  }, [searchParams, user, saveConnection, router]);
+  }, [searchParams, user, saveConnection, redirectAfterDelay]);
 
   useEffect(() => {
     handleCallback();
@@ -177,9 +188,14 @@ function UnauthenticatedRedirect() {
 
   useEffect(() => {
     // Redirect to home if not authenticated
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       router.push('/');
     }, 2000);
+
+    // Cleanup timeout on unmount
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [router]);
 
   return (
