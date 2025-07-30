@@ -124,7 +124,7 @@ export function UserProvider({
     useTanStackQuery({
       ...convexQuery(
         api.connectors.listUserConnectors,
-        user ? { userId: user._id } : 'skip'
+        user && !user.isAnonymous ? {} : 'skip'
       ),
       enabled: !!user && !user.isAnonymous,
       // Connectors are relatively stable, cache reasonably

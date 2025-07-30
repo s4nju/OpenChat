@@ -20,8 +20,8 @@ export function mapMessage(msg: Doc<'messages'>): UIMessage {
  * Validates input message
  */
 export function validateInput(
-  inputMessage: string, 
-  filesCount: number = 0,
+  inputMessage: string,
+  filesCount = 0,
   userId?: string
 ): boolean {
   if (!inputMessage.trim() && filesCount === 0) {
@@ -49,12 +49,12 @@ export function validateInput(
  */
 export function validateQueryParam(query: string): string | null {
   const trimmedQuery = query.trim();
-  
+
   if (trimmedQuery.length === 0) {
     toast({ title: 'Query cannot be empty', status: 'error' });
     return null;
   }
-  
+
   if (trimmedQuery.length > MESSAGE_MAX_LENGTH) {
     toast({
       title: `Query is too long (max ${MESSAGE_MAX_LENGTH} characters).`,
@@ -62,7 +62,7 @@ export function validateQueryParam(query: string): string | null {
     });
     return null;
   }
-  
+
   return trimmedQuery;
 }
 

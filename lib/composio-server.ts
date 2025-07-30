@@ -25,30 +25,27 @@ export const initiateConnection = async (
   callbackUrl?: string
 ): Promise<{ redirectUrl: string; connectionRequestId: string }> => {
   const authConfigId = getAuthConfigId(connectorType);
-  
+
   // First, check if user has existing connections for this toolkit and clean them up
   try {
     const existingAccounts = await composio.connectedAccounts.list({
       userIds: [userId],
     });
-    
+
     // Find any existing connection for this toolkit
     const toolkitSlug = connectorType.toUpperCase();
     const existingConnection = existingAccounts.items.find(
-      account => account.toolkit.slug.toUpperCase() === toolkitSlug
+      (account) => account.toolkit.slug.toUpperCase() === toolkitSlug
     );
-    
-    if (existingConnection) {
+
+    if (existingConnection && existingConnection.status !== 'ACTIVE') {
       // Only delete if connection is not active to avoid breaking working connections
-      if (existingConnection.status !== 'ACTIVE') {
-        await composio.connectedAccounts.delete(existingConnection.id);
-      }
+      await composio.connectedAccounts.delete(existingConnection.id);
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore cleanup errors and proceed with new connection
-    console.error('Cleanup of existing connections failed, proceeding anyway:', error);
   }
-  
+
   const connectionRequest = await composio.connectedAccounts.initiate(
     userId,
     authConfigId,
@@ -66,11 +63,11 @@ export const initiateConnection = async (
  */
 export const waitForConnection = async (
   connectionRequestId: string,
-  timeoutSeconds: number = 300
+  timeoutSeconds = 300
 ): Promise<{ connectionId: string; isConnected: boolean }> => {
   const connectedAccount = await composio.connectedAccounts.waitForConnection(
     connectionRequestId,
-    timeoutSeconds
+    timeoutSeconds * 1000 // Convert seconds to milliseconds
   );
 
   return {
@@ -82,7 +79,9 @@ export const waitForConnection = async (
 /**
  * Disconnect an account (server-side only)
  */
-export const disconnectAccount = async (connectionId: string): Promise<void> => {
+export const disconnectAccount = async (
+  connectionId: string
+): Promise<void> => {
   await composio.connectedAccounts.delete(connectionId);
 };
 
@@ -101,18 +100,23 @@ export const listConnectedAccounts = async (userId: string) => {
  * Get available toolkits with connection status (server-side only)
  */
 export const getToolkitsWithStatus = async (userId: string) => {
-  const SUPPORTED_TOOLKITS = ['GMAIL', 'GOOGLECALENDAR', 'NOTION'];
-  
+  const SUPPORTED_TOOLKITS = [
+    'GMAIL',
+    'GOOGLECALENDAR',
+    'NOTION',
+    'GOOGLEDRIVE',
+  ];
+
   // Get connected accounts first
   const connectedAccounts = await listConnectedAccounts(userId);
   const connectedToolkitMap = new Map();
-  
-  connectedAccounts.forEach(account => {
+
+  for (const account of connectedAccounts) {
     connectedToolkitMap.set(account.toolkit.slug.toUpperCase(), account.id);
-  });
+  }
 
   // Fetch toolkit data
-  const toolkitPromises = SUPPORTED_TOOLKITS.map(async slug => {
+  const toolkitPromises = SUPPORTED_TOOLKITS.map(async (slug) => {
     const toolkit = await composio.toolkits.get(slug);
     const connectionId = connectedToolkitMap.get(slug.toUpperCase());
 
@@ -133,37 +137,44 @@ export const getToolkitsWithStatus = async (userId: string) => {
 /**
  * Get Composio tools for enabled toolkits (for chat integration)
  */
-export const getComposioTools = async (userId: string, toolkitSlugs: string[]) => {
+export const getComposioTools = async (
+  userId: string,
+  toolkitSlugs: string[]
+) => {
   if (!toolkitSlugs.length) {
     return {};
   }
-  console.log('Fetching Composio tools for user:', userId, 'toolkits:', toolkitSlugs);
-  
+
   // Create an array of promises for parallel execution
   // Workaround for bug where multiple toolkits in one call only returns last toolkit
-  const toolPromises = toolkitSlugs.map(toolkit => 
-    composio.tools.get(userId, {
-      toolkits: [toolkit], // Single toolkit per request
-      limit: 10, // Limit to 10 tools per toolkit
-    }).catch(error => {
-      console.error(`Failed to fetch tools for toolkit ${toolkit}:`, error);
-      return {}; // Return empty object on error to not break other requests
-    })
+  const toolPromises = toolkitSlugs.map((toolkit) =>
+    composio.tools
+      .get(userId, {
+        toolkits: [toolkit], // Single toolkit per request
+        limit: 10, // Limit to 10 tools per toolkit
+      })
+      .catch(() => {
+        // Return empty object on error to not break other requests
+        return {};
+      })
   );
-  
+
   // Execute all requests in parallel
   const toolsArrays = await Promise.all(toolPromises);
-  
+
   // Merge all tools into a single object
-  const mergedTools = toolsArrays.reduce((acc, tools) => {
-    return { ...acc, ...tools };
-  }, {});
-  
+  const mergedTools: Record<string, unknown> = {};
+  for (const tools of toolsArrays) {
+    for (const [key, value] of Object.entries(tools)) {
+      mergedTools[key] = value;
+    }
+  }
+
   // console.log('Fetched Composio tools:', mergedTools);
   return mergedTools;
 };
 
-// Re-export utility functions from client-safe module  
+// Re-export utility functions from client-safe module
 export { validateEnvironment } from './composio-utils';
 
 export default composio;

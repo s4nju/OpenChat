@@ -5,7 +5,6 @@
     "includes": [
       "**",
       "!components/**",
-      "!lib/**",
       "!hooks/**",
       "!node_modules/**",
       "!convex/_generated/**",

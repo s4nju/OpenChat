@@ -1,16 +1,16 @@
-import { z } from "zod"
+import { z } from 'zod';
 
 export const ModelFeatureSchema = z.object({
   id: z.string(),
   enabled: z.boolean(),
   label: z.string().optional(),
   supportsEffort: z.boolean().optional(),
-})
+});
 
 export const ApiKeyUsageSchema = z.object({
   allowUserKey: z.boolean(),
   userKeyOnly: z.boolean(),
-})
+});
 
 export const ModelSchema = z.object({
   id: z.string(),
@@ -26,6 +26,6 @@ export const ModelSchema = z.object({
     allowUserKey: false,
     userKeyOnly: false,
   }),
-})
+});
 
-export type Model = z.infer<typeof ModelSchema>
+export type Model = z.infer<typeof ModelSchema>;

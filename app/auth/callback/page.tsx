@@ -22,7 +22,7 @@ function AuthenticatedCallback() {
   const searchParams = useSearchParams();
   const { user } = useUser();
   const [status, setStatus] = useState<CallbackStatus>('checking');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const saveConnection = useMutation(api.connectors.saveConnection);
 
@@ -59,8 +59,15 @@ function AuthenticatedCallback() {
         return;
       }
 
-      // Wait for user to be loaded
       if (!user) {
+        return;
+      }
+
+      // Redirect if no user or anonymous user - they can't complete OAuth callbacks
+      if (user.isAnonymous) {
+        toast.error('Please sign in with Google to connect external services');
+        setStatus('error');
+        redirectAfterDelay('/', 3000);
         return;
       }
 
@@ -100,7 +107,6 @@ function AuthenticatedCallback() {
         // Save to Convex (user is guaranteed to exist in Authenticated component)
         if (user) {
           await saveConnection({
-            userId: user._id,
             type: connectorType,
             connectionId: data.connectionId,
           });
@@ -157,7 +163,7 @@ function AuthenticatedCallback() {
   );
 }
 
-export default function AuthCallbackPage() {
+export function AuthCallbackPage() {
   return (
     <>
       {/* Auth Loading State */}
@@ -182,6 +188,8 @@ export default function AuthCallbackPage() {
     </>
   );
 }
+
+export default AuthCallbackPage;
 
 function UnauthenticatedRedirect() {
   const router = useRouter();

@@ -4,10 +4,9 @@
  */
 
 import type { FileUIPart } from 'ai';
-import type { Id } from '@/convex/_generated/dataModel';
-import { api } from '@/convex/_generated/api';
-import { humaniseUploadError } from './chat-error-utils';
 import { toast } from '@/components/ui/toast';
+import type { Id } from '@/convex/_generated/dataModel';
+import { humaniseUploadError } from './chat-error-utils';
 
 export interface FileAttachment {
   fileName: string; // This is the storage ID
@@ -43,8 +42,10 @@ export async function uploadAndSaveFile(
       throw new Error(`Upload failed with status ${response.status}`);
     }
 
-    const { storageId } = await response.json() as { storageId: Id<'_storage'> };
-    
+    const { storageId } = (await response.json()) as {
+      storageId: Id<'_storage'>;
+    };
+
     return await saveFileAttachment({
       chatId,
       fileName: storageId,

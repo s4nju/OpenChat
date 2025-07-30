@@ -12,7 +12,7 @@ type SimpleConnectionState = {
   status: 'idle' | 'connecting';
 };
 
-export default function ConnectorsPage() {
+export function ConnectorsPage() {
   const { user, connectors, isConnectorsLoading } = useUser();
   const [connectionStates, setConnectionStates] = useState<
     Record<ConnectorType, SimpleConnectionState>
@@ -151,3 +151,5 @@ export default function ConnectorsPage() {
     </div>
   );
 }
+
+export default ConnectorsPage;
