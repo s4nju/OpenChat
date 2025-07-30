@@ -5,10 +5,9 @@ import {
   BrainIcon,
   EyeIcon,
   FilePdfIcon,
-  GlobeIcon,
   SketchLogoIcon,
 } from "@phosphor-icons/react"
-import { ImagePlus, Key, Pin, PinOff } from "lucide-react"
+import { ImagePlus, Key, Pin, PinOff, Wrench } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -72,7 +71,7 @@ export const ModelCard = React.memo(function ModelCard({
   const hasFileUpload = featuresMap["file-upload"];
   const hasPdfProcessing = featuresMap["pdf-processing"];
   const hasReasoning = featuresMap["reasoning"];
-  const hasWebSearch = featuresMap["web-search"];
+  const hasToolCalling = featuresMap["tool-calling"];
   const hasImageGeneration = featuresMap["image-generation"];
   // Style definitions for feature icons
   const iconWrapperBaseClasses =
@@ -85,7 +84,7 @@ export const ModelCard = React.memo(function ModelCard({
   const visionColorClasses = "text-teal-600 dark:text-teal-400"
   const pdfColorClasses = "text-indigo-600 dark:text-indigo-400"
   const reasoningColorClasses = "text-pink-600 dark:text-pink-400"
-  const webSearchColorClasses = "text-blue-600 dark:text-blue-400"
+  const toolCallingColorClasses = "text-blue-600 dark:text-blue-400"
   const imageGenerationColorClasses = "text-orange-600 dark:text-orange-400"
 
   const handleCardClick = React.useCallback(() => {
@@ -271,30 +270,30 @@ export const ModelCard = React.memo(function ModelCard({
                   </TooltipContent>
                 </Tooltip>
               )}
-              {/* {hasWebSearch && (
+              {hasToolCalling && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
                       className={cn(
                         iconWrapperBaseClasses,
-                        webSearchColorClasses
+                        toolCallingColorClasses
                       )}
                     >
                       <div className={iconOverlayClasses}></div>
-                      <GlobeIcon
+                      <Wrench
                         className={cn(
                           iconSizeClasses,
                           "relative",
-                          webSearchColorClasses
+                          toolCallingColorClasses
                         )}
                       />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Supports web search</p>
+                    <p>Supports tool calling (web search & connectors)</p>
                   </TooltipContent>
                 </Tooltip>
-              )} */}
+              )}
               {hasImageGeneration && (
                 <Tooltip>
                   <TooltipTrigger asChild>
