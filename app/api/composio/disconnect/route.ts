@@ -2,8 +2,9 @@ import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { NextResponse } from 'next/server';
 import { api } from '@/convex/_generated/api';
-import { type ConnectorType, disconnectAccount } from '@/lib/composio-server';
+import { disconnectAccount } from '@/lib/composio-server';
 import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {

@@ -2,8 +2,9 @@ import { convexAuthNextjsToken } from '@convex-dev/auth/nextjs/server';
 import { fetchQuery } from 'convex/nextjs';
 import { NextResponse } from 'next/server';
 import { api } from '@/convex/_generated/api';
-import { type ConnectorType, initiateConnection } from '@/lib/composio-server';
+import { initiateConnection } from '@/lib/composio-server';
 import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { connectorType } = await request.json();
+    let connectorType: string;
+    try {
+      const body = await request.json();
+      connectorType = body.connectorType;
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     if (!connectorType) {
       return NextResponse.json(
@@ -27,7 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!SUPPORTED_CONNECTORS.includes(connectorType)) {
+    if (!SUPPORTED_CONNECTORS.includes(connectorType as ConnectorType)) {
       return NextResponse.json(
         { error: 'Invalid connector type' },
         { status: 400 }
