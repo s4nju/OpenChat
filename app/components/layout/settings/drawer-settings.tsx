@@ -46,7 +46,7 @@ const ModelsPage = dynamic(
   { ssr: false }
 );
 const ConnectorsPage = dynamic(
-  () => import('@/app/settings/connectors/page').then((m) => m.ConnectorsPage),
+  () => import('@/app/settings/connectors/page').then((m) => m.default),
   { ssr: false }
 );
 

@@ -163,7 +163,7 @@ function AuthenticatedCallback() {
   );
 }
 
-export function AuthCallbackPage() {
+export default function AuthCallbackPage() {
   return (
     <>
       {/* Auth Loading State */}
@@ -188,8 +188,6 @@ export function AuthCallbackPage() {
     </>
   );
 }
-
-export default AuthCallbackPage;
 
 function UnauthenticatedRedirect() {
   const router = useRouter();
