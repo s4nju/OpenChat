@@ -1,6 +1,7 @@
 import { Composio } from '@composio/core';
 import { VercelProvider } from '@composio/vercel';
-import { type ConnectorType, getAuthConfigId } from './composio-utils';
+import { getAuthConfigId } from './composio-utils';
+import type { ConnectorType } from './types';
 
 // Server-side Composio client initialization (following official example)
 const apiKey = process.env.COMPOSIO_API_KEY;
@@ -12,9 +13,6 @@ const composio = new Composio({
   apiKey,
   provider: new VercelProvider(),
 });
-
-// Re-export types and utilities from client-safe module
-export type { ConnectorType } from './composio-utils';
 
 /**
  * Initiate OAuth connection for a user (server-side only)
@@ -174,7 +172,21 @@ export const getComposioTools = async (
   return mergedTools;
 };
 
-// Re-export utility functions from client-safe module
-export { validateEnvironment } from './composio-utils';
+/**
+ * Validate environment setup (server-side only)
+ */
+export const validateEnvironment = (): {
+  isValid: boolean;
+  message?: string;
+} => {
+  if (!process.env.COMPOSIO_API_KEY) {
+    return {
+      isValid: false,
+      message: 'COMPOSIO_API_KEY environment variable is not set',
+    };
+  }
+
+  return { isValid: true };
+};
 
 export default composio;
