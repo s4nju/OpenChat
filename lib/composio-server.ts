@@ -137,12 +137,30 @@ export const getComposioTools = async (userId: string, toolkitSlugs: string[]) =
   if (!toolkitSlugs.length) {
     return {};
   }
-
-  const tools = await composio.tools.get(userId, {
-    toolkits: toolkitSlugs,
-  });
-
-  return tools || {};
+  console.log('Fetching Composio tools for user:', userId, 'toolkits:', toolkitSlugs);
+  
+  // Create an array of promises for parallel execution
+  // Workaround for bug where multiple toolkits in one call only returns last toolkit
+  const toolPromises = toolkitSlugs.map(toolkit => 
+    composio.tools.get(userId, {
+      toolkits: [toolkit], // Single toolkit per request
+      limit: 10, // Limit to 10 tools per toolkit
+    }).catch(error => {
+      console.error(`Failed to fetch tools for toolkit ${toolkit}:`, error);
+      return {}; // Return empty object on error to not break other requests
+    })
+  );
+  
+  // Execute all requests in parallel
+  const toolsArrays = await Promise.all(toolPromises);
+  
+  // Merge all tools into a single object
+  const mergedTools = toolsArrays.reduce((acc, tools) => {
+    return { ...acc, ...tools };
+  }, {});
+  
+  console.log('Fetched Composio tools:', mergedTools);
+  return mergedTools;
 };
 
 // Re-export utility functions from client-safe module  

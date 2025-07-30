@@ -20,6 +20,13 @@ export async function POST(request: Request) {
 
     const { connectorType } = await request.json();
 
+    if (!connectorType) {
+      return NextResponse.json(
+        { error: 'Missing connector type' },
+        { status: 400 }
+      );
+    }
+
     if (!SUPPORTED_CONNECTORS.includes(connectorType)) {
       return NextResponse.json(
         { error: 'Invalid connector type' },

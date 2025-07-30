@@ -18,7 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { connectorType } = await request.json();
+    let connectorType: ConnectorType;
+    try {
+      ({ connectorType } = await request.json());
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     if (!SUPPORTED_CONNECTORS.includes(connectorType)) {
       return NextResponse.json(
