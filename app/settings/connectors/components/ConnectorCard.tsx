@@ -1,6 +1,5 @@
 'use client';
 
-import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -58,12 +57,6 @@ export function ConnectorCard({
             <IconComponent className="size-5" />
             {config.displayName}
           </h3>
-          {connector.isConnected && (
-            <div className="flex items-center gap-2 text-green-600 text-sm">
-              <Check className="size-4" />
-              <span>Connected</span>
-            </div>
-          )}
         </div>
         <p className="text-muted-foreground text-sm">{config.description}</p>
         {connector.displayName && (

@@ -51,38 +51,38 @@ const SearchResultItem = memo<{
   const utmUrl = useMemo(() => addUTM(source.url), [source.url]);
 
   return (
-    <div key={source.sourceId}>
-      <a href={utmUrl} rel="noopener noreferrer" tabIndex={-1} target="_blank">
-        <button
-          className="flex h-[2rem] w-full min-w-0 shrink-0 cursor-pointer flex-row items-center justify-between gap-4 rounded-md px-1 tracking-tight transition-colors hover:bg-accent/50"
-          type="button"
-        >
-          <div className="flex min-w-0 flex-row items-center gap-2">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-              <Image
-                alt="favicon"
-                className="rounded-sm opacity-100 transition duration-500"
-                decoding="async"
-                height={16}
-                loader={({ src }) => src}
-                loading="lazy"
-                src={faviconUrl}
-                style={{
-                  maxWidth: '16px',
-                  maxHeight: '16px',
-                }}
-                unoptimized
-                width={16}
-              />
-            </div>
-            <p className="shrink overflow-hidden text-ellipsis whitespace-nowrap text-foreground text-sm">
-              {source.title}
-            </p>
-            <p className="line-clamp-1 shrink-0 text-muted-foreground text-xs">
-              {formattedUrl}
-            </p>
+    <div>
+      <a
+        className="flex h-[2rem] w-full min-w-0 shrink-0 cursor-pointer flex-row items-center justify-between gap-4 rounded-md px-1 tracking-tight transition-colors hover:bg-accent/50"
+        href={utmUrl}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <div className="flex min-w-0 flex-row items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+            <Image
+              alt="favicon"
+              className="rounded-sm opacity-100 transition duration-500"
+              decoding="async"
+              height={16}
+              loader={({ src }) => src}
+              loading="lazy"
+              src={faviconUrl}
+              style={{
+                maxWidth: '16px',
+                maxHeight: '16px',
+              }}
+              unoptimized
+              width={16}
+            />
           </div>
-        </button>
+          <p className="shrink overflow-hidden text-ellipsis whitespace-nowrap text-foreground text-sm">
+            {source.title}
+          </p>
+          <p className="line-clamp-1 shrink-0 text-muted-foreground text-xs">
+            {formattedUrl}
+          </p>
+        </div>
       </a>
     </div>
   );

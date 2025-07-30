@@ -67,9 +67,7 @@ export function ButtonSearch({
             </Button>
           </span>
         </TooltipTrigger>
-        <TooltipContent>
-          This model does not support tool calling.
-        </TooltipContent>
+        <TooltipContent>This model does not support web search.</TooltipContent>
       </Tooltip>
     );
   }

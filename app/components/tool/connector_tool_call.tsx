@@ -267,6 +267,8 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
             >
               <div
                 style={{
+                  WebkitMaskImage:
+                    'linear-gradient(transparent 0%, black 16px, black calc(100% - 16px), transparent 100%)',
                   maskImage:
                     'linear-gradient(transparent 0%, black 16px, black calc(100% - 16px), transparent 100%)',
                 }}
