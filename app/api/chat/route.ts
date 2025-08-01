@@ -170,6 +170,7 @@ type ChatRequest = {
   enableSearch?: boolean;
   reasoningEffort?: ReasoningEffort;
   userInfo?: { timezone?: string };
+  enabledToolSlugs?: string[];
 };
 
 /**
@@ -431,6 +432,7 @@ export async function POST(req: Request) {
       enableSearch,
       reasoningEffort,
       userInfo,
+      enabledToolSlugs,
     } = (await req.json()) as ChatRequest;
 
     if (!(messages && chatId)) {
@@ -656,9 +658,10 @@ export async function POST(req: Request) {
       basePrompt,
       enableSearch,
       enableTools,
-      userInfo?.timezone
+      userInfo?.timezone,
+      enabledToolSlugs
     );
-
+    // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
     // Check if this is an image generation model
     const isImageGenerationModel = selectedModel.features?.some(
       (feature) => feature.id === 'image-generation' && feature.enabled
@@ -771,7 +774,7 @@ export async function POST(req: Request) {
           ...(enableSearch ? { search: searchTool } : {}),
           ...(supportsToolCalling(selectedModel) ? composioTools : {}),
         },
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(20),
         experimental_transform: smoothStream({
           delayInMs: 20, // optional: defaults to 10ms
           chunking: 'word', // optional: defaults to 'word'
