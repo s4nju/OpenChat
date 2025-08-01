@@ -6,17 +6,15 @@ import ChatSidebar from './chat-sidebar';
 import { Header } from './header';
 
 export default function LayoutApp({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('sidebarOpen');
+      return savedState !== null ? savedState === 'true' : false;
+    }
+    return false;
+  });
   const router = useRouter();
   const pathname = usePathname();
-
-  // Load sidebar state from localStorage on initial mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebarOpen');
-    if (savedState !== null) {
-      setIsSidebarOpen(savedState === 'true');
-    }
-  }, []);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => {
