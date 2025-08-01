@@ -172,6 +172,23 @@ export async function setCachedConnectedAccounts(
 }
 
 /**
+ * Invalidate all caches for a user - deletes all keys containing the userId
+ */
+export async function invalidateAllUserCaches(userId: string): Promise<void> {
+  try {
+    // Find all keys that contain this userId
+    const pattern = `*${userId}*`;
+    const keys = await redis.keys(pattern);
+
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch {
+    // Silently fail - cache invalidation is optional
+  }
+}
+
+/**
  * Health check for Redis connection
  */
 export async function checkRedisHealth(): Promise<boolean> {

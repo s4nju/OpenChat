@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // Disconnect from Composio
-    await disconnectAccount(connector.connectionId);
+    await disconnectAccount(connector.connectionId, user._id);
 
     // Remove from Convex
     await fetchMutation(

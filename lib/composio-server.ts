@@ -5,6 +5,7 @@ import { jsonSchema } from 'ai';
 import {
   getCachedConnectedAccounts,
   getCachedConvertedTools,
+  invalidateAllUserCaches,
   setCachedConnectedAccounts,
   setCachedConvertedTools,
 } from './composio-cache';
@@ -116,16 +117,24 @@ export const initiateConnection = async (
  */
 export const waitForConnection = async (
   connectionRequestId: string,
-  timeoutSeconds = 300
+  timeoutSeconds = 300,
+  userId?: string
 ): Promise<{ connectionId: string; isConnected: boolean }> => {
   const connectedAccount = await composio.connectedAccounts.waitForConnection(
     connectionRequestId,
     timeoutSeconds * 1000 // Convert seconds to milliseconds
   );
 
+  const isConnected = connectedAccount.status === 'ACTIVE';
+
+  // If connection is successful and we have userId, refresh caches in background
+  if (isConnected && userId) {
+    refreshCache(userId);
+  }
+
   return {
     connectionId: connectedAccount.id,
-    isConnected: connectedAccount.status === 'ACTIVE',
+    isConnected,
   };
 };
 
@@ -133,9 +142,13 @@ export const waitForConnection = async (
  * Disconnect an account (server-side only)
  */
 export const disconnectAccount = async (
-  connectionId: string
+  connectionId: string,
+  userId: string
 ): Promise<void> => {
   await composio.connectedAccounts.delete(connectionId);
+
+  // Refresh caches in the background since connected accounts have changed
+  refreshCache(userId);
 };
 
 /**
@@ -246,6 +259,42 @@ export const validateEnvironment = (): {
   }
 
   return { isValid: true };
+};
+
+/**
+ * Refresh cache in the background (non-blocking)
+ * This function returns immediately and performs the refresh asynchronously
+ */
+export const refreshCache = (userId: string): void => {
+  // Fire and forget - runs in background
+  (async () => {
+    try {
+      // First, invalidate all existing cache entries for this user
+      // This ensures no stale data remains
+      await invalidateAllUserCaches(userId);
+
+      // Fetch fresh data from Composio API
+      const connectedAccounts = await composio.connectedAccounts.list({
+        userIds: [userId],
+      });
+
+      // Update the connected accounts cache with fresh data
+      await setCachedConnectedAccounts(userId, connectedAccounts.items);
+
+      // Get active toolkits for cache refresh
+      const activeToolkits = connectedAccounts.items
+        .filter((account) => account.status === 'ACTIVE')
+        .map((account) => account.toolkit.slug.toUpperCase());
+
+      if (activeToolkits.length > 0) {
+        // Refresh tools cache - getComposioTools will cache the results
+        await getComposioTools(userId, activeToolkits);
+      }
+    } catch {
+      // Silently handle error - this is a background operation
+      // In production, this could be sent to an error tracking service
+    }
+  })();
 };
 
 export default composio;

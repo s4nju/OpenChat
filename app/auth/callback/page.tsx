@@ -110,6 +110,12 @@ function AuthenticatedCallback() {
             type: connectorType,
             connectionId: data.connectionId,
           });
+
+          // Trigger background cache refresh - don't await
+          fetch('/api/composio/refresh-cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
 
         const connectorConfig = getConnectorConfig(connectorType);
