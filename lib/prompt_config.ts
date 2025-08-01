@@ -66,7 +66,7 @@ export const PERSONAS_MAP: Record<string, (typeof PERSONAS)[0]> =
   Object.fromEntries(PERSONAS.map((persona) => [persona.id, persona]));
 
 export const getSystemPromptDefault = () =>
-  `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention, never too much, never too little. You avoid cliches, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()}.`;
+  `You are OpenChat, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention, never too much, never too little. You avoid cliches, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform. Today's date is ${new Date().toLocaleDateString()} and the current time is ${new Date().toLocaleTimeString()}.`;
 
 // Search prompt instructions
 export const SEARCH_PROMPT_INSTRUCTIONS = `
@@ -99,12 +99,41 @@ Do NOT use web search for:
 - Mathematical calculations
 - Coding syntax or documentation you're confident about`.trim();
 
+// Tool usage prompt instructions
+export const TOOL_PROMPT_INSTRUCTIONS = `
+## Available Tools and Integrations
+You have access to external tools and integrations that can help you perform real-world actions and access live data.
+
+Use tools when you need to:
+- Access or manipulate data from external services (Gmail, Calendar, Drive, Notion, etc.)
+- Perform actions that require authentication with third-party platforms
+- Retrieve live information from connected accounts
+- Execute tasks that go beyond text generation (sending emails, creating calendar events, etc.)
+
+When using tools:
+1. **Choose the right tool**: Select tools based on the specific task and data source needed
+2. **Do not execute a tool without passing parameters**: Always provide the necessary parameters for the tool to function correctly
+3. **You can always use other tools to get parameters for a tool if needed.
+3. **Handle responses appropriately**: Tools may return data, confirmations, or error messages
+4. **Respect usage limits**: Be mindful of API rate limits and account quotas
+5. **Maintain user context**: Tools are scoped to the current user's connected accounts
+
+Tool execution guidelines:
+- Always confirm the action if it involves modifying user data
+- Explain what the tool will do before using it
+- Handle errors gracefully and suggest alternatives if a tool fails
+- Use tools efficiently - don't make unnecessary calls
+- Respect user privacy and data security
+
+Available integrations depend on what the user has connected to their account.`.trim();
+
 export type UserProfile = Doc<'users'>;
 
 export function buildSystemPrompt(
   user?: UserProfile | null,
   basePrompt?: string,
   enableSearch?: boolean,
+  enableTools?: boolean,
   timezone?: string
 ) {
   let prompt = basePrompt ?? getSystemPromptDefault();
@@ -112,6 +141,11 @@ export function buildSystemPrompt(
   // Add search instructions if search is enabled
   if (enableSearch) {
     prompt += `\n\n${SEARCH_PROMPT_INSTRUCTIONS}`;
+  }
+
+  // Add tool instructions if tools are enabled
+  if (enableTools) {
+    prompt += `\n\n${TOOL_PROMPT_INSTRUCTIONS}`;
   }
 
   if (timezone) {

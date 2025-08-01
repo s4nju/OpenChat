@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { ConnectorIcon } from '@/app/components/common/connector-icon';
 import { Button } from '@/components/ui/button';
 import type { Id } from '@/convex/_generated/dataModel';
 import { getConnectorConfig } from '@/lib/config/tools';
@@ -47,14 +48,13 @@ export function ConnectorCard({
   };
 
   const config = getConnectorConfig(connector.type);
-  const IconComponent = config.icon;
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
-            <IconComponent className="size-5" />
+            <ConnectorIcon className="size-5" connector={config} />
             {config.displayName}
           </h3>
         </div>

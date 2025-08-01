@@ -40,6 +40,14 @@ const getConnectorIcon = (connectorType: ConnectorType): string => {
     notion: 'https://www.google.com/s2/favicons?domain=notion.com&sz=48',
     googledrive:
       'https://www.google.com/s2/favicons?domain=drive.google.com&sz=48',
+    googledocs:
+      'https://www.google.com/s2/favicons?domain=docs.google.com&sz=48',
+    googlesheets:
+      'https://www.google.com/s2/favicons?domain=sheets.google.com&sz=48',
+    slack: 'https://www.google.com/s2/favicons?domain=slack.com&sz=48',
+    linear: 'https://www.google.com/s2/favicons?domain=linear.app&sz=48',
+    github: 'https://www.google.com/s2/favicons?domain=github.com&sz=48',
+    twitter: 'https://www.google.com/s2/favicons?domain=x.com&sz=48',
   };
   return (
     iconMap[connectorType] ||
@@ -54,6 +62,12 @@ const formatConnectorType = (connectorType: ConnectorType): string => {
     googlecalendar: 'Google Calendar',
     notion: 'Notion',
     googledrive: 'Google Drive',
+    googledocs: 'Google Docs',
+    googlesheets: 'Google Sheets',
+    slack: 'Slack',
+    linear: 'Linear',
+    github: 'GitHub',
+    twitter: 'X (Twitter)',
   };
   return displayNames[connectorType] || connectorType;
 };

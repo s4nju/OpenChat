@@ -4,4 +4,10 @@ export type ConnectorType =
   | 'gmail'
   | 'googlecalendar'
   | 'notion'
-  | 'googledrive';
+  | 'googledrive'
+  | 'googledocs'
+  | 'googlesheets'
+  | 'slack'
+  | 'linear'
+  | 'github'
+  | 'twitter';

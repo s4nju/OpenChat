@@ -1,5 +1,9 @@
 import { Composio } from '@composio/core';
 import { VercelProvider } from '@composio/vercel';
+import {
+  convertComposioTools,
+  validateComposioTools,
+} from './composio-tool-adapter';
 import { getAuthConfigId } from './composio-utils';
 import type { ConnectorType } from './types';
 
@@ -103,6 +107,12 @@ export const getToolkitsWithStatus = async (userId: string) => {
     'GOOGLECALENDAR',
     'NOTION',
     'GOOGLEDRIVE',
+    'GOOGLEDOCS',
+    'GOOGLESHEETS',
+    'SLACK',
+    'LINEAR',
+    'GITHUB',
+    'TWITTER',
   ];
 
   // Get connected accounts first
@@ -168,7 +178,32 @@ export const getComposioTools = async (
     }
   }
 
-  // console.log('Fetched Composio tools:', mergedTools);
+  // console.log(
+  //   'Fetched Composio tools (raw):',
+  //   JSON.stringify(
+  //     mergedTools,
+  //     (key, value) => {
+  //       if (typeof value === 'function') {
+  //         return `[Function: ${value.name || 'anonymous'}]\n${value.toString()}`;
+  //       }
+  //       return value;
+  //     },
+  //     2
+  //   )
+  // );
+
+  // Validate and convert Composio tools to AI SDK v5 format
+  if (validateComposioTools(mergedTools)) {
+    const convertedTools = convertComposioTools(mergedTools);
+    // console.log(
+    //   'Converted tools to AI SDK v5 format:',
+    //   Object.keys(convertedTools)
+    // );
+    return convertedTools;
+  }
+  // console.warn(
+  //   'Some tools are not in expected Composio format, returning as-is'
+  // );
   return mergedTools;
 };
 

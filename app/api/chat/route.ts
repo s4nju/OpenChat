@@ -10,6 +10,7 @@ import {
   type FileUIPart,
   experimental_generateImage as generateImage,
   type JSONValue,
+  smoothStream,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -22,6 +23,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';
 import { getComposioTools, listConnectedAccounts } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
+import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
 import {
   classifyError,
@@ -646,10 +648,14 @@ export async function POST(req: Request) {
     }
 
     const basePrompt = personaId ? PERSONAS_MAP[personaId]?.prompt : undefined;
+    const enableTools =
+      supportsToolCalling(selectedModel) &&
+      Object.keys(composioTools).length > 0;
     const finalSystemPrompt = buildSystemPrompt(
       user,
       basePrompt,
       enableSearch,
+      enableTools,
       userInfo?.timezone
     );
 
@@ -725,6 +731,17 @@ export async function POST(req: Request) {
           },
         };
       }
+      if (
+        selectedModel.apiProvider === 'openrouter' ||
+        selectedModel.provider === 'openrouter'
+      ) {
+        return {
+          openrouter: {
+            apiKey: key,
+            user: user?._id ? `user_${user._id}` : undefined,
+          },
+        };
+      }
       return;
     };
 
@@ -755,6 +772,10 @@ export async function POST(req: Request) {
           ...(supportsToolCalling(selectedModel) ? composioTools : {}),
         },
         stopWhen: stepCountIs(5),
+        experimental_transform: smoothStream({
+          delayInMs: 20, // optional: defaults to 10ms
+          chunking: 'word', // optional: defaults to 'word'
+        }),
         // COMMENTED OUT: abortSignal: req.signal
         //
         // Why we don't forward client abort signals to AI provider:
@@ -912,6 +933,13 @@ export async function POST(req: Request) {
           .filter((part) => part.type === 'text')
           .map((part) => part.text)
           .join('');
+
+        // Limit depth of parts to prevent Convex nesting limit errors
+        const depthLimitedParts = limitDepth(
+          Messages.responseMessage.parts,
+          14
+        );
+
         await fetchMutation(
           api.messages.saveAssistantMessage,
           {
@@ -919,7 +947,7 @@ export async function POST(req: Request) {
             role: 'assistant',
             content: capturedText,
             parentMessageId: userMsgId || undefined,
-            parts: Messages.responseMessage.parts,
+            parts: depthLimitedParts,
             metadata: finalMetadata,
           },
           { token }
