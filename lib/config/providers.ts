@@ -1,5 +1,4 @@
 import { Moonshot, ZAI } from '@lobehub/icons';
-import { DetectiveIcon } from '@phosphor-icons/react/dist/ssr';
 import {
   AnthropicDark,
   AnthropicLight,
@@ -11,6 +10,9 @@ import {
   MistralAI,
   OpenAIDark,
   OpenAILight,
+  OpenRouterDark,
+  OpenRouterLight,
+  QwenDark,
   QwenLight,
 } from '@ridemountainpig/svgl-react';
 
@@ -46,7 +48,8 @@ export const PROVIDERS = [
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    icon: DetectiveIcon,
+    icon: OpenRouterDark,
+    icon_light: OpenRouterLight,
   },
   {
     id: 'openai',
@@ -71,9 +74,10 @@ export const PROVIDERS = [
     icon: Meta,
   },
   {
-    id: 'Qwen',
+    id: 'qwen',
     name: 'Qwen',
-    icon: QwenLight,
+    icon: QwenDark,
+    icon_light: QwenLight,
   },
   {
     id: 'moonshotai',
