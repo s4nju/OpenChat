@@ -7,7 +7,13 @@ const CONNECTOR_TYPES = v.union(
   v.literal('gmail'),
   v.literal('googlecalendar'),
   v.literal('googledrive'),
-  v.literal('notion')
+  v.literal('notion'),
+  v.literal('googledocs'),
+  v.literal('googlesheets'),
+  v.literal('slack'),
+  v.literal('linear'),
+  v.literal('github'),
+  v.literal('twitter')
 );
 
 /**
