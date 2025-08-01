@@ -117,7 +117,8 @@ export const initiateConnection = async (
  */
 export const waitForConnection = async (
   connectionRequestId: string,
-  timeoutSeconds = 300
+  timeoutSeconds = 300,
+  userId?: string
 ): Promise<{ connectionId: string; isConnected: boolean }> => {
   const connectedAccount = await composio.connectedAccounts.waitForConnection(
     connectionRequestId,
@@ -125,6 +126,11 @@ export const waitForConnection = async (
   );
 
   const isConnected = connectedAccount.status === 'ACTIVE';
+
+  // If connection is successful and we have userId, refresh caches in background
+  if (isConnected && userId) {
+    refreshCache(userId);
+  }
 
   return {
     connectionId: connectedAccount.id,
