@@ -1,5 +1,9 @@
 // Feature definitions - these are the actual feature objects that models can include
-export const FILE_UPLOAD_FEATURE = { id: 'file-upload', enabled: true };
+export const FILE_UPLOAD_FEATURE = {
+  id: 'file-upload',
+  enabled: true,
+  label: 'Supports file uploads',
+};
 export const PDF_PROCESSING_FEATURE = {
   id: 'pdf-processing',
   enabled: true,

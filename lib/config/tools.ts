@@ -126,66 +126,103 @@ export const getConnectorConfig = (type: ConnectorType): ConnectorConfig => {
 export const CONNECTOR_TOOL_NAMES = SUPPORTED_CONNECTORS;
 
 /**
+ * Dynamically generate connector patterns from CONNECTOR_CONFIGS
+ * This ensures consistency and reduces duplication
+ */
+const getConnectorPatterns = (): Record<ConnectorType, string[]> => {
+  const patterns: Record<ConnectorType, string[]> = {} as Record<
+    ConnectorType,
+    string[]
+  >;
+
+  for (const [type, _config] of Object.entries(CONNECTOR_CONFIGS) as [
+    ConnectorType,
+    ConnectorConfig,
+  ][]) {
+    const typePatterns: string[] = [type];
+
+    // Add specific patterns based on the connector type
+    switch (type) {
+      case 'googlecalendar':
+        typePatterns.push('calendar');
+        break;
+      case 'googledrive':
+        typePatterns.push('drive');
+        break;
+      case 'googledocs':
+        typePatterns.push('docs');
+        break;
+      case 'googlesheets':
+        typePatterns.push('sheets');
+        break;
+      case 'twitter':
+        typePatterns.push('x.com');
+        break;
+      default:
+        // For most connectors, the type name is sufficient
+        break;
+    }
+
+    patterns[type] = typePatterns;
+  }
+
+  return patterns;
+};
+
+/**
+ * Cached connector patterns to avoid recomputation
+ */
+const CONNECTOR_PATTERNS = getConnectorPatterns();
+
+/**
  * Check if a tool name corresponds to a connector tool
+ * Dynamically checks against all configured connectors in CONNECTOR_CONFIGS
  */
 export const isConnectorTool = (toolName: string): boolean => {
   const lowerToolName = toolName.toLowerCase();
 
-  // Check for specific patterns that indicate connector tools
-  return (
-    lowerToolName.includes('gmail') ||
-    lowerToolName.includes('calendar') ||
-    lowerToolName.includes('notion') ||
-    lowerToolName.includes('drive') ||
-    lowerToolName.includes('docs') ||
-    lowerToolName.includes('sheets') ||
-    lowerToolName.includes('slack') ||
-    lowerToolName.includes('linear') ||
-    lowerToolName.includes('github') ||
-    lowerToolName.includes('twitter') ||
-    lowerToolName.includes('x.com')
+  // Check if the tool name matches any connector type directly
+  if (
+    SUPPORTED_CONNECTORS.some((connectorType) =>
+      lowerToolName.includes(connectorType)
+    )
+  ) {
+    return true;
+  }
+
+  // Check against additional patterns for each connector
+  return Object.values(CONNECTOR_PATTERNS).some((patterns) =>
+    patterns.some((pattern) => lowerToolName.includes(pattern))
   );
 };
 
 /**
  * Determine the connector type from a tool name
+ * Dynamically checks against all configured connectors in CONNECTOR_CONFIGS
+ * @throws {Error} When no matching connector type is found
  */
 export const getConnectorTypeFromToolName = (
   toolName: string
 ): ConnectorType => {
   const lowerToolName = toolName.toLowerCase();
 
-  if (lowerToolName.includes('gmail')) {
-    return 'gmail';
-  }
-  if (lowerToolName.includes('calendar')) {
-    return 'googlecalendar';
-  }
-  if (lowerToolName.includes('notion')) {
-    return 'notion';
-  }
-  if (lowerToolName.includes('drive')) {
-    return 'googledrive';
-  }
-  if (lowerToolName.includes('docs')) {
-    return 'googledocs';
-  }
-  if (lowerToolName.includes('sheets')) {
-    return 'googlesheets';
-  }
-  if (lowerToolName.includes('slack')) {
-    return 'slack';
-  }
-  if (lowerToolName.includes('linear')) {
-    return 'linear';
-  }
-  if (lowerToolName.includes('github')) {
-    return 'github';
-  }
-  if (lowerToolName.includes('twitter') || lowerToolName.includes('x.com')) {
-    return 'twitter';
+  // First check for direct connector type matches
+  for (const connectorType of SUPPORTED_CONNECTORS) {
+    if (lowerToolName.includes(connectorType)) {
+      return connectorType;
+    }
   }
 
-  // Default fallback - this should not happen if isConnectorTool returns true
-  return 'gmail';
+  // Then check against additional patterns for each connector
+  for (const [connectorType, patterns] of Object.entries(CONNECTOR_PATTERNS)) {
+    if (patterns.some((pattern) => lowerToolName.includes(pattern))) {
+      return connectorType as ConnectorType;
+    }
+  }
+
+  // Throw error for unmatched cases instead of silent fallback
+  throw new Error(
+    `Unable to determine connector type for tool: ${toolName}. ` +
+      'Please ensure the tool name contains one of the supported connector patterns.'
+  );
 };
