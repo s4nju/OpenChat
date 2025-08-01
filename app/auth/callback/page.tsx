@@ -122,8 +122,8 @@ function AuthenticatedCallback() {
         toast.success(`${connectorConfig.displayName} connected successfully`);
         setStatus('success');
 
-        // Redirect back to connectors page after 2 seconds
-        redirectAfterDelay('/settings/connectors', 2000);
+        // Redirect back to connectors page after 1 second
+        redirectAfterDelay('/settings/connectors', 1000);
       } else {
         toast.error('Connection verification failed');
         setStatus('error');

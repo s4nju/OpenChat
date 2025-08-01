@@ -54,7 +54,7 @@ const redis = new Redis({
 // Cache TTL values (in seconds)
 const CACHE_TTL = {
   CONVERTED_TOOLS: 24 * 60 * 60, // 24 hours for converted v5 tools
-  CONNECTED_ACCOUNTS: 60 * 60, // 1 hour for connected accounts
+  CONNECTED_ACCOUNTS: 24 * 60 * 60, // 24 hours for connected accounts
 } as const;
 
 // Cache key prefixes
