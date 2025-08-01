@@ -3,7 +3,7 @@
  * Helper functions for model validation, feature detection, and configuration
  */
 
-import { MODELS, MODEL_DEFAULT } from '@/lib/config';
+import { MODEL_DEFAULT, MODELS } from '@/lib/config';
 
 /**
  * Checks if a model supports configurable reasoning effort
@@ -25,9 +25,9 @@ export function supportsReasoningEffort(modelId: string): boolean {
  */
 export function createModelValidator() {
   const validModels = new Set(MODELS.map((m) => m.id));
-  
+
   return function getValidModel(
-    preferredModel: string, 
+    preferredModel: string,
     disabledModels: string[] = []
   ): string {
     // Check if model exists and is not disabled

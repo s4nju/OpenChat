@@ -1,22 +1,23 @@
-import { z } from "zod"
+import { z } from 'zod';
 
 export const ModelFeatureSchema = z.object({
   id: z.string(),
   enabled: z.boolean(),
   label: z.string().optional(),
   supportsEffort: z.boolean().optional(),
-})
+});
 
 export const ApiKeyUsageSchema = z.object({
   allowUserKey: z.boolean(),
   userKeyOnly: z.boolean(),
-})
+});
 
 export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   subName: z.string().optional(),
   provider: z.string(),
+  apiProvider: z.string().optional(), // API provider for routing (e.g., 'openrouter') - separate from display provider
   api_sdk: z.any().optional(),
   premium: z.boolean(),
   usesPremiumCredits: z.boolean(),
@@ -26,6 +27,6 @@ export const ModelSchema = z.object({
     allowUserKey: false,
     userKeyOnly: false,
   }),
-})
+});
 
-export type Model = z.infer<typeof ModelSchema>
+export type Model = z.infer<typeof ModelSchema>;

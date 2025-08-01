@@ -29,9 +29,9 @@ export function ButtonSearch({
 }: ButtonSearchProps) {
   // Use 640px as the mobile breakpoint (Tailwind 'sm')
   const isMobile = useBreakpoint(768);
-  const isWebSearchAvailable = MODELS_OPTIONS.find(
+  const isToolCallingAvailable = MODELS_OPTIONS.find(
     (m) => m.id === model
-  )?.features?.find((f) => f.id === 'web-search')?.enabled;
+  )?.features?.find((f) => f.id === 'tool-calling')?.enabled;
 
   // Compute classes for the enabled button state without nested ternaries
   let enabledButtonClass = '';
@@ -45,7 +45,7 @@ export function ButtonSearch({
       : 'size-9 rounded-full border border-border bg-transparent dark:bg-secondary';
   }
 
-  if (!isWebSearchAvailable) {
+  if (!isToolCallingAvailable) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>

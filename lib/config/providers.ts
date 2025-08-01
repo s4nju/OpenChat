@@ -1,73 +1,94 @@
-import { DeepSeek, Gemini, GrokDark, GrokLight, MistralAI, OpenAIDark, OpenAILight, Meta, QwenLight, AnthropicDark, AnthropicLight } from "@ridemountainpig/svgl-react"
-import { DetectiveIcon } from "@phosphor-icons/react/dist/ssr"
-import { Moonshot } from '@lobehub/icons';
+import { Moonshot, ZAI } from '@lobehub/icons';
+import {
+  AnthropicDark,
+  AnthropicLight,
+  DeepSeek,
+  Gemini,
+  GrokDark,
+  GrokLight,
+  Meta,
+  MistralAI,
+  OpenAIDark,
+  OpenAILight,
+  OpenRouterDark,
+  OpenRouterLight,
+  QwenDark,
+  QwenLight,
+} from '@ridemountainpig/svgl-react';
 
 export type Provider = {
-  id: string
-  name: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  icon_light?: React.ComponentType<React.SVGProps<SVGSVGElement>>
-}
+  id: string;
+  name: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon_light?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
 
 export const PROVIDERS = [
   {
-    id: "deepseek",
-    name: "DeepSeek",
+    id: 'deepseek',
+    name: 'DeepSeek',
     icon: DeepSeek,
   },
   {
-    id: "fal",
-    name: "Fal.ai",
+    id: 'fal',
+    name: 'Fal.ai',
     icon: Gemini,
   },
   {
-    id: "gemini",
-    name: "Gemini",
+    id: 'gemini',
+    name: 'Gemini',
     icon: Gemini,
   },
   {
-    id: "xai",
-    name: "xAI",
+    id: 'xai',
+    name: 'xAI',
     icon: GrokDark,
     icon_light: GrokLight,
   },
   {
-    id: "openrouter",
-    name: "OpenRouter",
-    icon: DetectiveIcon,
+    id: 'openrouter',
+    name: 'OpenRouter',
+    icon: OpenRouterDark,
+    icon_light: OpenRouterLight,
   },
   {
-    id: "openai",
-    name: "OpenAI",
+    id: 'openai',
+    name: 'OpenAI',
     icon: OpenAIDark,
     icon_light: OpenAILight,
   },
   {
-    id: "anthropic",
-    name: "Claude",
+    id: 'anthropic',
+    name: 'Claude',
     icon: AnthropicDark,
     icon_light: AnthropicLight,
   },
   {
-    id: "mistral",
-    name: "Mistral",
+    id: 'mistral',
+    name: 'Mistral',
     icon: MistralAI,
   },
   {
-    id: "meta",
-    name: "Meta",
+    id: 'meta',
+    name: 'Meta',
     icon: Meta,
   },
   {
-    id: "Qwen",
-    name: "Qwen",
-    icon: QwenLight,
+    id: 'qwen',
+    name: 'Qwen',
+    icon: QwenDark,
+    icon_light: QwenLight,
   },
   {
-    id: "moonshotai",
-    name: "Moonshot AI",
+    id: 'moonshotai',
+    name: 'Moonshot AI',
     icon: Moonshot,
   },
-] as Provider[]
+  {
+    id: 'z-ai',
+    name: 'Z.AI',
+    icon: ZAI,
+  },
+] as Provider[];
 
-export const PROVIDERS_OPTIONS = PROVIDERS
+export const PROVIDERS_OPTIONS = PROVIDERS;

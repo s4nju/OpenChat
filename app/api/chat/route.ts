@@ -10,6 +10,7 @@ import {
   type FileUIPart,
   experimental_generateImage as generateImage,
   type JSONValue,
+  smoothStream,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -20,7 +21,9 @@ import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';
+import { getComposioTools, listConnectedAccounts } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
+import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
 import {
   classifyError,
@@ -167,6 +170,7 @@ type ChatRequest = {
   enableSearch?: boolean;
   reasoningEffort?: ReasoningEffort;
   userInfo?: { timezone?: string };
+  enabledToolSlugs?: string[];
 };
 
 /**
@@ -181,6 +185,20 @@ const shouldEnableThinking = (modelId: string): boolean => {
 
   const reasoningFeature = model.features?.find((f) => f.id === 'reasoning');
   return reasoningFeature?.enabled === true;
+};
+
+/**
+ * Helper function to check if a model supports tool calling
+ * based on its features configuration
+ */
+const supportsToolCalling = (
+  selectedModel: (typeof MODELS_MAP)[string]
+): boolean => {
+  return (
+    selectedModel.features?.some(
+      (feature) => feature.id === 'tool-calling' && feature.enabled === true
+    ) ?? false
+  );
 };
 
 const buildGoogleProviderOptions = (
@@ -414,6 +432,7 @@ export async function POST(req: Request) {
       enableSearch,
       reasoningEffort,
       userInfo,
+      enabledToolSlugs,
     } = (await req.json()) as ChatRequest;
 
     if (!(messages && chatId)) {
@@ -442,18 +461,57 @@ export async function POST(req: Request) {
 
     // --- Optimized Parallel Database Queries ---
     // Run independent queries in parallel to reduce latency
-    const [user, userKeys, isUserPremiumForPremiumModels] = await Promise.all([
-      // Get current user for PostHog tracking and auth
-      fetchQuery(api.users.getCurrentUser, {}, { token }),
-      // Get user API keys if model allows user keys
-      selectedModel.apiKeyUsage?.allowUserKey
-        ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
-        : Promise.resolve([]),
-      // Check premium status for premium models (only if needed)
-      selectedModel.premium
-        ? fetchQuery(api.users.userHasPremium, {}, { token }).catch(() => false)
-        : Promise.resolve(false),
-    ]);
+    const [user, userKeys, isUserPremiumForPremiumModels, composioTools] =
+      await Promise.all([
+        // Get current user for PostHog tracking and auth
+        fetchQuery(api.users.getCurrentUser, {}, { token }),
+        // Get user API keys if model allows user keys
+        selectedModel.apiKeyUsage?.allowUserKey
+          ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
+          : Promise.resolve([]),
+        // Check premium status for premium models (only if needed)
+        selectedModel.premium
+          ? fetchQuery(api.users.userHasPremium, {}, { token }).catch(
+              () => false
+            )
+          : Promise.resolve(false),
+        // Get Composio tools for connected accounts (only if model supports tool calling)
+        (async () => {
+          try {
+            // Only fetch tools if the model supports tool calling
+            if (!supportsToolCalling(selectedModel)) {
+              return {};
+            }
+
+            const currentUser = await fetchQuery(
+              api.users.getCurrentUser,
+              {},
+              { token }
+            );
+            if (!currentUser) {
+              return {};
+            }
+
+            const connectedAccounts = await listConnectedAccounts(
+              currentUser._id
+            );
+            const connectedToolkitSlugs = connectedAccounts
+              .filter((account) => account.status === 'ACTIVE')
+              .map((account) => account.toolkit.slug.toUpperCase());
+
+            if (connectedToolkitSlugs.length > 0) {
+              return await getComposioTools(
+                currentUser._id,
+                connectedToolkitSlugs
+              );
+            }
+            return {};
+          } catch {
+            // If Composio tools fail to load, continue without them
+            return {};
+          }
+        })(),
+      ]);
 
     // const userId = user?._id;
 
@@ -592,13 +650,18 @@ export async function POST(req: Request) {
     }
 
     const basePrompt = personaId ? PERSONAS_MAP[personaId]?.prompt : undefined;
+    const enableTools =
+      supportsToolCalling(selectedModel) &&
+      Object.keys(composioTools).length > 0;
     const finalSystemPrompt = buildSystemPrompt(
       user,
       basePrompt,
       enableSearch,
-      userInfo?.timezone
+      enableTools,
+      userInfo?.timezone,
+      enabledToolSlugs
     );
-
+    // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
     // Check if this is an image generation model
     const isImageGenerationModel = selectedModel.features?.some(
       (feature) => feature.id === 'image-generation' && feature.enabled
@@ -671,6 +734,17 @@ export async function POST(req: Request) {
           },
         };
       }
+      if (
+        selectedModel.apiProvider === 'openrouter' ||
+        selectedModel.provider === 'openrouter'
+      ) {
+        return {
+          openrouter: {
+            apiKey: key,
+            user: user?._id ? `user_${user._id}` : undefined,
+          },
+        };
+      }
       return;
     };
 
@@ -696,8 +770,15 @@ export async function POST(req: Request) {
         model: selectedModel.api_sdk,
         system: finalSystemPrompt,
         messages: convertToModelMessages(messages),
-        tools: enableSearch ? { search: searchTool } : undefined,
-        stopWhen: stepCountIs(5),
+        tools: {
+          ...(enableSearch ? { search: searchTool } : {}),
+          ...(supportsToolCalling(selectedModel) ? composioTools : {}),
+        },
+        stopWhen: stepCountIs(20),
+        experimental_transform: smoothStream({
+          delayInMs: 20, // optional: defaults to 10ms
+          chunking: 'word', // optional: defaults to 'word'
+        }),
         // COMMENTED OUT: abortSignal: req.signal
         //
         // Why we don't forward client abort signals to AI provider:
@@ -855,6 +936,13 @@ export async function POST(req: Request) {
           .filter((part) => part.type === 'text')
           .map((part) => part.text)
           .join('');
+
+        // Limit depth of parts to prevent Convex nesting limit errors
+        const depthLimitedParts = limitDepth(
+          Messages.responseMessage.parts,
+          14
+        );
+
         await fetchMutation(
           api.messages.saveAssistantMessage,
           {
@@ -862,7 +950,7 @@ export async function POST(req: Request) {
             role: 'assistant',
             content: capturedText,
             parentMessageId: userMsgId || undefined,
-            parts: Messages.responseMessage.parts,
+            parts: depthLimitedParts,
             metadata: finalMetadata,
           },
           { token }

@@ -28,6 +28,23 @@ type ErrorUIPart = {
   };
 };
 
+// Type guard for error parts
+const isErrorPart = (part: unknown): part is ErrorUIPart => {
+  return (
+    typeof part === 'object' &&
+    part !== null &&
+    'type' in part &&
+    part.type === 'error' &&
+    'error' in part &&
+    typeof part.error === 'object' &&
+    part.error !== null &&
+    'code' in part.error &&
+    typeof part.error.code === 'string' &&
+    'message' in part.error &&
+    typeof part.error.message === 'string'
+  );
+};
+
 import {
   ArrowClockwise,
   CaretDown,
@@ -43,6 +60,8 @@ import dynamic from 'next/dynamic'; // Client component – required when using 
 import Image from 'next/image';
 
 import { memo, useEffect, useRef, useState } from 'react'; // Import React to access memo
+import { ConnectorToolCall } from '@/app/components/tool/connector_tool_call';
+import { UnifiedSearch } from '@/app/components/tool/web_search';
 import {
   MorphingDialog,
   MorphingDialogClose,
@@ -51,7 +70,11 @@ import {
   MorphingDialogImage,
   MorphingDialogTrigger,
 } from '@/components/motion-primitives/morphing-dialog';
-import { SearchQueryDisplay } from './search-query-display';
+import {
+  getConnectorTypeFromToolName,
+  isConnectorTool,
+} from '@/lib/config/tools';
+import type { ConnectorType } from '@/lib/types';
 import { SourcesList } from './sources-list';
 
 // Helper function to format model display with reasoning effort
@@ -108,66 +131,27 @@ const extractSourcesFromParts = (
   });
 };
 
-// Helper function to extract search queries from tool invocations
-const extractSearchQueries = (
+// Helper function to extract search query from parts
+const extractSearchQueryFromParts = (
   combinedParts: MessageType['parts']
-): Array<{ query: string; toolName: string }> => {
+): string | null => {
   if (!combinedParts) {
-    return [];
+    return null;
   }
 
-  return combinedParts
-    .filter(
-      (part): part is ToolUIPart =>
-        part !== undefined &&
-        typeof part === 'object' &&
-        part !== null &&
-        'type' in part &&
-        typeof (part as { type?: unknown }).type === 'string' &&
-        (part as { type: string }).type.startsWith('tool-')
-    )
-    .map((part) => {
-      // Extract tool name from part.type (e.g., 'tool-search' -> 'search')
-      const toolName = part.type.replace('tool-', '');
-
-      // Direct property access
-      const inv = {
-        toolName,
-        toolCallId: part.toolCallId,
-        args: part.input as Record<string, unknown> | undefined,
-      };
-
-      // Handle different search tool argument structures
-      if (inv.toolName === 'search' && inv.args) {
-        // New unified search tool
-        return { query: inv.args.query as string, toolName: inv.toolName };
-      }
-
-      return null;
-    })
-    .filter(
-      (item): item is { query: string; toolName: string } =>
-        item !== null &&
-        typeof item.query === 'string' &&
-        item.query.trim().length > 0
-    );
-};
-
-// Helper function to extract file parts
-const extractFileParts = (
-  combinedParts: MessageType['parts']
-): FileUIPart[] => {
-  if (!combinedParts) {
-    return [];
+  for (const part of combinedParts) {
+    if (
+      part.type === 'tool-search' &&
+      'input' in part &&
+      part.input &&
+      typeof part.input === 'object' &&
+      'query' in part.input
+    ) {
+      return part.input.query as string;
+    }
   }
 
-  return (combinedParts as unknown[]).filter(
-    (part: unknown): part is FileUIPart =>
-      typeof part === 'object' &&
-      part !== null &&
-      'type' in part &&
-      part.type === 'file'
-  );
+  return null;
 };
 
 // Helper function to render different file types
@@ -291,74 +275,58 @@ const renderFilePart = (filePart: FileUIPart, index: number) => {
   return null;
 };
 
-// Helper function to extract reasoning parts
-const extractReasoningParts = (
-  combinedParts: MessageType['parts']
-): ReasoningUIPart[] => {
-  if (!combinedParts) {
-    return [];
-  }
-
-  return combinedParts.filter(
-    (part): part is ReasoningUIPart => part.type === 'reasoning'
-  );
+type MessageAssistantProps = {
+  isLast?: boolean;
+  hasScrollAnchor?: boolean;
+  copied?: boolean;
+  copyToClipboard?: () => void;
+  onReload?: () => void;
+  onBranch?: () => void;
+  model?: string;
+  parts?: MessageType['parts'];
+  status?: 'streaming' | 'ready' | 'submitted' | 'error';
+  id: string;
+  metadata?: Infer<typeof MessageSchema>['metadata'];
 };
 
-// Helper function to extract error parts
-const extractErrorParts = (
-  combinedParts: MessageType['parts']
-): ErrorUIPart[] => {
-  if (!combinedParts) {
-    return [];
-  }
+const Markdown = dynamic(
+  () => import('@/components/prompt-kit/markdown').then((mod) => mod.Markdown),
+  { ssr: false }
+);
 
-  return (combinedParts as unknown[]).filter(
-    (part: unknown): part is ErrorUIPart =>
-      typeof part === 'object' &&
-      part !== null &&
-      'type' in part &&
-      part.type === 'error'
-  );
-};
-
-// Helper function to check if any tool invocations are in progress
-const getToolInvocationsInProgress = (
-  combinedParts: MessageType['parts']
-): ToolUIPart[] => {
-  if (!combinedParts) {
-    return [];
-  }
-
-  return combinedParts.filter(
-    (part): part is ToolUIPart =>
-      part !== undefined &&
-      typeof part === 'object' &&
-      part !== null &&
-      'type' in part &&
-      typeof (part as { type?: unknown }).type === 'string' &&
-      (part as { type: string }).type.startsWith('tool-') &&
-      'state' in part &&
-      (part as { state?: unknown }).state !== 'output-available'
-  );
-};
-
-// Helper function to render reasoning section
-const renderReasoningSection = (
-  reasoningParts: ReasoningUIPart[],
-  status: string | undefined,
-  showReasoning: boolean,
-  setShowReasoning: (show: (prev: boolean) => boolean) => void,
-  combinedReasoningMarkdown: string,
-  id: string,
-  combinedParts: MessageType['parts'] = []
+// Individual part renderers for sequential rendering
+const renderTextPart = (
+  part: { type: 'text'; text: string },
+  index: number,
+  id: string
 ) => {
-  if (reasoningParts.length === 0) {
+  if (!part.text.trim()) {
     return null;
   }
 
   return (
-    <div className="mb-2 w-full">
-      {status === 'streaming' ? (
+    <MessageContent
+      className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
+      id={`${id}-text-${index}`}
+      key={`text-${index}`}
+      markdown={true}
+    >
+      {part.text}
+    </MessageContent>
+  );
+};
+
+const renderReasoningPart = (
+  part: ReasoningUIPart,
+  index: number,
+  id: string,
+  showReasoning: boolean,
+  toggleReasoning: () => void,
+  isPartStreaming: boolean
+) => {
+  return (
+    <div className="mb-2 w-full" key={`reasoning-${index}`}>
+      {isPartStreaming ? (
         <div className="flex flex-row items-center gap-2">
           <div className="font-medium text-muted-foreground text-sm">
             Reasoning
@@ -378,7 +346,7 @@ const renderReasoningSection = (
               'cursor-pointer rounded-full p-1 transition hover:bg-zinc-200 dark:hover:bg-zinc-800',
               showReasoning && 'bg-zinc-200 dark:bg-zinc-800'
             )}
-            onClick={() => setShowReasoning((v) => !v)}
+            onClick={toggleReasoning}
             type="button"
           >
             {showReasoning ? (
@@ -411,78 +379,14 @@ const renderReasoningSection = (
               marginBottom: 0,
               height: 0,
             }}
-            key="reasoning"
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
-            {/* Render parts in order */}
-            {combinedParts && combinedParts.length > 0
-              ? (() => {
-                  const elements: React.ReactNode[] = [];
-                  let consecutiveSearchQueries: Array<{
-                    query: string;
-                    toolName: string;
-                  }> = [];
-
-                  const flushSearchQueries = () => {
-                    if (consecutiveSearchQueries.length > 0) {
-                      elements.push(
-                        <SearchQueryDisplay
-                          key={`${id}-search-group-${elements.length}`}
-                          queries={consecutiveSearchQueries}
-                        />
-                      );
-                      consecutiveSearchQueries = [];
-                    }
-                  };
-
-                  combinedParts.forEach((part, index) => {
-                    if (part.type === 'reasoning') {
-                      // Flush any pending search queries before adding reasoning
-                      flushSearchQueries();
-
-                      elements.push(
-                        <Markdown
-                          className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
-                          id={`${id}-reasoning-${index}`}
-                          key={`${id}-reasoning-${index}-${part.text.substring(0, 20)}`}
-                        >
-                          {part.text}
-                        </Markdown>
-                      );
-                    } else if (part.type.startsWith('tool-')) {
-                      // Extract tool name from part.type
-                      const toolName = part.type.replace('tool-', '');
-                      // Type guard to ensure we have a ToolUIPart
-                      if ('input' in part) {
-                        const args = part.input as
-                          | Record<string, unknown>
-                          | undefined;
-
-                        // Collect consecutive search queries
-                        if (toolName === 'search' && args) {
-                          consecutiveSearchQueries.push({
-                            query: args.query as string,
-                            toolName,
-                          });
-                        }
-                      }
-                    }
-                  });
-
-                  // Flush any remaining search queries at the end
-                  flushSearchQueries();
-
-                  return elements;
-                })()
-              : // Fallback to original behavior when no combinedParts
-                combinedReasoningMarkdown && (
-                  <Markdown
-                    className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
-                    id={`${id}-reasoning`}
-                  >
-                    {combinedReasoningMarkdown}
-                  </Markdown>
-                )}
+            <Markdown
+              className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
+              id={`${id}-reasoning-${index}`}
+            >
+              {part.text}
+            </Markdown>
           </motion.div>
         )}
       </AnimatePresence>
@@ -490,58 +394,174 @@ const renderReasoningSection = (
   );
 };
 
-// Helper function to render error parts
-const renderErrorParts = (errorParts: ErrorUIPart[]) => {
-  if (errorParts.length === 0) {
-    return null;
-  }
+const renderToolPart = (part: ToolUIPart, index: number, _id: string) => {
+  const toolName = part.type.replace('tool-', '');
 
-  return (
-    <div className="w-full">
-      {errorParts.map((errorPart) => (
+  // Handle search tools
+  if (toolName === 'search') {
+    const searchQuery = extractSearchQueryFromParts([part]);
+
+    // For in-progress search tools, show loading state
+    if ('state' in part && part.state !== 'output-available') {
+      if (searchQuery) {
+        return (
+          <UnifiedSearch
+            isLoading={true}
+            key={`search-loading-${index}`}
+            query={searchQuery}
+          />
+        );
+      }
+      // Fallback to original loader if no query is available
+      return (
         <div
-          className="mt-4 flex items-start gap-3 rounded-lg bg-red-500/15 px-4 py-3 text-red-900 text-sm dark:text-red-400"
-          key={`error-${errorPart.error.code}-${errorPart.error.message}`}
-          role="alert"
+          className="my-2 flex items-center gap-2 text-muted-foreground text-sm"
+          key={`tool-${index}`}
         >
-          <div className="leading-relaxed">{errorPart.error.message}</div>
+          <Loader text="Searching the web" />
         </div>
-      ))}
-    </div>
-  );
-};
+      );
+    }
 
-// Helper function to render search spinner
-const renderSearchSpinner = (isSearching: boolean) => {
-  if (!isSearching) {
-    return null;
+    // For completed search tools, render the unified search component with results
+    if ('state' in part && part.state === 'output-available') {
+      const sources = extractSourcesFromParts([part]);
+
+      if (searchQuery) {
+        return (
+          <UnifiedSearch
+            isLoading={false}
+            key={`search-results-${index}`}
+            query={searchQuery}
+            sources={sources}
+          />
+        );
+      }
+    }
   }
 
+  // Handle connector tool calls (Composio tools)
+  const isConnectorToolCall = isConnectorTool(toolName);
+
+  if (isConnectorToolCall) {
+    // Determine connector type from tool name
+    const connectorType = getConnectorTypeFromToolName(toolName);
+
+    // Handle different tool states based on AI SDK v5 ToolUIPart states
+    if ('state' in part) {
+      const isLoading =
+        part.state === 'input-streaming' || part.state === 'input-available';
+      const hasCompleted = part.state === 'output-available';
+      const hasError = part.state === 'output-error';
+
+      // Extract tool call data based on state
+      const toolCallData: {
+        toolName: string;
+        connectorType: ConnectorType;
+        request?: {
+          action: string;
+          parameters?: Record<string, unknown>;
+        };
+        response?: {
+          success: boolean;
+          data?: unknown;
+          error?: string;
+        };
+        metadata?: {
+          executionTime?: number;
+          timestamp?: string;
+        };
+      } = {
+        toolName,
+        connectorType,
+      };
+
+      // Extract input/arguments if available
+      if ('input' in part && part.input) {
+        toolCallData.request = {
+          action: toolName,
+          parameters: part.input as Record<string, unknown>,
+        };
+      }
+
+      // Extract output/result if available
+      if (hasCompleted && 'output' in part && part.output) {
+        toolCallData.response = {
+          success: true,
+          data: part.output,
+        };
+      } else if (hasError && 'error' in part && part.error) {
+        toolCallData.response = {
+          success: false,
+          error:
+            typeof part.error === 'string'
+              ? part.error
+              : 'Tool execution failed',
+        };
+      }
+
+      // Add metadata
+      toolCallData.metadata = {
+        timestamp: new Date().toISOString(),
+      };
+
+      return (
+        <ConnectorToolCall
+          data={toolCallData}
+          isLoading={isLoading}
+          key={`connector-${part.state}-${index}`}
+        />
+      );
+    }
+
+    // Fallback for connector tools without proper state (shouldn't happen with AI SDK v5)
+    const fallbackData: {
+      toolName: string;
+      connectorType: ConnectorType;
+      request?: {
+        action: string;
+        parameters?: Record<string, unknown>;
+      };
+      response?: {
+        success: boolean;
+        data?: unknown;
+        error?: string;
+      };
+      metadata?: {
+        executionTime?: number;
+        timestamp?: string;
+      };
+    } = {
+      toolName,
+      connectorType,
+      metadata: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    return (
+      <ConnectorToolCall
+        data={fallbackData}
+        isLoading={false}
+        key={`connector-fallback-${index}`}
+      />
+    );
+  }
+
+  return null;
+};
+
+const renderErrorPart = (part: ErrorUIPart, index: number) => {
   return (
-    <div className="my-2 flex items-center gap-2 text-muted-foreground text-sm">
-      <Loader text="Searching the web" />
+    <div
+      className="mt-4 flex items-start gap-3 rounded-lg bg-red-500/15 px-4 py-3 text-red-900 text-sm dark:text-red-400"
+      key={`error-${index}`}
+      role="alert"
+    >
+      <div className="leading-relaxed">{part.error.message}</div>
     </div>
   );
 };
-
-type MessageAssistantProps = {
-  isLast?: boolean;
-  hasScrollAnchor?: boolean;
-  copied?: boolean;
-  copyToClipboard?: () => void;
-  onReload?: () => void;
-  onBranch?: () => void;
-  model?: string;
-  parts?: MessageType['parts'];
-  status?: 'streaming' | 'ready' | 'submitted' | 'error';
-  id: string;
-  metadata?: Infer<typeof MessageSchema>['metadata'];
-};
-
-const Markdown = dynamic(
-  () => import('@/components/prompt-kit/markdown').then((mod) => mod.Markdown),
-  { ssr: false }
-);
 
 function MessageAssistantInner({
   isLast,
@@ -556,15 +576,66 @@ function MessageAssistantInner({
   id,
   metadata,
 }: MessageAssistantProps) {
-  // Extract text content from parts
-  const textContent =
-    parts
-      ?.filter((part) => part.type === 'text')
-      .map((part) => part.text)
-      .join('') || '';
-  const [showReasoning, setShowReasoning] = useState(status === 'streaming');
+  // Prefer `parts` prop, but fall back to `attachments` if `parts` is undefined.
+  const combinedParts = parts || [];
+
+  // State for reasoning collapse/expand functionality - track each reasoning part individually
+  const [reasoningStates, setReasoningStates] = useState<
+    Record<string, boolean>
+  >({});
+  // Track which reasoning parts were initially streaming (to show correct UI)
+  const [reasoningStreamingStates, setReasoningStreamingStates] = useState<
+    Record<string, boolean>
+  >({});
   const prevStatusRef = useRef(status);
+  const initialStatusRef = useRef<Record<string, boolean>>({});
   const [isTouch, setIsTouch] = useState(false);
+
+  // Initialize reasoning states - only run once when reasoning parts are first detected
+  useEffect(() => {
+    if (combinedParts) {
+      setReasoningStates((prevStates) => {
+        const newStates = { ...prevStates };
+        let hasChanges = false;
+
+        combinedParts.forEach((part, index) => {
+          if (part.type === 'reasoning') {
+            const key = `${id}-${index}`;
+            if (!(key in newStates)) {
+              // Check if we have a stored initial status, otherwise use current status
+              const isInitiallyStreaming =
+                initialStatusRef.current[key] ?? status === 'streaming';
+              newStates[key] = isInitiallyStreaming;
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? newStates : prevStates;
+      });
+
+      // Track which reasoning parts were initially streaming
+      setReasoningStreamingStates((prevStreamingStates) => {
+        const newStreamingStates = { ...prevStreamingStates };
+        let hasChanges = false;
+
+        combinedParts.forEach((part, index) => {
+          if (part.type === 'reasoning') {
+            const key = `${id}-${index}`;
+            if (!(key in newStreamingStates)) {
+              const isInitiallyStreaming = status === 'streaming';
+              newStreamingStates[key] = isInitiallyStreaming;
+              // Store the initial status in ref to avoid re-initialization
+              initialStatusRef.current[key] = isInitiallyStreaming;
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? newStreamingStates : prevStreamingStates;
+      });
+    }
+  }, [combinedParts, id, status]);
 
   // Extract model from metadata or use direct model prop as fallback
   const modelFromMetadata = metadata?.modelName || metadata?.modelId;
@@ -577,28 +648,42 @@ function MessageAssistantInner({
     }
   }, []);
 
-  // Effect to auto-collapse reasoning when streaming finishes
+  // Effect to auto-collapse all reasoning when streaming finishes
   useEffect(() => {
     if (prevStatusRef.current === 'streaming' && status !== 'streaming') {
-      setShowReasoning(false);
+      // Collapse reasoning parts for this message
+      setReasoningStates((prev) => {
+        const newStates = { ...prev };
+        for (const key of Object.keys(newStates)) {
+          if (key.startsWith(`${id}-`)) {
+            newStates[key] = false;
+          }
+        }
+        return newStates;
+      });
+
+      // Clear streaming states for this message (so they show buttons instead of spinners)
+      setReasoningStreamingStates((prev) => {
+        const newStates = { ...prev };
+        for (const key of Object.keys(newStates)) {
+          if (key.startsWith(`${id}-`)) {
+            newStates[key] = false;
+          }
+        }
+        return newStates;
+      });
     }
     prevStatusRef.current = status;
-  }, [status]);
+  }, [status, id]);
 
-  // Prefer `parts` prop, but fall back to `attachments` if `parts` is undefined.
-  const combinedParts = parts || [];
-
-  // Extract different types of parts using helper functions
-  const reasoningParts = extractReasoningParts(combinedParts);
-  const errorParts = extractErrorParts(combinedParts);
-  const sources = extractSourcesFromParts(combinedParts);
-  const fileParts = extractFileParts(combinedParts);
-  const searchQueries = extractSearchQueries(combinedParts);
-  const toolInvocationsInProgress = getToolInvocationsInProgress(combinedParts);
-  const isSearching = toolInvocationsInProgress.length > 0;
-
-  // Combine reasoning parts into a single markdown string
-  const combinedReasoningMarkdown = reasoningParts.map((p) => p.text).join('');
+  // Helper function to toggle individual reasoning part
+  const toggleReasoning = (index: number) => {
+    const key = `${id}-${index}`;
+    setReasoningStates((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   return (
     <Message
@@ -609,49 +694,64 @@ function MessageAssistantInner({
       id={id}
     >
       <div className={cn('flex w-full flex-col gap-2', isLast && 'pb-8')}>
-        {renderReasoningSection(
-          reasoningParts,
-          status,
-          showReasoning,
-          setShowReasoning,
-          combinedReasoningMarkdown,
-          id,
-          combinedParts
-        )}
+        {/* Sequential rendering of all parts in stream order */}
+        {combinedParts?.map((part, index) => {
+          const partKey = `${part.type}-${index}`;
 
-        {renderErrorParts(errorParts)}
+          switch (part.type) {
+            case 'text':
+              return renderTextPart(
+                part as { type: 'text'; text: string },
+                index,
+                id
+              );
 
-        {renderSearchSpinner(isSearching)}
+            case 'reasoning':
+              return renderReasoningPart(
+                part as ReasoningUIPart,
+                index,
+                id,
+                reasoningStates[`${id}-${index}`],
+                () => toggleReasoning(index),
+                reasoningStreamingStates[`${id}-${index}`]
+              );
 
-        {/* Display search queries when search tools were executed - only show outside reasoning block if no reasoning parts exist */}
-        {searchQueries.length > 0 &&
-          !isSearching &&
-          reasoningParts.length === 0 && (
-            <SearchQueryDisplay queries={searchQueries} />
-          )}
+            case 'file':
+              return (
+                <div className="flex w-full flex-wrap gap-2" key={partKey}>
+                  {renderFilePart(part as FileUIPart, index)}
+                </div>
+              );
 
-        {/* Render text content only if it's not empty */}
-        {textContent.trim() && (
-          <MessageContent
-            className="prose dark:prose-invert relative min-w-full bg-transparent p-0"
-            id={id}
-            markdown={true}
-          >
-            {textContent}
-          </MessageContent>
-        )}
+            default:
+              // Handle tool parts (tool-search, tool-*, etc.)
+              if (part.type.startsWith('tool-')) {
+                return renderToolPart(part as ToolUIPart, index, id);
+              }
+              // Handle error parts (not in UIMessage union type but may exist)
+              if (isErrorPart(part)) {
+                return renderErrorPart(part, index);
+              }
+              return null;
+          }
+        })}
 
-        {/* Render file parts (images, PDFs, etc.) */}
-        {fileParts.length > 0 && (
-          <div className="flex w-full flex-wrap gap-2">
-            {fileParts.map((filePart, index) =>
-              renderFilePart(filePart, index)
-            )}
-          </div>
-        )}
+        {/* Render sources list for non-search sources only */}
+        {(() => {
+          // Get all sources
+          const allSources = extractSourcesFromParts(combinedParts);
+          const searchQuery = extractSearchQueryFromParts(combinedParts);
 
-        {/* Perplexity-style sources list */}
-        {sources.length > 0 && <SourcesList sources={sources} />}
+          // If we have search sources, they are already rendered inline, so skip them
+          if (searchQuery && allSources.length > 0) {
+            return null;
+          }
+
+          // Only render SourcesList for non-search sources
+          return allSources.length > 0 ? (
+            <SourcesList sources={allSources} />
+          ) : null;
+        })()}
 
         <MessageActions
           className={cn(

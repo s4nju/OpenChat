@@ -25,6 +25,8 @@ export type ApiKey = {
   updatedAt?: number;
 };
 
+export type Connector = Doc<'connectors'>;
+
 type UserContextType = {
   user: UserProfile | null;
   isLoading: boolean;
@@ -59,6 +61,9 @@ type UserContextType = {
   hasAnthropic: boolean;
   hasGemini: boolean;
   isApiKeysLoading: boolean;
+  // Connectors
+  connectors: Connector[];
+  isConnectorsLoading: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -114,6 +119,17 @@ export function UserProvider({
     // API keys are relatively stable, cache reasonably
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  const { data: connectorsQuery, isLoading: isConnectorsLoading } =
+    useTanStackQuery({
+      ...convexQuery(
+        api.connectors.listUserConnectors,
+        user && !user.isAnonymous ? {} : 'skip'
+      ),
+      enabled: !!user && !user.isAnonymous,
+      // Connectors are relatively stable, cache reasonably
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    });
   const storeCurrentUser = useMutation(api.users.storeCurrentUser);
   const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
@@ -196,6 +212,12 @@ export function UserProvider({
     [apiKeysQuery]
   );
 
+  // Process connectors data
+  const connectors = useMemo(
+    () => (connectorsQuery ?? []) as Connector[],
+    [connectorsQuery]
+  );
+
   const hasApiKey = useMemo(() => {
     const keyMap = new Map<string, boolean>();
     for (const key of apiKeys) {
@@ -216,7 +238,8 @@ export function UserProvider({
         (isPremiumLoading ||
           isProductsLoading ||
           isRateLimitLoading ||
-          isApiKeysLoading))
+          isApiKeysLoading ||
+          isConnectorsLoading))
   );
 
   return (
@@ -255,6 +278,9 @@ export function UserProvider({
         hasAnthropic,
         hasGemini,
         isApiKeysLoading,
+        // Connectors
+        connectors,
+        isConnectorsLoading,
       }}
     >
       {children}
