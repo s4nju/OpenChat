@@ -1,50 +1,6 @@
 import { Redis } from '@upstash/redis';
 import type { Tool } from 'ai';
 
-// Type for connected account from Composio API (full response with sensitive data)
-interface ConnectedAccount {
-  id: string;
-  status: string;
-  toolkit: {
-    slug: string;
-    name?: string;
-  };
-  [key: string]: unknown;
-}
-
-// Secure minimal interface for caching (excludes ALL sensitive OAuth data)
-interface SecureConnectedAccount {
-  id: string;
-  status: string;
-  toolkit: {
-    slug: string;
-    name?: string;
-  };
-  isDisabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Helper function to safely extract cacheable data
-export function extractSecureAccountData(
-  account: ConnectedAccount
-): SecureConnectedAccount {
-  return {
-    id: account.id,
-    status: account.status,
-    toolkit: {
-      slug: account.toolkit.slug,
-      name: account.toolkit.name,
-    },
-    isDisabled: account.isDisabled as boolean,
-    createdAt: account.createdAt as string,
-    updatedAt: account.updatedAt as string,
-  };
-}
-
-// Export types for use in other files
-export type { ConnectedAccount, SecureConnectedAccount };
-
 // Initialize Redis client using environment variables
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL || '',
@@ -53,14 +9,12 @@ const redis = new Redis({
 
 // Cache TTL values (in seconds)
 const CACHE_TTL = {
-  CONVERTED_TOOLS: 24 * 60 * 60, // 24 hours for converted v5 tools
-  CONNECTED_ACCOUNTS: 24 * 60 * 60, // 24 hours for connected accounts
+  CONVERTED_TOOLS: 48 * 60 * 60, // 48 hours for converted v5 tools
 } as const;
 
 // Cache key prefixes
 const CACHE_PREFIX = {
   CONVERTED_TOOLS: 'composio:converted:',
-  CONNECTED_ACCOUNTS: 'composio:accounts:',
 } as const;
 
 // Note: We cannot cache raw tools because they contain non-serializable functions
@@ -121,63 +75,12 @@ export async function setCachedConvertedTools(
 }
 
 /**
- * Get cached connected accounts from Redis (secure version - no OAuth tokens)
+ * Invalidate tools cache for a user
  */
-export async function getCachedConnectedAccounts(
-  userId: string
-): Promise<SecureConnectedAccount[] | null> {
+export async function invalidateUserToolsCache(userId: string): Promise<void> {
   try {
-    const cacheKey = `${CACHE_PREFIX.CONNECTED_ACCOUNTS}${userId}`;
-    const cached = await redis.get(cacheKey);
-
-    if (!cached) {
-      return null;
-    }
-
-    // Handle both object and string cases
-    let parsed: SecureConnectedAccount[];
-    if (typeof cached === 'string') {
-      parsed = JSON.parse(cached) as SecureConnectedAccount[];
-    } else if (Array.isArray(cached)) {
-      parsed = cached;
-    } else {
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Set connected accounts in Redis cache (secure version - strips OAuth tokens)
- */
-export async function setCachedConnectedAccounts(
-  userId: string,
-  accounts: ConnectedAccount[]
-): Promise<void> {
-  try {
-    const cacheKey = `${CACHE_PREFIX.CONNECTED_ACCOUNTS}${userId}`;
-
-    // Extract only safe, non-sensitive data for caching
-    const secureAccounts = accounts.map(extractSecureAccountData);
-
-    await redis.set(cacheKey, JSON.stringify(secureAccounts), {
-      ex: CACHE_TTL.CONNECTED_ACCOUNTS,
-    });
-  } catch {
-    // Silently fail - caching is optional
-  }
-}
-
-/**
- * Invalidate all caches for a user - deletes all keys containing the userId
- */
-export async function invalidateAllUserCaches(userId: string): Promise<void> {
-  try {
-    // Find all keys that contain this userId
-    const pattern = `*${userId}*`;
+    // Find all tools cache keys for this user
+    const pattern = `${CACHE_PREFIX.CONVERTED_TOOLS}${userId}:*`;
     const keys = await redis.keys(pattern);
 
     if (keys.length > 0) {

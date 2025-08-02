@@ -21,7 +21,7 @@ import { searchTool } from '@/app/api/tools';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';
-import { getComposioTools, listConnectedAccounts } from '@/lib/composio-server';
+import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
 import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
@@ -459,12 +459,13 @@ export async function POST(req: Request) {
 
     const token = await convexAuthNextjsToken();
 
+    // Get current user first (needed for multiple operations below)
+    const user = await fetchQuery(api.users.getCurrentUser, {}, { token });
+
     // --- Optimized Parallel Database Queries ---
     // Run independent queries in parallel to reduce latency
-    const [user, userKeys, isUserPremiumForPremiumModels, composioTools] =
+    const [userKeys, isUserPremiumForPremiumModels, composioTools] =
       await Promise.all([
-        // Get current user for PostHog tracking and auth
-        fetchQuery(api.users.getCurrentUser, {}, { token }),
         // Get user API keys if model allows user keys
         selectedModel.apiKeyUsage?.allowUserKey
           ? fetchQuery(api.api_keys.getApiKeys, {}, { token }).catch(() => [])
@@ -483,28 +484,16 @@ export async function POST(req: Request) {
               return {};
             }
 
-            const currentUser = await fetchQuery(
-              api.users.getCurrentUser,
-              {},
-              { token }
-            );
-            if (!currentUser) {
+            if (!user) {
               return {};
             }
 
-            const connectedAccounts = await listConnectedAccounts(
-              currentUser._id
-            );
-            const connectedToolkitSlugs = connectedAccounts
-              .filter((account) => account.status === 'ACTIVE')
-              .map((account) => account.toolkit.slug.toUpperCase());
-
-            if (connectedToolkitSlugs.length > 0) {
-              return await getComposioTools(
-                currentUser._id,
-                connectedToolkitSlugs
-              );
+            // Use frontend-provided tool slugs (frontend is source of truth)
+            if (enabledToolSlugs && enabledToolSlugs.length > 0) {
+              return await getComposioTools(user._id, enabledToolSlugs);
             }
+
+            // No tools available
             return {};
           } catch {
             // If Composio tools fail to load, continue without them

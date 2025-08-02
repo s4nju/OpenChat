@@ -3,10 +3,8 @@ import { VercelProvider } from '@composio/vercel';
 import type { JSONSchema7, Tool } from 'ai';
 import { jsonSchema } from 'ai';
 import {
-  getCachedConnectedAccounts,
   getCachedConvertedTools,
-  invalidateAllUserCaches,
-  setCachedConnectedAccounts,
+  invalidateUserToolsCache,
   setCachedConvertedTools,
 } from './composio-cache';
 import {
@@ -152,29 +150,6 @@ export const disconnectAccount = async (
 };
 
 /**
- * List connected accounts for a user (server-side only)
- * Returns secure cached data when available, full API data when not cached
- */
-export const listConnectedAccounts = async (userId: string) => {
-  // Check cache first (returns secure data without OAuth tokens)
-  const cachedAccounts = await getCachedConnectedAccounts(userId);
-  if (cachedAccounts) {
-    return cachedAccounts;
-  }
-
-  // Fetch from Composio API if not cached (full data with sensitive tokens)
-  const connectedAccounts = await composio.connectedAccounts.list({
-    userIds: [userId],
-  });
-
-  // Cache the results (sensitive data is automatically stripped by setCachedConnectedAccounts)
-  await setCachedConnectedAccounts(userId, connectedAccounts.items);
-
-  // Return the full API response for this call (caller needs to handle sensitive data appropriately)
-  return connectedAccounts.items;
-};
-
-/**
  * Get Composio tools for enabled toolkits (for chat integration)
  */
 export const getComposioTools = async (
@@ -262,36 +237,30 @@ export const validateEnvironment = (): {
 };
 
 /**
- * Refresh cache for a user
- * Returns a Promise to ensure completion in serverless environments
+ * Refresh tools cache for a user
+ * Called after connect/disconnect to ensure fresh tools
  */
 export const refreshCache = async (userId: string): Promise<void> => {
   try {
-    // First, invalidate all existing cache entries for this user
-    // This ensures no stale data remains
-    await invalidateAllUserCaches(userId);
+    // Invalidate tools cache first
+    await invalidateUserToolsCache(userId);
 
-    // Fetch fresh data from Composio API
+    // Get fresh connected accounts from Composio to pre-warm cache
     const connectedAccounts = await composio.connectedAccounts.list({
       userIds: [userId],
     });
 
-    // Get active toolkits for cache refresh
+    // Get active toolkits for cache pre-warming
     const activeToolkits = connectedAccounts.items
       .filter((account) => account.status === 'ACTIVE')
       .map((account) => account.toolkit.slug.toUpperCase());
 
-    // Only cache if there are active accounts, otherwise don't cache anything
+    // Pre-warm tools cache if there are active tools
     if (activeToolkits.length > 0) {
-      // Update the connected accounts cache with fresh data
-      await setCachedConnectedAccounts(userId, connectedAccounts.items);
-
-      // Refresh tools cache - getComposioTools will cache the results
       await getComposioTools(userId, activeToolkits);
     }
   } catch {
     // Silently handle error - cache refresh is optional
-    // In production, this could be sent to an error tracking service
   }
 };
 
