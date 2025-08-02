@@ -21,6 +21,7 @@ export const ModelSchema = z.object({
   api_sdk: z.any().optional(),
   premium: z.boolean(),
   usesPremiumCredits: z.boolean(),
+  skipRateLimit: z.boolean().optional(), // Skip rate limiting completely for this model
   description: z.string(),
   features: z.array(ModelFeatureSchema).default([]),
   apiKeyUsage: ApiKeyUsageSchema.default({

@@ -9,7 +9,7 @@ export const APP_DESCRIPTION =
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-export const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
+export const MODEL_DEFAULT = 'openrouter/horizon-beta';
 
 export const RECOMMENDED_MODELS = [
   'gemini-2.5-flash-lite',

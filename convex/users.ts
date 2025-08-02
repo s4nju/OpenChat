@@ -4,7 +4,7 @@ import {
   type RateLimitConfig,
 } from '@convex-dev/rate-limiter';
 import { ConvexError, v } from 'convex/values';
-import { RECOMMENDED_MODELS } from '../lib/config';
+import { MODEL_DEFAULT, RECOMMENDED_MODELS } from '../lib/config';
 import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
@@ -12,8 +12,6 @@ import { RATE_LIMITS } from './lib/rateLimitConstants';
 import { polar } from './polar';
 import { rateLimiter } from './rateLimiter';
 import { User } from './schema/user';
-
-const MODEL_DEFAULT = 'gemini-2.5-flash-lite';
 
 export const getCurrentUser = query({
   args: {},

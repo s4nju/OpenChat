@@ -589,10 +589,10 @@ export async function POST(req: Request) {
       return createErrorResponse(premiumError);
     }
 
-    // --- Rate Limiting (only if not using user key) ---
+    // --- Rate Limiting (only if not using user key and model doesn't skip rate limits) ---
     let rateLimitError: Error | null = null;
 
-    if (!useUserKey) {
+    if (!(useUserKey || selectedModel.skipRateLimit)) {
       try {
         // Check if the selected model uses premium credits
         const usesPremiumCredits = selectedModel.usesPremiumCredits === true;
@@ -961,7 +961,8 @@ export async function POST(req: Request) {
             { provider: selectedModel.provider },
             { token }
           );
-        } else {
+        } else if (!selectedModel.skipRateLimit) {
+          // Only increment credits if model doesn't skip rate limiting
           // Check if the selected model uses premium credits
           const usesPremiumCredits = selectedModel.usesPremiumCredits === true;
 
