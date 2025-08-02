@@ -195,16 +195,19 @@ export function UserProvider({
     }
   }, [isAuthenticated, user, isUserLoading, handleUserStorage]);
 
-  const signInGoogle = async () => {
+  const signInGoogle = useCallback(async () => {
     await signIn('google');
-  };
+  }, [signIn]);
 
-  const updateUser = async (updates: Partial<UserProfile>) => {
-    // Note: Model preference updates (favoriteModels, disabledModels) should now
-    // use the specialized mutations: toggleFavoriteModel, setModelEnabled, etc.
-    // This function is for general profile updates only.
-    await updateUserProfile({ updates });
-  };
+  const updateUser = useCallback(
+    async (updates: Partial<UserProfile>) => {
+      // Note: Model preference updates (favoriteModels, disabledModels) should now
+      // use the specialized mutations: toggleFavoriteModel, setModelEnabled, etc.
+      // This function is for general profile updates only.
+      await updateUserProfile({ updates });
+    },
+    [updateUserProfile]
+  );
 
   // Process API keys data
   const apiKeys = useMemo(
@@ -242,49 +245,67 @@ export function UserProvider({
           isConnectorsLoading))
   );
 
+  const contextValue = useMemo(
+    () => ({
+      user,
+      isLoading: combinedLoading,
+      signInGoogle,
+      signOut,
+      updateUser,
+      // User capabilities and settings
+      hasPremium: (hasPremium ?? false) as boolean,
+      products: products as { premium?: { id: string } } | undefined,
+      rateLimitStatus: rateLimitStatus as
+        | {
+            isPremium: boolean;
+            dailyCount: number;
+            dailyLimit: number;
+            dailyRemaining: number;
+            monthlyCount: number;
+            monthlyLimit: number;
+            monthlyRemaining: number;
+            premiumCount: number;
+            premiumLimit: number;
+            premiumRemaining: number;
+            effectiveRemaining: number;
+            dailyReset?: number;
+            monthlyReset?: number;
+            premiumReset?: number;
+          }
+        | undefined,
+      // API Keys
+      apiKeys,
+      hasApiKey,
+      hasOpenAI,
+      hasAnthropic,
+      hasGemini,
+      isApiKeysLoading,
+      // Connectors
+      connectors,
+      isConnectorsLoading,
+    }),
+    [
+      user,
+      combinedLoading,
+      signInGoogle,
+      signOut,
+      updateUser,
+      hasPremium,
+      products,
+      rateLimitStatus,
+      apiKeys,
+      hasApiKey,
+      hasOpenAI,
+      hasAnthropic,
+      hasGemini,
+      isApiKeysLoading,
+      connectors,
+      isConnectorsLoading,
+    ]
+  );
+
   return (
-    <UserContext.Provider
-      value={{
-        user,
-        isLoading: combinedLoading,
-        signInGoogle,
-        signOut,
-        updateUser,
-        // User capabilities and settings
-        hasPremium: (hasPremium ?? false) as boolean,
-        products: products as { premium?: { id: string } } | undefined,
-        rateLimitStatus: rateLimitStatus as
-          | {
-              isPremium: boolean;
-              dailyCount: number;
-              dailyLimit: number;
-              dailyRemaining: number;
-              monthlyCount: number;
-              monthlyLimit: number;
-              monthlyRemaining: number;
-              premiumCount: number;
-              premiumLimit: number;
-              premiumRemaining: number;
-              effectiveRemaining: number;
-              dailyReset?: number;
-              monthlyReset?: number;
-              premiumReset?: number;
-            }
-          | undefined,
-        // API Keys
-        apiKeys,
-        hasApiKey,
-        hasOpenAI,
-        hasAnthropic,
-        hasGemini,
-        isApiKeysLoading,
-        // Connectors
-        connectors,
-        isConnectorsLoading,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
+    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
   );
 }
 

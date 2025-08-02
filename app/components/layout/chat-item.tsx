@@ -37,7 +37,7 @@ interface ChatItemProps {
   activeChatId?: string | null;
 }
 
-export const ChatItem = React.memo(function ChatItemComponent({
+const ChatItemComponent = function ChatItemComponent({
   id,
   title,
   originalChatId,
@@ -263,4 +263,22 @@ export const ChatItem = React.memo(function ChatItemComponent({
       {renderContent()}
     </li>
   );
-});
+};
+
+// Export with custom memo comparison to prevent unnecessary re-renders
+export const ChatItem = React.memo(
+  ChatItemComponent,
+  (prevProps, nextProps) => {
+    // Only re-render if props that affect the UI have actually changed
+    return (
+      prevProps.id === nextProps.id &&
+      prevProps.title === nextProps.title &&
+      prevProps.originalChatId === nextProps.originalChatId &&
+      prevProps.parentChatTitle === nextProps.parentChatTitle &&
+      prevProps.isPinned === nextProps.isPinned &&
+      prevProps.activeChatId === nextProps.activeChatId
+      // Note: We intentionally don't compare handler functions as they're
+      // memoized in the parent and should be stable across renders
+    );
+  }
+);

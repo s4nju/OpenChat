@@ -11,8 +11,41 @@ export interface GroupedChats {
   [key: string]: Doc<'chats'>[];
 }
 
+// Cache date boundaries to avoid recalculating on every call
+const DAY_MS = 24 * 60 * 60 * 1000;
+let cachedDateBoundaries: {
+  today: number;
+  yesterday: number;
+  sevenDaysAgo: number;
+  thirtyDaysAgo: number;
+} | null = null;
+let lastCalculatedDay: number | null = null;
+
+function getDateBoundaries() {
+  const now = new Date();
+  const currentDay = now.getDate();
+
+  // Return cached boundaries if we're still on the same day
+  if (lastCalculatedDay === currentDay && cachedDateBoundaries) {
+    return cachedDateBoundaries;
+  }
+
+  // Calculate new boundaries
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const boundaries = {
+    today: today.getTime(),
+    yesterday: today.getTime() - DAY_MS,
+    sevenDaysAgo: today.getTime() - 7 * DAY_MS,
+    thirtyDaysAgo: today.getTime() - 30 * DAY_MS,
+  };
+
+  cachedDateBoundaries = boundaries;
+  lastCalculatedDay = currentDay;
+  return boundaries;
+}
+
 /**
- * Get the time group for a given timestamp
+ * Get the time group for a given timestamp (optimized with cached date boundaries)
  */
 export function getTimeGroup(timestamp: number): TimeGroup {
   // Handle invalid timestamps
@@ -20,7 +53,6 @@ export function getTimeGroup(timestamp: number): TimeGroup {
     return 'Older';
   }
 
-  const now = new Date();
   const chatDate = new Date(timestamp);
 
   // Check if the date is valid
@@ -29,32 +61,32 @@ export function getTimeGroup(timestamp: number): TimeGroup {
   }
 
   // Handle future dates by treating them as "Today"
-  if (chatDate > now) {
+  const now = Date.now();
+  if (timestamp > now) {
     return 'Today';
   }
 
-  // Reset time to start of day for accurate comparison
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  // Get cached date boundaries
+  const boundaries = getDateBoundaries();
 
+  // Get start of day for the chat timestamp
   const chatStartOfDay = new Date(
     chatDate.getFullYear(),
     chatDate.getMonth(),
     chatDate.getDate()
-  );
+  ).getTime();
 
-  if (chatStartOfDay.getTime() === today.getTime()) {
+  // Compare against cached boundaries
+  if (chatStartOfDay === boundaries.today) {
     return 'Today';
   }
-  if (chatStartOfDay.getTime() === yesterday.getTime()) {
+  if (chatStartOfDay === boundaries.yesterday) {
     return 'Yesterday';
   }
-  if (chatStartOfDay >= sevenDaysAgo) {
+  if (chatStartOfDay >= boundaries.sevenDaysAgo) {
     return 'Last 7 Days';
   }
-  if (chatStartOfDay >= thirtyDaysAgo) {
+  if (chatStartOfDay >= boundaries.thirtyDaysAgo) {
     return 'Last 30 Days';
   }
   return 'Older';

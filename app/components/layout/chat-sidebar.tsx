@@ -5,7 +5,7 @@ import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Link from 'next/link';
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
-import type { Id } from '@/convex/_generated/dataModel';
+import type { Doc, Id } from '@/convex/_generated/dataModel';
 import {
   getOrderedGroupKeys,
   groupChatsByTime,
@@ -50,15 +50,41 @@ const ChatSidebar = memo(function SidebarComponent({
   const { setIsDeleting: setChatIsDeleting, chatId: activeChatId } =
     useChatSession();
 
-  const params = useParams<{ chatId?: string }>();
   const router = useRouter();
   const pathname = usePathname();
 
   // State for search and edit/delete in the main sidebar list
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Memoize chats array to stabilize dependencies
-  const chats = useMemo(() => chatsQuery, [chatsQuery]);
+  // Memoize search input handler
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(e.target.value);
+    },
+    []
+  );
+
+  // Memoize search button handler
+  const handleSearchButtonClick = useCallback(() => {
+    if (!isOpen) {
+      window.dispatchEvent(new Event('openCommandHistory'));
+    }
+  }, [isOpen]);
+
+  // Memoize new chat button handler
+  const handleNewChatClick = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  // Memoize conditional new chat button handler
+  const handleConditionalNewChatClick = useCallback(() => {
+    if (pathname !== '/') {
+      router.push('/');
+    }
+  }, [pathname, router]);
+
+  // Use chats directly from query (already memoized by TanStack Query)
+  const chats = chatsQuery;
 
   // --- Handlers for main sidebar list ---
   const handleSaveEdit = useCallback(
@@ -70,7 +96,8 @@ const ChatSidebar = memo(function SidebarComponent({
 
   const handleConfirmDelete = useCallback(
     async (id: Id<'chats'>) => {
-      const isCurrentChat = params.chatId === id;
+      // Get current chatId at execution time instead of capturing in dependency
+      const isCurrentChat = activeChatId === id;
       if (isCurrentChat) {
         // Signal to the active Chat component that we are deleting it so it can
         // suppress the "Chat not found" toast during the brief race condition
@@ -97,7 +124,7 @@ const ChatSidebar = memo(function SidebarComponent({
         throw err;
       }
     },
-    [params.chatId, deleteChat, router, setChatIsDeleting]
+    [activeChatId, deleteChat, router, setChatIsDeleting]
   );
 
   const handleTogglePin = useCallback(
@@ -107,19 +134,39 @@ const ChatSidebar = memo(function SidebarComponent({
     [pinChatToggle]
   );
 
-  // Memoize filtered chats to avoid unnecessary re-computations
-  const filteredChats = useMemo(
-    () =>
-      chats.filter((chat) =>
-        (chat.title || '').toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    [chats, searchQuery]
-  );
+  // Memoize filtered chats with early return for empty arrays
+  const filteredChats = useMemo(() => {
+    if (!chats?.length) {
+      return [];
+    }
+    if (!searchQuery.trim()) {
+      return chats;
+    }
 
-  // Memoize pinned and unpinned chats
+    const lowerQuery = searchQuery.toLowerCase();
+    return chats.filter((chat) =>
+      (chat.title || '').toLowerCase().includes(lowerQuery)
+    );
+  }, [chats, searchQuery]);
+
+  // Memoize pinned and unpinned chats with optimized single-pass separation
   const { pinnedChats, unpinnedChats } = useMemo(() => {
-    const pinned = filteredChats.filter((chat) => chat.isPinned);
-    const unpinned = filteredChats.filter((chat) => !chat.isPinned);
+    if (!filteredChats.length) {
+      return { pinnedChats: [], unpinnedChats: [] };
+    }
+
+    const pinned: Doc<'chats'>[] = [];
+    const unpinned: Doc<'chats'>[] = [];
+
+    // Single pass through the array instead of two filter operations
+    for (const chat of filteredChats) {
+      if (chat.isPinned) {
+        pinned.push(chat);
+      } else {
+        unpinned.push(chat);
+      }
+    }
+
     return { pinnedChats: pinned, unpinnedChats: unpinned };
   }, [filteredChats]);
 
@@ -154,11 +201,7 @@ const ChatSidebar = memo(function SidebarComponent({
             <button
               aria-label="Search"
               className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-all duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
-              onClick={() => {
-                if (!isOpen) {
-                  window.dispatchEvent(new Event('openCommandHistory'));
-                }
-              }}
+              onClick={handleSearchButtonClick}
               style={{ transitionDelay: isOpen ? '0ms' : '100ms' }}
               tabIndex={isOpen ? -1 : 0}
               type="button"
@@ -177,7 +220,7 @@ const ChatSidebar = memo(function SidebarComponent({
               <button
                 aria-label="New chat"
                 className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-all duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
-                onClick={() => router.push('/')}
+                onClick={handleNewChatClick}
                 style={{ transitionDelay: isOpen ? '0ms' : '200ms' }}
                 tabIndex={isOpen ? -1 : 0}
                 type="button"
@@ -220,7 +263,7 @@ const ChatSidebar = memo(function SidebarComponent({
         >
           <Button
             className="h-9 w-full justify-center font-bold text-sm"
-            onClick={() => pathname !== '/' && router.push('/')}
+            onClick={handleConditionalNewChatClick}
             variant="outline"
           >
             New Chat
@@ -231,7 +274,7 @@ const ChatSidebar = memo(function SidebarComponent({
             <Input
               autoFocus={isOpen}
               className="h-9 w-full pl-8 text-sm"
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Search chats..."
               type="search"
               value={searchQuery}

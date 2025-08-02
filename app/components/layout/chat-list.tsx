@@ -1,7 +1,7 @@
 'use client';
 
 import { PushPinSimpleIcon } from '@phosphor-icons/react';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import type { Doc, Id } from '@/convex/_generated/dataModel';
 import type { TimeGroup } from '@/lib/chat-utils/time-grouping';
 import { ChatItem } from './chat-item';
@@ -43,22 +43,25 @@ export const ChatList = memo(function ChatListComponent({
       }
     }
 
-    // Add grouped chats to the map
-    for (const chat of Object.values(groupedChats).flat()) {
-      if (chat.title) {
-        map.set(chat._id, chat.title);
+    // Add grouped chats to the map (single loop instead of Object.values().flat())
+    for (const chatArray of Object.values(groupedChats)) {
+      for (const chat of chatArray) {
+        if (chat.title) {
+          map.set(chat._id, chat.title);
+        }
       }
     }
 
     return map;
   }, [pinnedChats, groupedChats]);
 
-  // Helper function to get parent chat title for reuse across both sections
-  const getParentChatTitle = (
-    originalChatId: Id<'chats'> | undefined
-  ): string | undefined => {
-    return originalChatId ? chatLookupMap.get(originalChatId) : undefined;
-  };
+  // Helper function to get parent chat title for reuse across both sections (memoized)
+  const getParentChatTitle = useCallback(
+    (originalChatId: Id<'chats'> | undefined): string | undefined => {
+      return originalChatId ? chatLookupMap.get(originalChatId) : undefined;
+    },
+    [chatLookupMap]
+  );
 
   return (
     <div className="flex flex-col pt-2 pb-8">
