@@ -13,4 +13,15 @@ export const OPENROUTER_MODELS = [
     api_sdk: openrouter('openrouter/horizon-alpha:nitro'),
     features: [TOOL_CALLING_FEATURE],
   },
+  {
+    id: 'openrouter/horizon-beta',
+    name: 'Horizon Beta',
+    provider: 'openrouter',
+    apiProvider: 'openrouter',
+    premium: false,
+    usesPremiumCredits: false,
+    description: `OpenRouter's new stealth model. Improved version of Horizon Alpha with enhanced capabilities.`,
+    api_sdk: openrouter('openrouter/horizon-beta:nitro'),
+    features: [TOOL_CALLING_FEATURE],
+  },
 ];
