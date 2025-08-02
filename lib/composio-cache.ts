@@ -29,27 +29,13 @@ export async function getCachedConvertedTools(
 ): Promise<Record<string, Tool> | null> {
   const sortedSlugs = toolkitSlugs.sort().join(',');
   const cacheKey = `${CACHE_PREFIX.CONVERTED_TOOLS}${userId}:${sortedSlugs}`;
-  const cached = await redis.get(cacheKey);
-  // console.log('Cache key:', cacheKey);
-  // console.log('Cached data type:', typeof cached);
-  // console.log('Cached data:', cached);
-  if (!cached) {
-    // console.log('No cached converted tools found for:', cacheKey);
+  const cached = await redis.json.get(cacheKey, '$');
+
+  if (!(cached && Array.isArray(cached)) || cached.length === 0) {
     return null;
   }
 
-  // Handle both object and string cases
-  let parsed: Record<string, Tool>;
-  if (typeof cached === 'string') {
-    parsed = JSON.parse(cached) as Record<string, Tool>;
-  } else if (typeof cached === 'object' && cached !== null) {
-    parsed = cached as Record<string, Tool>;
-  } else {
-    // console.log('Unexpected cached data type:', typeof cached);
-    return null;
-  }
-
-  return parsed;
+  return cached[0] as Record<string, Tool>;
 }
 
 /**
@@ -63,12 +49,8 @@ export async function setCachedConvertedTools(
   try {
     const sortedSlugs = toolkitSlugs.sort().join(',');
     const cacheKey = `${CACHE_PREFIX.CONVERTED_TOOLS}${userId}:${sortedSlugs}`;
-    // console.log('Setting cached converted tools:', cacheKey);
-    // console.log('Tools to cache:', tools);
-    // Stringify the tools object before storing
-    await redis.set(cacheKey, JSON.stringify(tools), {
-      ex: CACHE_TTL.CONVERTED_TOOLS,
-    });
+    await redis.json.set(cacheKey, '$', tools);
+    await redis.expire(cacheKey, CACHE_TTL.CONVERTED_TOOLS);
   } catch {
     // Silently fail - caching is optional
   }
