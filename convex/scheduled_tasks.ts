@@ -1,4 +1,5 @@
 import { ConvexError, v } from 'convex/values';
+import { fromZonedTime } from 'date-fns-tz';
 import { ERROR_CODES } from '../lib/error-codes';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
@@ -20,13 +21,44 @@ const TASK_LIMITS = {
 // Helper function to parse scheduled time and convert to next execution timestamp
 function calculateNextExecution(
   scheduleType: 'onetime' | 'daily' | 'weekly',
-  scheduledTime: string
+  scheduledTime: string,
+  timezone: string,
+  scheduledDate?: string
 ): number {
   const now = Date.now();
 
   if (scheduleType === 'onetime') {
-    // For one-time tasks, scheduledTime is an ISO string
-    return new Date(scheduledTime).getTime();
+    // For one-time tasks, scheduledTime is "HH:MM" format
+    const [hours, minutes] = scheduledTime.split(':').map(Number);
+
+    let userDate: Date;
+
+    if (scheduledDate) {
+      // Use the provided date in "YYYY-MM-DD" format
+      const [year, month, day] = scheduledDate.split('-').map(Number);
+      userDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    } else {
+      // Fallback to tomorrow if no date provided (backward compatibility)
+      const nowInUserTz = new Date();
+      userDate = new Date(
+        nowInUserTz.getFullYear(),
+        nowInUserTz.getMonth(),
+        nowInUserTz.getDate() + 1, // Tomorrow
+        hours,
+        minutes,
+        0,
+        0
+      );
+    }
+
+    // Convert from user timezone to UTC
+    const utcDate = fromZonedTime(userDate, timezone);
+
+    if (!utcDate || Number.isNaN(utcDate.getTime())) {
+      throw new Error(`Invalid timezone: ${timezone}`);
+    }
+
+    return utcDate.getTime();
   }
 
   // For recurring tasks, always calculate from the scheduled time
@@ -36,16 +68,36 @@ function calculateNextExecution(
     // scheduledTime format: "HH:MM"
     const [hours, minutes] = scheduledTime.split(':').map(Number);
 
-    // Start with today at the scheduled time
-    const scheduled = new Date();
-    scheduled.setHours(hours, minutes, 0, 0);
+    // Create a date in the user's timezone
+    const nowInUserTz = new Date();
+    const userDate = new Date(
+      nowInUserTz.getFullYear(),
+      nowInUserTz.getMonth(),
+      nowInUserTz.getDate(),
+      hours,
+      minutes,
+      0,
+      0
+    );
 
-    // Keep adding days until we find the next future occurrence
-    while (scheduled.getTime() <= now) {
-      scheduled.setDate(scheduled.getDate() + 1);
+    // Convert from user timezone to UTC
+    let utcDate = fromZonedTime(userDate, timezone);
+
+    if (!utcDate || Number.isNaN(utcDate.getTime())) {
+      throw new Error(`Invalid timezone: ${timezone}`);
     }
 
-    return scheduled.getTime();
+    // Keep adding days until we find the next future occurrence
+    while (utcDate.getTime() <= now) {
+      userDate.setDate(userDate.getDate() + 1);
+      utcDate = fromZonedTime(userDate, timezone);
+
+      if (!utcDate || Number.isNaN(utcDate.getTime())) {
+        throw new Error(`Invalid timezone: ${timezone}`);
+      }
+    }
+
+    return utcDate.getTime();
   }
 
   if (scheduleType === 'weekly') {
@@ -54,20 +106,39 @@ function calculateNextExecution(
     const targetDay = Number.parseInt(dayStr, 10);
     const [hours, minutes] = timeStr.split(':').map(Number);
 
-    // Start with this week's target day at the scheduled time
-    const scheduled = new Date();
-    const currentDay = scheduled.getDay();
+    // Create a date in the user's timezone
+    const nowInUserTz = new Date();
+    const currentDay = nowInUserTz.getDay();
     const daysToTarget = (targetDay - currentDay + 7) % 7;
 
-    scheduled.setDate(scheduled.getDate() + daysToTarget);
-    scheduled.setHours(hours, minutes, 0, 0);
+    const userDate = new Date(
+      nowInUserTz.getFullYear(),
+      nowInUserTz.getMonth(),
+      nowInUserTz.getDate() + daysToTarget,
+      hours,
+      minutes,
+      0,
+      0
+    );
 
-    // If this week's occurrence is in the past, add 7 days
-    if (scheduled.getTime() <= now) {
-      scheduled.setDate(scheduled.getDate() + 7);
+    // Convert from user timezone to UTC
+    let utcDate = fromZonedTime(userDate, timezone);
+
+    if (!utcDate || Number.isNaN(utcDate.getTime())) {
+      throw new Error(`Invalid timezone: ${timezone}`);
     }
 
-    return scheduled.getTime();
+    // If this week's occurrence is in the past, add 7 days
+    if (utcDate.getTime() <= now) {
+      userDate.setDate(userDate.getDate() + 7);
+      utcDate = fromZonedTime(userDate, timezone);
+
+      if (!utcDate || Number.isNaN(utcDate.getTime())) {
+        throw new Error(`Invalid timezone: ${timezone}`);
+      }
+    }
+
+    return utcDate.getTime();
   }
 
   throw new Error('Invalid schedule type');
@@ -84,6 +155,7 @@ export const createScheduledTask = mutation({
       v.literal('weekly')
     ),
     scheduledTime: v.string(),
+    scheduledDate: v.optional(v.string()), // For onetime tasks, format: "YYYY-MM-DD"
     timezone: v.string(),
     enableSearch: v.optional(v.boolean()),
     enabledToolSlugs: v.optional(v.array(v.string())),
@@ -120,7 +192,9 @@ export const createScheduledTask = mutation({
     const now = Date.now();
     const nextExecution = calculateNextExecution(
       args.scheduleType,
-      args.scheduledTime
+      args.scheduledTime,
+      args.timezone,
+      args.scheduledDate
     );
 
     // Insert the task
@@ -130,6 +204,7 @@ export const createScheduledTask = mutation({
       prompt: args.prompt,
       scheduleType: args.scheduleType,
       scheduledTime: args.scheduledTime,
+      scheduledDate: args.scheduledDate,
       timezone: args.timezone,
       isActive: true,
       enableSearch: args.enableSearch,
@@ -169,6 +244,7 @@ export const listScheduledTasks = query({
         v.literal('weekly')
       ),
       scheduledTime: v.string(),
+      scheduledDate: v.optional(v.string()),
       timezone: v.string(),
       isActive: v.boolean(),
       enableSearch: v.optional(v.boolean()),
@@ -198,6 +274,7 @@ export const updateScheduledTask = mutation({
     title: v.optional(v.string()),
     prompt: v.optional(v.string()),
     scheduledTime: v.optional(v.string()),
+    scheduledDate: v.optional(v.string()),
     timezone: v.optional(v.string()),
     enableSearch: v.optional(v.boolean()),
     enabledToolSlugs: v.optional(v.array(v.string())),
@@ -235,10 +312,18 @@ export const updateScheduledTask = mutation({
     if (args.isActive !== undefined) {
       updates.isActive = args.isActive;
     }
+    if (args.scheduledDate !== undefined) {
+      updates.scheduledDate = args.scheduledDate;
+    }
 
-    // If scheduledTime or timezone changed, recalculate next execution
-    if (args.scheduledTime !== undefined || args.timezone !== undefined) {
+    // If scheduledTime, scheduledDate, or timezone changed, recalculate next execution
+    if (
+      args.scheduledTime !== undefined ||
+      args.scheduledDate !== undefined ||
+      args.timezone !== undefined
+    ) {
       const newScheduledTime = args.scheduledTime ?? task.scheduledTime;
+      const newScheduledDate = args.scheduledDate ?? task.scheduledDate;
       // const newTimezone = args.timezone ?? task.timezone;
 
       // Cancel existing scheduled function if any
@@ -252,7 +337,9 @@ export const updateScheduledTask = mutation({
       if (args.isActive !== false && task.isActive !== false) {
         const nextExecution = calculateNextExecution(
           task.scheduleType,
-          newScheduledTime
+          newScheduledTime,
+          args.timezone ?? task.timezone,
+          newScheduledDate
         );
 
         const scheduledFunctionId = await ctx.scheduler.runAt(
@@ -275,13 +362,16 @@ export const updateScheduledTask = mutation({
     if (
       args.isActive !== undefined &&
       args.scheduledTime === undefined &&
+      args.scheduledDate === undefined &&
       args.timezone === undefined
     ) {
       if (args.isActive && !task.isActive) {
         // Reactivating - schedule next execution
         const nextExecution = calculateNextExecution(
           task.scheduleType,
-          task.scheduledTime
+          task.scheduledTime,
+          task.timezone,
+          task.scheduledDate
         );
 
         const scheduledFunctionId = await ctx.scheduler.runAt(
@@ -353,6 +443,7 @@ export const getTask = internalQuery({
         v.literal('weekly')
       ),
       scheduledTime: v.string(),
+      scheduledDate: v.optional(v.string()),
       timezone: v.string(),
       isActive: v.boolean(),
       enableSearch: v.optional(v.boolean()),
@@ -413,6 +504,62 @@ export const updateTaskChatId = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.taskId, { chatId: args.chatId });
     return null;
+  },
+});
+
+// Get task counts and remaining limits for the current user
+export const getTaskLimits = query({
+  args: {},
+  returns: v.object({
+    daily: v.object({
+      current: v.number(),
+      limit: v.number(),
+      remaining: v.number(),
+    }),
+    weekly: v.object({
+      current: v.number(),
+      limit: v.number(),
+      remaining: v.number(),
+    }),
+    total: v.object({
+      current: v.number(),
+      limit: v.number(),
+      remaining: v.number(),
+    }),
+  }),
+  handler: async (ctx) => {
+    const userId = await ensureAuthenticated(ctx);
+
+    // Get all active tasks for the user
+    const activeTasks = await ctx.db
+      .query('scheduled_tasks')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .filter((q) => q.eq(q.field('isActive'), true))
+      .collect();
+
+    const counts = {
+      daily: activeTasks.filter((t) => t.scheduleType === 'daily').length,
+      weekly: activeTasks.filter((t) => t.scheduleType === 'weekly').length,
+      total: activeTasks.length,
+    };
+
+    return {
+      daily: {
+        current: counts.daily,
+        limit: TASK_LIMITS.daily,
+        remaining: TASK_LIMITS.daily - counts.daily,
+      },
+      weekly: {
+        current: counts.weekly,
+        limit: TASK_LIMITS.weekly,
+        remaining: TASK_LIMITS.weekly - counts.weekly,
+      },
+      total: {
+        current: counts.total,
+        limit: TASK_LIMITS.total,
+        remaining: TASK_LIMITS.total - counts.total,
+      },
+    };
   },
 });
 

@@ -9,7 +9,8 @@ export const ScheduledTask = v.object({
     v.literal('daily'),
     v.literal('weekly')
   ),
-  scheduledTime: v.string(), // "HH:MM" for daily, "day:HH:MM" for weekly, ISO string for onetime
+  scheduledTime: v.string(), // "HH:MM" format for all types
+  scheduledDate: v.optional(v.string()), // "YYYY-MM-DD" format for onetime tasks
   timezone: v.string(),
   isActive: v.boolean(),
   enableSearch: v.optional(v.boolean()),

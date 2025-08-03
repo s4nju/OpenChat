@@ -302,6 +302,9 @@ export function buildSystemPrompt(
     return prompt;
   }
   const details: string[] = [];
+  if (user.name) {
+    details.push(`Name: ${user.name}`);
+  }
   if (user.preferredName) {
     details.push(`Preferred Name: ${user.preferredName}`);
   }

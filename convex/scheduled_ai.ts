@@ -1,12 +1,14 @@
 'use node';
 
 import {
+  consumeStream,
   convertToModelMessages,
-  generateText,
   stepCountIs,
+  streamText,
   type UIMessage,
 } from 'ai';
 import { v } from 'convex/values';
+import { fromZonedTime } from 'date-fns-tz';
 import { searchTool } from '@/app/api/tools';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
@@ -23,13 +25,14 @@ export const executeTask = internalAction({
   handler: async (ctx, args) => {
     try {
       // Get task details
+      // console.log('Executing scheduled task:', args.taskId);
       const task: Doc<'scheduled_tasks'> | null = await ctx.runQuery(
         internal.scheduled_tasks.getTask,
         { taskId: args.taskId }
       );
 
       if (!task) {
-        // console.error('Task not found:', args.taskId);
+        // console.log('Task not found:', args.taskId);
         return null;
       }
 
@@ -45,43 +48,59 @@ export const executeTask = internalAction({
       );
 
       if (!user) {
-        // console.error('User not found for task:', args.taskId);
+        // console.log('User not found for task:', args.taskId);
         return null;
       }
 
-      // Create or get chat for this task
-      let chatId = task.chatId;
-      if (!chatId) {
-        // Create a new chat for this scheduled task
-        const { chatId: newChatId } = await ctx.runMutation(
-          internal.chats.createChatInternal,
-          {
-            userId: task.userId,
-            title: `Scheduled: ${task.title}`,
-            model: 'moonshotai/kimi-k2',
-          }
-        );
-        chatId = newChatId;
+      // Create a new chat for each task execution
+      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const currentTime = new Date().toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
-        // Update task with the chat ID
-        await ctx.runMutation(internal.scheduled_tasks.updateTaskChatId, {
-          taskId: args.taskId,
-          chatId: newChatId,
-        });
-      }
-
-      // Get Composio tools if enabled
-      let composioTools = {};
-      if (task.enabledToolSlugs && task.enabledToolSlugs.length > 0) {
-        try {
-          composioTools = await getComposioTools(
-            task.userId,
-            task.enabledToolSlugs
-          );
-        } catch (_error) {
-          // console.error('Failed to load Composio tools:', error);
-          // Continue without Composio tools
+      const { chatId } = await ctx.runMutation(
+        internal.chats.createChatInternal,
+        {
+          userId: task.userId,
+          title: `${task.title} - ${currentDate} ${currentTime}`,
+          model: 'moonshotai/kimi-k2',
         }
+      );
+
+      // Update task with the latest chat ID (for the "View Results" link)
+      await ctx.runMutation(internal.scheduled_tasks.updateTaskChatId, {
+        taskId: args.taskId,
+        chatId,
+      });
+
+      // Get Composio tools from user's connected services
+      // We use connectors table instead of task.enabledToolSlugs because:
+      // 1. The enabledToolSlugs field is not yet implemented in the UI
+      // 2. Connectors table tracks actual user connections to external services
+      // 3. This ensures only connected services are available as tools
+      let composioTools = {};
+      let toolkitSlugs: string[] = [];
+      try {
+        // Get user's connected connectors (Gmail, Google Calendar, Notion, etc.)
+        const connectedConnectors = await ctx.runQuery(
+          internal.connectors.getConnectedConnectors,
+          { userId: task.userId }
+        );
+
+        if (connectedConnectors.length > 0) {
+          // Convert connector types to Composio toolkit slugs
+          // e.g., 'gmail' -> 'GMAIL', 'googlecalendar' -> 'GOOGLECALENDAR'
+          toolkitSlugs = connectedConnectors.map((connector) =>
+            connector.type.toUpperCase()
+          );
+
+          composioTools = await getComposioTools(task.userId, toolkitSlugs);
+        }
+      } catch (_error) {
+        // console.error('Failed to load Composio tools:', error);
+        // Continue without Composio tools
       }
 
       // Build system prompt
@@ -91,21 +110,24 @@ export const executeTask = internalAction({
         task.enableSearch,
         Object.keys(composioTools).length > 0,
         task.timezone,
-        task.enabledToolSlugs
+        toolkitSlugs // Use derived toolkit slugs from connectors
       );
+      // console.log('System prompt:', systemPrompt);
 
       // Get Kimi K2 model
       const selectedModel = MODELS_MAP['moonshotai/kimi-k2'];
       if (!selectedModel) {
-        throw new Error('Kimi K2 model not found');
+        // console.log('Kimi K2 model not found');
       }
-
+      // console.log('Selected model:', selectedModel);
       // Create user message
       const userMessage: UIMessage = {
-        id: crypto.randomUUID(),
+        id: Math.random().toString(36).substring(2, 15),
         role: 'user',
         parts: [{ type: 'text', text: task.prompt }],
       };
+
+      // console.log('User message:', userMessage);
 
       // Save user message
       const { messageId: userMsgId } = await ctx.runMutation(
@@ -119,9 +141,27 @@ export const executeTask = internalAction({
         }
       );
 
-      // Execute AI request
+      // Execute AI request using streamText (same pattern as chat route)
       const startTime = Date.now();
-      const result = await generateText({
+
+      // Pre-build base metadata before streaming (same as chat route)
+      const baseMetadata = {
+        modelId: selectedModel.id,
+        modelName: selectedModel.name,
+        includeSearch: task.enableSearch,
+        reasoningEffort: 'none' as const,
+      };
+
+      // Initialize usage tracking (same as chat route)
+      let finalUsage = {
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        totalTokens: 0,
+        cachedInputTokens: 0,
+      };
+
+      const result = streamText({
         model: selectedModel.api_sdk,
         system: systemPrompt,
         messages: convertToModelMessages([userMessage]),
@@ -129,41 +169,65 @@ export const executeTask = internalAction({
           ...(task.enableSearch ? { search: searchTool } : {}),
           ...composioTools,
         },
-        stopWhen: stepCountIs(20),
+        stopWhen: stepCountIs(5),
+        onFinish({ usage }) {
+          // Capture usage data (runs on successful completion) - same as chat route
+          finalUsage = {
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+            reasoningTokens: usage.reasoningTokens || 0,
+            totalTokens: usage.totalTokens || 0,
+            cachedInputTokens: usage.cachedInputTokens || 0,
+          };
+        },
       });
 
-      // Get the generated content and usage from generateText response
-      const { content, text, usage } = result;
+      // Consume the stream to ensure it runs to completion (same as chat route)
+      await result.consumeStream();
 
-      // Use the content array directly as parts (from your test output)
-      const allParts = content || [];
+      // Get UI-compatible parts using toUIMessageStreamResponse (same as chat route)
+      result.toUIMessageStreamResponse({
+        originalMessages: [userMessage],
+        sendReasoning: true,
+        sendSources: true,
+        onFinish: async (Messages) => {
+          // Construct final metadata (same as chat route)
+          const finalMetadata = {
+            ...baseMetadata,
+            serverDurationMs: Date.now() - startTime,
+            inputTokens: finalUsage.inputTokens,
+            outputTokens: finalUsage.outputTokens,
+            totalTokens: finalUsage.totalTokens,
+            reasoningTokens: finalUsage.reasoningTokens,
+            cachedInputTokens: finalUsage.cachedInputTokens,
+          };
 
-      // Extract text content for the content field (for search indexing)
-      // This matches the chat route pattern
-      const textContent = text || '';
+          // Extract text content for the content field (for search indexing)
+          const textContent = Messages.responseMessage.parts
+            .filter((part) => part.type === 'text')
+            .map((part) => part.text)
+            .join('');
 
-      // Limit depth of parts to prevent Convex nesting limit errors
-      const depthLimitedParts = limitDepth(allParts, 14);
+          // Limit depth of parts to prevent Convex nesting limit errors
+          const depthLimitedParts = limitDepth(
+            Messages.responseMessage.parts,
+            14
+          );
 
-      // Save assistant message
-      await ctx.runMutation(internal.messages.saveAssistantMessageInternal, {
-        chatId,
-        role: 'assistant',
-        content: textContent,
-        parentMessageId: userMsgId,
-        parts: depthLimitedParts,
-        metadata: {
-          modelId: selectedModel.id,
-          modelName: selectedModel.name,
-          includeSearch: task.enableSearch,
-          reasoningEffort: 'none',
-          serverDurationMs: Date.now() - startTime,
-          reasoningTokens: usage?.reasoningTokens || 0,
-          cachedInputTokens: usage?.cachedInputTokens || 0,
-          inputTokens: usage?.inputTokens || 0,
-          outputTokens: usage?.outputTokens || 0,
-          totalTokens: usage?.totalTokens || 0,
+          // Save assistant message with UI-compatible parts
+          await ctx.runMutation(
+            internal.messages.saveAssistantMessageInternal,
+            {
+              chatId,
+              role: 'assistant',
+              content: textContent,
+              parentMessageId: userMsgId,
+              parts: depthLimitedParts,
+              metadata: finalMetadata,
+            }
+          );
         },
+        consumeSseStream: consumeStream,
       });
 
       // Handle rescheduling based on task type
@@ -187,31 +251,60 @@ export const executeTask = internalAction({
         if (task.scheduleType === 'daily') {
           // Parse the scheduled time (HH:MM) and calculate next occurrence
           const [hours, minutes] = task.scheduledTime.split(':').map(Number);
-          const nextRun = new Date(now);
-          nextRun.setHours(hours, minutes, 0, 0);
-          // Add days until we're in the future
-          while (nextRun.getTime() <= now) {
-            nextRun.setDate(nextRun.getDate() + 1);
+
+          // Create a date in the user's timezone
+          const nowInUserTz = new Date();
+          const userDate = new Date(
+            nowInUserTz.getFullYear(),
+            nowInUserTz.getMonth(),
+            nowInUserTz.getDate(),
+            hours,
+            minutes,
+            0,
+            0
+          );
+
+          // Convert from user timezone to UTC
+          let utcDate = fromZonedTime(userDate, task.timezone);
+
+          // Keep adding days until we find the next future occurrence
+          while (utcDate.getTime() <= now) {
+            userDate.setDate(userDate.getDate() + 1);
+            utcDate = fromZonedTime(userDate, task.timezone);
           }
-          nextExecution = nextRun.getTime();
+
+          nextExecution = utcDate.getTime();
         } else {
           // Weekly - parse day:HH:MM
           const [dayStr, timeStr] = task.scheduledTime.split(':');
           const targetDay = Number.parseInt(dayStr, 10);
           const [hours, minutes] = timeStr.split(':').map(Number);
 
-          const nextRun = new Date(now);
-          const currentDay = nextRun.getDay();
+          // Create a date in the user's timezone
+          const nowInUserTz = new Date();
+          const currentDay = nowInUserTz.getDay();
           const daysToTarget = (targetDay - currentDay + 7) % 7;
 
-          nextRun.setDate(nextRun.getDate() + daysToTarget);
-          nextRun.setHours(hours, minutes, 0, 0);
+          const userDate = new Date(
+            nowInUserTz.getFullYear(),
+            nowInUserTz.getMonth(),
+            nowInUserTz.getDate() + daysToTarget,
+            hours,
+            minutes,
+            0,
+            0
+          );
+
+          // Convert from user timezone to UTC
+          let utcDate = fromZonedTime(userDate, task.timezone);
 
           // If this week's occurrence is in the past, add 7 days
-          if (nextRun.getTime() <= now) {
-            nextRun.setDate(nextRun.getDate() + 7);
+          if (utcDate.getTime() <= now) {
+            userDate.setDate(userDate.getDate() + 7);
+            utcDate = fromZonedTime(userDate, task.timezone);
           }
-          nextExecution = nextRun.getTime();
+
+          nextExecution = utcDate.getTime();
         }
 
         const scheduledFunctionId = await ctx.scheduler.runAt(
@@ -233,7 +326,7 @@ export const executeTask = internalAction({
 
       return null;
     } catch (_error) {
-      // console.error('Error executing scheduled task:', error);
+      // console.log('Error executing scheduled task:', _error);
 
       // Update task to mark last execution attempt
       await ctx.runMutation(internal.scheduled_tasks.updateTaskAfterExecution, {

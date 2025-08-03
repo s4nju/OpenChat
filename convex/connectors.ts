@@ -1,5 +1,10 @@
 import { v } from 'convex/values';
-import { internalMutation, mutation, query } from './_generated/server';
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from './_generated/server';
 import { ensureAuthenticated } from './lib/auth_helper';
 
 // Type for connector types
@@ -169,6 +174,35 @@ export const updateConnectionStatus = mutation({
     }
 
     return null;
+  },
+});
+
+/**
+ * Internal function to get connected connectors for a user (for scheduled tasks)
+ */
+export const getConnectedConnectors = internalQuery({
+  args: {
+    userId: v.id('users'),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('connectors'),
+      _creationTime: v.number(),
+      userId: v.id('users'),
+      type: CONNECTOR_TYPES,
+      connectionId: v.string(),
+      isConnected: v.boolean(),
+      displayName: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const connectors = await ctx.db
+      .query('connectors')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .filter((q) => q.eq(q.field('isConnected'), true))
+      .collect();
+
+    return connectors;
   },
 });
 
