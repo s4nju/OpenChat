@@ -1,7 +1,12 @@
 'use client';
 
 import { convexQuery } from '@convex-dev/react-query';
-import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
+import {
+  CalendarDots,
+  MagnifyingGlass,
+  Plus,
+  SidebarSimple,
+} from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Link from 'next/link';
@@ -267,6 +272,17 @@ const ChatSidebar = memo(function SidebarComponent({
             variant="outline"
           >
             New Chat
+          </Button>
+
+          <Button
+            asChild
+            className="h-9 w-full justify-start gap-2 font-medium text-sm"
+            variant="ghost"
+          >
+            <Link href="/tasks">
+              <CalendarDots className="h-4 w-4" weight="bold" />
+              Scheduled Tasks
+            </Link>
           </Button>
 
           <div className="relative">
