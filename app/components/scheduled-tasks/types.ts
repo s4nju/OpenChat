@@ -9,6 +9,7 @@ export type CreateTaskForm = {
   prompt: string;
   scheduleType: ScheduleType;
   scheduledTime: string;
+  scheduledDate?: string; // For onetime tasks
   timezone: string;
   enableSearch?: boolean;
   enabledToolSlugs?: string[];

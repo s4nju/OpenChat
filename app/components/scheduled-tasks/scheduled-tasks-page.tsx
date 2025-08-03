@@ -1,25 +1,20 @@
 'use client';
 
 import { convexQuery } from '@convex-dev/react-query';
-import { ArrowsClockwise, Plus } from '@phosphor-icons/react';
+import { Plus } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/convex/_generated/api';
-import { CreateTaskDrawer } from './create-task-drawer';
-import { ScheduledTaskCard } from './scheduled-task-card';
+import { TaskCard } from './task-card';
+import { TaskTrigger } from './task-trigger';
 import type { TaskStatus } from './types';
 
 export function ScheduledTasksPage() {
   const [activeTab, setActiveTab] = useState<TaskStatus>('active');
-  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
 
-  const {
-    data: tasks = [],
-    isLoading,
-    refetch,
-  } = useTanStackQuery({
+  const { data: tasks = [], isLoading } = useTanStackQuery({
     ...convexQuery(api.scheduled_tasks.listScheduledTasks, {}),
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -32,96 +27,83 @@ export function ScheduledTasksPage() {
     return !task.isActive;
   });
 
-  const handleRefresh = () => {
-    refetch();
-  };
-
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex flex-col gap-4 border-border border-b p-4 sm:p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-semibold text-2xl">Scheduled Tasks</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              aria-label="Refresh tasks"
-              onClick={handleRefresh}
-              size="icon"
-              variant="ghost"
+    <div className="flex h-full items-center justify-center p-4">
+      <div className="w-full max-w-3xl">
+        {/* Single line header */}
+        <div className="mb-12 grid grid-cols-3 items-center">
+          {/* Tabs on the left */}
+          <div className="justify-self-start">
+            <Tabs
+              defaultValue="active"
+              onValueChange={(value) => setActiveTab(value as TaskStatus)}
+              value={activeTab}
             >
-              <ArrowsClockwise className="h-4 w-4" />
-            </Button>
-            <Button
-              className="gap-2"
-              onClick={() => setIsCreateDrawerOpen(true)}
-              size="sm"
-            >
-              <Plus className="h-4 w-4" />
-              Add new
-            </Button>
+              <TabsList className="grid w-[180px] grid-cols-2">
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="archived">Archived</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Centered Title */}
+          <h1 className="justify-self-center font-semibold text-3xl">Tasks</h1>
+
+          {/* Add button on the right */}
+          <div className="justify-self-end">
+            <TaskTrigger
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add new
+                </Button>
+              }
+            />
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs
-          defaultValue="active"
-          onValueChange={(value) => setActiveTab(value as TaskStatus)}
-          value={activeTab}
-        >
-          <TabsList className="grid w-full max-w-[400px] grid-cols-2">
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        {/* Content */}
         {isLoading && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <div
-                className="h-32 animate-pulse rounded-lg bg-muted/50"
+                className="h-28 animate-pulse rounded-xl bg-muted/50"
                 // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton items
                 key={i}
               />
             ))}
           </div>
         )}
+
         {!isLoading && filteredTasks.length === 0 && (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex min-h-[300px] items-center justify-center rounded-xl border border-border bg-card/50 p-8">
             <div className="text-center">
-              <p className="text-muted-foreground">
+              <p className="mb-4 text-muted-foreground">
                 {activeTab === 'active'
-                  ? 'No active scheduled tasks'
+                  ? 'No scheduled tasks yet'
                   : 'No archived tasks'}
               </p>
               {activeTab === 'active' && (
-                <Button
-                  className="mt-4"
-                  onClick={() => setIsCreateDrawerOpen(true)}
-                  variant="outline"
-                >
-                  Create your first task
-                </Button>
+                <TaskTrigger
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      Create your first task
+                    </Button>
+                  }
+                />
               )}
             </div>
           </div>
         )}
+
         {!isLoading && filteredTasks.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredTasks.map((task) => (
-              <ScheduledTaskCard key={task._id} task={task} />
+              <TaskCard key={task._id} task={task} />
             ))}
           </div>
         )}
       </div>
-
-      {/* Create Task Drawer */}
-      <CreateTaskDrawer
-        isOpen={isCreateDrawerOpen}
-        onClose={() => setIsCreateDrawerOpen(false)}
-      />
     </div>
   );
 }
