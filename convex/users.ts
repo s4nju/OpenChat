@@ -7,7 +7,7 @@ import { ConvexError, v } from 'convex/values';
 import { MODEL_DEFAULT, RECOMMENDED_MODELS } from '../lib/config';
 import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
-import { mutation, query } from './_generated/server';
+import { internalQuery, mutation, query } from './_generated/server';
 import { RATE_LIMITS } from './lib/rateLimitConstants';
 import { polar } from './polar';
 import { rateLimiter } from './rateLimiter';
@@ -879,3 +879,19 @@ export const { getRateLimit: getRateLimitHook, getServerTime } =
       },
     }
   );
+
+// Internal query to get user by ID
+export const getUser = internalQuery({
+  args: { userId: v.id('users') },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id('users'),
+      _creationTime: v.number(),
+      ...User.fields,
+    })
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});

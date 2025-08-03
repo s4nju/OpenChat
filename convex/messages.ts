@@ -1,7 +1,12 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
-import { type MutationCtx, mutation, query } from './_generated/server';
+import {
+  internalMutation,
+  type MutationCtx,
+  mutation,
+  query,
+} from './_generated/server';
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
 
@@ -401,5 +406,103 @@ export const searchMessages = query({
       content: msg.content,
       createdAt: msg.createdAt,
     }));
+  },
+});
+
+// Internal mutation for scheduled tasks to send user messages
+export const sendUserMessageToChatInternal = internalMutation({
+  args: {
+    chatId: v.id('chats'),
+    role: v.union(
+      v.literal('user'),
+      v.literal('assistant'),
+      v.literal('system')
+    ),
+    content: v.string(),
+    parentMessageId: v.optional(v.id('messages')),
+    parts: v.optional(v.any()),
+    metadata: v.optional(
+      v.object({
+        modelId: v.optional(v.string()),
+        modelName: v.optional(v.string()),
+        inputTokens: v.optional(v.number()),
+        outputTokens: v.optional(v.number()),
+        reasoningTokens: v.optional(v.number()),
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({ messageId: v.id('messages') }),
+  handler: async (ctx, args) => {
+    // Get the chat to find the userId (no auth in scheduled functions)
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    const messageId = await ctx.db.insert('messages', {
+      chatId: args.chatId,
+      userId: chat.userId,
+      role: args.role,
+      content: args.content,
+      parentMessageId: args.parentMessageId,
+      parts: args.parts,
+      metadata: args.metadata || {},
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
+    return { messageId };
+  },
+});
+
+// Internal mutation for scheduled tasks to save assistant messages
+export const saveAssistantMessageInternal = internalMutation({
+  args: {
+    chatId: v.id('chats'),
+    role: v.union(
+      v.literal('user'),
+      v.literal('assistant'),
+      v.literal('system')
+    ),
+    content: v.string(),
+    parentMessageId: v.optional(v.id('messages')),
+    parts: v.optional(v.any()),
+    metadata: v.optional(
+      v.object({
+        modelId: v.optional(v.string()),
+        modelName: v.optional(v.string()),
+        inputTokens: v.optional(v.number()),
+        outputTokens: v.optional(v.number()),
+        reasoningTokens: v.optional(v.number()),
+        totalTokens: v.optional(v.number()),
+        cachedInputTokens: v.optional(v.number()),
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({ messageId: v.id('messages') }),
+  handler: async (ctx, args) => {
+    // Get the chat to find the userId (no auth in scheduled functions)
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    const messageId = await ctx.db.insert('messages', {
+      chatId: args.chatId,
+      userId: chat.userId,
+      role: args.role,
+      content: args.content,
+      parentMessageId: args.parentMessageId,
+      parts: args.parts,
+      metadata: args.metadata || {},
+      createdAt: Date.now(),
+    });
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
+    return { messageId };
   },
 });
