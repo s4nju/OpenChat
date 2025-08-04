@@ -102,9 +102,10 @@ function calculateNextExecution(
 
   if (scheduleType === 'weekly') {
     // scheduledTime format: "day:HH:MM" where day is 0-6 (Sunday-Saturday)
-    const [dayStr, timeStr] = scheduledTime.split(':');
-    const targetDay = Number.parseInt(dayStr, 10);
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const parts = scheduledTime.split(':');
+    const targetDay = Number.parseInt(parts[0], 10);
+    const hours = Number.parseInt(parts[1], 10);
+    const minutes = Number.parseInt(parts[2], 10);
 
     // Create a date in the user's timezone
     const nowInUserTz = new Date();
@@ -166,11 +167,11 @@ export const createScheduledTask = mutation({
   handler: async (ctx, args) => {
     const userId = await ensureAuthenticated(ctx);
 
-    // Validate user limits
+    // Validate user limits - only count 'active' tasks
     const activeTasks = await ctx.db
       .query('scheduled_tasks')
       .withIndex('by_user', (q) => q.eq('userId', userId))
-      .filter((q) => q.eq(q.field('isActive'), true))
+      .filter((q) => q.eq(q.field('status'), 'active'))
       .collect();
 
     const counts = {
@@ -207,7 +208,7 @@ export const createScheduledTask = mutation({
       scheduledTime: args.scheduledTime,
       scheduledDate: args.scheduledDate,
       timezone: args.timezone,
-      isActive: true,
+      status: 'active',
       enableSearch: args.enableSearch,
       enabledToolSlugs: args.enabledToolSlugs,
       emailNotifications: args.emailNotifications,
@@ -248,7 +249,12 @@ export const listScheduledTasks = query({
       scheduledTime: v.string(),
       scheduledDate: v.optional(v.string()),
       timezone: v.string(),
-      isActive: v.boolean(),
+      status: v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('archived'),
+        v.literal('running')
+      ),
       enableSearch: v.optional(v.boolean()),
       enabledToolSlugs: v.optional(v.array(v.string())),
       emailNotifications: v.optional(v.boolean()),
@@ -282,7 +288,14 @@ export const updateScheduledTask = mutation({
     enableSearch: v.optional(v.boolean()),
     enabledToolSlugs: v.optional(v.array(v.string())),
     emailNotifications: v.optional(v.boolean()),
-    isActive: v.optional(v.boolean()),
+    status: v.optional(
+      v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('archived'),
+        v.literal('running')
+      )
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -316,8 +329,8 @@ export const updateScheduledTask = mutation({
     if (args.emailNotifications !== undefined) {
       updates.emailNotifications = args.emailNotifications;
     }
-    if (args.isActive !== undefined) {
-      updates.isActive = args.isActive;
+    if (args.status !== undefined) {
+      updates.status = args.status;
     }
     if (args.scheduledDate !== undefined) {
       updates.scheduledDate = args.scheduledDate;
@@ -340,8 +353,12 @@ export const updateScheduledTask = mutation({
         );
       }
 
-      // Only reschedule if task is active
-      if (args.isActive !== false && task.isActive !== false) {
+      // Only reschedule if task status is active (or becoming active)
+      if (
+        args.status !== 'paused' &&
+        args.status !== 'archived' &&
+        task.status === 'active'
+      ) {
         const nextExecution = calculateNextExecution(
           task.scheduleType,
           newScheduledTime,
@@ -365,15 +382,15 @@ export const updateScheduledTask = mutation({
       }
     }
 
-    // If only activating/deactivating
+    // Handle status transitions (pause/resume/archive)
     if (
-      args.isActive !== undefined &&
+      args.status !== undefined &&
       args.scheduledTime === undefined &&
       args.scheduledDate === undefined &&
       args.timezone === undefined
     ) {
-      if (args.isActive && !task.isActive) {
-        // Reactivating - schedule next execution
+      if (args.status === 'active' && task.status !== 'active') {
+        // Reactivating from paused/archived - schedule next execution
         const nextExecution = calculateNextExecution(
           task.scheduleType,
           task.scheduledTime,
@@ -389,8 +406,11 @@ export const updateScheduledTask = mutation({
 
         updates.nextExecution = nextExecution;
         updates.scheduledFunctionId = scheduledFunctionId;
-      } else if (!args.isActive && task.isActive) {
-        // Deactivating - cancel scheduled function
+      } else if (
+        (args.status === 'paused' || args.status === 'archived') &&
+        task.status === 'active'
+      ) {
+        // Pausing or archiving - cancel scheduled function
         if (task.scheduledFunctionId) {
           await ctx.scheduler.cancel(
             task.scheduledFunctionId as Id<'_scheduled_functions'>
@@ -452,7 +472,12 @@ export const getTask = internalQuery({
       scheduledTime: v.string(),
       scheduledDate: v.optional(v.string()),
       timezone: v.string(),
-      isActive: v.boolean(),
+      status: v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('archived'),
+        v.literal('running')
+      ),
       enableSearch: v.optional(v.boolean()),
       enabledToolSlugs: v.optional(v.array(v.string())),
       emailNotifications: v.optional(v.boolean()),
@@ -475,7 +500,14 @@ export const updateTaskAfterExecution = internalMutation({
     lastExecuted: v.number(),
     nextExecution: v.optional(v.number()),
     scheduledFunctionId: v.optional(v.string()),
-    deactivate: v.optional(v.boolean()),
+    newStatus: v.optional(
+      v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('archived'),
+        v.literal('running')
+      )
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -491,10 +523,13 @@ export const updateTaskAfterExecution = internalMutation({
       updates.scheduledFunctionId = args.scheduledFunctionId;
     }
 
-    if (args.deactivate) {
-      updates.isActive = false;
-      updates.scheduledFunctionId = undefined;
-      updates.nextExecution = undefined;
+    if (args.newStatus) {
+      updates.status = args.newStatus;
+      // If archiving, clear scheduling info
+      if (args.newStatus === 'archived') {
+        updates.scheduledFunctionId = undefined;
+        updates.nextExecution = undefined;
+      }
     }
 
     await ctx.db.patch(args.taskId, updates);
@@ -538,11 +573,11 @@ export const getTaskLimits = query({
   handler: async (ctx) => {
     const userId = await ensureAuthenticated(ctx);
 
-    // Get all active tasks for the user
+    // Get all active tasks for the user (only 'active' status counts toward limits)
     const activeTasks = await ctx.db
       .query('scheduled_tasks')
       .withIndex('by_user', (q) => q.eq('userId', userId))
-      .filter((q) => q.eq(q.field('isActive'), true))
+      .filter((q) => q.eq(q.field('status'), 'active'))
       .collect();
 
     const counts = {
@@ -586,9 +621,10 @@ export const triggerScheduledTask = mutation({
       });
     }
 
-    // Schedule immediate execution
+    // Schedule immediate execution with manual trigger flag
     await ctx.scheduler.runAfter(0, internal.scheduled_ai.executeTask, {
       taskId: args.taskId,
+      isManualTrigger: true,
     });
 
     return null;

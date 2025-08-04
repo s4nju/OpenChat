@@ -37,5 +37,5 @@ export default defineSchema({
   scheduled_tasks: defineTable(ScheduledTask)
     .index('by_user', ['userId'])
     .index('by_user_and_type', ['userId', 'scheduleType'])
-    .index('by_next_execution', ['isActive', 'nextExecution']),
+    .index('by_next_execution', ['status', 'nextExecution']),
 });

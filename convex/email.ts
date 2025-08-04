@@ -99,6 +99,7 @@ export const sendTaskSummaryEmail = internalMutation({
 
 /**
  * Create HTML email template for task summary
+ * Currently using the monospace terminal-style template
  */
 function createEmailTemplate({
   taskTitle,
@@ -115,142 +116,916 @@ function createEmailTemplate({
   chatId: string;
   userName: string;
 }): string {
-  return `
-<!DOCTYPE html>
+  // Use the monospace terminal template (template #8)
+  return createMonospaceTemplate({
+    taskTitle,
+    executionDate,
+    taskContent,
+    contentTruncated,
+    chatId,
+    userName,
+  });
+}
+
+/**
+ * Monospace terminal-style email template (Active Template)
+ */
+function createMonospaceTemplate({
+  taskTitle,
+  executionDate,
+  taskContent,
+  contentTruncated,
+  chatId,
+  userName,
+}: {
+  taskTitle: string;
+  executionDate: string;
+  taskContent: string;
+  contentTruncated: boolean;
+  chatId: string;
+  userName: string;
+}): string {
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>Task Complete: ${escapeHtml(taskTitle)}</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .email-container {
-            background-color: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: #2c3e50;
+        * {
             margin: 0;
-            font-size: 24px;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .task-info {
-            background-color: #f8f9fa;
-            border-radius: 6px;
+        
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', 'Courier New', monospace;
+            line-height: 1.6;
+            color: #333333;
+            background: #f8f8f8;
+            min-height: 100vh;
             padding: 20px;
-            margin-bottom: 25px;
+            font-size: 14px;
         }
-        .task-info h2 {
-            color: #495057;
-            margin: 0 0 10px 0;
-            font-size: 18px;
+        
+        .email-container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            font-family: inherit;
+            animation: typeIn 0.8s ease-out;
         }
-        .task-info p {
-            margin: 5px 0;
-            color: #6c757d;
+        
+        @keyframes typeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
+        
+        .terminal-header {
+            background: #2d2d2d;
+            color: #ffffff;
+            padding: 12px 20px;
+            font-size: 12px;
+            border-bottom: 1px solid #cccccc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .terminal-controls {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .control-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #666666;
+        }
+        
+        .control-dot.red { background: #ff5f56; }
+        .control-dot.yellow { background: #ffbd2e; }
+        .control-dot.green { background: #27ca3f; }
+        
+        .terminal-title {
+            font-weight: 400;
+            flex: 1;
+            text-align: center;
+            margin: 0 20px;
+        }
+        
         .content {
-            background-color: #ffffff;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
+            padding: 30px;
+            background: #ffffff;
+        }
+        
+        .prompt-line {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .prompt {
+            color: #666666;
+            margin-right: 10px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        
+        .command {
+            color: #333333;
+            flex: 1;
+        }
+        
+        .output {
+            margin-left: 20px;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 2px solid #eeeeee;
+        }
+        
+        .section-header {
+            color: #666666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 30px 0 15px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        
+        .info-block {
+            background: #fafafa;
+            border: 1px solid #eeeeee;
             padding: 20px;
-            margin-bottom: 25px;
+            margin: 15px 0;
+            position: relative;
         }
-        .content h3 {
-            color: #343a40;
-            margin: 0 0 15px 0;
-            font-size: 16px;
+        
+        .info-block::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #333333;
         }
-        .content-text {
+        
+        .key-value {
+            display: flex;
+            margin-bottom: 8px;
+            align-items: baseline;
+        }
+        
+        .key {
+            color: #666666;
+            min-width: 120px;
+            margin-right: 20px;
+            font-size: 12px;
+        }
+        
+        .value {
+            color: #333333;
+            font-weight: 500;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #dddddd;
+            padding: 20px;
+            margin: 15px 0;
             white-space: pre-wrap;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.5;
-            color: #495057;
-            background-color: #f8f9fa;
+            color: #444444;
+            overflow-x: auto;
+        }
+        
+        .status-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ca3f;
+        }
+        
+        .status-text {
+            color: #333333;
+            font-weight: 500;
+        }
+        
+        .warning-block {
+            background: #fffbf0;
+            border: 1px solid #f0e68c;
             padding: 15px;
-            border-radius: 4px;
-            border-left: 4px solid #007bff;
+            margin: 15px 0;
+            position: relative;
         }
-        .truncated-notice {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 15px;
-            color: #856404;
-            font-size: 14px;
+        
+        .warning-block::before {
+            content: '⚠';
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            color: #b8860b;
         }
-        .view-full-btn {
+        
+        .warning-content {
+            margin-left: 25px;
+            color: #8b4513;
+            font-size: 12px;
+        }
+        
+        .action-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eeeeee;
+        }
+        
+        .button-container {
+            margin: 20px 0;
+        }
+        
+        .cli-button {
             display: inline-block;
-            background-color: #007bff;
-            color: white;
+            background: #333333;
+            color: #ffffff;
             text-decoration: none;
             padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 500;
-            margin-top: 20px;
+            border: 1px solid #333333;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
-        .view-full-btn:hover {
-            background-color: #0056b3;
+        
+        .cli-button:hover {
+            background: #ffffff;
+            color: #333333;
+            border-color: #333333;
         }
+        
+        .cli-button::before {
+            content: '$ ';
+            opacity: 0.7;
+        }
+        
         .footer {
-            border-top: 1px solid #e9ecef;
-            padding-top: 20px;
-            margin-top: 30px;
-            text-align: center;
-            color: #6c757d;
-            font-size: 14px;
+            background: #f5f5f5;
+            border-top: 1px solid #eeeeee;
+            padding: 20px 30px;
+            font-size: 12px;
+            color: #666666;
+        }
+        
+        .footer-line {
+            margin-bottom: 8px;
+        }
+        
+        .footer-link {
+            color: #333333;
+            text-decoration: underline;
+        }
+        
+        .footer-link:hover {
+            text-decoration: none;
+        }
+        
+        .comment {
+            color: #999999;
+            font-style: italic;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+                font-size: 13px;
+            }
+            
+            .content, .footer {
+                padding: 20px 15px;
+            }
+            
+            .key {
+                min-width: 80px;
+                margin-right: 10px;
+            }
+            
+            .code-block {
+                padding: 15px;
+                font-size: 12px;
+            }
+            
+            .cli-button {
+                padding: 10px 20px;
+                font-size: 12px;
+            }
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a1a;
+                color: #e0e0e0;
+            }
+            
+            .email-container {
+                background: #2d2d2d;
+                border-color: #444444;
+            }
+            
+            .terminal-header {
+                background: #1a1a1a;
+                border-color: #444444;
+            }
+            
+            .content {
+                background: #2d2d2d;
+            }
+            
+            .command, .value, .status-text {
+                color: #e0e0e0;
+            }
+            
+            .prompt, .key, .comment {
+                color: #999999;
+            }
+            
+            .section-header {
+                color: #cccccc;
+                border-color: #444444;
+            }
+            
+            .output {
+                border-color: #444444;
+            }
+            
+            .info-block {
+                background: #3a3a3a;
+                border-color: #444444;
+            }
+            
+            .info-block::before {
+                background: #e0e0e0;
+            }
+            
+            .code-block {
+                background: #3a3a3a;
+                border-color: #444444;
+                color: #cccccc;
+            }
+            
+            .warning-block {
+                background: #3a2f1a;
+                border-color: #665a2d;
+            }
+            
+            .warning-content {
+                color: #d4a574;
+            }
+            
+            .warning-block::before {
+                color: #d4a574;
+            }
+            
+            .action-section {
+                border-color: #444444;
+            }
+            
+            .cli-button {
+                background: #e0e0e0;
+                color: #1a1a1a;
+                border-color: #e0e0e0;
+            }
+            
+            .cli-button:hover {
+                background: #2d2d2d;
+                color: #e0e0e0;
+            }
+            
+            .footer {
+                background: #3a3a3a;
+                border-color: #444444;
+            }
+            
+            .footer-link {
+                color: #e0e0e0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="email-container">
-        <div class="header">
-            <h1>✅ Scheduled Task Complete</h1>
-        </div>
-        
-        <p>Hi ${escapeHtml(userName)},</p>
-        
-        <p>Your scheduled task has been completed successfully. Here's a summary of the results:</p>
-        
-        <div class="task-info">
-            <h2>${escapeHtml(taskTitle)}</h2>
-            <p><strong>Completed:</strong> ${escapeHtml(executionDate)}</p>
+        <div class="terminal-header">
+            <div class="terminal-controls">
+                <div class="control-dot red"></div>
+                <div class="control-dot yellow"></div>
+                <div class="control-dot green"></div>
+            </div>
+            <div class="terminal-title">task-notification.log</div>
+            <div style="width: 60px;"></div>
         </div>
         
         <div class="content">
-            <h3>Task Results:</h3>
-            <div class="content-text">${escapeHtml(taskContent)}</div>
-            ${contentTruncated ? '<div class="truncated-notice">⚠️ <strong>Content Truncated:</strong> The full results are available in the app. Click the button below to view the complete response.</div>' : ''}
+            <div class="prompt-line">
+                <span class="prompt">$</span>
+                <span class="command">cat task_completion.log</span>
+            </div>
+            
+            <div class="output">
+                <div class="status-line">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">TASK_COMPLETE</span>
+                </div>
+                
+                <div class="section-header">// Message</div>
+                <div class="prompt-line">
+                    <span class="prompt">></span>
+                    <span class="command">Hello ${escapeHtml(userName)},</span>
+                </div>
+                <div class="prompt-line">
+                    <span class="prompt">></span>
+                    <span class="command">Your scheduled task has been completed successfully.</span>
+                </div>
+                
+                <div class="section-header">// Task Information</div>
+                <div class="info-block">
+                    <div class="key-value">
+                        <span class="key">task_name:</span>
+                        <span class="value">"${escapeHtml(taskTitle)}"</span>
+                    </div>
+                    <div class="key-value">
+                        <span class="key">status:</span>
+                        <span class="value">completed</span>
+                    </div>
+                    <div class="key-value">
+                        <span class="key">completed_at:</span>
+                        <span class="value">${escapeHtml(executionDate)}</span>
+                    </div>
+                </div>
+                
+                <div class="section-header">// Execution Output</div>
+                <div class="code-block">${escapeHtml(taskContent)}</div>
+                
+                ${
+                  contentTruncated
+                    ? `<div class="warning-block">
+                    <div class="warning-content">
+                        <strong>INFO:</strong> Output truncated. Full results available in dashboard.
+                    </div>
+                </div>`
+                    : ''
+                }
+                
+                <div class="section-header">// Next Actions</div>
+                <div class="prompt-line">
+                    <span class="prompt">></span>
+                    <span class="command">View complete results and logs</span>
+                </div>
+                
+                <div class="button-container">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/chat/${chatId}" class="cli-button">
+                        open dashboard
+                    </a>
+                </div>
+                
+                <div class="action-section">
+                    <div class="prompt-line">
+                        <span class="prompt">#</span>
+                        <span class="command comment">End of log file</span>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/chat/${chatId}" class="view-full-btn">
-            View Full Results
-        </a>
-        
         <div class="footer">
-            <p>This email was sent because you enabled email notifications for this scheduled task.</p>
-            <p>You can manage your notification preferences in your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/settings">account settings</a>.</p>
+            <div class="footer-line">
+                <span class="comment">// This notification was sent because email alerts are enabled for this task</span>
+            </div>
+            <div class="footer-line">
+                <span class="comment">// Configure settings: </span>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/settings" class="footer-link">account_settings</a>
+            </div>
         </div>
     </div>
 </body>
 </html>`;
 }
+
+/**
+ * Swiss minimal email template (Alternative Template)
+ */
+// function createSwissTemplate({
+//   taskTitle,
+//   executionDate,
+//   taskContent,
+//   contentTruncated,
+//   chatId,
+//   userName,
+// }: {
+//   taskTitle: string;
+//   executionDate: string;
+//   taskContent: string;
+//   contentTruncated: boolean;
+//   chatId: string;
+//   userName: string;
+// }): string {
+//   return `<!DOCTYPE html>
+// <html lang="en">
+// <head>
+//     <meta charset="UTF-8">
+//     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//     <meta name="color-scheme" content="light dark">
+//     <meta name="supported-color-schemes" content="light dark">
+//     <title>Task Complete: ${escapeHtml(taskTitle)}</title>
+//     <style>
+//         * {
+//             margin: 0;
+//             padding: 0;
+//             box-sizing: border-box;
+//         }
+
+//         body {
+//             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+//             line-height: 1.5;
+//             color: #2c2c2c;
+//             background: #ffffff;
+//             min-height: 100vh;
+//             padding: 40px 20px;
+//         }
+
+//         .email-container {
+//             max-width: 600px;
+//             margin: 0 auto;
+//             background: #ffffff;
+//             border: 1px solid #e5e5e5;
+//             animation: fadeIn 0.6s ease-out;
+//         }
+
+//         @keyframes fadeIn {
+//             from {
+//                 opacity: 0;
+//                 transform: translateY(20px);
+//             }
+//             to {
+//                 opacity: 1;
+//                 transform: translateY(0);
+//             }
+//         }
+
+//         .header {
+//             padding: 60px 40px 40px;
+//             border-bottom: 1px solid #e5e5e5;
+//         }
+
+//         .status-indicator {
+//             width: 12px;
+//             height: 12px;
+//             background: #2c2c2c;
+//             border-radius: 50%;
+//             margin-bottom: 30px;
+//         }
+
+//         .header-title {
+//             font-size: 32px;
+//             font-weight: 300;
+//             color: #2c2c2c;
+//             margin-bottom: 12px;
+//             letter-spacing: -0.5px;
+//         }
+
+//         .header-subtitle {
+//             font-size: 16px;
+//             color: #666666;
+//             font-weight: 400;
+//             line-height: 1.4;
+//         }
+
+//         .main-content {
+//             padding: 40px;
+//         }
+
+//         .section {
+//             margin-bottom: 50px;
+//         }
+
+//         .section:last-child {
+//             margin-bottom: 0;
+//         }
+
+//         .section-label {
+//             font-size: 12px;
+//             color: #999999;
+//             text-transform: uppercase;
+//             letter-spacing: 1px;
+//             margin-bottom: 16px;
+//             font-weight: 500;
+//         }
+
+//         .greeting {
+//             font-size: 18px;
+//             color: #2c2c2c;
+//             margin-bottom: 20px;
+//             font-weight: 400;
+//         }
+
+//         .body-text {
+//             font-size: 16px;
+//             color: #666666;
+//             line-height: 1.6;
+//             margin-bottom: 0;
+//         }
+
+//         .task-info {
+//             border-left: 2px solid #2c2c2c;
+//             padding-left: 20px;
+//         }
+
+//         .task-title {
+//             font-size: 20px;
+//             font-weight: 500;
+//             color: #2c2c2c;
+//             margin-bottom: 8px;
+//             line-height: 1.3;
+//         }
+
+//         .task-meta {
+//             font-size: 14px;
+//             color: #999999;
+//             font-weight: 400;
+//         }
+
+//         .results-content {
+//             background: #fafafa;
+//             padding: 30px;
+//             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+//             font-size: 14px;
+//             line-height: 1.6;
+//             color: #444444;
+//             white-space: pre-wrap;
+//             border: 1px solid #e5e5e5;
+//         }
+
+//         .notice {
+//             margin-top: 20px;
+//             padding: 20px;
+//             background: #f5f5f5;
+//             border: 1px solid #e0e0e0;
+//             font-size: 14px;
+//             color: #666666;
+//             line-height: 1.5;
+//         }
+
+//         .notice-title {
+//             font-weight: 500;
+//             color: #2c2c2c;
+//             margin-bottom: 4px;
+//         }
+
+//         .cta-section {
+//             margin-top: 50px;
+//             padding-top: 30px;
+//             border-top: 1px solid #e5e5e5;
+//         }
+
+//         .cta-button {
+//             display: inline-block;
+//             background: #2c2c2c;
+//             color: #ffffff;
+//             text-decoration: none;
+//             padding: 16px 32px;
+//             font-size: 14px;
+//             font-weight: 500;
+//             text-transform: uppercase;
+//             letter-spacing: 0.5px;
+//             transition: all 0.2s ease;
+//         }
+
+//         .cta-button:hover {
+//             background: #1a1a1a;
+//             transform: translateY(-1px);
+//         }
+
+//         .footer {
+//             padding: 40px;
+//             border-top: 1px solid #e5e5e5;
+//             background: #fafafa;
+//         }
+
+//         .footer-text {
+//             font-size: 14px;
+//             color: #999999;
+//             line-height: 1.6;
+//             margin-bottom: 8px;
+//             text-align: center;
+//         }
+
+//         .footer-link {
+//             color: #2c2c2c;
+//             text-decoration: none;
+//             font-weight: 500;
+//         }
+
+//         .footer-link:hover {
+//             text-decoration: underline;
+//         }
+
+//         .divider {
+//             height: 1px;
+//             background: #e5e5e5;
+//             margin: 30px 0;
+//         }
+
+//         @media (max-width: 640px) {
+//             body {
+//                 padding: 20px 10px;
+//             }
+
+//             .header {
+//                 padding: 40px 25px 30px;
+//             }
+
+//             .main-content {
+//                 padding: 30px 25px;
+//             }
+
+//             .footer {
+//                 padding: 30px 25px;
+//             }
+
+//             .header-title {
+//                 font-size: 28px;
+//             }
+
+//             .task-info {
+//                 padding-left: 15px;
+//             }
+
+//             .results-content {
+//                 padding: 20px;
+//             }
+
+//             .cta-button {
+//                 padding: 14px 28px;
+//                 font-size: 13px;
+//             }
+//         }
+
+//         @media (prefers-color-scheme: dark) {
+//             body {
+//                 background: #1a1a1a;
+//                 color: #e5e5e5;
+//             }
+
+//             .email-container {
+//                 background: #1a1a1a;
+//                 border-color: #333333;
+//             }
+
+//             .header {
+//                 border-color: #333333;
+//             }
+
+//             .status-indicator {
+//                 background: #e5e5e5;
+//             }
+
+//             .header-title {
+//                 color: #e5e5e5;
+//             }
+
+//             .header-subtitle {
+//                 color: #999999;
+//             }
+
+//             .greeting, .task-title {
+//                 color: #e5e5e5;
+//             }
+
+//             .body-text {
+//                 color: #999999;
+//             }
+
+//             .task-info {
+//                 border-color: #e5e5e5;
+//             }
+
+//             .results-content {
+//                 background: #2a2a2a;
+//                 border-color: #333333;
+//                 color: #cccccc;
+//             }
+
+//             .notice {
+//                 background: #2a2a2a;
+//                 border-color: #333333;
+//             }
+
+//             .notice-title {
+//                 color: #e5e5e5;
+//             }
+
+//             .cta-section {
+//                 border-color: #333333;
+//             }
+
+//             .cta-button {
+//                 background: #e5e5e5;
+//                 color: #1a1a1a;
+//             }
+
+//             .cta-button:hover {
+//                 background: #ffffff;
+//             }
+
+//             .footer {
+//                 background: #2a2a2a;
+//                 border-color: #333333;
+//             }
+
+//             .footer-link {
+//                 color: #e5e5e5;
+//             }
+
+//             .divider {
+//                 background: #333333;
+//             }
+//         }
+//     </style>
+// </head>
+// <body>
+//     <div class="email-container">
+//         <div class="header">
+//             <div class="status-indicator"></div>
+//             <h1 class="header-title">Task Complete</h1>
+//             <p class="header-subtitle">Your scheduled automation has finished successfully</p>
+//         </div>
+
+//         <div class="main-content">
+//             <div class="section">
+//                 <p class="section-label">Message</p>
+//                 <p class="greeting">Hello ${escapeHtml(userName)},</p>
+//                 <p class="body-text">Your scheduled task has been completed successfully. Here's a summary of the results.</p>
+//             </div>
+
+//             <div class="divider"></div>
+
+//             <div class="section">
+//                 <p class="section-label">Task Details</p>
+//                 <div class="task-info">
+//                     <h2 class="task-title">${escapeHtml(taskTitle)}</h2>
+//                     <p class="task-meta">Completed on ${escapeHtml(executionDate)}</p>
+//                 </div>
+//             </div>
+
+//             <div class="divider"></div>
+
+//             <div class="section">
+//                 <p class="section-label">Results</p>
+//                 <div class="results-content">${escapeHtml(taskContent)}</div>
+//                 ${
+//                   contentTruncated
+//                     ? `<div class="notice">
+//                     <div class="notice-title">Content Truncated</div>
+//                     <div>The full results are available in the application. Use the button below to view the complete response.</div>
+//                 </div>`
+//                     : ''
+//                 }
+//             </div>
+
+//             <div class="cta-section">
+//                 <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/chat/${chatId}" class="cta-button">
+//                     View Full Results
+//                 </a>
+//             </div>
+//         </div>
+
+//         <div class="footer">
+//             <p class="footer-text">This email was sent because you enabled email notifications for this scheduled task.</p>
+//             <p class="footer-text">You can manage your notification preferences in your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/settings" class="footer-link">account settings</a>.</p>
+//         </div>
+//     </div>
+// </body>
+// </html>`;
+// }
 
 /**
  * Create plain text email template for task summary

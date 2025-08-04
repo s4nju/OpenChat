@@ -7,12 +7,13 @@ import {
   streamText,
   type UIMessage,
 } from 'ai';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { fromZonedTime } from 'date-fns-tz';
 import { searchTool } from '@/app/api/tools';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
 import { limitDepth } from '@/lib/depth-limiter';
+import { ERROR_CODES } from '@/lib/error-codes';
 import { buildSystemPrompt } from '@/lib/prompt_config';
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
@@ -20,7 +21,10 @@ import { internalAction } from './_generated/server';
 
 // Execute a scheduled task
 export const executeTask = internalAction({
-  args: { taskId: v.id('scheduled_tasks') },
+  args: {
+    taskId: v.id('scheduled_tasks'),
+    isManualTrigger: v.optional(v.boolean()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     try {
@@ -36,7 +40,7 @@ export const executeTask = internalAction({
         return null;
       }
 
-      if (!task.isActive) {
+      if (task.status !== 'active') {
         // console.log('Task is not active:', args.taskId);
         return null;
       }
@@ -69,10 +73,17 @@ export const executeTask = internalAction({
         }
       );
 
-      // Update task with the latest chat ID (for the "View Results" link)
+      // Update task with the latest chat ID and set status to 'running'
       await ctx.runMutation(internal.scheduled_tasks.updateTaskChatId, {
         taskId: args.taskId,
         chatId,
+      });
+
+      // Set status to 'running' to indicate task is executing
+      await ctx.runMutation(internal.scheduled_tasks.updateTaskAfterExecution, {
+        taskId: args.taskId,
+        lastExecuted: Date.now(),
+        newStatus: 'running',
       });
 
       // Get Composio tools from user's connected services
@@ -118,7 +129,42 @@ export const executeTask = internalAction({
       const selectedModel = MODELS_MAP['moonshotai/kimi-k2'];
       if (!selectedModel) {
         // console.log('Kimi K2 model not found');
+        return null;
       }
+
+      // --- Rate Limiting Check (same as chat route) ---
+      try {
+        // Check if the selected model uses premium credits
+        const usesPremiumCredits = selectedModel.usesPremiumCredits === true;
+
+        await ctx.runMutation(internal.users.assertNotOverLimitInternal, {
+          userId: task.userId,
+          usesPremiumCredits,
+        });
+      } catch (error) {
+        if (error instanceof ConvexError) {
+          const errorCode = error.data;
+          if (
+            errorCode === ERROR_CODES.DAILY_LIMIT_REACHED ||
+            errorCode === ERROR_CODES.MONTHLY_LIMIT_REACHED ||
+            errorCode === ERROR_CODES.PREMIUM_LIMIT_REACHED
+          ) {
+            // Rate limit reached - pause the task (don't reschedule)
+            await ctx.runMutation(
+              internal.scheduled_tasks.updateTaskAfterExecution,
+              {
+                taskId: args.taskId,
+                lastExecuted: Date.now(),
+                newStatus: 'paused',
+              }
+            );
+            return null;
+          }
+        }
+        // Re-throw non-rate-limit errors
+        throw error;
+      }
+
       // console.log('Selected model:', selectedModel);
       // Create user message
       const userMessage: UIMessage = {
@@ -254,6 +300,22 @@ export const executeTask = internalAction({
               metadata: finalMetadata,
             }
           );
+
+          // --- Usage Tracking (same as chat route) ---
+          // Only increment credits if model doesn't skip rate limiting
+          if (!selectedModel.skipRateLimit) {
+            // Check if the selected model uses premium credits
+            const usesPremiumCredits =
+              selectedModel.usesPremiumCredits === true;
+
+            await ctx.runMutation(
+              internal.users.incrementMessageCountInternal,
+              {
+                userId: task.userId,
+                usesPremiumCredits,
+              }
+            );
+          }
         },
         consumeSseStream: consumeStream,
       });
@@ -262,13 +324,23 @@ export const executeTask = internalAction({
       const now = Date.now();
 
       if (task.scheduleType === 'onetime') {
-        // One-time task - mark as completed (deactivate)
+        // One-time task - mark as archived (completed)
         await ctx.runMutation(
           internal.scheduled_tasks.updateTaskAfterExecution,
           {
             taskId: args.taskId,
             lastExecuted: now,
-            deactivate: true,
+            newStatus: 'archived',
+          }
+        );
+      } else if (args.isManualTrigger) {
+        // Manual trigger for recurring task - execute normally but don't reschedule
+        await ctx.runMutation(
+          internal.scheduled_tasks.updateTaskAfterExecution,
+          {
+            taskId: args.taskId,
+            lastExecuted: now,
+            newStatus: 'active', // Reset to active but don't schedule next execution
           }
         );
       } else {
@@ -304,9 +376,10 @@ export const executeTask = internalAction({
           nextExecution = utcDate.getTime();
         } else {
           // Weekly - parse day:HH:MM
-          const [dayStr, timeStr] = task.scheduledTime.split(':');
-          const targetDay = Number.parseInt(dayStr, 10);
-          const [hours, minutes] = timeStr.split(':').map(Number);
+          const parts = task.scheduledTime.split(':');
+          const targetDay = Number.parseInt(parts[0], 10);
+          const hours = Number.parseInt(parts[1], 10);
+          const minutes = Number.parseInt(parts[2], 10);
 
           // Create a date in the user's timezone
           const nowInUserTz = new Date();
@@ -348,6 +421,7 @@ export const executeTask = internalAction({
             lastExecuted: now,
             nextExecution,
             scheduledFunctionId,
+            newStatus: 'active', // Reset to active for next scheduled execution
           }
         );
       }
@@ -356,10 +430,11 @@ export const executeTask = internalAction({
     } catch (_error) {
       // console.log('Error executing scheduled task:', _error);
 
-      // Update task to mark last execution attempt
+      // Update task to mark last execution attempt and reset status to active
       await ctx.runMutation(internal.scheduled_tasks.updateTaskAfterExecution, {
         taskId: args.taskId,
         lastExecuted: Date.now(),
+        newStatus: 'active', // Reset to active even on error for recurring tasks
       });
 
       return null;

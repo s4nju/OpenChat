@@ -12,7 +12,12 @@ export const ScheduledTask = v.object({
   scheduledTime: v.string(), // "HH:MM" format for all types
   scheduledDate: v.optional(v.string()), // "YYYY-MM-DD" format for onetime tasks
   timezone: v.string(),
-  isActive: v.boolean(),
+  status: v.union(
+    v.literal('active'),
+    v.literal('paused'),
+    v.literal('archived'),
+    v.literal('running')
+  ),
   enableSearch: v.optional(v.boolean()),
   enabledToolSlugs: v.optional(v.array(v.string())),
   emailNotifications: v.optional(v.boolean()),
