@@ -31,7 +31,7 @@ export function ScheduledTasksPage() {
     <div className="flex h-full items-center justify-center p-4">
       <div className="w-full max-w-3xl">
         {/* Single line header */}
-        <div className="mb-12 grid grid-cols-3 items-center">
+        <div className="mb-12 grid grid-cols-3 items-center pr-4">
           {/* Tabs on the left */}
           <div className="justify-self-start">
             <Tabs
@@ -47,7 +47,7 @@ export function ScheduledTasksPage() {
           </div>
 
           {/* Centered Title */}
-          <h1 className="justify-self-center font-semibold text-3xl">Tasks</h1>
+          <h1 className="justify-self-center font-semibold text-4xl">Tasks</h1>
 
           {/* Add button on the right */}
           <div className="justify-self-end">
@@ -76,7 +76,7 @@ export function ScheduledTasksPage() {
         )}
 
         {!isLoading && filteredTasks.length === 0 && (
-          <div className="flex min-h-[300px] items-center justify-center rounded-xl border border-border bg-card/50 p-8">
+          <div className="mr-4 flex min-h-[440px] items-center justify-center rounded-xl border border-border bg-card/50">
             <div className="text-center">
               <p className="mb-4 text-muted-foreground">
                 {activeTab === 'active'
@@ -97,7 +97,14 @@ export function ScheduledTasksPage() {
         )}
 
         {!isLoading && filteredTasks.length > 0 && (
-          <div className="space-y-3">
+          <div
+            className="space-y-3 pr-4"
+            style={{
+              maxHeight: '440px',
+              overflowY: 'scroll',
+              scrollbarGutter: 'stable',
+            }}
+          >
             {filteredTasks.map((task) => (
               <TaskCard key={task._id} task={task} />
             ))}
