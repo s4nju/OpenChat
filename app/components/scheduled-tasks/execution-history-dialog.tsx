@@ -4,7 +4,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { ClockIcon, XIcon } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { memo, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,8 @@ function ExecutionHistoryDialogComponent({
   isOpen,
   onClose,
 }: ExecutionHistoryDialogProps) {
+  const router = useRouter();
+
   // Memoized query configuration
   const historyQueryConfig = useMemo(
     () => ({
@@ -240,11 +242,15 @@ function ExecutionHistoryDialogComponent({
 
                         <div className="flex items-center gap-2">
                           {execution.chatId && (
-                            <Link href={`/c/${execution.chatId}`}>
-                              <Button size="sm" variant="outline">
-                                View Results
-                              </Button>
-                            </Link>
+                            <Button
+                              onClick={() =>
+                                router.push(`/c/${execution.chatId}`)
+                              }
+                              size="sm"
+                              variant="outline"
+                            >
+                              View Results
+                            </Button>
                           )}
                         </div>
                       </div>
