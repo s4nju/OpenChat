@@ -10,10 +10,11 @@ export type CreateTaskForm = {
   scheduleType: ScheduleType;
   scheduledTime: string;
   scheduledDate?: string; // For onetime tasks
+  selectedDay?: number; // For weekly tasks (0-6, Sunday-Saturday)
   timezone: string;
   enableSearch?: boolean;
   enabledToolSlugs?: string[];
   emailNotifications?: boolean;
 };
 
-export type TaskStatus = 'active' | 'archived';
+export type TaskStatus = 'active' | 'paused' | 'archived' | 'running';

@@ -5,12 +5,9 @@ import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { format } from 'date-fns';
 import { Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  getNextAvailableDate,
-  getNextAvailableTime,
-} from '@/app/utils/time-utils';
+import { formatWeeklyTime, parseWeeklyTime } from '@/app/utils/time-utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -34,6 +31,49 @@ const TASK_LIMITS = {
   TOTAL_TASKS: 10,
 } as const;
 
+// Helper function to get tomorrow's date as YYYY-MM-DD
+const getTomorrowDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return format(tomorrow, 'yyyy-MM-dd');
+};
+
+// Pure function to compute initial form state - no side effects
+const getInitialFormState = (
+  initialData?: Partial<CreateTaskForm> & { taskId?: Id<'scheduled_tasks'> },
+  mode: 'create' | 'edit' = 'create'
+): CreateTaskForm => {
+  // Parse weekly time if needed
+  const parsedData =
+    initialData?.scheduleType === 'weekly' && initialData?.scheduledTime
+      ? {
+          ...initialData,
+          scheduledTime: parseWeeklyTime(initialData.scheduledTime).time,
+          selectedDay: parseWeeklyTime(initialData.scheduledTime).day,
+        }
+      : initialData;
+
+  // Determine if this is a new onetime task that needs default date/time
+  const isNewOnetimeTask =
+    mode === 'create' && (parsedData?.scheduleType || 'daily') === 'onetime';
+
+  return {
+    title: parsedData?.title || '',
+    prompt: parsedData?.prompt || '',
+    scheduleType: parsedData?.scheduleType || 'daily',
+    scheduledTime: parsedData?.scheduledTime || '09:00',
+    scheduledDate:
+      parsedData?.scheduledDate ||
+      (isNewOnetimeTask ? getTomorrowDate() : undefined),
+    selectedDay: parsedData?.selectedDay || 1, // Default to Monday
+    timezone:
+      parsedData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+    enableSearch: parsedData?.enableSearch,
+    enabledToolSlugs: parsedData?.enabledToolSlugs || [],
+    emailNotifications: parsedData?.emailNotifications,
+  };
+};
+
 type CreateTaskFormProps = {
   onSuccess: () => void;
   onCancel: () => void;
@@ -49,45 +89,26 @@ export function TaskFormContent({
   initialData,
   mode = 'create',
 }: CreateTaskFormProps) {
-  const [form, setForm] = useState<CreateTaskForm>({
-    title: initialData?.title || '',
-    prompt: initialData?.prompt || '',
-    scheduleType: initialData?.scheduleType || 'daily',
-    scheduledTime: initialData?.scheduledTime || '09:00',
-    scheduledDate: initialData?.scheduledDate,
-    timezone:
-      initialData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-    enableSearch: initialData?.enableSearch,
-    enabledToolSlugs: initialData?.enabledToolSlugs || [],
-    emailNotifications: initialData?.emailNotifications,
-  });
+  // Use pure function to compute initial state - no useEffect needed
+  const [form, setForm] = useState<CreateTaskForm>(() =>
+    getInitialFormState(initialData, mode)
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createTask = useMutation(api.scheduled_tasks.createScheduledTask);
   const updateTask = useMutation(api.scheduled_tasks.updateScheduledTask);
 
-  // Fetch task limits data
-  const { data: taskLimits } = useTanStackQuery({
-    ...convexQuery(api.scheduled_tasks.getTaskLimits, {}),
-    gcTime: 30 * 1000, // 30 seconds
-  });
+  // Memoize query configuration to prevent recreation
+  const queryConfig = useMemo(
+    () => ({
+      ...convexQuery(api.scheduled_tasks.getTaskLimits, {}),
+      gcTime: 30 * 1000, // 30 seconds
+    }),
+    []
+  );
 
-  // Reset form when component mounts or initialData changes
-  useEffect(() => {
-    setForm({
-      title: initialData?.title || '',
-      prompt: initialData?.prompt || '',
-      scheduleType: initialData?.scheduleType || 'daily',
-      scheduledTime: initialData?.scheduledTime || '09:00',
-      scheduledDate: initialData?.scheduledDate,
-      timezone:
-        initialData?.timezone ||
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-      enableSearch: initialData?.enableSearch,
-      enabledToolSlugs: initialData?.enabledToolSlugs || [],
-      emailNotifications: initialData?.emailNotifications,
-    });
-  }, [initialData]);
+  // Fetch task limits data
+  const { data: taskLimits } = useTanStackQuery(queryConfig);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,12 +120,18 @@ export function TaskFormContent({
 
     setIsSubmitting(true);
     try {
+      // Format scheduledTime for weekly tasks
+      const formattedScheduledTime =
+        form.scheduleType === 'weekly'
+          ? formatWeeklyTime(form.selectedDay || 1, form.scheduledTime)
+          : form.scheduledTime;
+
       if (mode === 'edit' && initialData?.taskId) {
         await updateTask({
           taskId: initialData.taskId,
           title: form.title.trim(),
           prompt: form.prompt.trim(),
-          scheduledTime: form.scheduledTime,
+          scheduledTime: formattedScheduledTime,
           scheduledDate: form.scheduledDate,
           timezone: form.timezone,
           enableSearch: form.enableSearch,
@@ -117,7 +144,7 @@ export function TaskFormContent({
           title: form.title.trim(),
           prompt: form.prompt.trim(),
           scheduleType: form.scheduleType as 'onetime' | 'daily' | 'weekly',
-          scheduledTime: form.scheduledTime,
+          scheduledTime: formattedScheduledTime,
           scheduledDate: form.scheduledDate,
           timezone: form.timezone,
           enableSearch: form.enableSearch,
@@ -143,38 +170,6 @@ export function TaskFormContent({
   ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
-
-  // Set default time and date for onetime tasks when schedule type changes
-  useEffect(() => {
-    if (form.scheduleType === 'onetime' && mode === 'create') {
-      // Only set defaults if values are not already set
-      const needsTimeDefault =
-        !initialData?.scheduledTime && form.scheduledTime === '09:00';
-      const needsDateDefault = !(
-        initialData?.scheduledDate || form.scheduledDate
-      );
-
-      if (needsTimeDefault || needsDateDefault) {
-        const nextTime = getNextAvailableTime();
-        const nextDate = getNextAvailableDate();
-
-        setForm((prev) => ({
-          ...prev,
-          ...(needsTimeDefault && { scheduledTime: nextTime }),
-          ...(needsDateDefault && {
-            scheduledDate: format(nextDate, 'yyyy-MM-dd'),
-          }),
-        }));
-      }
-    }
-  }, [
-    form.scheduleType,
-    mode,
-    initialData?.scheduledTime,
-    initialData?.scheduledDate,
-    form.scheduledTime,
-    form.scheduledDate,
-  ]);
 
   // Helper to convert form.scheduledDate string to Date object
   const getSelectedDate = () => {
@@ -285,10 +280,13 @@ export function TaskFormContent({
           <TimePicker
             filterPastTimes={form.scheduleType === 'onetime'}
             name="scheduledTime"
-            onChange={(value) => updateForm('scheduledTime', value)}
+            onChange={(value: string) => updateForm('scheduledTime', value)}
             onDateChange={handleDateChange}
+            onDayChange={(day: number) => updateForm('selectedDay', day)}
             selectedDate={getSelectedDate()}
+            selectedDay={form.selectedDay}
             showDatePicker={form.scheduleType === 'onetime'}
+            showDayPicker={form.scheduleType === 'weekly'}
             value={form.scheduledTime}
           />
         </div>
