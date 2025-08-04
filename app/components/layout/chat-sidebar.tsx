@@ -1,12 +1,7 @@
 'use client';
 
 import { convexQuery } from '@convex-dev/react-query';
-import {
-  CalendarDots,
-  MagnifyingGlass,
-  Plus,
-  SidebarSimple,
-} from '@phosphor-icons/react';
+import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Link from 'next/link';
@@ -85,6 +80,13 @@ const ChatSidebar = memo(function SidebarComponent({
   const handleConditionalNewChatClick = useCallback(() => {
     if (pathname !== '/') {
       router.push('/');
+    }
+  }, [pathname, router]);
+
+  // Memoize conditional tasks button handler
+  const handleConditionalTasksClick = useCallback(() => {
+    if (pathname !== '/tasks') {
+      router.push('/tasks');
     }
   }, [pathname, router]);
 
@@ -275,14 +277,11 @@ const ChatSidebar = memo(function SidebarComponent({
           </Button>
 
           <Button
-            asChild
-            className="h-9 w-full justify-start gap-2 font-medium text-sm"
-            variant="ghost"
+            className="h-9 w-full justify-center font-bold text-sm"
+            onClick={handleConditionalTasksClick}
+            variant="outline"
           >
-            <Link href="/tasks">
-              <CalendarDots className="h-4 w-4" weight="bold" />
-              Scheduled Tasks
-            </Link>
+            Tasks
           </Button>
 
           <div className="relative">
