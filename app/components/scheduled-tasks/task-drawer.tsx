@@ -1,7 +1,7 @@
 'use client';
 
-import { X } from '@phosphor-icons/react';
-import { lazy, Suspense, useRef } from 'react';
+import { XIcon } from '@phosphor-icons/react';
+import { lazy, Suspense, useState } from 'react';
 import {
   Drawer,
   DrawerClose,
@@ -25,6 +25,54 @@ const FormLoadingSpinner = () => (
   </div>
 );
 
+type SharedDrawerContentProps = {
+  mode: 'create' | 'edit';
+  initialData?: Partial<CreateTaskForm> & { taskId?: Id<'scheduled_tasks'> };
+  onClose: () => void;
+};
+
+// Extracted shared drawer content component
+function SharedDrawerContent({
+  mode,
+  initialData,
+  onClose,
+}: SharedDrawerContentProps) {
+  return (
+    <DrawerContent className="max-h-[90vh]">
+      <div className="flex h-full max-h-[80vh] flex-col">
+        <DrawerHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
+          <DrawerTitle className="font-semibold text-base">
+            {mode === 'edit'
+              ? 'Edit Scheduled Task'
+              : 'Create New Scheduled Task'}
+          </DrawerTitle>
+          <DrawerClose asChild>
+            <button
+              aria-label="Close dialog"
+              className="flex size-11 items-center justify-center rounded-full hover:bg-muted focus:outline-none"
+              type="button"
+            >
+              <XIcon className="size-5" />
+            </button>
+          </DrawerClose>
+        </DrawerHeader>
+
+        <Suspense fallback={<FormLoadingSpinner />}>
+          <TaskFormContent
+            CloseWrapper={({ children }) => (
+              <DrawerClose asChild>{children}</DrawerClose>
+            )}
+            initialData={initialData}
+            mode={mode}
+            onCancel={onClose}
+            onSuccess={onClose}
+          />
+        </Suspense>
+      </div>
+    </DrawerContent>
+  );
+}
+
 type TaskDrawerProps = {
   trigger?: React.ReactNode;
   isOpen?: boolean;
@@ -40,104 +88,38 @@ export function TaskDrawer({
   initialData,
   mode = 'create',
 }: TaskDrawerProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
+  // Internal state for uncontrolled mode
+  const [internalOpen, setInternalOpen] = useState(false);
 
-  // If using trigger mode (uncontrolled)
-  if (trigger) {
-    return (
-      <Drawer>
-        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]">
-          <div className="flex h-full max-h-[80vh] flex-col">
-            <DrawerHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
-              <DrawerTitle className="font-semibold text-base">
-                {mode === 'edit'
-                  ? 'Edit Scheduled Task'
-                  : 'Create New Scheduled Task'}
-              </DrawerTitle>
-              <DrawerClose asChild>
-                <button
-                  aria-label="Close dialog"
-                  className="flex size-11 items-center justify-center rounded-full hover:bg-muted focus:outline-none"
-                  type="button"
-                >
-                  <X className="size-5" />
-                </button>
-              </DrawerClose>
-            </DrawerHeader>
+  // Determine if we're in controlled or uncontrolled mode
+  const isControlled = isOpen !== undefined;
+  const open = isControlled ? isOpen : internalOpen;
+  const handleClose = () => {
+    if (isControlled) {
+      onClose?.();
+    } else {
+      setInternalOpen(false);
+    }
+  };
 
-            <Suspense fallback={<FormLoadingSpinner />}>
-              <TaskFormContent
-                CloseWrapper={({ children }) => (
-                  <DrawerClose asChild>{children}</DrawerClose>
-                )}
-                initialData={initialData}
-                mode={mode}
-                onCancel={() => {
-                  /* handled by DrawerClose wrapper */
-                }}
-                onSuccess={() => {
-                  // Programmatically trigger the close button
-                  closeRef.current?.click();
-                }}
-              />
-            </Suspense>
-            {/* Hidden close button for programmatic closing */}
-            <DrawerClose asChild>
-              <button
-                ref={closeRef}
-                style={{ display: 'none' }}
-                type="button"
-              />
-            </DrawerClose>
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isControlled) {
+      if (!newOpen) {
+        onClose?.();
+      }
+    } else {
+      setInternalOpen(newOpen);
+    }
+  };
 
-  // Controlled mode (existing behavior)
   return (
-    <Drawer onOpenChange={(open) => !open && onClose?.()} open={isOpen}>
-      <DrawerContent className="max-h-[90vh]">
-        <div className="flex h-full max-h-[80vh] flex-col">
-          <DrawerHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
-            <DrawerTitle className="font-semibold text-base">
-              {mode === 'edit'
-                ? 'Edit Scheduled Task'
-                : 'Create New Scheduled Task'}
-            </DrawerTitle>
-            <DrawerClose asChild>
-              <button
-                aria-label="Close dialog"
-                className="flex size-11 items-center justify-center rounded-full hover:bg-muted focus:outline-none"
-                type="button"
-              >
-                <X className="size-5" />
-              </button>
-            </DrawerClose>
-          </DrawerHeader>
-
-          <Suspense fallback={<FormLoadingSpinner />}>
-            <TaskFormContent
-              CloseWrapper={({ children }) => (
-                <DrawerClose asChild>{children}</DrawerClose>
-              )}
-              initialData={initialData}
-              mode={mode}
-              onCancel={
-                onClose ||
-                (() => {
-                  // No-op fallback
-                })
-              }
-              onSuccess={() => {
-                onClose?.();
-              }}
-            />
-          </Suspense>
-        </div>
-      </DrawerContent>
+    <Drawer onOpenChange={handleOpenChange} open={open}>
+      {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
+      <SharedDrawerContent
+        initialData={initialData}
+        mode={mode}
+        onClose={handleClose}
+      />
     </Drawer>
   );
 }
