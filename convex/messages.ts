@@ -131,6 +131,49 @@ async function cleanupOrphanedAttachments(
   await Promise.allSettled(cleanupPromises);
 }
 
+/**
+ * Shared helper function to insert a message to chat
+ * Used by both public mutations (with auth) and internal mutations (without auth)
+ */
+async function insertMessageToChat(
+  ctx: MutationCtx,
+  args: {
+    chatId: Id<'chats'>;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    parentMessageId?: Id<'messages'>;
+    // biome-ignore lint/suspicious/noExplicitAny: <parts can be any>
+    parts?: any;
+    metadata?: {
+      modelId?: string;
+      modelName?: string;
+      inputTokens?: number;
+      outputTokens?: number;
+      reasoningTokens?: number;
+      totalTokens?: number;
+      cachedInputTokens?: number;
+      serverDurationMs?: number;
+      includeSearch?: boolean;
+      reasoningEffort?: string;
+    };
+  },
+  userId: Id<'users'>
+): Promise<{ messageId: Id<'messages'> }> {
+  const messageId = await ctx.db.insert('messages', {
+    chatId: args.chatId,
+    userId,
+    role: args.role,
+    content: args.content,
+    parentMessageId: args.parentMessageId,
+    parts: args.parts,
+    metadata: args.metadata || {},
+    createdAt: Date.now(),
+  });
+
+  await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
+  return { messageId };
+}
+
 export const sendUserMessageToChat = mutation({
   args: {
     chatId: v.id('chats'),
@@ -160,18 +203,7 @@ export const sendUserMessageToChat = mutation({
     // Verify that the authenticated user owns the chat
     const { userId } = await ensureChatAccess(ctx, args.chatId);
 
-    const messageId = await ctx.db.insert('messages', {
-      chatId: args.chatId,
-      userId,
-      role: args.role,
-      content: args.content,
-      parentMessageId: args.parentMessageId,
-      parts: args.parts,
-      metadata: args.metadata || {},
-      createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    return await insertMessageToChat(ctx, args, userId);
   },
 });
 
@@ -206,18 +238,7 @@ export const saveAssistantMessage = mutation({
     // Verify that the authenticated user owns the chat
     const { userId } = await ensureChatAccess(ctx, args.chatId);
 
-    const messageId = await ctx.db.insert('messages', {
-      chatId: args.chatId,
-      userId,
-      role: args.role,
-      content: args.content,
-      parentMessageId: args.parentMessageId,
-      parts: args.parts,
-      metadata: args.metadata || {},
-      createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    return await insertMessageToChat(ctx, args, userId);
   },
 });
 
@@ -442,18 +463,7 @@ export const sendUserMessageToChatInternal = internalMutation({
       throw new Error('Chat not found');
     }
 
-    const messageId = await ctx.db.insert('messages', {
-      chatId: args.chatId,
-      userId: chat.userId,
-      role: args.role,
-      content: args.content,
-      parentMessageId: args.parentMessageId,
-      parts: args.parts,
-      metadata: args.metadata || {},
-      createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    return await insertMessageToChat(ctx, args, chat.userId);
   },
 });
 
@@ -492,17 +502,6 @@ export const saveAssistantMessageInternal = internalMutation({
       throw new Error('Chat not found');
     }
 
-    const messageId = await ctx.db.insert('messages', {
-      chatId: args.chatId,
-      userId: chat.userId,
-      role: args.role,
-      content: args.content,
-      parentMessageId: args.parentMessageId,
-      parts: args.parts,
-      metadata: args.metadata || {},
-      createdAt: Date.now(),
-    });
-    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
-    return { messageId };
+    return await insertMessageToChat(ctx, args, chat.userId);
   },
 });
