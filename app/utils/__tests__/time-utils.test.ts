@@ -234,6 +234,73 @@ describe('time-utils', () => {
         const result2 = formatTime12Hour('14:35');
         expect(result2).toEqual({ hour12: '2', minute: '35', ampm: 'PM' });
       });
+
+      it('should handle edge cases correctly', () => {
+        // Midnight
+        expect(formatTime12Hour('00:00')).toEqual({
+          hour12: '12',
+          minute: '00',
+          ampm: 'AM',
+        });
+        // Noon
+        expect(formatTime12Hour('12:00')).toEqual({
+          hour12: '12',
+          minute: '00',
+          ampm: 'PM',
+        });
+        // Last minute of day
+        expect(formatTime12Hour('23:59')).toEqual({
+          hour12: '11',
+          minute: '59',
+          ampm: 'PM',
+        });
+        // Single digit hours and minutes
+        expect(formatTime12Hour('9:05')).toEqual({
+          hour12: '9',
+          minute: '05',
+          ampm: 'AM',
+        });
+      });
+
+      it('should throw error for invalid time format', () => {
+        // Invalid format strings
+        expect(() => formatTime12Hour('25:00')).toThrow('Invalid time format');
+        expect(() => formatTime12Hour('12:60')).toThrow('Invalid time format');
+        expect(() => formatTime12Hour('abc:def')).toThrow(
+          'Invalid time format'
+        );
+        expect(() => formatTime12Hour('12')).toThrow('Invalid time format');
+        expect(() => formatTime12Hour('12:30:45')).toThrow(
+          'Invalid time format'
+        );
+        expect(() => formatTime12Hour('')).toThrow('Invalid time format');
+      });
+
+      it('should throw error for out-of-range hour values', () => {
+        expect(() => formatTime12Hour('24:00')).toThrow('Invalid time format');
+        expect(() => formatTime12Hour('-1:00')).toThrow('Invalid time format');
+      });
+
+      it('should throw error for out-of-range minute values', () => {
+        expect(() => formatTime12Hour('12:60')).toThrow('Invalid time format');
+        expect(() => formatTime12Hour('12:-1')).toThrow('Invalid time format');
+      });
+
+      it('should accept various valid formats', () => {
+        // Single digit hours
+        expect(formatTime12Hour('1:30')).toEqual({
+          hour12: '1',
+          minute: '30',
+          ampm: 'AM',
+        });
+        expect(formatTime12Hour('01:30')).toEqual({
+          hour12: '1',
+          minute: '30',
+          ampm: 'AM',
+        });
+        // Single digit minutes (should not be valid in strict format)
+        expect(() => formatTime12Hour('12:5')).toThrow('Invalid time format');
+      });
     });
 
     describe('isTimeInPast', () => {

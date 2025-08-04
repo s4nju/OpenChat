@@ -1,5 +1,11 @@
 // Helper functions for time conversion and formatting
 
+// Regex for validating "HH:mm" time format (24-hour)
+const TIME_24H_REGEX = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
+
+// Regex for validating strict "HH:MM" format (two-digit hours and minutes)
+const TIME_STRICT_REGEX = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+
 export const convertTo12Hour = (hour24: number): number => {
   if (hour24 === 0) {
     return 12;
@@ -17,12 +23,45 @@ export const convertTo24Hour = (hour12: number, ampm: string): number => {
   return hour12 === 12 ? 12 : hour12 + 12;
 };
 
-export const formatTime12Hour = (time24: string) => {
+// Return type interface for formatTime12Hour function
+export interface Time12HourFormat {
+  hour12: string;
+  minute: string;
+  ampm: 'AM' | 'PM';
+}
+
+export const formatTime12Hour = (time24: string): Time12HourFormat => {
+  // Validate input format using regex - expects "HH:mm" format
+  if (!TIME_24H_REGEX.test(time24)) {
+    throw new Error(
+      `Invalid time format. Expected "HH:mm" format, received: "${time24}"`
+    );
+  }
+
   const [hour, minute] = time24.split(':');
   const hour24 = Number.parseInt(hour, 10);
+
+  // Additional validation for hour range (0-23)
+  if (hour24 < 0 || hour24 > 23) {
+    throw new Error(`Invalid hour value. Expected 0-23, received: ${hour24}`);
+  }
+
+  // Additional validation for minute range (0-59)
+  const minuteValue = Number.parseInt(minute, 10);
+  if (minuteValue < 0 || minuteValue > 59) {
+    throw new Error(
+      `Invalid minute value. Expected 0-59, received: ${minuteValue}`
+    );
+  }
+
   const hour12 = convertTo12Hour(hour24);
-  const ampm = hour24 < 12 ? 'AM' : 'PM';
-  return { hour12: hour12.toString(), minute, ampm };
+  const ampm: 'AM' | 'PM' = hour24 < 12 ? 'AM' : 'PM';
+
+  return {
+    hour12: hour12.toString(),
+    minute,
+    ampm,
+  };
 };
 
 export const formatNextRun = (
@@ -163,20 +202,116 @@ export const getNextAvailableDate = (): Date => {
 export const parseWeeklyTime = (
   scheduledTime: string
 ): { day: number; time: string } => {
-  const parts = scheduledTime.split(':');
+  // Validate input is a string
+  if (typeof scheduledTime !== 'string') {
+    throw new Error('scheduledTime must be a string');
+  }
+
+  const trimmedTime = scheduledTime.trim();
+  if (!trimmedTime) {
+    throw new Error('scheduledTime cannot be empty');
+  }
+
+  const parts = trimmedTime.split(':');
+
   if (parts.length === 3) {
     // Format is "day:HH:MM"
-    const day = Number.parseInt(parts[0], 10);
-    const time = `${parts[1]}:${parts[2]}`;
+    const dayStr = parts[0];
+    const hourStr = parts[1];
+    const minuteStr = parts[2];
+
+    // Validate day part
+    const day = Number.parseInt(dayStr, 10);
+    if (Number.isNaN(day) || day < 0 || day > 6) {
+      throw new Error('Day must be a number between 0 and 6 (Sunday-Saturday)');
+    }
+
+    // Validate hour part
+    const hour = Number.parseInt(hourStr, 10);
+    if (Number.isNaN(hour) || hour < 0 || hour > 23 || hourStr.length !== 2) {
+      throw new Error(
+        'Hour must be a valid two-digit number between 00 and 23'
+      );
+    }
+
+    // Validate minute part
+    const minute = Number.parseInt(minuteStr, 10);
+    if (
+      Number.isNaN(minute) ||
+      minute < 0 ||
+      minute > 59 ||
+      minuteStr.length !== 2
+    ) {
+      throw new Error(
+        'Minute must be a valid two-digit number between 00 and 59'
+      );
+    }
+
+    const time = `${hourStr}:${minuteStr}`;
     return { day, time };
   }
-  // Fallback for regular time format - default to Monday
-  return { day: 1, time: scheduledTime };
+
+  // Fallback for regular time format (HH:MM) - validate and default to Monday
+  if (parts.length === 2) {
+    const hourStr = parts[0];
+    const minuteStr = parts[1];
+
+    // Validate hour part
+    const hour = Number.parseInt(hourStr, 10);
+    if (Number.isNaN(hour) || hour < 0 || hour > 23 || hourStr.length !== 2) {
+      throw new Error(
+        'Hour must be a valid two-digit number between 00 and 23'
+      );
+    }
+
+    // Validate minute part
+    const minute = Number.parseInt(minuteStr, 10);
+    if (
+      Number.isNaN(minute) ||
+      minute < 0 ||
+      minute > 59 ||
+      minuteStr.length !== 2
+    ) {
+      throw new Error(
+        'Minute must be a valid two-digit number between 00 and 59'
+      );
+    }
+
+    return { day: 1, time: trimmedTime };
+  }
+
+  throw new Error('scheduledTime must be in format "day:HH:MM" or "HH:MM"');
 };
 
 export const formatWeeklyTime = (day: number, time: string): string => {
+  // Validate day parameter
+  if (typeof day !== 'number') {
+    throw new Error('day must be a number');
+  }
+
+  if (Number.isNaN(day) || day < 0 || day > 6 || !Number.isInteger(day)) {
+    throw new Error('day must be an integer between 0 and 6 (Sunday-Saturday)');
+  }
+
+  // Validate time parameter
+  if (typeof time !== 'string') {
+    throw new Error('time must be a string');
+  }
+
+  const trimmedTime = time.trim();
+  if (!trimmedTime) {
+    throw new Error('time cannot be empty');
+  }
+
+  // Validate time format (HH:MM)
+  if (!TIME_STRICT_REGEX.test(trimmedTime)) {
+    throw new Error(
+      'time must be in format "HH:MM" with valid hours (00-23) and minutes (00-59)'
+    );
+  }
+
   // Format: "day:HH:MM" where day is 0-6 (Sunday-Saturday)
-  return `${day}:${time}`;
+  return `${day}:${trimmedTime}`;
 };
 
 export const getDayName = (dayNumber: number): string => {
