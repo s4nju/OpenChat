@@ -185,6 +185,9 @@ export const executeTask = internalAction({
       // Consume the stream to ensure it runs to completion (same as chat route)
       await result.consumeStream();
 
+      // Variable to store email content outside the callback
+      let emailTextContent = '';
+
       // Get UI-compatible parts using toUIMessageStreamResponse (same as chat route)
       result.toUIMessageStreamResponse({
         originalMessages: [userMessage],
@@ -208,11 +211,36 @@ export const executeTask = internalAction({
             .map((part) => part.text)
             .join('');
 
+          // Extract email content (last text part only)
+          const textParts = Messages.responseMessage.parts.filter(
+            (part) => part.type === 'text'
+          );
+          emailTextContent =
+            textParts.length > 0 ? textParts.at(-1)?.text || '' : '';
+
           // Limit depth of parts to prevent Convex nesting limit errors
           const depthLimitedParts = limitDepth(
             Messages.responseMessage.parts,
             14
           );
+
+          // Send email notification after message processing is complete
+          if (task.emailNotifications && emailTextContent) {
+            const executionDate = `${currentDate} ${currentTime}`;
+            // Schedule email mutation to run immediately after this action completes
+            await ctx.scheduler.runAfter(
+              0,
+              internal.email.sendTaskSummaryEmail,
+              {
+                userId: task.userId,
+                taskId: args.taskId,
+                taskTitle: task.title,
+                taskContent: emailTextContent,
+                executionDate,
+                chatId,
+              }
+            );
+          }
 
           // Save assistant message with UI-compatible parts
           await ctx.runMutation(

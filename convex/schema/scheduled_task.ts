@@ -15,6 +15,7 @@ export const ScheduledTask = v.object({
   isActive: v.boolean(),
   enableSearch: v.optional(v.boolean()),
   enabledToolSlugs: v.optional(v.array(v.string())),
+  emailNotifications: v.optional(v.boolean()),
   lastExecuted: v.optional(v.number()),
   nextExecution: v.optional(v.number()),
   scheduledFunctionId: v.optional(v.string()), // Convex scheduled function ID

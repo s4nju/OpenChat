@@ -159,6 +159,7 @@ export const createScheduledTask = mutation({
     timezone: v.string(),
     enableSearch: v.optional(v.boolean()),
     enabledToolSlugs: v.optional(v.array(v.string())),
+    emailNotifications: v.optional(v.boolean()),
     chatId: v.optional(v.id('chats')),
   },
   returns: v.id('scheduled_tasks'),
@@ -209,6 +210,7 @@ export const createScheduledTask = mutation({
       isActive: true,
       enableSearch: args.enableSearch,
       enabledToolSlugs: args.enabledToolSlugs,
+      emailNotifications: args.emailNotifications,
       chatId: args.chatId,
       createdAt: now,
       nextExecution,
@@ -249,6 +251,7 @@ export const listScheduledTasks = query({
       isActive: v.boolean(),
       enableSearch: v.optional(v.boolean()),
       enabledToolSlugs: v.optional(v.array(v.string())),
+      emailNotifications: v.optional(v.boolean()),
       lastExecuted: v.optional(v.number()),
       nextExecution: v.optional(v.number()),
       scheduledFunctionId: v.optional(v.string()),
@@ -278,6 +281,7 @@ export const updateScheduledTask = mutation({
     timezone: v.optional(v.string()),
     enableSearch: v.optional(v.boolean()),
     enabledToolSlugs: v.optional(v.array(v.string())),
+    emailNotifications: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
   },
   returns: v.null(),
@@ -308,6 +312,9 @@ export const updateScheduledTask = mutation({
     }
     if (args.enabledToolSlugs !== undefined) {
       updates.enabledToolSlugs = args.enabledToolSlugs;
+    }
+    if (args.emailNotifications !== undefined) {
+      updates.emailNotifications = args.emailNotifications;
     }
     if (args.isActive !== undefined) {
       updates.isActive = args.isActive;
@@ -448,6 +455,7 @@ export const getTask = internalQuery({
       isActive: v.boolean(),
       enableSearch: v.optional(v.boolean()),
       enabledToolSlugs: v.optional(v.array(v.string())),
+      emailNotifications: v.optional(v.boolean()),
       lastExecuted: v.optional(v.number()),
       nextExecution: v.optional(v.number()),
       scheduledFunctionId: v.optional(v.string()),
