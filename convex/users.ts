@@ -1017,3 +1017,37 @@ export const incrementMessageCountInternal = internalMutation({
     return null;
   },
 });
+
+// Update all users' preferred model to a new value
+export const updateAllUsersPreferredModel = internalMutation({
+  args: {
+    newPreferredModel: v.string(),
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+    totalCount: v.number(),
+  }),
+  handler: async (ctx, { newPreferredModel }) => {
+    // Get all users from the database
+    const allUsers = await ctx.db.query('users').collect();
+    const totalCount = allUsers.length;
+
+    // Update each user's preferredModel in parallel
+    const updatePromises = allUsers.map(async (user) => {
+      await ctx.db.patch(user._id, {
+        preferredModel: newPreferredModel,
+      });
+    });
+
+    // Wait for all updates to complete and count successes
+    const results = await Promise.allSettled(updatePromises);
+    const updatedCount = results.filter(
+      (result) => result.status === 'fulfilled'
+    ).length;
+
+    return {
+      updatedCount,
+      totalCount,
+    };
+  },
+});
