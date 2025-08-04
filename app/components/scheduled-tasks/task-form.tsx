@@ -65,7 +65,7 @@ const getInitialFormState = (
     scheduledDate:
       parsedData?.scheduledDate ||
       (isNewOnetimeTask ? getTomorrowDate() : undefined),
-    selectedDay: parsedData?.selectedDay || 1, // Default to Monday
+    selectedDay: parsedData?.selectedDay ?? 1, // Default to Monday
     timezone:
       parsedData?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     enableSearch: parsedData?.enableSearch,
@@ -123,7 +123,7 @@ export function TaskFormContent({
       // Format scheduledTime for weekly tasks
       const formattedScheduledTime =
         form.scheduleType === 'weekly'
-          ? formatWeeklyTime(form.selectedDay || 1, form.scheduledTime)
+          ? formatWeeklyTime(form.selectedDay ?? 1, form.scheduledTime)
           : form.scheduledTime;
 
       if (mode === 'edit' && initialData?.taskId) {

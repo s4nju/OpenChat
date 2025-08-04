@@ -16,10 +16,7 @@ export default function TasksPage() {
       return;
     }
 
-    if (user?.isAnonymous) {
-      router.replace('/');
-    }
-    if (!user) {
+    if (!user || user.isAnonymous) {
       router.replace('/');
     }
   }, [user, isLoading, router]);
