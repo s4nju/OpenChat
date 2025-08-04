@@ -32,10 +32,12 @@ import type * as schema_feedback from "../schema/feedback.js";
 import type * as schema_index from "../schema/index.js";
 import type * as schema_message from "../schema/message.js";
 import type * as schema_scheduled_task from "../schema/scheduled_task.js";
+import type * as schema_task_history from "../schema/task_history.js";
 import type * as schema_usage_history from "../schema/usage_history.js";
 import type * as schema_user from "../schema/user.js";
 import type * as schema_user_api_key from "../schema/user_api_key.js";
 import type * as subscription from "../subscription.js";
+import type * as task_history from "../task_history.js";
 import type * as users from "../users.js";
 
 import type {
@@ -77,10 +79,12 @@ declare const fullApi: ApiFromModules<{
   "schema/index": typeof schema_index;
   "schema/message": typeof schema_message;
   "schema/scheduled_task": typeof schema_scheduled_task;
+  "schema/task_history": typeof schema_task_history;
   "schema/usage_history": typeof schema_usage_history;
   "schema/user": typeof schema_user;
   "schema/user_api_key": typeof schema_user_api_key;
   subscription: typeof subscription;
+  task_history: typeof task_history;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

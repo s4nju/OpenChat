@@ -131,6 +131,7 @@ export function TaskFormContent({
           taskId: initialData.taskId,
           title: form.title.trim(),
           prompt: form.prompt.trim(),
+          scheduleType: form.scheduleType as 'onetime' | 'daily' | 'weekly',
           scheduledTime: formattedScheduledTime,
           scheduledDate: form.scheduledDate,
           timezone: form.timezone,

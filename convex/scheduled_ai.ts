@@ -27,6 +27,11 @@ export const executeTask = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Generate unique execution ID
+    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const startTime = Date.now();
+    let historyRecordId: string | null = null;
+
     try {
       // Get task details
       // console.log('Executing scheduled task:', args.taskId);
@@ -44,6 +49,17 @@ export const executeTask = internalAction({
         // console.log('Task is not active:', args.taskId);
         return null;
       }
+
+      // Create execution history record
+      historyRecordId = await ctx.runMutation(
+        internal.task_history.createExecutionHistory,
+        {
+          taskId: args.taskId,
+          executionId,
+          startTime,
+          isManualTrigger: args.isManualTrigger,
+        }
+      );
 
       // Get user details
       const user: Doc<'users'> | null = await ctx.runQuery(
@@ -100,14 +116,26 @@ export const executeTask = internalAction({
           { userId: task.userId }
         );
 
+        // console.log('Connected connectors:', connectedConnectors);
+
         if (connectedConnectors.length > 0) {
           // Convert connector types to Composio toolkit slugs
           // e.g., 'gmail' -> 'GMAIL', 'googlecalendar' -> 'GOOGLECALENDAR'
           toolkitSlugs = connectedConnectors.map((connector) =>
             connector.type.toUpperCase()
           );
-
+          // console.log('Derived toolkit slugs:', toolkitSlugs);
           composioTools = await getComposioTools(task.userId, toolkitSlugs);
+
+          // console.log(composioTools);
+
+          // Log the number of tools selected for monitoring
+          const toolCount = Object.keys(composioTools).length;
+          if (toolCount > 0) {
+            // console.log(
+            //   `Semantic search selected ${toolCount} relevant tools from ${toolkitSlugs.join(', ')} for task: "${task.title}"`
+            // );
+          }
         }
       } catch (_error) {
         // console.error('Failed to load Composio tools:', error);
@@ -121,7 +149,8 @@ export const executeTask = internalAction({
         task.enableSearch,
         Object.keys(composioTools).length > 0,
         task.timezone,
-        toolkitSlugs // Use derived toolkit slugs from connectors
+        toolkitSlugs, // Use derived toolkit slugs from connectors
+        task.emailNotifications // Enable email mode when notifications are enabled
       );
       // console.log('System prompt:', systemPrompt);
 
@@ -188,7 +217,7 @@ export const executeTask = internalAction({
       );
 
       // Execute AI request using streamText (same pattern as chat route)
-      const startTime = Date.now();
+      const aiStartTime = Date.now();
 
       // Pre-build base metadata before streaming (same as chat route)
       const baseMetadata = {
@@ -215,7 +244,7 @@ export const executeTask = internalAction({
           ...(task.enableSearch ? { search: searchTool } : {}),
           ...composioTools,
         },
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(10),
         onFinish({ usage }) {
           // Capture usage data (runs on successful completion) - same as chat route
           finalUsage = {
@@ -243,7 +272,7 @@ export const executeTask = internalAction({
           // Construct final metadata (same as chat route)
           const finalMetadata = {
             ...baseMetadata,
-            serverDurationMs: Date.now() - startTime,
+            serverDurationMs: Date.now() - aiStartTime,
             inputTokens: finalUsage.inputTokens,
             outputTokens: finalUsage.outputTokens,
             totalTokens: finalUsage.totalTokens,
@@ -426,9 +455,48 @@ export const executeTask = internalAction({
         );
       }
 
+      // Update execution history with success
+      if (historyRecordId) {
+        await ctx.runMutation(internal.task_history.updateExecutionHistory, {
+          executionId,
+          status: 'success',
+          endTime: Date.now(),
+          chatId,
+          metadata: {
+            modelId: selectedModel.id,
+            modelName: selectedModel.name,
+            inputTokens: finalUsage.inputTokens,
+            outputTokens: finalUsage.outputTokens,
+            totalTokens: finalUsage.totalTokens,
+            reasoningTokens: finalUsage.reasoningTokens,
+            cachedInputTokens: finalUsage.cachedInputTokens,
+            serverDurationMs: Date.now() - startTime,
+            includeSearch: task.enableSearch,
+            toolkitSlugs,
+          },
+        });
+      }
+
+      // Clean up old execution history (keep last 30)
+      await ctx.runMutation(internal.task_history.cleanupOldExecutions, {
+        taskId: args.taskId,
+        keepCount: 30,
+      });
+
       return null;
-    } catch (_error) {
-      // console.log('Error executing scheduled task:', _error);
+    } catch (error) {
+      // console.log('Error executing scheduled task:', error);
+
+      // Update execution history with failure
+      if (historyRecordId) {
+        await ctx.runMutation(internal.task_history.updateExecutionHistory, {
+          executionId,
+          status: 'failure',
+          endTime: Date.now(),
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
 
       // Update task to mark last execution attempt and reset status to active
       await ctx.runMutation(internal.scheduled_tasks.updateTaskAfterExecution, {

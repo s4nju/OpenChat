@@ -2,6 +2,7 @@
 
 import {
   ArchiveIcon,
+  ClockIcon,
   PauseIcon,
   PencilIcon,
   PlayIcon,
@@ -29,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
+import { ExecutionHistoryDialog } from './execution-history-dialog';
 import { TaskDialog } from './task-dialog';
 import type { ScheduledTask } from './types';
 
@@ -56,6 +58,7 @@ type TaskCardProps = {
 function TaskCardComponent({ task }: TaskCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const deleteTask = useMutation(api.scheduled_tasks.deleteScheduledTask);
   const updateTask = useMutation(api.scheduled_tasks.updateScheduledTask);
   const triggerTask = useMutation(api.scheduled_tasks.triggerScheduledTask);
@@ -319,6 +322,23 @@ function TaskCardComponent({ task }: TaskCardProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    aria-label="View execution history"
+                    className="h-8 w-8"
+                    onClick={() => setShowHistoryDialog(true)}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <ClockIcon className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View execution history</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
                     aria-label="Edit task"
                     className="h-8 w-8"
                     onClick={() => setShowEditDialog(true)}
@@ -410,6 +430,13 @@ function TaskCardComponent({ task }: TaskCardProps) {
         isOpen={showEditDialog}
         mode="edit"
         onClose={handleEditSuccess}
+      />
+
+      <ExecutionHistoryDialog
+        isOpen={showHistoryDialog}
+        onClose={() => setShowHistoryDialog(false)}
+        taskId={task._id}
+        taskTitle={task.title}
       />
     </>
   );

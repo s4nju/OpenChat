@@ -282,6 +282,9 @@ export const updateScheduledTask = mutation({
     taskId: v.id('scheduled_tasks'),
     title: v.optional(v.string()),
     prompt: v.optional(v.string()),
+    scheduleType: v.optional(
+      v.union(v.literal('onetime'), v.literal('daily'), v.literal('weekly'))
+    ),
     scheduledTime: v.optional(v.string()),
     scheduledDate: v.optional(v.string()),
     timezone: v.optional(v.string()),
@@ -335,16 +338,20 @@ export const updateScheduledTask = mutation({
     if (args.scheduledDate !== undefined) {
       updates.scheduledDate = args.scheduledDate;
     }
+    if (args.scheduleType !== undefined) {
+      updates.scheduleType = args.scheduleType;
+    }
 
-    // If scheduledTime, scheduledDate, or timezone changed, recalculate next execution
+    // If scheduledTime, scheduledDate, timezone, or scheduleType changed, recalculate next execution
     if (
       args.scheduledTime !== undefined ||
       args.scheduledDate !== undefined ||
-      args.timezone !== undefined
+      args.timezone !== undefined ||
+      args.scheduleType !== undefined
     ) {
       const newScheduledTime = args.scheduledTime ?? task.scheduledTime;
       const newScheduledDate = args.scheduledDate ?? task.scheduledDate;
-      // const newTimezone = args.timezone ?? task.timezone;
+      const newScheduleType = args.scheduleType ?? task.scheduleType;
 
       // Cancel existing scheduled function if any
       if (task.scheduledFunctionId) {
@@ -360,7 +367,7 @@ export const updateScheduledTask = mutation({
         task.status === 'active'
       ) {
         const nextExecution = calculateNextExecution(
-          task.scheduleType,
+          newScheduleType,
           newScheduledTime,
           args.timezone ?? task.timezone,
           newScheduledDate
@@ -387,7 +394,8 @@ export const updateScheduledTask = mutation({
       args.status !== undefined &&
       args.scheduledTime === undefined &&
       args.scheduledDate === undefined &&
-      args.timezone === undefined
+      args.timezone === undefined &&
+      args.scheduleType === undefined
     ) {
       if (args.status === 'active' && task.status !== 'active') {
         // Reactivating from paused/archived - schedule next execution
