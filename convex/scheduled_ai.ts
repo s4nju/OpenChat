@@ -50,17 +50,6 @@ export const executeTask = internalAction({
         return null;
       }
 
-      // Create execution history record
-      historyRecordId = await ctx.runMutation(
-        internal.task_history.createExecutionHistory,
-        {
-          taskId: args.taskId,
-          executionId,
-          startTime,
-          isManualTrigger: args.isManualTrigger,
-        }
-      );
-
       // Get user details
       const user: Doc<'users'> | null = await ctx.runQuery(
         internal.users.getUser,
@@ -71,6 +60,17 @@ export const executeTask = internalAction({
         // console.log('User not found for task:', args.taskId);
         return null;
       }
+
+      // Create execution history record (after all validations pass)
+      historyRecordId = await ctx.runMutation(
+        internal.task_history.createExecutionHistory,
+        {
+          taskId: args.taskId,
+          executionId,
+          startTime,
+          isManualTrigger: args.isManualTrigger,
+        }
+      );
 
       // Create a new chat for each task execution
       const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
