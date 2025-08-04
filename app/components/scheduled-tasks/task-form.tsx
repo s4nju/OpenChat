@@ -109,6 +109,7 @@ export function TaskFormContent({
           timezone: form.timezone,
           enableSearch: form.enableSearch,
           enabledToolSlugs: form.enabledToolSlugs,
+          emailNotifications: form.emailNotifications,
         });
         toast.success('Scheduled task updated successfully');
       } else {
@@ -121,6 +122,7 @@ export function TaskFormContent({
           timezone: form.timezone,
           enableSearch: form.enableSearch,
           enabledToolSlugs: form.enabledToolSlugs,
+          emailNotifications: form.emailNotifications,
         });
         toast.success('Scheduled task created successfully');
       }

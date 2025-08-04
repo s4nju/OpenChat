@@ -238,6 +238,7 @@ export function TaskCard({ task }: TaskCardProps) {
           timezone: task.timezone,
           enableSearch: task.enableSearch,
           enabledToolSlugs: task.enabledToolSlugs,
+          emailNotifications: task.emailNotifications,
         }}
         isOpen={showEditDialog}
         mode="edit"
