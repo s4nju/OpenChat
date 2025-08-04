@@ -26,6 +26,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   const circumference = radius * 2 * Math.PI;
   const progress = Math.min(value / max, 1);
   const strokeDasharray = `${progress * circumference}, ${circumference}`;
+  const percentage = Math.round(progress * 100);
 
   const colorClasses = {
     primary: 'stroke-primary',
@@ -34,8 +35,20 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     danger: 'stroke-red-500',
   };
 
+  // Generate unique IDs for accessibility
+  const labelId = React.useId();
+  const describedById = label ? `${labelId}-desc` : undefined;
+
   return (
-    <div className={cn('relative flex items-center justify-center', className)}>
+    <div 
+      className={cn('relative flex items-center justify-center', className)}
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-label={label || `Progress: ${percentage}% complete`}
+      aria-describedby={describedById}
+    >
       <svg className="transform -rotate-90" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {/* Background circle */}
         <circle
@@ -48,7 +61,10 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
         />
         {/* Progress circle */}
         <circle
-          className={cn(colorClasses[color], 'transition-all duration-300')}
+          className={cn(
+            colorClasses[color], 
+            'transition-all duration-300 ease-in-out [transition-property:stroke-dasharray,stroke]'
+          )}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           cx={size / 2}
@@ -56,17 +72,21 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           r={radius}
           fill="transparent"
           strokeDasharray={strokeDasharray}
-          style={{
-            transition: 'stroke-dasharray 0.3s ease-in-out',
-          }}
         />
       </svg>
       {showLabel && (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-xs font-semibold text-foreground" id={labelId}>
             {value}/{max}
           </span>
-          {label && <span className="text-[10px] text-muted-foreground leading-none">{label}</span>}
+          {label && (
+            <span 
+              className="text-[10px] text-muted-foreground leading-none" 
+              id={describedById}
+            >
+              {label}
+            </span>
+          )}
         </div>
       )}
     </div>
