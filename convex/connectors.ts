@@ -198,8 +198,9 @@ export const getConnectedConnectors = internalQuery({
   handler: async (ctx, args) => {
     const connectors = await ctx.db
       .query('connectors')
-      .withIndex('by_user', (q) => q.eq('userId', args.userId))
-      .filter((q) => q.eq(q.field('isConnected'), true))
+      .withIndex('by_user_and_connected', (q) =>
+        q.eq('userId', args.userId).eq('isConnected', true)
+      )
       .collect();
 
     return connectors;

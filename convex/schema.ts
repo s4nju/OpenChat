@@ -34,7 +34,8 @@ export default defineSchema({
   ]),
   connectors: defineTable(Connector)
     .index('by_user', ['userId'])
-    .index('by_user_and_type', ['userId', 'type']),
+    .index('by_user_and_type', ['userId', 'type'])
+    .index('by_user_and_connected', ['userId', 'isConnected']),
   scheduled_tasks: defineTable(ScheduledTask)
     .index('by_user', ['userId'])
     .index('by_user_and_type', ['userId', 'scheduleType'])

@@ -106,6 +106,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Test responsive design on mobile and desktop
 - Verify real-time features work across multiple clients
 
+# **Testing Practices**
+
+- After every code change, create and run tests using Bun to verify the fix works correctly
+- Write test files that cover:
+  - Normal use cases (happy path)
+  - Edge cases (boundaries, special values)
+  - Error cases (what was originally broken)
+- Test approach:
+  1. Create a simple `.js` test file that imports/copies the changed function
+  2. Test various scenarios including the specific issue that was fixed
+  3. Run with `bun run <test-file>.js` to verify behavior
+  4. Clean up test files after verification
+- Always verify that your changes don't break existing functionality
+- Test both the specific fix and related functionality that might be affected
+
 # **Reference Files**
 
 - `agent_rules/commit.md` - Commit message conventions and process

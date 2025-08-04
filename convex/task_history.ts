@@ -3,6 +3,48 @@ import { ERROR_CODES } from '../lib/error-codes';
 import { internalMutation, query } from './_generated/server';
 import { ensureAuthenticated } from './lib/auth_helper';
 
+// Shared validator for task_history entity metadata
+const taskHistoryMetadataValidator = v.optional(
+  v.object({
+    modelId: v.optional(v.string()),
+    modelName: v.optional(v.string()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    totalTokens: v.optional(v.number()),
+    reasoningTokens: v.optional(v.number()),
+    cachedInputTokens: v.optional(v.number()),
+    serverDurationMs: v.optional(v.number()),
+    includeSearch: v.optional(v.boolean()),
+    toolkitSlugs: v.optional(v.array(v.string())),
+  })
+);
+
+// Shared validator for task_history entity status
+const taskHistoryStatusValidator = v.union(
+  v.literal('pending'),
+  v.literal('running'),
+  v.literal('success'),
+  v.literal('failure'),
+  v.literal('cancelled'),
+  v.literal('timeout')
+);
+
+// Shared validator for complete task_history entity
+const taskHistoryEntityValidator = v.object({
+  _id: v.id('task_history'),
+  _creationTime: v.number(),
+  taskId: v.id('scheduled_tasks'),
+  executionId: v.string(),
+  status: taskHistoryStatusValidator,
+  startTime: v.number(),
+  endTime: v.optional(v.number()),
+  chatId: v.optional(v.id('chats')),
+  errorMessage: v.optional(v.string()),
+  metadata: taskHistoryMetadataValidator,
+  isManualTrigger: v.optional(v.boolean()),
+  createdAt: v.number(),
+});
+
 // Create a new task execution history record
 export const createExecutionHistory = internalMutation({
   args: {
@@ -16,7 +58,7 @@ export const createExecutionHistory = internalMutation({
     const historyId = await ctx.db.insert('task_history', {
       taskId: args.taskId,
       executionId: args.executionId,
-      status: 'success', // Will be updated on completion/failure
+      status: 'running', // Task is now running, will be updated on completion/failure
       startTime: args.startTime,
       isManualTrigger: args.isManualTrigger,
       createdAt: Date.now(),
@@ -30,29 +72,11 @@ export const createExecutionHistory = internalMutation({
 export const updateExecutionHistory = internalMutation({
   args: {
     executionId: v.string(),
-    status: v.union(
-      v.literal('success'),
-      v.literal('failure'),
-      v.literal('cancelled'),
-      v.literal('timeout')
-    ),
+    status: taskHistoryStatusValidator,
     endTime: v.number(),
     chatId: v.optional(v.id('chats')),
     errorMessage: v.optional(v.string()),
-    metadata: v.optional(
-      v.object({
-        modelId: v.optional(v.string()),
-        modelName: v.optional(v.string()),
-        inputTokens: v.optional(v.number()),
-        outputTokens: v.optional(v.number()),
-        totalTokens: v.optional(v.number()),
-        reasoningTokens: v.optional(v.number()),
-        cachedInputTokens: v.optional(v.number()),
-        serverDurationMs: v.optional(v.number()),
-        includeSearch: v.optional(v.boolean()),
-        toolkitSlugs: v.optional(v.array(v.string())),
-      })
-    ),
+    metadata: taskHistoryMetadataValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -90,40 +114,7 @@ export const getTaskExecutionHistory = query({
     taskId: v.id('scheduled_tasks'),
     limit: v.optional(v.number()),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id('task_history'),
-      _creationTime: v.number(),
-      taskId: v.id('scheduled_tasks'),
-      executionId: v.string(),
-      status: v.union(
-        v.literal('success'),
-        v.literal('failure'),
-        v.literal('cancelled'),
-        v.literal('timeout')
-      ),
-      startTime: v.number(),
-      endTime: v.optional(v.number()),
-      chatId: v.optional(v.id('chats')),
-      errorMessage: v.optional(v.string()),
-      metadata: v.optional(
-        v.object({
-          modelId: v.optional(v.string()),
-          modelName: v.optional(v.string()),
-          inputTokens: v.optional(v.number()),
-          outputTokens: v.optional(v.number()),
-          totalTokens: v.optional(v.number()),
-          reasoningTokens: v.optional(v.number()),
-          cachedInputTokens: v.optional(v.number()),
-          serverDurationMs: v.optional(v.number()),
-          includeSearch: v.optional(v.boolean()),
-          toolkitSlugs: v.optional(v.array(v.string())),
-        })
-      ),
-      isManualTrigger: v.optional(v.boolean()),
-      createdAt: v.number(),
-    })
-  ),
+  returns: v.array(taskHistoryEntityValidator),
   handler: async (ctx, args) => {
     const userId = await ensureAuthenticated(ctx);
 
@@ -157,17 +148,14 @@ export const getTaskExecutionStats = query({
     totalExecutions: v.number(),
     successfulExecutions: v.number(),
     failedExecutions: v.number(),
+    runningExecutions: v.number(),
+    completedExecutions: v.number(),
     successRate: v.number(),
     averageDuration: v.optional(v.number()),
     lastExecution: v.optional(
       v.object({
         _id: v.id('task_history'),
-        status: v.union(
-          v.literal('success'),
-          v.literal('failure'),
-          v.literal('cancelled'),
-          v.literal('timeout')
-        ),
+        status: taskHistoryStatusValidator,
         startTime: v.number(),
         endTime: v.optional(v.number()),
         chatId: v.optional(v.id('chats')),
@@ -197,20 +185,31 @@ export const getTaskExecutionStats = query({
     const successfulExecutions = allHistory.filter(
       (h) => h.status === 'success'
     ).length;
-    const failedExecutions = totalExecutions - successfulExecutions;
+    const failedExecutions = allHistory.filter(
+      (h) =>
+        h.status === 'failure' ||
+        h.status === 'cancelled' ||
+        h.status === 'timeout'
+    ).length;
+    const runningExecutions = allHistory.filter(
+      (h) => h.status === 'running' || h.status === 'pending'
+    ).length;
+    const completedExecutions = successfulExecutions + failedExecutions;
     const successRate =
-      totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0;
+      completedExecutions > 0
+        ? (successfulExecutions / completedExecutions) * 100
+        : 0;
 
-    // Calculate average duration for completed executions
-    const completedExecutions = allHistory.filter(
+    // Calculate average duration for completed executions (only those with endTime)
+    const executionsWithEndTime = allHistory.filter(
       (h) => h.endTime !== undefined
     );
     const averageDuration =
-      completedExecutions.length > 0
-        ? completedExecutions.reduce((sum, h) => {
+      executionsWithEndTime.length > 0
+        ? executionsWithEndTime.reduce((sum, h) => {
             const duration = (h.endTime ?? 0) - h.startTime;
             return sum + duration;
-          }, 0) / completedExecutions.length
+          }, 0) / executionsWithEndTime.length
         : undefined;
 
     // Get most recent execution
@@ -225,6 +224,8 @@ export const getTaskExecutionStats = query({
       totalExecutions,
       successfulExecutions,
       failedExecutions,
+      runningExecutions,
+      completedExecutions,
       successRate: Math.round(successRate * 100) / 100, // Round to 2 decimal places
       averageDuration,
       lastExecution: lastExecution
@@ -249,36 +250,7 @@ export const getExecutionDetails = query({
   returns: v.union(
     v.null(),
     v.object({
-      _id: v.id('task_history'),
-      _creationTime: v.number(),
-      taskId: v.id('scheduled_tasks'),
-      executionId: v.string(),
-      status: v.union(
-        v.literal('success'),
-        v.literal('failure'),
-        v.literal('cancelled'),
-        v.literal('timeout')
-      ),
-      startTime: v.number(),
-      endTime: v.optional(v.number()),
-      chatId: v.optional(v.id('chats')),
-      errorMessage: v.optional(v.string()),
-      metadata: v.optional(
-        v.object({
-          modelId: v.optional(v.string()),
-          modelName: v.optional(v.string()),
-          inputTokens: v.optional(v.number()),
-          outputTokens: v.optional(v.number()),
-          totalTokens: v.optional(v.number()),
-          reasoningTokens: v.optional(v.number()),
-          cachedInputTokens: v.optional(v.number()),
-          serverDurationMs: v.optional(v.number()),
-          includeSearch: v.optional(v.boolean()),
-          toolkitSlugs: v.optional(v.array(v.string())),
-        })
-      ),
-      isManualTrigger: v.optional(v.boolean()),
-      createdAt: v.number(),
+      ...taskHistoryEntityValidator.fields,
       taskTitle: v.string(), // Include task title for context
     })
   ),

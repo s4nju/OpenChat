@@ -28,6 +28,16 @@ type ExecutionHistoryDialogProps = {
 
 // Static constants for better performance
 const STATUS_CONFIG = {
+  pending: {
+    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    label: 'Pending',
+    icon: '⏸️',
+  },
+  running: {
+    color: 'bg-orange-100 text-orange-800 border-orange-200',
+    label: 'Running',
+    icon: '🔄',
+  },
   success: {
     color: 'bg-green-100 text-green-800 border-green-200',
     label: 'Success',
@@ -118,7 +128,7 @@ function ExecutionHistoryDialogComponent({
         <div className="space-y-6">
           {/* Statistics Section */}
           {!isStatsLoading && stats && (
-            <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-4 md:grid-cols-5">
               <div className="text-center">
                 <div className="font-semibold text-2xl">
                   {stats.totalExecutions}
@@ -144,6 +154,12 @@ function ExecutionHistoryDialogComponent({
                   {stats.failedExecutions}
                 </div>
                 <div className="text-muted-foreground text-sm">Failed</div>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold text-2xl text-orange-600">
+                  {stats.runningExecutions}
+                </div>
+                <div className="text-muted-foreground text-sm">Running</div>
               </div>
             </div>
           )}

@@ -75,17 +75,24 @@ export const formatRelativeTime = (date: Date | string): string => {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
 
-  if (diffInSeconds < 60) {
-    return 'Just now';
+  // Handle future dates (negative diff)
+  const isFuture = diffInSeconds < 0;
+  const absDiffInSeconds = Math.abs(diffInSeconds);
+
+  if (absDiffInSeconds < 60) {
+    return isFuture ? 'In a moment' : 'Just now';
   }
-  if (diffInSeconds < 3600) {
-    return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (absDiffInSeconds < 3600) {
+    const minutes = Math.floor(absDiffInSeconds / 60);
+    return isFuture ? `In ${minutes}m` : `${minutes}m ago`;
   }
-  if (diffInSeconds < 86_400) {
-    return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (absDiffInSeconds < 86_400) {
+    const hours = Math.floor(absDiffInSeconds / 3600);
+    return isFuture ? `In ${hours}h` : `${hours}h ago`;
   }
-  if (diffInSeconds < 604_800) {
-    return `${Math.floor(diffInSeconds / 86_400)}d ago`;
+  if (absDiffInSeconds < 604_800) {
+    const days = Math.floor(absDiffInSeconds / 86_400);
+    return isFuture ? `In ${days}d` : `${days}d ago`;
   }
 
   return dateObj.toLocaleDateString();

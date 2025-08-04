@@ -16,18 +16,18 @@ Create well-formatted commits with conventional commit messages and emojis.
 
 ## Commit Types:
 
-- ✨ feat: New features
-- 🐛 fix: Bug fixes
-- 📝 docs: Documentation changes
-- ♻️ refactor: Code restructuring without changing functionality
-- 🎨 style: Code formatting, missing semicolons, etc.
-- ⚡️ perf: Performance improvements
-- ✅ test: Adding or correcting tests
-- 🧑‍💻 chore: Tooling, configuration, maintenance
-- 🚧 wip: Work in progress
-- 🔥 remove: Removing code or files
-- 🚑 hotfix: Critical fixes
-- 🔒 security: Security improvements
+- feat: New features
+- fix: Bug fixes
+- docs: Documentation changes
+- refactor: Code restructuring without changing functionality
+- style: Code formatting, missing semicolons, etc.
+- perf: Performance improvements
+- test: Adding or correcting tests
+- chore: Tooling, configuration, maintenance
+- wip: Work in progress
+- remove: Removing code or files
+- hotfix: Critical fixes
+- security: Security improvements
 
 ## Process:
 

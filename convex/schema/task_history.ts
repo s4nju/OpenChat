@@ -4,6 +4,8 @@ export const TaskHistory = v.object({
   taskId: v.id('scheduled_tasks'),
   executionId: v.string(), // Unique identifier for this execution
   status: v.union(
+    v.literal('pending'),
+    v.literal('running'),
     v.literal('success'),
     v.literal('failure'),
     v.literal('cancelled'),
