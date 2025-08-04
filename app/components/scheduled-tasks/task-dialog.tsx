@@ -1,5 +1,6 @@
 'use client';
 
+import { lazy, Suspense, useRef } from 'react';
 import {
   Dialog,
   DialogClose,
@@ -9,8 +10,19 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Id } from '@/convex/_generated/dataModel';
-import { TaskFormContent } from './task-form';
 import type { CreateTaskForm } from './types';
+
+// Lazy load TaskFormContent for better performance
+const TaskFormContent = lazy(() =>
+  import('./task-form').then((module) => ({ default: module.TaskFormContent }))
+);
+
+// Loading component for Suspense
+const FormLoadingSpinner = () => (
+  <div className="flex h-32 items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-primary border-b-2" />
+  </div>
+);
 
 type TaskDialogProps = {
   trigger?: React.ReactNode;
@@ -27,6 +39,8 @@ export function TaskDialog({
   initialData,
   mode = 'create',
 }: TaskDialogProps) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
   // If using trigger mode (uncontrolled)
   if (trigger) {
     return (
@@ -46,19 +60,30 @@ export function TaskDialog({
               </DialogTitle>
             </DialogHeader>
 
-            <TaskFormContent
-              CloseWrapper={({ children }) => (
-                <DialogClose asChild>{children}</DialogClose>
-              )}
-              initialData={initialData}
-              mode={mode}
-              onCancel={() => {
-                /* handled by DialogClose wrapper */
-              }}
-              onSuccess={() => {
-                /* handled by DialogClose wrapper */
-              }}
-            />
+            <Suspense fallback={<FormLoadingSpinner />}>
+              <TaskFormContent
+                CloseWrapper={({ children }) => (
+                  <DialogClose asChild>{children}</DialogClose>
+                )}
+                initialData={initialData}
+                mode={mode}
+                onCancel={() => {
+                  /* handled by DialogClose wrapper */
+                }}
+                onSuccess={() => {
+                  // Programmatically trigger the close button
+                  closeRef.current?.click();
+                }}
+              />
+            </Suspense>
+            {/* Hidden close button for programmatic closing */}
+            <DialogClose asChild>
+              <button
+                ref={closeRef}
+                style={{ display: 'none' }}
+                type="button"
+              />
+            </DialogClose>
           </div>
         </DialogContent>
       </Dialog>
@@ -82,22 +107,24 @@ export function TaskDialog({
             </DialogTitle>
           </DialogHeader>
 
-          <TaskFormContent
-            CloseWrapper={({ children }) => (
-              <DialogClose asChild>{children}</DialogClose>
-            )}
-            initialData={initialData}
-            mode={mode}
-            onCancel={
-              onClose ||
-              (() => {
-                // No-op fallback
-              })
-            }
-            onSuccess={() => {
-              onClose?.();
-            }}
-          />
+          <Suspense fallback={<FormLoadingSpinner />}>
+            <TaskFormContent
+              CloseWrapper={({ children }) => (
+                <DialogClose asChild>{children}</DialogClose>
+              )}
+              initialData={initialData}
+              mode={mode}
+              onCancel={
+                onClose ||
+                (() => {
+                  // No-op fallback
+                })
+              }
+              onSuccess={() => {
+                onClose?.();
+              }}
+            />
+          </Suspense>
         </div>
       </DialogContent>
     </Dialog>

@@ -3,7 +3,7 @@
 import { convexQuery } from '@convex-dev/react-query';
 import { Plus } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/convex/_generated/api';
@@ -11,21 +11,47 @@ import { TaskCard } from './task-card';
 import { TaskTrigger } from './task-trigger';
 import type { TaskStatus } from './types';
 
+// Static constants moved outside component for better performance
+const SCROLL_CONTAINER_STYLES = {
+  maxHeight: '440px',
+  overflowY: 'scroll' as const,
+  scrollbarGutter: 'stable' as const,
+};
+
+const SKELETON_ARRAY = Array.from({ length: 1 });
+
 export function ScheduledTasksPage() {
   const [activeTab, setActiveTab] = useState<TaskStatus>('active');
 
-  const { data: tasks = [], isLoading } = useTanStackQuery({
-    ...convexQuery(api.scheduled_tasks.listScheduledTasks, {}),
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
+  // Memoized query configuration to prevent recreation on every render
+  const queryConfig = useMemo(
+    () => ({
+      ...convexQuery(api.scheduled_tasks.listScheduledTasks, {}),
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    }),
+    []
+  );
 
-  // Filter tasks based on active/archived status
-  const filteredTasks = tasks.filter((task) => {
-    if (activeTab === 'active') {
-      return task.isActive;
-    }
-    return !task.isActive;
-  });
+  const { data: tasks = [], isLoading } = useTanStackQuery(queryConfig);
+
+  // Memoized task filtering to prevent recalculation on every render
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      if (activeTab === 'active') {
+        return (
+          task.status === 'active' ||
+          task.status === 'paused' ||
+          task.status === 'running'
+        );
+      }
+      return task.status === 'archived';
+    });
+  }, [tasks, activeTab]);
+
+  // Memoized tab change handler to prevent recreation on every render
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as TaskStatus);
+  }, []);
 
   return (
     <div className="flex h-full items-center justify-center p-4">
@@ -36,7 +62,7 @@ export function ScheduledTasksPage() {
           <div className="justify-self-start">
             <Tabs
               defaultValue="active"
-              onValueChange={(value) => setActiveTab(value as TaskStatus)}
+              onValueChange={handleTabChange}
               value={activeTab}
             >
               <TabsList className="grid w-[180px] grid-cols-2">
@@ -65,7 +91,7 @@ export function ScheduledTasksPage() {
         {/* Content */}
         {isLoading && (
           <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
+            {SKELETON_ARRAY.map((_, i) => (
               <div
                 className="h-28 animate-pulse rounded-xl bg-muted/50"
                 // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton items
@@ -76,7 +102,7 @@ export function ScheduledTasksPage() {
         )}
 
         {!isLoading && filteredTasks.length === 0 && (
-          <div className="mr-4 flex min-h-[440px] items-center justify-center rounded-xl border border-border bg-card/50">
+          <div className="mr-4 flex min-h-[138px] items-center justify-center rounded-xl border border-border bg-card/50">
             <div className="text-center">
               <p className="mb-4 text-muted-foreground">
                 {activeTab === 'active'
@@ -97,14 +123,7 @@ export function ScheduledTasksPage() {
         )}
 
         {!isLoading && filteredTasks.length > 0 && (
-          <div
-            className="space-y-3 pr-4"
-            style={{
-              maxHeight: '440px',
-              overflowY: 'scroll',
-              scrollbarGutter: 'stable',
-            }}
-          >
+          <div className="space-y-3 pr-4" style={SCROLL_CONTAINER_STYLES}>
             {filteredTasks.map((task) => (
               <TaskCard key={task._id} task={task} />
             ))}

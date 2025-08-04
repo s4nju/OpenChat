@@ -38,21 +38,35 @@ export const formatNextRun = (
 };
 
 export const formatFrequency = (frequency: string, time: string): string => {
-  // Convert time to 12-hour format for display
-  const { hour12, minute, ampm } = formatTime12Hour(time);
-  const displayTime = `${hour12}:${minute} ${ampm}`;
-
   switch (frequency) {
-    case 'daily':
+    case 'daily': {
+      const { hour12, minute, ampm } = formatTime12Hour(time);
+      const displayTime = `${hour12}:${minute} ${ampm}`;
       return `Daily at ${displayTime}`;
-    case 'weekly':
-      return `Thursdays at ${displayTime}`;
-    case 'monthly':
+    }
+    case 'weekly': {
+      // For weekly tasks, time format is "day:HH:MM"
+      const { day, time: timeOnly } = parseWeeklyTime(time);
+      const { hour12, minute, ampm } = formatTime12Hour(timeOnly);
+      const displayTime = `${hour12}:${minute} ${ampm}`;
+      const dayName = getDayName(day);
+      return `${dayName}s at ${displayTime}`;
+    }
+    case 'monthly': {
+      const { hour12, minute, ampm } = formatTime12Hour(time);
+      const displayTime = `${hour12}:${minute} ${ampm}`;
       return `Monthly on the 1st at ${displayTime}`;
-    case 'once':
+    }
+    case 'once': {
+      const { hour12, minute, ampm } = formatTime12Hour(time);
+      const displayTime = `${hour12}:${minute} ${ampm}`;
       return `Once at ${displayTime}`;
-    default:
+    }
+    default: {
+      const { hour12, minute, ampm } = formatTime12Hour(time);
+      const displayTime = `${hour12}:${minute} ${ampm}`;
       return `${frequency} at ${displayTime}`;
+    }
   }
 };
 
@@ -136,4 +150,49 @@ export const getNextAvailableDate = (): Date => {
   }
 
   return now;
+};
+
+// Helper functions for weekly task time formatting
+export const parseWeeklyTime = (
+  scheduledTime: string
+): { day: number; time: string } => {
+  const parts = scheduledTime.split(':');
+  if (parts.length === 3) {
+    // Format is "day:HH:MM"
+    const day = Number.parseInt(parts[0], 10);
+    const time = `${parts[1]}:${parts[2]}`;
+    return { day, time };
+  }
+  // Fallback for regular time format - default to Monday
+  return { day: 1, time: scheduledTime };
+};
+
+export const formatWeeklyTime = (day: number, time: string): string => {
+  // Format: "day:HH:MM" where day is 0-6 (Sunday-Saturday)
+  return `${day}:${time}`;
+};
+
+export const getDayName = (dayNumber: number): string => {
+  const days = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  return days[dayNumber] || 'Monday';
+};
+
+export const getDayOptions = (): Array<{ value: number; label: string }> => {
+  return [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' },
+  ];
 };

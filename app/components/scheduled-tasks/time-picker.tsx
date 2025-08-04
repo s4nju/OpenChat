@@ -2,7 +2,12 @@
 
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { convertTo24Hour, formatTime12Hour } from '@/app/utils/time-utils';
+import { memo, useMemo } from 'react';
+import {
+  convertTo24Hour,
+  formatTime12Hour,
+  getDayOptions,
+} from '@/app/utils/time-utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -19,6 +24,37 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+// Pre-generated time options for performance - 144 options (12 hours × 12 five-minute intervals)
+const TIME_OPTIONS = (() => {
+  const options: Array<{ value: string; label: string }> = [];
+  // Generate hours in correct 12-hour order: 12, 1, 2, 3, ..., 11
+  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const minutes = [
+    '00',
+    '05',
+    '10',
+    '15',
+    '20',
+    '25',
+    '30',
+    '35',
+    '40',
+    '45',
+    '50',
+    '55',
+  ];
+
+  for (const hour of hours) {
+    for (const minute of minutes) {
+      options.push({
+        value: `${hour}:${minute}`,
+        label: `${hour}:${minute}`,
+      });
+    }
+  }
+  return options;
+})();
+
 interface TimePickerProps {
   value: string;
   onChange: (value: string) => void;
@@ -27,9 +63,12 @@ interface TimePickerProps {
   onDateChange?: (date: Date | undefined) => void;
   filterPastTimes?: boolean;
   showDatePicker?: boolean;
+  selectedDay?: number;
+  onDayChange?: (day: number) => void;
+  showDayPicker?: boolean;
 }
 
-export function TimePicker({
+function TimePickerComponent({
   value,
   onChange,
   name,
@@ -37,6 +76,9 @@ export function TimePicker({
   onDateChange,
   filterPastTimes = false,
   showDatePicker = false,
+  selectedDay = 1,
+  onDayChange,
+  showDayPicker = false,
 }: TimePickerProps) {
   const now = new Date();
   const isToday =
@@ -56,81 +98,56 @@ export function TimePicker({
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
-  // Generate hour:minute options
-  const generateHourMinuteOptions = () => {
-    const options: Array<{ value: string; label: string }> = [];
-    // Generate hours in correct 12-hour order: 12, 1, 2, 3, ..., 11
-    const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-
-    for (const hour of hours) {
-      for (const minuteValue of [
-        '00',
-        '05',
-        '10',
-        '15',
-        '20',
-        '25',
-        '30',
-        '35',
-        '40',
-        '45',
-        '50',
-        '55',
-      ]) {
-        options.push({
-          value: `${hour}:${minuteValue}`,
-          label: `${hour}:${minuteValue}`,
-        });
+  // Memoize filtered options based on current time if needed
+  const getFilteredOptions = useMemo(() => {
+    return (amPeriod: string) => {
+      // If selected date is in the past, disable all times
+      if (shouldDisableAllTimes) {
+        return [];
       }
-    }
-    return options;
-  };
 
-  // Filter options based on current time if needed
-  const getFilteredOptions = (amPeriod: string) => {
-    const allOptions = generateHourMinuteOptions();
-
-    // If selected date is in the past, disable all times
-    if (shouldDisableAllTimes) {
-      return [];
-    }
-
-    if (!shouldFilterPastTimes) {
-      return allOptions;
-    }
-
-    const currentAmPm = currentHour < 12 ? 'AM' : 'PM';
-
-    // If current time is PM and we're showing AM options, all AM times are for tomorrow (valid)
-    // If current time is AM and we're showing PM options, all PM times are for today (valid)
-    if (amPeriod !== currentAmPm) {
-      if (currentAmPm === 'PM' && amPeriod === 'AM') {
-        return allOptions; // All AM times are for tomorrow
+      if (!shouldFilterPastTimes) {
+        return TIME_OPTIONS;
       }
-      if (currentAmPm === 'AM' && amPeriod === 'PM') {
-        return allOptions; // All PM times are for today
+
+      const currentAmPm = currentHour < 12 ? 'AM' : 'PM';
+
+      // If current time is PM and we're showing AM options, all AM times are for tomorrow (valid)
+      // If current time is AM and we're showing PM options, all PM times are for today (valid)
+      if (amPeriod !== currentAmPm) {
+        if (currentAmPm === 'PM' && amPeriod === 'AM') {
+          return TIME_OPTIONS; // All AM times are for tomorrow
+        }
+        if (currentAmPm === 'AM' && amPeriod === 'PM') {
+          return TIME_OPTIONS; // All PM times are for today
+        }
       }
-    }
 
-    // Same period, filter based on current time
-    return allOptions.filter((option) => {
-      const [hourStr, minuteStr] = option.value.split(':');
-      const optionHour12 = Number.parseInt(hourStr, 10);
-      const optionMinute = Number.parseInt(minuteStr, 10);
+      // Same period, filter based on current time
+      return TIME_OPTIONS.filter((option) => {
+        const [hourStr, minuteStr] = option.value.split(':');
+        const optionHour12 = Number.parseInt(hourStr, 10);
+        const optionMinute = Number.parseInt(minuteStr, 10);
 
-      // Convert option time to 24-hour format for proper comparison
-      const optionHour24 = convertTo24Hour(optionHour12, amPeriod);
-      const optionTimeInMinutes = optionHour24 * 60 + optionMinute;
-      const currentTimeInMinutes = currentHour * 60 + currentMinute;
+        // Convert option time to 24-hour format for proper comparison
+        const optionHour24 = convertTo24Hour(optionHour12, amPeriod);
+        const optionTimeInMinutes = optionHour24 * 60 + optionMinute;
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-      return optionTimeInMinutes > currentTimeInMinutes;
-    });
-  };
+        return optionTimeInMinutes > currentTimeInMinutes;
+      });
+    };
+  }, [
+    shouldDisableAllTimes,
+    shouldFilterPastTimes,
+    currentHour,
+    currentMinute,
+  ]);
 
   const { hour12, minute, ampm } = formatTime12Hour(value || '09:00');
 
-  // Filter AM/PM options based on current time if needed
-  const getAvailableAmPmOptions = () => {
+  // Memoize AM/PM options based on current time if needed
+  const availableAmPmOptions = useMemo(() => {
     if (!shouldFilterPastTimes) {
       return ['AM', 'PM'];
     }
@@ -144,9 +161,7 @@ export function TimePicker({
 
     // If current time is AM, show both AM and PM
     return ['AM', 'PM'];
-  };
-
-  const availableAmPmOptions = getAvailableAmPmOptions();
+  }, [shouldFilterPastTimes, currentHour]);
 
   // Auto-correct AM/PM if current selection is not available
   const correctedAmPm = availableAmPmOptions.includes(ampm)
@@ -245,7 +260,36 @@ export function TimePicker({
             </Popover>
           </div>
         )}
+
+        {/* Day Picker for Weekly Tasks */}
+        {showDayPicker && (
+          <div className="flex-1">
+            <Select
+              onValueChange={(dayValue) =>
+                onDayChange?.(Number.parseInt(dayValue, 10))
+              }
+              value={selectedDay.toString()}
+            >
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Select day" />
+              </SelectTrigger>
+              <SelectContent className="z-[101]">
+                {getDayOptions().map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value.toString()}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </>
   );
 }
+
+// Memoize TimePicker component to prevent unnecessary re-renders
+export const TimePicker = memo(TimePickerComponent);

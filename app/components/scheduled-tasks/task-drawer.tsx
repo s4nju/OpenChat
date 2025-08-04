@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from '@phosphor-icons/react';
+import { lazy, Suspense, useRef } from 'react';
 import {
   Drawer,
   DrawerClose,
@@ -10,8 +11,19 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import type { Id } from '@/convex/_generated/dataModel';
-import { TaskFormContent } from './task-form';
 import type { CreateTaskForm } from './types';
+
+// Lazy load TaskFormContent for better performance
+const TaskFormContent = lazy(() =>
+  import('./task-form').then((module) => ({ default: module.TaskFormContent }))
+);
+
+// Loading component for Suspense
+const FormLoadingSpinner = () => (
+  <div className="flex h-32 items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-primary border-b-2" />
+  </div>
+);
 
 type TaskDrawerProps = {
   trigger?: React.ReactNode;
@@ -28,6 +40,8 @@ export function TaskDrawer({
   initialData,
   mode = 'create',
 }: TaskDrawerProps) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
   // If using trigger mode (uncontrolled)
   if (trigger) {
     return (
@@ -52,19 +66,30 @@ export function TaskDrawer({
               </DrawerClose>
             </DrawerHeader>
 
-            <TaskFormContent
-              CloseWrapper={({ children }) => (
-                <DrawerClose asChild>{children}</DrawerClose>
-              )}
-              initialData={initialData}
-              mode={mode}
-              onCancel={() => {
-                /* handled by DrawerClose wrapper */
-              }}
-              onSuccess={() => {
-                /* handled by DrawerClose wrapper */
-              }}
-            />
+            <Suspense fallback={<FormLoadingSpinner />}>
+              <TaskFormContent
+                CloseWrapper={({ children }) => (
+                  <DrawerClose asChild>{children}</DrawerClose>
+                )}
+                initialData={initialData}
+                mode={mode}
+                onCancel={() => {
+                  /* handled by DrawerClose wrapper */
+                }}
+                onSuccess={() => {
+                  // Programmatically trigger the close button
+                  closeRef.current?.click();
+                }}
+              />
+            </Suspense>
+            {/* Hidden close button for programmatic closing */}
+            <DrawerClose asChild>
+              <button
+                ref={closeRef}
+                style={{ display: 'none' }}
+                type="button"
+              />
+            </DrawerClose>
           </div>
         </DrawerContent>
       </Drawer>
@@ -93,25 +118,24 @@ export function TaskDrawer({
             </DrawerClose>
           </DrawerHeader>
 
-          <TaskFormContent
-            CloseWrapper={({ children }) => (
-              <DrawerClose asChild>{children}</DrawerClose>
-            )}
-            initialData={initialData}
-            mode={mode}
-            onCancel={
-              onClose ||
-              (() => {
-                // No-op fallback
-              })
-            }
-            onSuccess={
-              onClose ||
-              (() => {
-                // No-op fallback
-              })
-            }
-          />
+          <Suspense fallback={<FormLoadingSpinner />}>
+            <TaskFormContent
+              CloseWrapper={({ children }) => (
+                <DrawerClose asChild>{children}</DrawerClose>
+              )}
+              initialData={initialData}
+              mode={mode}
+              onCancel={
+                onClose ||
+                (() => {
+                  // No-op fallback
+                })
+              }
+              onSuccess={() => {
+                onClose?.();
+              }}
+            />
+          </Suspense>
         </div>
       </DrawerContent>
     </Drawer>

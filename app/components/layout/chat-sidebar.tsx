@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useChatSession } from '@/app/providers/chat-session-provider';
+import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,6 +50,7 @@ const ChatSidebar = memo(function SidebarComponent({
   const pinChatToggle = useMutation(api.chats.pinChatToggle);
   const { setIsDeleting: setChatIsDeleting, chatId: activeChatId } =
     useChatSession();
+  const { user } = useUser();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -276,13 +278,16 @@ const ChatSidebar = memo(function SidebarComponent({
             New Chat
           </Button>
 
-          <Button
-            className="h-9 w-full justify-center font-bold text-sm"
-            onClick={handleConditionalTasksClick}
-            variant="outline"
-          >
-            Tasks
-          </Button>
+          {/* Only show Tasks button for logged-in users */}
+          {user && !user.isAnonymous && (
+            <Button
+              className="h-9 w-full justify-center font-bold text-sm"
+              onClick={handleConditionalTasksClick}
+              variant="outline"
+            >
+              Tasks
+            </Button>
+          )}
 
           <div className="relative">
             <MagnifyingGlass className="-translate-y-1/2 absolute top-1/2 left-2.5 h-4 w-4 text-muted-foreground" />
