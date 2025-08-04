@@ -117,7 +117,7 @@ const mapToolkitSlugToDisplayName = (slug: string): string => {
 export const getSystemPromptDefault = (enabledToolSlugs?: string[]) =>
   `
 <identity>
-You are OpenChat, a thoughtful and clear assistant.
+You are OpenChat, a thoughtful and clear agentic assistant.
 </identity>
 
 <communication_style>
@@ -133,7 +133,9 @@ You're here to help the user think clearly and move forward, not to overwhelm or
 </purpose>
 
 <context>
-The current date is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}.
+The current date is ${new Date().toLocaleDateString()} (MM/DD/YYYY) at ${new Date().toLocaleTimeString()}.
+Use this date and time to answer questions about current events, deadlines, or anything time-sensitive.
+Do not use outdated information or make assumptions about the current date and time.
 </context>
 
 <tools>
@@ -263,6 +265,10 @@ Actions are configured through Config.NOTION_ACTIONS.
 </content_management>
 </notion_information>
 
+</gmail_information>
+- Use proper dates when getting content from Gmail.
+</gmail_information>
+
 <additional_guidelines>
 - When creating or editing documents, it is often helpful to provide the user with a link to the document.
 - For the web, you must not be _super detailed_. It is okay to be fast and do it in 1-2 turns. If the user wants more information, they will ask for it.
@@ -270,6 +276,28 @@ Actions are configured through Config.NOTION_ACTIONS.
 - IMPORTANT: WHEN WRITING TO GOOGLE DOCS OR GOOGLE SHEETS, WRITE IN SMALLER CHUNKS, E.G. 4 PARAGRAPHS AT A TIME. 
 </additional_guidelines>
 
+`.trim();
+
+// Email-specific prompt instructions
+export const EMAIL_PROMPT_INSTRUCTIONS = `
+<email_formatting>
+Your response will be sent via email notification. Please format your response to be email-friendly:
+
+1. Start with a brief executive summary (2-3 sentences) that captures the key findings or insights
+2. Use clear section headers to organize information (use ## for main sections)
+3. Be concise and focused - aim for readability in email clients
+4. Use bullet points or numbered lists for multiple items
+5. Avoid complex formatting that may not render well in email
+6. Use plain text emphasis (like **bold** or *italic*) instead of rich formatting
+7. Keep the total length reasonable for email consumption (aim for 300-800 words)
+8. End with a brief summary of key takeaways or recommended next steps
+9. Use professional but accessible language appropriate for email communication
+
+Structure your response like this:
+- Executive Summary
+- Main Content (organized in clear sections)
+- Key Takeaways/Next Steps
+</email_formatting>
 `.trim();
 
 export type UserProfile = Doc<'users'>;
@@ -280,7 +308,8 @@ export function buildSystemPrompt(
   enableSearch?: boolean,
   enableTools?: boolean,
   timezone?: string,
-  enabledToolSlugs?: string[]
+  enabledToolSlugs?: string[],
+  emailMode?: boolean
 ) {
   let prompt = basePrompt ?? getSystemPromptDefault(enabledToolSlugs);
 
@@ -294,6 +323,11 @@ export function buildSystemPrompt(
     prompt += `\n\n${TOOL_PROMPT_INSTRUCTIONS}`;
   }
 
+  // Add email formatting instructions if email mode is enabled
+  if (emailMode) {
+    prompt += `\n\n${EMAIL_PROMPT_INSTRUCTIONS}`;
+  }
+
   if (timezone) {
     prompt += `\nThe user's timezone is ${timezone}.`;
   }
@@ -302,6 +336,9 @@ export function buildSystemPrompt(
     return prompt;
   }
   const details: string[] = [];
+  if (user.name) {
+    details.push(`Name: ${user.name}`);
+  }
   if (user.preferredName) {
     details.push(`Preferred Name: ${user.preferredName}`);
   }

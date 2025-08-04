@@ -5,6 +5,8 @@ import { ChatAttachment } from './schema/chat_attachment';
 import { Connector } from './schema/connectors';
 import { Feedback } from './schema/feedback';
 import { Message } from './schema/message';
+import { ScheduledTask } from './schema/scheduled_task';
+import { TaskHistory } from './schema/task_history';
 import { UsageHistory } from './schema/usage_history';
 // Import all schema modules
 import { User } from './schema/user';
@@ -33,4 +35,13 @@ export default defineSchema({
   connectors: defineTable(Connector)
     .index('by_user', ['userId'])
     .index('by_user_and_type', ['userId', 'type']),
+  scheduled_tasks: defineTable(ScheduledTask)
+    .index('by_user', ['userId'])
+    .index('by_user_and_type', ['userId', 'scheduleType'])
+    .index('by_next_execution', ['status', 'nextExecution']),
+  task_history: defineTable(TaskHistory)
+    .index('by_task', ['taskId'])
+    .index('by_task_and_time', ['taskId', 'startTime'])
+    .index('by_status', ['status'])
+    .index('by_execution_id', ['executionId']),
 });

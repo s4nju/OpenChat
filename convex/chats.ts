@@ -2,7 +2,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
 import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
-import { mutation, query } from './_generated/server';
+import { internalMutation, mutation, query } from './_generated/server';
 // Import helper functions
 import {
   ensureAuthenticated,
@@ -258,5 +258,28 @@ export const pinChatToggle = mutation({
     });
 
     return null;
+  },
+});
+
+// Internal mutation to create a chat (for scheduled tasks)
+export const createChatInternal = internalMutation({
+  args: {
+    userId: v.id('users'),
+    title: v.optional(v.string()),
+    model: v.optional(v.string()),
+    personaId: v.optional(v.string()),
+  },
+  returns: v.object({ chatId: v.id('chats') }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const chatId = await ctx.db.insert('chats', {
+      userId: args.userId,
+      title: args.title ?? 'New Chat',
+      model: args.model,
+      personaId: args.personaId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return { chatId };
   },
 });

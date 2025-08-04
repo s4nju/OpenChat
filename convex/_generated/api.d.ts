@@ -12,6 +12,7 @@ import type * as api_keys from "../api_keys.js";
 import type * as auth from "../auth.js";
 import type * as chats from "../chats.js";
 import type * as connectors from "../connectors.js";
+import type * as email from "../email.js";
 import type * as feedback from "../feedback.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
@@ -22,16 +23,21 @@ import type * as lib_rateLimitConstants from "../lib/rateLimitConstants.js";
 import type * as messages from "../messages.js";
 import type * as polar from "../polar.js";
 import type * as rateLimiter from "../rateLimiter.js";
+import type * as scheduled_ai from "../scheduled_ai.js";
+import type * as scheduled_tasks from "../scheduled_tasks.js";
 import type * as schema_chat from "../schema/chat.js";
 import type * as schema_chat_attachment from "../schema/chat_attachment.js";
 import type * as schema_connectors from "../schema/connectors.js";
 import type * as schema_feedback from "../schema/feedback.js";
 import type * as schema_index from "../schema/index.js";
 import type * as schema_message from "../schema/message.js";
+import type * as schema_scheduled_task from "../schema/scheduled_task.js";
+import type * as schema_task_history from "../schema/task_history.js";
 import type * as schema_usage_history from "../schema/usage_history.js";
 import type * as schema_user from "../schema/user.js";
 import type * as schema_user_api_key from "../schema/user_api_key.js";
 import type * as subscription from "../subscription.js";
+import type * as task_history from "../task_history.js";
 import type * as users from "../users.js";
 
 import type {
@@ -53,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   chats: typeof chats;
   connectors: typeof connectors;
+  email: typeof email;
   feedback: typeof feedback;
   files: typeof files;
   http: typeof http;
@@ -63,16 +70,21 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   polar: typeof polar;
   rateLimiter: typeof rateLimiter;
+  scheduled_ai: typeof scheduled_ai;
+  scheduled_tasks: typeof scheduled_tasks;
   "schema/chat": typeof schema_chat;
   "schema/chat_attachment": typeof schema_chat_attachment;
   "schema/connectors": typeof schema_connectors;
   "schema/feedback": typeof schema_feedback;
   "schema/index": typeof schema_index;
   "schema/message": typeof schema_message;
+  "schema/scheduled_task": typeof schema_scheduled_task;
+  "schema/task_history": typeof schema_task_history;
   "schema/usage_history": typeof schema_usage_history;
   "schema/user": typeof schema_user;
   "schema/user_api_key": typeof schema_user_api_key;
   subscription: typeof subscription;
+  task_history: typeof task_history;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
@@ -739,6 +751,104 @@ export declare const components: {
         "mutation",
         "internal",
         { id: string; metadata?: Record<string, any>; userId: string },
+        string
+      >;
+    };
+  };
+  resend: {
+    lib: {
+      cancelEmail: FunctionReference<
+        "mutation",
+        "internal",
+        { emailId: string },
+        null
+      >;
+      cleanupAbandonedEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      cleanupOldEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          complained: boolean;
+          createdAt: number;
+          errorMessage?: string;
+          finalizedAt: number;
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          opened: boolean;
+          replyTo: Array<string>;
+          resendId?: string;
+          segment: number;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+          subject: string;
+          text?: string;
+          to: string;
+        } | null
+      >;
+      getStatus: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          complained: boolean;
+          errorMessage: string | null;
+          opened: boolean;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+        } | null
+      >;
+      handleEmailEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { event: any },
+        null
+      >;
+      sendEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          options: {
+            apiKey: string;
+            initialBackoffMs: number;
+            onEmailEvent?: { fnHandle: string };
+            retryAttempts: number;
+            testMode: boolean;
+          };
+          replyTo?: Array<string>;
+          subject: string;
+          text?: string;
+          to: string;
+        },
         string
       >;
     };

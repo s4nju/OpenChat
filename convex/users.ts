@@ -7,7 +7,12 @@ import { ConvexError, v } from 'convex/values';
 import { MODEL_DEFAULT, RECOMMENDED_MODELS } from '../lib/config';
 import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
-import { mutation, query } from './_generated/server';
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from './_generated/server';
 import { RATE_LIMITS } from './lib/rateLimitConstants';
 import { polar } from './polar';
 import { rateLimiter } from './rateLimiter';
@@ -879,3 +884,170 @@ export const { getRateLimit: getRateLimitHook, getServerTime } =
       },
     }
   );
+
+// Internal query to get user by ID
+export const getUser = internalQuery({
+  args: { userId: v.id('users') },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id('users'),
+      _creationTime: v.number(),
+      ...User.fields,
+    })
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
+// Internal mutation to check rate limits for scheduled tasks
+export const assertNotOverLimitInternal = internalMutation({
+  args: {
+    userId: v.id('users'),
+    usesPremiumCredits: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { userId, usesPremiumCredits }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    const subscription = await polar.getCurrentSubscription(ctx, {
+      userId: user._id,
+    });
+    const isPremium = subscription?.status === 'active';
+    const isAnonymous = user.isAnonymous ?? false;
+
+    // For premium users using premium models, check premium credits
+    if (isPremium && usesPremiumCredits) {
+      const premiumStatus = await rateLimiter.check(ctx, 'premiumMonthly', {
+        key: userId,
+      });
+      if (!premiumStatus.ok) {
+        throw new ConvexError(ERROR_CODES.PREMIUM_LIMIT_REACHED);
+      }
+    } else {
+      // For non-premium models or non-premium users, check standard credits
+      const checkPromises: Promise<unknown>[] = [];
+
+      // CHECK daily limits for non-premium users (don't consume yet)
+      if (!isPremium) {
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        checkPromises.push(
+          rateLimiter.check(ctx, dailyLimitName, {
+            key: userId,
+          })
+        );
+      }
+
+      // CHECK monthly limits for all users (don't consume yet)
+      checkPromises.push(
+        rateLimiter.check(ctx, 'standardMonthly', {
+          key: userId,
+        })
+      );
+
+      const results = await Promise.all(checkPromises);
+
+      // Check results and throw appropriate errors
+      for (const [index, result] of results.entries()) {
+        const limitResult = result as { ok: boolean };
+        if (!limitResult.ok) {
+          if (index === 0 && !isPremium) {
+            // Daily limit exceeded
+            throw new ConvexError(ERROR_CODES.DAILY_LIMIT_REACHED);
+          }
+          // Monthly limit exceeded (or only monthly was checked)
+          throw new ConvexError(ERROR_CODES.MONTHLY_LIMIT_REACHED);
+        }
+      }
+    }
+  },
+});
+
+// Internal mutation to increment message count for scheduled tasks
+export const incrementMessageCountInternal = internalMutation({
+  args: {
+    userId: v.id('users'),
+    usesPremiumCredits: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { userId, usesPremiumCredits }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new ConvexError(ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    const subscription = await polar.getCurrentSubscription(ctx, {
+      userId: user._id,
+    });
+    const isPremium = subscription?.status === 'active';
+    const isAnonymous = user.isAnonymous ?? false;
+
+    // For premium users using premium models, deduct from premium credits
+    if (isPremium && usesPremiumCredits) {
+      await rateLimiter.limit(ctx, 'premiumMonthly', {
+        key: userId,
+        throws: true,
+      });
+    } else {
+      // For non-premium models or non-premium users, use standard credits
+
+      // CONSUME daily limits for non-premium users
+      if (!isPremium) {
+        const dailyLimitName = isAnonymous
+          ? 'anonymousDaily'
+          : 'authenticatedDaily';
+        await rateLimiter.limit(ctx, dailyLimitName, {
+          key: userId,
+          throws: true,
+        });
+      }
+
+      // CONSUME monthly limits for all users
+      await rateLimiter.limit(ctx, 'standardMonthly', {
+        key: userId,
+        throws: true,
+      });
+    }
+
+    return null;
+  },
+});
+
+// Update all users' preferred model to a new value
+export const updateAllUsersPreferredModel = internalMutation({
+  args: {
+    newPreferredModel: v.string(),
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+    totalCount: v.number(),
+  }),
+  handler: async (ctx, { newPreferredModel }) => {
+    // Get all users from the database
+    const allUsers = await ctx.db.query('users').collect();
+    const totalCount = allUsers.length;
+
+    // Update each user's preferredModel in parallel
+    const updatePromises = allUsers.map(async (user) => {
+      await ctx.db.patch(user._id, {
+        preferredModel: newPreferredModel,
+      });
+    });
+
+    // Wait for all updates to complete and count successes
+    const results = await Promise.allSettled(updatePromises);
+    const updatedCount = results.filter(
+      (result) => result.status === 'fulfilled'
+    ).length;
+
+    return {
+      updatedCount,
+      totalCount,
+    };
+  },
+});
