@@ -164,6 +164,7 @@ export const getComposioTools = async (
   const cachedConverted = await getCachedConvertedTools(userId, toolkitSlugs);
   // console.log(cachedConverted);
   if (cachedConverted) {
+    // console.log("Cache hit")
     // Add execute functions back to cached tools
     const toolsWithExecute = addExecuteFunctionsToCache(
       cachedConverted,
@@ -173,6 +174,7 @@ export const getComposioTools = async (
   }
 
   // Fetch raw tools from Composio API (can't cache due to functions)
+  // console.log("Using non cache tool")
   const toolPromises = toolkitSlugs.map(async (toolkit) => {
     try {
       const tools = await composio.tools.get(userId, {

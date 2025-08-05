@@ -766,7 +766,7 @@ export async function POST(req: Request) {
         stopWhen: stepCountIs(20),
         experimental_transform: smoothStream({
           delayInMs: 20, // optional: defaults to 10ms
-          chunking: 'word', // optional: defaults to 'word'
+          chunking: 'line', // optional: defaults to 'word'
         }),
         // COMMENTED OUT: abortSignal: req.signal
         //
