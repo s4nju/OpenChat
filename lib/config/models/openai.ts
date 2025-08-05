@@ -10,6 +10,39 @@ import {
 
 export const OPENAI_MODELS = [
   {
+    id: 'gpt-oss-20b',
+    name: 'GPT OSS 20B',
+    provider: 'openai',
+    premium: false,
+    usesPremiumCredits: false,
+    description: `OpenAI's new smaller 20B open-source model. Around o3-mini performance, with super fast inference by Groq.`,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    features: [
+      FILE_UPLOAD_FEATURE,
+      PDF_PROCESSING_FEATURE,
+      REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
+    ],
+    api_sdk: openai('openai/gpt-oss-20b:nitro'),
+  },
+  {
+    id: 'gpt-oss-120b',
+    name: 'GPT OSS 120B',
+    provider: 'openai',
+    apiProvider: 'openrouter',
+    premium: false,
+    usesPremiumCredits: false,
+    description: `OpenAI's new larger 120B open-source model. Nearly as good as o4-mini, with super fast inference by Groq.`,
+    apiKeyUsage: { allowUserKey: true, userKeyOnly: false },
+    features: [
+      FILE_UPLOAD_FEATURE,
+      PDF_PROCESSING_FEATURE,
+      REASONING_FEATURE,
+      TOOL_CALLING_FEATURE,
+    ],
+    api_sdk: openai('openai/gpt-oss-120b:nitro'),
+  },
+  {
     id: 'gpt-4o',
     name: 'GPT-4o',
     provider: 'openai',
