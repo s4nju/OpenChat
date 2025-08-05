@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils"
 import { marked } from "marked"
-import { memo, useId, useMemo } from "react"
+import { memo, useId, useMemo, Children } from "react"
 import ReactMarkdown, { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import { ButtonCopy } from "../common/button-copy"
 import { CodeBlock, CodeBlockCode, CodeBlockGroup } from "./code-block"
+import { Source, SourceTrigger, SourceContent } from "./source"
 
 export type MarkdownProps = {
   children: string
@@ -68,6 +69,34 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     return <>{children}</>
   },
   a: function LinkComponent({ href, children, ...props }) {
+    // Convert React children to plain text to detect citation-style labels like [[1]]
+    const text = Children.toArray(children)
+      .map((c) => (typeof c === "string" ? c : ""))
+      .join("")
+      .trim()
+
+    // Render [title](url) as a Source pill with domain label and hover details
+    if (href && text) {
+      const urlStr = String(href)
+      const isHttp = /^https?:\/\//i.test(urlStr)
+      if (isHttp) {
+        let hostname = urlStr
+        try {
+          hostname = new URL(urlStr).hostname
+        } catch {}
+
+        return (
+          <Source href={urlStr}>
+            {/* Pill label is the domain (handled by SourceTrigger default) with favicon */}
+            <SourceTrigger showFavicon />
+            {/* Hover title is brandified host; description is the link text from AI */}
+            <SourceContent title={text} description={""} />
+          </Source>
+        )
+      }
+    }
+
+    // Fallback: render a normal external link
     return (
       <a
         href={href}

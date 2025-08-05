@@ -193,7 +193,7 @@ When using search:
 <response_format>
 How to answer:
 - Synthesize findings in your own words.  
-- After each sourced claim, cite it in markdown as [[1]](url), [[2]](url) and so on.  
+- After each sourced claim, cite it in markdown as [title](url) [title](url) and so on.  
 - Convert times and dates to the user's timezone before presenting.  
 - State "I could not confirm" rather than hallucinating if results conflict or are missing.
 </response_format>
