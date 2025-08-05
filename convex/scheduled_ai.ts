@@ -264,89 +264,99 @@ export const executeTask = internalAction({
       let emailTextContent = '';
 
       // Get UI-compatible parts using toUIMessageStreamResponse (same as chat route)
-      result.toUIMessageStreamResponse({
-        originalMessages: [userMessage],
-        sendReasoning: true,
-        sendSources: true,
-        onFinish: async (Messages) => {
-          // Construct final metadata (same as chat route)
-          const finalMetadata = {
-            ...baseMetadata,
-            serverDurationMs: Date.now() - aiStartTime,
-            inputTokens: finalUsage.inputTokens,
-            outputTokens: finalUsage.outputTokens,
-            totalTokens: finalUsage.totalTokens,
-            reasoningTokens: finalUsage.reasoningTokens,
-            cachedInputTokens: finalUsage.cachedInputTokens,
-          };
+      // Create a promise that resolves when onFinish completes
+      await new Promise<void>((resolve, reject) => {
+        result.toUIMessageStreamResponse({
+          originalMessages: [userMessage],
+          sendReasoning: true,
+          sendSources: true,
+          onFinish: async (Messages) => {
+            try {
+              // Construct final metadata (same as chat route)
+              const finalMetadata = {
+                ...baseMetadata,
+                serverDurationMs: Date.now() - aiStartTime,
+                inputTokens: finalUsage.inputTokens,
+                outputTokens: finalUsage.outputTokens,
+                totalTokens: finalUsage.totalTokens,
+                reasoningTokens: finalUsage.reasoningTokens,
+                cachedInputTokens: finalUsage.cachedInputTokens,
+              };
 
-          // Extract text content for the content field (for search indexing)
-          const textContent = Messages.responseMessage.parts
-            .filter((part) => part.type === 'text')
-            .map((part) => part.text)
-            .join('');
+              // Extract text content for the content field (for search indexing)
+              const textContent = Messages.responseMessage.parts
+                .filter((part) => part.type === 'text')
+                .map((part) => part.text)
+                .join('');
 
-          // Extract email content (last text part only)
-          const textParts = Messages.responseMessage.parts.filter(
-            (part) => part.type === 'text'
-          );
-          emailTextContent =
-            textParts.length > 0 ? textParts.at(-1)?.text || '' : '';
+              // Extract email content (last text part only)
+              const textParts = Messages.responseMessage.parts.filter(
+                (part) => part.type === 'text'
+              );
+              emailTextContent =
+                textParts.length > 0 ? textParts.at(-1)?.text || '' : '';
 
-          // Limit depth of parts to prevent Convex nesting limit errors
-          const depthLimitedParts = limitDepth(
-            Messages.responseMessage.parts,
-            14
-          );
+              // Limit depth of parts to prevent Convex nesting limit errors
+              const depthLimitedParts = limitDepth(
+                Messages.responseMessage.parts,
+                14
+              );
 
-          // Send email notification after message processing is complete
-          if (task.emailNotifications && emailTextContent) {
-            const executionDate = `${currentDate} ${currentTime}`;
-            // Schedule email mutation to run immediately after this action completes
-            await ctx.scheduler.runAfter(
-              0,
-              internal.email.sendTaskSummaryEmail,
-              {
-                userId: task.userId,
-                taskId: args.taskId,
-                taskTitle: task.title,
-                taskContent: emailTextContent,
-                executionDate,
-                chatId,
+              // Send email notification after message processing is complete
+              if (task.emailNotifications && emailTextContent) {
+                const executionDate = `${currentDate} ${currentTime}`;
+                // Schedule email mutation to run immediately after this action completes
+                await ctx.scheduler.runAfter(
+                  0,
+                  internal.email.sendTaskSummaryEmail,
+                  {
+                    userId: task.userId,
+                    taskId: args.taskId,
+                    taskTitle: task.title,
+                    taskContent: emailTextContent,
+                    executionDate,
+                    chatId,
+                  }
+                );
               }
-            );
-          }
 
-          // Save assistant message with UI-compatible parts
-          await ctx.runMutation(
-            internal.messages.saveAssistantMessageInternal,
-            {
-              chatId,
-              role: 'assistant',
-              content: textContent,
-              parentMessageId: userMsgId,
-              parts: depthLimitedParts,
-              metadata: finalMetadata,
+              // Save assistant message with UI-compatible parts
+              await ctx.runMutation(
+                internal.messages.saveAssistantMessageInternal,
+                {
+                  chatId,
+                  role: 'assistant',
+                  content: textContent,
+                  parentMessageId: userMsgId,
+                  parts: depthLimitedParts,
+                  metadata: finalMetadata,
+                }
+              );
+
+              // --- Usage Tracking (same as chat route) ---
+              // Only increment credits if model doesn't skip rate limiting
+              if (!selectedModel.skipRateLimit) {
+                // Check if the selected model uses premium credits
+                const usesPremiumCredits =
+                  selectedModel.usesPremiumCredits === true;
+
+                await ctx.runMutation(
+                  internal.users.incrementMessageCountInternal,
+                  {
+                    userId: task.userId,
+                    usesPremiumCredits,
+                  }
+                );
+              }
+
+              // Resolve the promise to signal completion
+              resolve();
+            } catch (error) {
+              reject(error);
             }
-          );
-
-          // --- Usage Tracking (same as chat route) ---
-          // Only increment credits if model doesn't skip rate limiting
-          if (!selectedModel.skipRateLimit) {
-            // Check if the selected model uses premium credits
-            const usesPremiumCredits =
-              selectedModel.usesPremiumCredits === true;
-
-            await ctx.runMutation(
-              internal.users.incrementMessageCountInternal,
-              {
-                userId: task.userId,
-                usesPremiumCredits,
-              }
-            );
-          }
-        },
-        consumeSseStream: consumeStream,
+          },
+          consumeSseStream: consumeStream,
+        });
       });
 
       // Handle rescheduling based on task type
