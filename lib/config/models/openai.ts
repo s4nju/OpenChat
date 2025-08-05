@@ -7,6 +7,7 @@ import {
   REASONING_FEATURE_DISABLED,
   TOOL_CALLING_FEATURE,
 } from '../features';
+import { openrouter } from '../openrouter';
 
 export const OPENAI_MODELS = [
   {
@@ -23,7 +24,7 @@ export const OPENAI_MODELS = [
       REASONING_FEATURE,
       TOOL_CALLING_FEATURE,
     ],
-    api_sdk: openai('openai/gpt-oss-20b:nitro'),
+    api_sdk: openrouter('openai/gpt-oss-20b:nitro'),
   },
   {
     id: 'gpt-oss-120b',
@@ -40,7 +41,7 @@ export const OPENAI_MODELS = [
       REASONING_FEATURE,
       TOOL_CALLING_FEATURE,
     ],
-    api_sdk: openai('openai/gpt-oss-120b:nitro'),
+    api_sdk: openrouter('openai/gpt-oss-120b:nitro'),
   },
   {
     id: 'gpt-4o',
