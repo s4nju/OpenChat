@@ -30,7 +30,7 @@ import {
   BrainIcon,
   SketchLogoIcon,
 } from "@phosphor-icons/react"
-import { Key, ImagePlus, Pin, EyeOff, Wrench } from "lucide-react"
+import { Key, ImagePlus, Pin, EyeOff } from "lucide-react"
 import { ProviderIcon } from "@/app/components/common/provider-icon"
 import { ModelCard } from "./model-card"
 import { ModelSelectorSearchHeader } from "./model-selector-search-header"
@@ -157,7 +157,6 @@ return {
     const hasFileUpload = modelOption.featuresMap["file-upload"];
     const hasPdfProcessing = modelOption.featuresMap["pdf-processing"];
     const hasReasoning = modelOption.featuresMap["reasoning"];
-    const hasToolCalling = modelOption.featuresMap["tool-calling"];
     const hasImageGeneration = modelOption.featuresMap["image-generation"];
 
     // --- Style Definitions based on the provided HTML ---
@@ -171,7 +170,6 @@ return {
     const visionColorClasses = "text-teal-600 dark:text-teal-400"
     const pdfColorClasses = "text-indigo-600 dark:text-indigo-400" // Matched to file-text example
     const reasoningColorClasses = "text-pink-600 dark:text-pink-400" // Choosing pink for reasoning
-    const toolCallingColorClasses = "text-blue-600 dark:text-blue-400" // Blue for tool calling
     const imageGenerationColorClasses = "text-orange-600 dark:text-orange-400" // Orange for image generation
 
     return (
@@ -269,19 +267,6 @@ return {
               </TooltipTrigger>
               <TooltipContent side="top">
                 <p>Supports reasoning capabilities</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {hasToolCalling && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(iconWrapperBaseClasses, toolCallingColorClasses)}>
-                  <div className={iconOverlayClasses}></div>
-                  <Wrench className={cn(iconSizeClasses, "relative", toolCallingColorClasses)} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Supports tool calling (web search & connectors)</p>
               </TooltipContent>
             </Tooltip>
           )}

@@ -19,12 +19,7 @@ export const OPENAI_MODELS = [
     usesPremiumCredits: false,
     description: `OpenAI's new smaller 20B open-source model. \nAround o3-mini performance, with super fast inference by Groq.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    features: [
-      FILE_UPLOAD_FEATURE,
-      PDF_PROCESSING_FEATURE,
-      REASONING_FEATURE,
-      TOOL_CALLING_FEATURE,
-    ],
+    features: [REASONING_FEATURE, TOOL_CALLING_FEATURE],
     api_sdk: gateway('openai/gpt-oss-20b'),
   },
   {
@@ -36,12 +31,7 @@ export const OPENAI_MODELS = [
     usesPremiumCredits: false,
     description: `OpenAI's new larger 120B open-source model. \nNearly as good as o4-mini, with super fast inference by Groq.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
-    features: [
-      FILE_UPLOAD_FEATURE,
-      PDF_PROCESSING_FEATURE,
-      REASONING_FEATURE,
-      TOOL_CALLING_FEATURE,
-    ],
+    features: [REASONING_FEATURE, TOOL_CALLING_FEATURE],
     api_sdk: gateway('openai/gpt-oss-120b'),
   },
   {
