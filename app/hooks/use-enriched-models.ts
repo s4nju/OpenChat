@@ -55,9 +55,13 @@ export function useEnrichedModels() {
         {} as Record<string, boolean>
       );
 
-      // Find provider info once
+      // Find provider info once - use displayProvider for UI, fallback to provider
+      const modelWithDisplayProvider = model as typeof model & {
+        displayProvider?: string;
+      };
       const providerInfo = PROVIDERS_OPTIONS.find(
-        (p) => p.id === model.provider
+        (p) =>
+          p.id === (modelWithDisplayProvider.displayProvider || model.provider)
       );
 
       return {

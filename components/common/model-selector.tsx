@@ -87,8 +87,11 @@ let favorites = categorizedModels.favorites;
       const query = searchQuery.toLowerCase();
       const matchesSearch = (model: EnrichedModel) => {
         const displayName = getDisplayName(model.name, model.subName);
+        const modelWithDisplayProvider = model as typeof model & { displayProvider?: string };
+        const displayProvider = modelWithDisplayProvider.displayProvider || model.provider;
         return displayName.toLowerCase().includes(query) ||
-               model.provider.toLowerCase().includes(query);
+               model.provider.toLowerCase().includes(query) ||
+               displayProvider.toLowerCase().includes(query);
       };
       
       favorites = favorites.filter(matchesSearch);
@@ -144,7 +147,7 @@ return {
   }, [selectedModelId])
   
   const provider = React.useMemo(
-    () => PROVIDERS_OPTIONS.find(provider => provider.id === model?.provider),
+    () => PROVIDERS_OPTIONS.find(provider => provider.id === (model?.displayProvider || model?.provider)),
     [model]
   )
 

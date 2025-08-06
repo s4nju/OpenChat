@@ -409,8 +409,13 @@ export default function ModelsPage() {
             </div>
           )}
           {filteredModels.map((model) => {
+            const modelWithDisplayProvider = model as typeof model & {
+              displayProvider?: string;
+            };
             const provider = PROVIDERS_OPTIONS.find(
-              (p) => p.id === model.provider
+              (p) =>
+                p.id ===
+                (modelWithDisplayProvider.displayProvider || model.provider)
             );
             return (
               <Card className="relative p-3 sm:p-4" key={model.id}>

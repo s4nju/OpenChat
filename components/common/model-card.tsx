@@ -23,6 +23,7 @@ type Model = {
   name: string
   subName?: string
   provider: string
+  displayProvider?: string
   premium: boolean
   usesPremiumCredits: boolean
   description: string
@@ -56,7 +57,7 @@ export const ModelCard = React.memo(function ModelCard({
   onSelect,
   onToggleFavorite,
 }: ModelCardProps) {
-  const provider = PROVIDERS_OPTIONS.find(p => p.id === model.provider)
+  const provider = PROVIDERS_OPTIONS.find(p => p.id === (model.displayProvider || model.provider))
 
   // Feature flags
   // Pre-compute features map for O(1) lookups
