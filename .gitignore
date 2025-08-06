@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/ai-chatbot-main
 
 # testing
 /coverage

@@ -14,7 +14,11 @@ import { QWEN_MODELS } from './qwen';
 import { XAI_MODELS } from './xai';
 import { ZAI_MODELS } from './zai';
 
-const reasoningMiddleware = extractReasoningMiddleware({ tagName: 'think' });
+const reasoningMiddleware = extractReasoningMiddleware({
+  tagName: 'think',
+  // separator: '\n',
+  // startWithReasoning: true,
+});
 
 // Combine all models from different providers
 export const MODELS_DATA = [
