@@ -1,5 +1,6 @@
 import { Resend } from '@convex-dev/resend';
 import { v } from 'convex/values';
+import { marked } from 'marked';
 import { components } from './_generated/api';
 import { internalMutation } from './_generated/server';
 
@@ -12,6 +13,62 @@ export const resend: Resend = new Resend(components.resend, {
   // Enable test mode in development (set to false in production via env var)
   testMode: process.env.NODE_ENV !== 'production',
 });
+
+/**
+ * Convert markdown to sanitized HTML for email rendering
+ * Uses marked for conversion and simple regex-based sanitization for email safety
+ */
+function markdownToSafeHtml(markdown: string): string {
+  // Configure marked for safe HTML output
+  marked.setOptions({
+    breaks: true, // Convert newlines to <br>
+    gfm: true, // Enable GitHub Flavored Markdown
+  });
+
+  // Convert markdown to HTML
+  // marked.parse can return a string or Promise<string>, but without async extensions it returns string
+  let html = marked.parse(markdown) as string;
+
+  // Basic sanitization for email safety
+  // Remove any script tags and their content
+  html = html.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    ''
+  );
+
+  // Remove any on* event attributes
+  html = html.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
+  html = html.replace(/\son\w+\s*=\s*[^\s>]*/gi, '');
+
+  // Remove javascript: protocol from links
+  html = html.replace(/href\s*=\s*["']?\s*javascript:[^"'>]*/gi, 'href="#"');
+
+  // Remove data: URLs from images (except safe image formats)
+  html = html.replace(
+    /src\s*=\s*["']?\s*data:(?!image\/(png|jpg|jpeg|gif|webp|svg\+xml))[^"'>]*/gi,
+    'src=""'
+  );
+
+  // Remove any style tags and their content (optional, but recommended for email)
+  html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+  // Remove any meta tags
+  html = html.replace(/<meta\b[^>]*>/gi, '');
+
+  // Remove any iframe tags
+  html = html.replace(
+    /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
+    ''
+  );
+
+  // Remove any object/embed tags
+  html = html.replace(
+    /<(object|embed)\b[^<]*(?:(?!<\/(object|embed)>)<[^<]*)*<\/(object|embed)>/gi,
+    ''
+  );
+
+  return html;
+}
 
 /**
  * Send a task summary email to the user
@@ -57,21 +114,24 @@ export const sendTaskSummaryEmail = internalMutation({
         contentTruncated = true;
       }
 
+      // Convert markdown to HTML for the HTML email template
+      const htmlTaskContent = markdownToSafeHtml(emailContent);
+
       // Create email HTML template
       const htmlContent = createEmailTemplate({
         taskTitle: args.taskTitle,
         executionDate: args.executionDate,
-        taskContent: emailContent,
+        taskContent: htmlTaskContent, // Use converted HTML
         contentTruncated,
         chatId: args.chatId,
         userName: user.name || user.preferredName || 'there',
       });
 
-      // Create plain text version
+      // Create plain text version (keep original markdown for text-only emails)
       const textContent = createTextTemplate({
         taskTitle: args.taskTitle,
         executionDate: args.executionDate,
-        taskContent: emailContent,
+        taskContent: emailContent, // Keep markdown for plain text
         contentTruncated,
         chatId: args.chatId,
         userName: user.name || user.preferredName || 'there',
@@ -306,11 +366,112 @@ function createMonospaceTemplate({
             border: 1px solid #dddddd;
             padding: 20px;
             margin: 15px 0;
-            white-space: pre-wrap;
             font-size: 13px;
             line-height: 1.5;
             color: #444444;
             overflow-x: auto;
+        }
+        
+        /* Styles for markdown-rendered content */
+        .code-block h1, .code-block h2, .code-block h3, 
+        .code-block h4, .code-block h5, .code-block h6 {
+            margin: 16px 0 8px 0;
+            font-weight: 600;
+            line-height: 1.3;
+            color: #333333;
+        }
+        
+        .code-block h1 { font-size: 20px; }
+        .code-block h2 { font-size: 18px; }
+        .code-block h3 { font-size: 16px; }
+        .code-block h4 { font-size: 14px; }
+        .code-block h5 { font-size: 13px; }
+        .code-block h6 { font-size: 12px; }
+        
+        .code-block p {
+            margin: 8px 0;
+            white-space: normal;
+        }
+        
+        .code-block ul, .code-block ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+        
+        .code-block li {
+            margin: 4px 0;
+            white-space: normal;
+        }
+        
+        .code-block code {
+            background: #e8e8e8;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        
+        .code-block pre {
+            background: #333333;
+            color: #f8f8f8;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 2px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        
+        .code-block pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        
+        .code-block a {
+            color: #0066cc;
+            text-decoration: underline;
+        }
+        
+        .code-block a:hover {
+            color: #0052a3;
+        }
+        
+        .code-block blockquote {
+            border-left: 3px solid #999999;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #666666;
+        }
+        
+        .code-block strong {
+            font-weight: 600;
+            color: #333333;
+        }
+        
+        .code-block em {
+            font-style: italic;
+        }
+        
+        .code-block hr {
+            border: none;
+            border-top: 1px solid #cccccc;
+            margin: 16px 0;
+        }
+        
+        .code-block table {
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+        
+        .code-block th, .code-block td {
+            border: 1px solid #dddddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        .code-block th {
+            background: #e8e8e8;
+            font-weight: 600;
         }
         
         .status-line {
@@ -493,6 +654,50 @@ function createMonospaceTemplate({
                 color: #cccccc;
             }
             
+            .code-block h1, .code-block h2, .code-block h3,
+            .code-block h4, .code-block h5, .code-block h6 {
+                color: #e0e0e0;
+            }
+            
+            .code-block code {
+                background: #2d2d2d;
+                color: #e0e0e0;
+            }
+            
+            .code-block pre {
+                background: #1a1a1a;
+                color: #e0e0e0;
+            }
+            
+            .code-block a {
+                color: #6db3f2;
+            }
+            
+            .code-block a:hover {
+                color: #8bc4f7;
+            }
+            
+            .code-block blockquote {
+                border-color: #666666;
+                color: #999999;
+            }
+            
+            .code-block strong {
+                color: #e0e0e0;
+            }
+            
+            .code-block hr {
+                border-color: #555555;
+            }
+            
+            .code-block th {
+                background: #2d2d2d;
+            }
+            
+            .code-block th, .code-block td {
+                border-color: #555555;
+            }
+            
             .warning-block {
                 background: #3a2f1a;
                 border-color: #665a2d;
@@ -583,7 +788,7 @@ function createMonospaceTemplate({
                 </div>
                 
                 <div class="section-header">// Execution Output</div>
-                <div class="code-block">${escapeHtml(taskContent)}</div>
+                <div class="code-block">${taskContent}</div>
                 
                 ${
                   contentTruncated
@@ -602,7 +807,7 @@ function createMonospaceTemplate({
                 </div>
                 
                 <div class="button-container">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/chat/${chatId}" class="cli-button">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://chat.ajanraj.com'}/c/${chatId}" class="cli-button">
                         open dashboard
                     </a>
                 </div>
