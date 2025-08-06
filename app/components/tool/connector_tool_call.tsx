@@ -1,8 +1,9 @@
 'use client';
 
 import { CaretDown, Copy, SpinnerGap } from '@phosphor-icons/react';
-import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ConnectorIcon } from '@/app/components/common/connector-icon';
+import { getConnectorConfig } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -29,47 +30,6 @@ type ConnectorToolCallProps = {
   data: ConnectorToolCallData;
   className?: string;
   isLoading?: boolean;
-};
-
-// Connector icons mapping
-const getConnectorIcon = (connectorType: ConnectorType): string => {
-  const iconMap: Record<ConnectorType, string> = {
-    gmail: 'https://www.google.com/s2/favicons?domain=gmail.com&sz=48',
-    googlecalendar:
-      'https://www.google.com/s2/favicons?domain=calendar.google.com&sz=48',
-    notion: 'https://www.google.com/s2/favicons?domain=notion.com&sz=48',
-    googledrive:
-      'https://www.google.com/s2/favicons?domain=drive.google.com&sz=48',
-    googledocs:
-      'https://www.google.com/s2/favicons?domain=docs.google.com&sz=48',
-    googlesheets:
-      'https://www.google.com/s2/favicons?domain=sheets.google.com&sz=48',
-    slack: 'https://www.google.com/s2/favicons?domain=slack.com&sz=48',
-    linear: 'https://www.google.com/s2/favicons?domain=linear.app&sz=48',
-    github: 'https://www.google.com/s2/favicons?domain=github.com&sz=48',
-    twitter: 'https://www.google.com/s2/favicons?domain=x.com&sz=48',
-  };
-  return (
-    iconMap[connectorType] ||
-    `https://www.google.com/s2/favicons?domain=${connectorType}.com&sz=48`
-  );
-};
-
-// Format connector type for display
-const formatConnectorType = (connectorType: ConnectorType): string => {
-  const displayNames: Record<ConnectorType, string> = {
-    gmail: 'Gmail',
-    googlecalendar: 'Google Calendar',
-    notion: 'Notion',
-    googledrive: 'Google Drive',
-    googledocs: 'Google Docs',
-    googlesheets: 'Google Sheets',
-    slack: 'Slack',
-    linear: 'Linear',
-    github: 'GitHub',
-    twitter: 'X (Twitter)',
-  };
-  return displayNames[connectorType] || connectorType;
 };
 
 // Copy to clipboard functionality
@@ -185,12 +145,8 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
     const [isExpanded, setIsExpanded] = useState(false);
 
     // Memoized values
-    const connectorIcon = useMemo(
-      () => getConnectorIcon(data.connectorType),
-      [data.connectorType]
-    );
-    const connectorDisplayName = useMemo(
-      () => formatConnectorType(data.connectorType),
+    const connectorConfig = useMemo(
+      () => getConnectorConfig(data.connectorType),
       [data.connectorType]
     );
 
@@ -262,20 +218,9 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
           >
             <div className="flex min-w-0 flex-row items-center gap-2">
               <div className="flex h-5 w-5 items-center justify-center text-muted-foreground">
-                <Image
-                  alt="connector icon"
-                  className="rounded-sm opacity-100 transition duration-500"
-                  decoding="async"
-                  height={18}
-                  loading="lazy"
-                  src={connectorIcon}
-                  style={{
-                    color: 'transparent',
-                    maxWidth: '18px',
-                    maxHeight: '18px',
-                  }}
-                  unoptimized
-                  width={18}
+                <ConnectorIcon
+                  className="h-[18px] w-[18px]"
+                  connector={connectorConfig}
                 />
               </div>
               <div className="relative bottom-[0.5px] flex-grow overflow-hidden overflow-ellipsis whitespace-nowrap text-left text-muted-foreground leading-tight">
@@ -290,7 +235,7 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
               ) : (
                 <>
                   <div className="shrink-0 whitespace-nowrap text-muted-foreground text-sm leading-tight">
-                    {connectorDisplayName}
+                    {connectorConfig.displayName}
                   </div>
                   <div className={cn(caretClassName, 'h-4 w-4')}>
                     <CaretDown size={20} />
