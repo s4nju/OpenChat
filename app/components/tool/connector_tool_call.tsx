@@ -216,7 +216,7 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
 
     const buttonClassName = useMemo(() => {
       return cn(
-        'group/row flex h-[2.625rem] flex-row items-center justify-between gap-4 rounded-lg px-3 py-2',
+        'group/row flex h-[2.625rem] flex-row items-center justify-between gap-4 rounded-xl px-3 py-2',
         'text-muted-foreground transition-colors duration-200',
         isLoading ? 'cursor-default' : 'cursor-pointer hover:text-foreground'
       );
@@ -252,7 +252,7 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
 
     return (
       <div className={cn('my-3 w-full', className)}>
-        <div className="flex min-h-[2.625rem] flex-col rounded-lg border bg-card font-ui leading-normal tracking-tight shadow-sm transition-all duration-400 ease-out">
+        <div className="flex min-h-[2.625rem] flex-col rounded-xl border bg-card font-ui leading-normal tracking-tight shadow-sm transition-all duration-400 ease-out">
           {/* Toggle Button Header */}
           <button
             className={buttonClassName}

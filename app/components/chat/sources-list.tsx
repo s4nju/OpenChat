@@ -86,7 +86,7 @@ export const SourcesList = memo<SourcesListProps>(
 
     return (
       <div className={cn('my-4', className)}>
-        <div className="flex flex-col gap-0 overflow-hidden rounded-lg border border-border bg-card">
+        <div className="flex flex-col gap-0 overflow-hidden rounded-xl border border-border bg-card">
           <button
             className="flex w-full flex-row items-center px-4 py-3 transition-colors hover:bg-accent"
             onClick={handleToggleExpanded}
@@ -151,7 +151,7 @@ export const SourcesList = memo<SourcesListProps>(
                             rel="noopener noreferrer"
                             target="_blank"
                           >
-                            <div className="overflow-hidden rounded-lg border bg-background transition-colors hover:bg-accent/50">
+                            <div className="overflow-hidden rounded-xl border bg-background transition-colors hover:bg-accent/50">
                               {/* OpenGraph Image */}
                               <div className="relative h-32 w-full overflow-hidden bg-muted">
                                 {imageErrors.has(source.sourceId) ? (

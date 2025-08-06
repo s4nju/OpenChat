@@ -9,7 +9,8 @@
       "!node_modules/**",
       "!convex/_generated/**",
       "!app/globals.css",
-      "!*.lock"
+      "!*.lock",
+      "!ai-chatbot-main/**"
     ]
   },
   "linter": {

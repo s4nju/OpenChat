@@ -1,0 +1,187 @@
+"use client"
+
+import { CaretDown } from "@phosphor-icons/react"
+import { AnimatePresence, motion } from "framer-motion"
+import { createContext, useContext, useState } from "react"
+import { cn } from "@/lib/utils"
+
+const ReasoningContext = createContext<{
+  isExpanded: boolean
+  toggle: () => void
+  isLoading?: boolean
+} | null>(null)
+
+function useReasoningContext() {
+  const ctx = useContext(ReasoningContext)
+  if (!ctx) throw new Error("Reasoning.* must be used inside <Reasoning>")
+  return ctx
+}
+
+export type ReasoningProps = {
+  children: React.ReactNode
+  defaultExpanded?: boolean
+  expanded?: boolean
+  onToggle?: () => void
+  isLoading?: boolean
+  className?: string
+}
+
+export function Reasoning({
+  children,
+  defaultExpanded = false,
+  expanded,
+  onToggle,
+  isLoading = false,
+  className,
+}: ReasoningProps) {
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded)
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isExpanded = expanded !== undefined ? expanded : internalExpanded
+
+  const toggle = () => {
+    if (onToggle) {
+      onToggle()
+    } else {
+      setInternalExpanded((prev) => !prev)
+    }
+  }
+
+  return (
+    <ReasoningContext.Provider value={{ isExpanded, toggle, isLoading }}>
+      <div
+        className={cn(
+          "relative w-full max-w-full rounded-xl border px-4 shadow-xs",
+          className
+        )}
+      >
+        {children}
+      </div>
+    </ReasoningContext.Provider>
+  )
+}
+
+export type ReasoningTriggerProps = {
+  className?: string
+}
+
+export function ReasoningTrigger({ className }: ReasoningTriggerProps) {
+  const { isExpanded, toggle, isLoading } = useReasoningContext()
+
+  return (
+    <div>
+      <button
+        className={cn(
+          "flex h-10 w-full items-center cursor-pointer",
+          className
+        )}
+        type="button"
+        onClick={toggle}
+        disabled={isLoading}
+      >
+        <motion.div 
+          className={cn(
+            "mr-2.75 size-2.25 rounded-full transition-colors duration-200",
+            isLoading 
+              ? "bg-orange-500 dark:bg-orange-400" 
+              : "bg-blue-600 dark:bg-blue-400"
+          )}
+          animate={isLoading ? {
+            opacity: [1, 0.4, 1],
+            scale: [1, 1.1, 1]
+          } : {
+            opacity: 1,
+            scale: 1
+          }}
+          transition={{
+            duration: 2,
+            ease: "easeInOut",
+            repeat: isLoading ? Infinity : 0,
+            repeatType: "loop"
+          }}
+        />
+        <span className="font-medium text-sm">
+          {isLoading ? "Reasoning" : "Reasoned for a few seconds"}
+        </span>
+        <div className="flex-grow" />
+        {!isLoading && (
+          <div
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm shadow-none outline-none transition-all",
+              "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "disabled:pointer-events-none disabled:opacity-50",
+              "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
+              "[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+              "text-muted-foreground shadow-none hover:bg-muted hover:text-muted-foreground",
+              "h-7 w-7 absolute top-1.5 right-1.5"
+            )}
+          >
+            <div style={{ transform: "none" }}>
+              <CaretDown
+                className={cn(
+                  "size-4 transition-transform duration-200",
+                  isExpanded && "rotate-180"
+                )}
+              />
+            </div>
+          </div>
+        )}
+      </button>
+    </div>
+  )
+}
+
+export type ReasoningContentProps = {
+  children: React.ReactNode
+  className?: string
+}
+
+export function ReasoningContent({
+  children,
+  className,
+}: ReasoningContentProps) {
+  const { isExpanded } = useReasoningContext()
+
+  return (
+    <AnimatePresence initial={false}>
+      {isExpanded && (
+        <motion.div
+          initial={{
+            opacity: 0,
+            height: 0,
+            marginTop: 0,
+            marginBottom: 0,
+          }}
+          animate={{
+            opacity: 1,
+            height: "auto",
+            marginTop: "0.5rem",
+            marginBottom: "0.5rem",
+          }}
+          exit={{
+            opacity: 0,
+            height: 0,
+            marginTop: 0,
+            marginBottom: 0,
+          }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          style={{ overflow: "hidden" }}
+        >
+          <div
+            className={cn(
+              "w-full flex flex-col justify-center gap-1 prose-sm",
+              "[&_*]:!text-foreground/80 [&_*]:!text-sm whitespace-pre-line",
+              "[&>:first-child:not(span)]:mt-2 [&>:last-child:not(span)]:mb-2",
+              "[&>:only-child:not(span)]:mt-2 [&_p:has(>strong)+p]:mt-0",
+              "[&_p:has(>strong)]:mb-0",
+              className
+            )}
+          >
+            {children}
+          </div>
+          <div className="h-[0.875rem]" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}

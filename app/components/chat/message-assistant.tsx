@@ -15,6 +15,11 @@ import {
   MessageActions,
   MessageContent,
 } from '@/components/prompt-kit/message';
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from '@/components/prompt-kit/reasoning';
 import type { Message as MessageSchema } from '@/convex/schema/message';
 import { cn } from '@/lib/utils';
 
@@ -47,15 +52,11 @@ const isErrorPart = (part: unknown): part is ErrorUIPart => {
 
 import {
   ArrowClockwise,
-  CaretDown,
-  CaretUp,
   Check,
   Copy,
   FilePdf,
   GitBranch,
-  SpinnerGap,
 } from '@phosphor-icons/react';
-import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic'; // Client component – required when using React hooks in the app router
 import Image from 'next/image';
 
@@ -326,70 +327,21 @@ const renderReasoningPart = (
 ) => {
   return (
     <div className="mb-2 w-full" key={`reasoning-${index}`}>
-      {isPartStreaming ? (
-        <div className="flex flex-row items-center gap-2">
-          <div className="font-medium text-muted-foreground text-sm">
-            Reasoning
-          </div>
-          <div className="animate-spin">
-            <SpinnerGap size={14} weight="bold" />
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-row items-center gap-2">
-          <div className="font-medium text-muted-foreground text-sm">
-            Reasoned for a few seconds
-          </div>
-          <button
-            aria-label={showReasoning ? 'Hide Reasoning' : 'Show Reasoning'}
-            className={cn(
-              'cursor-pointer rounded-full p-1 transition hover:bg-zinc-200 dark:hover:bg-zinc-800',
-              showReasoning && 'bg-zinc-200 dark:bg-zinc-800'
-            )}
-            onClick={toggleReasoning}
-            type="button"
+      <Reasoning
+        expanded={showReasoning}
+        isLoading={isPartStreaming}
+        onToggle={toggleReasoning}
+      >
+        <ReasoningTrigger />
+        <ReasoningContent>
+          <Markdown
+            className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
+            id={`${id}-reasoning-${index}`}
           >
-            {showReasoning ? (
-              <CaretUp size={16} weight="bold" />
-            ) : (
-              <CaretDown size={16} weight="bold" />
-            )}
-          </button>
-        </div>
-      )}
-      <AnimatePresence initial={false}>
-        {showReasoning && (
-          <motion.div
-            animate={{
-              opacity: 1,
-              marginTop: '1rem',
-              marginBottom: 0,
-              height: 'auto',
-            }}
-            className="flex w-full flex-col gap-4 border-zinc-300 border-l pl-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
-            exit={{
-              opacity: 0,
-              marginTop: 0,
-              marginBottom: 0,
-              height: 0,
-            }}
-            initial={{
-              opacity: 0,
-              marginTop: 0,
-              marginBottom: 0,
-              height: 0,
-            }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-          >
-            <Markdown
-              className="prose prose-sm dark:prose-invert w-full max-w-none break-words leading-relaxed"
-              id={`${id}-reasoning-${index}`}
-            >
-              {part.text}
-            </Markdown>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {part.text}
+          </Markdown>
+        </ReasoningContent>
+      </Reasoning>
     </div>
   );
 };

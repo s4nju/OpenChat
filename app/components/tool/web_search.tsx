@@ -116,7 +116,7 @@ export const UnifiedSearch = memo<UnifiedSearchProps>(
 
     const buttonClassName = useMemo(() => {
       return cn(
-        'group/row flex h-[2.625rem] flex-row items-center justify-between gap-4 rounded-lg px-3 py-2 text-muted-foreground transition-colors duration-200',
+        'group/row flex h-[2.625rem] flex-row items-center justify-between gap-4 rounded-xl px-3 py-2 text-muted-foreground transition-colors duration-200',
         isLoading ? 'cursor-default' : 'cursor-pointer hover:text-foreground'
       );
     }, [isLoading]);
@@ -148,7 +148,7 @@ export const UnifiedSearch = memo<UnifiedSearchProps>(
 
     return (
       <div className={cn('my-3 w-full', className)}>
-        <div className="flex min-h-[2.625rem] flex-col rounded-lg border bg-card leading-normal tracking-tight shadow-sm transition-all duration-300 ease-out">
+        <div className="flex min-h-[2.625rem] flex-col rounded-xl border bg-card leading-normal tracking-tight shadow-sm transition-all duration-300 ease-out">
           {/* Toggle Button Header */}
           <button
             className={buttonClassName}
