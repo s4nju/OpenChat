@@ -137,29 +137,69 @@ async function saveUserMessage(
 }
 
 /**
- * Token budget configuration for reasoning models
+ * Centralized reasoning effort configuration
  * - low: For quick responses with minimal reasoning depth
  * - medium: Balanced reasoning depth for most use cases
  * - high: Maximum reasoning depth for complex problems
  *
- * Anthropic uses 1024 for low (aligned with their API minimum),
- * while Google uses 1000 (their minimum threshold)
+ * tokens: Used by Google and Anthropic providers
+ * effort: Used by OpenAI and OpenRouter providers
  */
-const REASONING_BUDGETS = {
-  low: { google: 1000, openai: 'low', anthropic: 1024 },
-  medium: { google: 6000, openai: 'medium', anthropic: 6000 },
-  high: { google: 12_000, openai: 'high', anthropic: 12_000 },
+const REASONING_EFFORT_CONFIG = {
+  low: {
+    tokens: 1024,
+    effort: 'low',
+  },
+  medium: {
+    tokens: 6000,
+    effort: 'medium',
+  },
+  high: {
+    tokens: 12_000,
+    effort: 'high',
+  },
 } as const;
 
 /**
- * Model identifiers that support reasoning capabilities
- * Uses substring matching for version flexibility (e.g., "2.5-flash-001", "o1-preview")
+ * Maps reasoning effort to provider-specific configuration
+ * Uses feature-based detection instead of hardcoded patterns
  */
-const REASONING_MODELS = {
-  google: ['2.5-flash', '2.5-pro'],
-  openai: ['o1', 'o3', 'o4'],
-  anthropic: ['sonnet-4', '4-sonnet', '4-opus', 'opus-4', '3-7'],
-} as const;
+const mapReasoningEffortToProviderConfig = (
+  provider: string,
+  effort: ReasoningEffort
+): Record<string, unknown> => {
+  const config = REASONING_EFFORT_CONFIG[effort];
+
+  switch (provider) {
+    case 'openai':
+      return { reasoningEffort: config.effort };
+
+    case 'anthropic':
+      return {
+        thinking: {
+          budgetTokens: config.tokens,
+        },
+      };
+
+    case 'google':
+    case 'gemini':
+      return {
+        thinkingConfig: {
+          thinkingBudget: config.tokens,
+        },
+      };
+
+    case 'openrouter':
+      return {
+        reasoning: {
+          effort: config.effort,
+        },
+      };
+
+    default:
+      return {};
+  }
+};
 
 type ChatRequest = {
   messages: UIMessage[];
@@ -207,17 +247,18 @@ const buildGoogleProviderOptions = (
 ): GoogleGenerativeAIProviderOptions => {
   const options: GoogleGenerativeAIProviderOptions = {};
 
-  // Check if model supports reasoning using centralized configuration
-  if (REASONING_MODELS.google.some((m) => modelId.includes(m))) {
-    const enableThinking = shouldEnableThinking(modelId);
+  // Check if model supports reasoning using feature-based detection
+  if (shouldEnableThinking(modelId) && reasoningEffort) {
+    const reasoningConfig = mapReasoningEffortToProviderConfig(
+      'google',
+      reasoningEffort
+    );
 
-    if (enableThinking) {
+    if (reasoningConfig.thinkingConfig) {
       options.thinkingConfig = {
         includeThoughts: true,
-        thinkingBudget: reasoningEffort
-          ? REASONING_BUDGETS[reasoningEffort].google
-          : REASONING_BUDGETS.medium.google,
-      };
+        ...reasoningConfig.thinkingConfig,
+      } as GoogleGenerativeAIProviderOptions['thinkingConfig'];
     }
   }
 
@@ -230,14 +271,18 @@ const buildOpenAIProviderOptions = (
 ): OpenAIResponsesProviderOptions => {
   const options: OpenAIResponsesProviderOptions = {};
 
-  // Check if model supports reasoning using centralized configuration
-  if (
-    REASONING_MODELS.openai.some((m) => modelId.includes(m)) &&
-    reasoningEffort
-  ) {
-    options.reasoningEffort = REASONING_BUDGETS[reasoningEffort]
-      .openai as ReasoningEffort;
-    options.reasoningSummary = 'detailed';
+  // Check if model supports reasoning using feature-based detection
+  if (shouldEnableThinking(modelId) && reasoningEffort) {
+    const reasoningConfig = mapReasoningEffortToProviderConfig(
+      'openai',
+      reasoningEffort
+    );
+
+    if (reasoningConfig.reasoningEffort) {
+      options.reasoningEffort =
+        reasoningConfig.reasoningEffort as ReasoningEffort;
+      options.reasoningSummary = 'detailed';
+    }
   }
 
   return options;
@@ -249,15 +294,40 @@ const buildAnthropicProviderOptions = (
 ): AnthropicProviderOptions => {
   const options: AnthropicProviderOptions = {};
 
-  // Check if model supports reasoning using centralized configuration
-  if (
-    reasoningEffort &&
-    REASONING_MODELS.anthropic.some((m) => modelId.includes(m))
-  ) {
-    options.thinking = {
-      type: 'enabled',
-      budgetTokens: REASONING_BUDGETS[reasoningEffort].anthropic,
-    };
+  // Check if model supports reasoning using feature-based detection
+  if (shouldEnableThinking(modelId) && reasoningEffort) {
+    const reasoningConfig = mapReasoningEffortToProviderConfig(
+      'anthropic',
+      reasoningEffort
+    );
+
+    if (reasoningConfig.thinking) {
+      options.thinking = {
+        type: 'enabled',
+        ...reasoningConfig.thinking,
+      } as AnthropicProviderOptions['thinking'];
+    }
+  }
+
+  return options;
+};
+
+const buildOpenRouterProviderOptions = (
+  modelId: string,
+  reasoningEffort?: ReasoningEffort
+): Record<string, unknown> => {
+  const options: Record<string, unknown> = {};
+
+  // Check if model supports reasoning using feature-based detection
+  if (shouldEnableThinking(modelId) && reasoningEffort) {
+    const reasoningConfig = mapReasoningEffortToProviderConfig(
+      'openrouter',
+      reasoningEffort
+    );
+
+    if (reasoningConfig.reasoning) {
+      options.reasoning = reasoningConfig.reasoning;
+    }
   }
 
   return options;
@@ -723,12 +793,13 @@ export async function POST(req: Request) {
           },
         };
       }
-      if (
-        selectedModel.apiProvider === 'openrouter' ||
-        selectedModel.provider === 'openrouter'
-      ) {
+      if (selectedModel.provider === 'openrouter') {
         return {
           openrouter: {
+            ...buildOpenRouterProviderOptions(
+              selectedModel.id,
+              reasoningEffort
+            ),
             apiKey: key,
             user: user?._id ? `user_${user._id}` : undefined,
           },
@@ -766,7 +837,7 @@ export async function POST(req: Request) {
         stopWhen: stepCountIs(20),
         experimental_transform: smoothStream({
           delayInMs: 20, // optional: defaults to 10ms
-          chunking: 'line', // optional: defaults to 'word'
+          chunking: 'word', // optional: defaults to 'word'
         }),
         // COMMENTED OUT: abortSignal: req.signal
         //
