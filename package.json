@@ -34,7 +34,7 @@
     "@convex-dev/resend": "^0.1.7",
     "@emotion/is-prop-valid": "^1.3.1",
     "@lobehub/icons": "^2.23.0",
-    "@openrouter/ai-sdk-provider": "^1.0.0-beta.5",
+    "@openrouter/ai-sdk-provider": "^1.0.0-beta.6",
     "@phosphor-icons/react": "^2.1.10",
     "@posthog/ai": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.14",
