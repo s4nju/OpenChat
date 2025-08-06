@@ -16,8 +16,8 @@ export const ModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   subName: z.string().optional(),
-  provider: z.string(),
-  apiProvider: z.string().optional(), // API provider for routing (e.g., 'openrouter') - separate from display provider
+  provider: z.string(), // Main provider for API routing and parameter configuration
+  displayProvider: z.string().optional(), // Optional provider name for UI display/icons only
   api_sdk: z.any().optional(),
   premium: z.boolean(),
   usesPremiumCredits: z.boolean(),

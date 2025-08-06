@@ -7,8 +7,8 @@ export const MOONSHOT_MODELS = [
   {
     id: 'moonshotai/kimi-k2',
     name: 'Kimi K2',
-    provider: 'moonshotai',
-    apiProvider: 'openrouter',
+    provider: 'openrouter',
+    displayProvider: 'moonshotai',
     premium: false,
     usesPremiumCredits: false,
     description: `Moonshot AI's Kimi K2 model.\nOffers agentic tools capabilities for various tasks.`,

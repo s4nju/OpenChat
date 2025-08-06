@@ -6,7 +6,6 @@ export const OPENROUTER_MODELS = [
     id: 'openrouter/horizon-beta',
     name: 'Horizon Beta',
     provider: 'openrouter',
-    apiProvider: 'openrouter',
     premium: false,
     usesPremiumCredits: false,
     skipRateLimit: true,

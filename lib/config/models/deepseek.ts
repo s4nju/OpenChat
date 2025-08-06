@@ -14,8 +14,8 @@ export const DEEPSEEK_MODELS = [
   {
     id: 'deepseek/deepseek-chat-v3-0324:free',
     name: 'DeepSeek V3 0324',
-    provider: 'deepseek',
-    apiProvider: 'openrouter',
+    provider: 'openrouter',
+    displayProvider: 'deepseek',
     premium: false,
     usesPremiumCredits: false,
     description: `DeepSeek's experimental chat model for research exploration.\nProvides cost-effective access to DeepSeek capabilities.`,
@@ -39,8 +39,8 @@ export const DEEPSEEK_MODELS = [
     id: 'deepseek/deepseek-r1-distill-llama-70b:free',
     name: 'DeepSeek R1',
     subName: 'Llama Distilled',
-    provider: 'deepseek',
-    apiProvider: 'openrouter',
+    provider: 'openrouter',
+    displayProvider: 'deepseek',
     premium: true,
     usesPremiumCredits: false,
     description:
