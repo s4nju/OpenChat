@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
@@ -253,26 +254,21 @@ export function TaskFormContent({
         {/* Frequency */}
         <div className="space-y-3">
           <Label>Frequency</Label>
-          <div className="inline-flex rounded-md bg-muted p-1">
-            {(['onetime', 'daily', 'weekly'] as const).map((type) => (
-              <Button
-                className={`${
-                  form.scheduleType === type
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-transparent text-muted-foreground hover:bg-muted'
-                } rounded-md px-4`}
-                key={type}
-                onClick={() => updateForm('scheduleType', type)}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                {type === 'onetime'
-                  ? 'Once'
-                  : type.charAt(0).toUpperCase() + type.slice(1)}
-              </Button>
-            ))}
-          </div>
+          <Tabs
+            onValueChange={(value) =>
+              updateForm(
+                'scheduleType',
+                value as 'onetime' | 'daily' | 'weekly'
+              )
+            }
+            value={form.scheduleType}
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="onetime">Once</TabsTrigger>
+              <TabsTrigger value="daily">Daily</TabsTrigger>
+              <TabsTrigger value="weekly">Weekly</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Time */}
