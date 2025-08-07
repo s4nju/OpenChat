@@ -11,109 +11,14 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
 
-// Define the provider type to match the mutation
-type Provider =
-  | 'openrouter'
-  | 'openai'
-  | 'anthropic'
-  | 'mistral'
-  | 'meta'
-  | 'Qwen'
-  | 'gemini';
+import {
+  getApiKeyProviders,
+  type ApiKeyProvider as Provider,
+  validateApiKey,
+} from '@/lib/config/api-keys';
 
-// API key validation patterns
-const API_KEY_PATTERNS = {
-  openai: /^sk-[a-zA-Z0-9]{20,}$/,
-  anthropic: /^sk-ant-[a-zA-Z0-9_-]{8,}$/,
-  gemini: /^AIza[a-zA-Z0-9_-]{35,}$/,
-} as const;
-
-// Validation function
-function validateApiKey(
-  provider: Provider,
-  key: string
-): { isValid: boolean; error?: string } {
-  if (!key.trim()) {
-    return { isValid: false, error: 'API key is required' };
-  }
-
-  const pattern = API_KEY_PATTERNS[provider as keyof typeof API_KEY_PATTERNS];
-  if (!pattern) {
-    return { isValid: true }; // No specific pattern for this provider
-  }
-
-  if (!pattern.test(key)) {
-    switch (provider) {
-      case 'openai':
-        return {
-          isValid: false,
-          error:
-            "OpenAI API keys should start with 'sk-' followed by at least 20 characters",
-        };
-      case 'anthropic':
-        return {
-          isValid: false,
-          error:
-            "Anthropic API keys should start with 'sk-ant-' followed by at least 8 characters (letters, numbers, hyphens, underscores)",
-        };
-      case 'gemini':
-        return {
-          isValid: false,
-          error:
-            "Google API keys should start with 'AIza' followed by 35+ characters",
-        };
-      default:
-        return { isValid: false, error: 'Invalid API key format' };
-    }
-  }
-
-  return { isValid: true };
-}
-
-const PROVIDERS: Array<{
-  id: Provider;
-  title: string;
-  placeholder: string;
-  docs: string;
-  models: string[];
-}> = [
-  {
-    id: 'anthropic',
-    title: 'Anthropic API Key',
-    placeholder: 'sk-ant...',
-    docs: 'https://console.anthropic.com/account/keys',
-    models: [
-      'Claude 3.5 Sonnet',
-      'Claude 3.7 Sonnet',
-      'Claude 3.7 Sonnet (Reasoning)',
-      'Claude 4 Opus',
-      'Claude 4 Sonnet',
-      'Claude 4 Sonnet (Reasoning)',
-    ],
-  },
-  {
-    id: 'openai',
-    title: 'OpenAI API Key',
-    placeholder: 'sk-...',
-    docs: 'https://platform.openai.com/api-keys',
-    models: ['GPT-4.5', 'o3', 'o3 Pro'],
-  },
-  {
-    id: 'gemini',
-    title: 'Google API Key',
-    placeholder: 'AIza...',
-    docs: 'https://console.cloud.google.com/apis/credentials',
-    models: [
-      'Gemini 2.0 Flash',
-      'Gemini 2.0 Flash Lite',
-      'Gemini 2.5 Flash',
-      'Gemini 2.5 Flash (Thinking)',
-      'Gemini 2.5 Flash Lite',
-      'Gemini 2.5 Flash Lite (Thinking)',
-      'Gemini 2.5 Pro',
-    ],
-  },
-] as const;
+// Get dynamic provider data from model configuration
+const PROVIDERS = getApiKeyProviders();
 
 // Helper component for delete icon
 function DeleteIcon() {
