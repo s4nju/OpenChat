@@ -9,13 +9,15 @@ export const APP_DESCRIPTION =
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-export const MODEL_DEFAULT = 'openrouter/horizon-beta';
+export const MODEL_DEFAULT = 'gpt-5-nano';
 
 export const RECOMMENDED_MODELS = [
   'gemini-2.5-flash-lite',
   'gemini-2.5-pro',
   'imagen-4',
-  'gpt-4o-mini',
+  'gpt-5',
+  'gpt-5-mini',
+  'gpt-5-nano',
   'o4-mini',
   'gpt-image-1',
   'claude-4-sonnet',
