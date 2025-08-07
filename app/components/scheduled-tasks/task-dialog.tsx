@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -58,6 +59,11 @@ export function TaskDialog({
                   ? 'Edit Scheduled Task'
                   : 'Create New Scheduled Task'}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                {mode === 'edit'
+                  ? 'Edit the settings and configuration for this scheduled task.'
+                  : 'Create a new automated task that will run on a schedule.'}
+              </DialogDescription>
             </DialogHeader>
 
             <Suspense fallback={<FormLoadingSpinner />}>
@@ -105,6 +111,11 @@ export function TaskDialog({
                 ? 'Edit Scheduled Task'
                 : 'Create New Scheduled Task'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {mode === 'edit'
+                ? 'Edit the settings and configuration for this scheduled task.'
+                : 'Create a new automated task that will run on a schedule.'}
+            </DialogDescription>
           </DialogHeader>
 
           <Suspense fallback={<FormLoadingSpinner />}>

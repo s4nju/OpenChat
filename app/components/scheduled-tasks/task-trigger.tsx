@@ -2,21 +2,31 @@
 
 import { memo } from 'react';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
+import type { Id } from '@/convex/_generated/dataModel';
 import { TaskDialog } from './task-dialog';
 import { TaskDrawer } from './task-drawer';
+import type { CreateTaskForm } from './types';
 
 type TaskTriggerProps = {
   trigger: React.ReactNode;
+  initialData?: Partial<CreateTaskForm> & { taskId?: Id<'scheduled_tasks'> };
+  mode?: 'create' | 'edit';
 };
 
-function TaskTriggerComponent({ trigger }: TaskTriggerProps) {
+function TaskTriggerComponent({
+  trigger,
+  initialData,
+  mode = 'create',
+}: TaskTriggerProps) {
   const isMobileOrTablet = useBreakpoint(896); // Same breakpoint as settings
 
   if (isMobileOrTablet) {
-    return <TaskDrawer trigger={trigger} />;
+    return (
+      <TaskDrawer initialData={initialData} mode={mode} trigger={trigger} />
+    );
   }
 
-  return <TaskDialog trigger={trigger} />;
+  return <TaskDialog initialData={initialData} mode={mode} trigger={trigger} />;
 }
 
 // Memoize TaskTrigger component to prevent unnecessary re-renders

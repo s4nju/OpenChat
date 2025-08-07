@@ -6,6 +6,7 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -46,6 +47,11 @@ function SharedDrawerContent({
               ? 'Edit Scheduled Task'
               : 'Create New Scheduled Task'}
           </DrawerTitle>
+          <DrawerDescription className="sr-only">
+            {mode === 'edit'
+              ? 'Edit the settings and configuration for this scheduled task.'
+              : 'Create a new automated task that will run on a schedule.'}
+          </DrawerDescription>
           <DrawerClose asChild>
             <button
               aria-label="Close dialog"
