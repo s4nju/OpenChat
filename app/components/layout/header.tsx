@@ -1,6 +1,7 @@
 'use client';
 
-import { Info, Plus, Timer } from '@phosphor-icons/react';
+import { Info, Plus } from '@phosphor-icons/react';
+import { CircleCheckBig } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -69,7 +70,7 @@ export function Header() {
                     onClick={() => router.push('/tasks')}
                     type="button"
                   >
-                    <Timer size={24} />
+                    <CircleCheckBig size={20} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>Tasks</TooltipContent>
