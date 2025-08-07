@@ -79,27 +79,24 @@ export function ReasoningTrigger({ className }: ReasoningTriggerProps) {
         onClick={toggle}
         disabled={isLoading}
       >
-        <motion.div 
-          className={cn(
-            "mr-2.75 size-2.25 rounded-full transition-colors duration-200",
-            isLoading 
-              ? "bg-orange-500 dark:bg-orange-400" 
-              : "bg-blue-600 dark:bg-blue-400"
+        <span className="relative flex size-2.25 mr-2.75">
+          {isLoading && (
+            <span
+              className={cn(
+                "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                "bg-orange-400 dark:bg-orange-300"
+              )}
+            />
           )}
-          animate={isLoading ? {
-            opacity: [1, 0.4, 1],
-            scale: [1, 1.1, 1]
-          } : {
-            opacity: 1,
-            scale: 1
-          }}
-          transition={{
-            duration: 2,
-            ease: "easeInOut",
-            repeat: isLoading ? Infinity : 0,
-            repeatType: "loop"
-          }}
-        />
+          <span
+            className={cn(
+              "relative inline-flex size-2.25 rounded-full transition-colors duration-200",
+              isLoading 
+                ? "bg-orange-500 dark:bg-orange-400" 
+                : "bg-blue-600 dark:bg-blue-400"
+            )}
+          />
+        </span>
         <span className="font-medium text-sm">
           {isLoading ? "Reasoning" : "Reasoned for a few seconds"}
         </span>
