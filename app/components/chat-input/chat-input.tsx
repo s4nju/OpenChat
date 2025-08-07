@@ -264,6 +264,7 @@ export function ChatInput({
               />
               {isReasoningModel && (
                 <SelectReasoningEffort
+                  isUserAuthenticated={isUserAuthenticated}
                   onSelectReasoningEffortAction={onSelectReasoningEffortAction}
                   reasoningEffort={reasoningEffort}
                 />

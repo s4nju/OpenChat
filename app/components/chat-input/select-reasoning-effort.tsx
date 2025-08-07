@@ -1,8 +1,10 @@
 'use client';
 
-import { BrainIcon } from '@phosphor-icons/react';
+import { BrainIcon, CaretDownIcon } from '@phosphor-icons/react';
 import React from 'react';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -15,22 +17,63 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { PopoverContentAuth } from './popover-content-auth';
 
 type ReasoningEffort = 'low' | 'medium' | 'high';
 
 type SelectReasoningEffortProps = {
   reasoningEffort: ReasoningEffort;
   onSelectReasoningEffortAction: (reasoningEffort: ReasoningEffort) => void;
+  isUserAuthenticated: boolean;
 };
 
 export function SelectReasoningEffort({
   reasoningEffort,
   onSelectReasoningEffortAction,
+  isUserAuthenticated,
 }: SelectReasoningEffortProps) {
   const isMobile = useBreakpoint(768);
   const hiddenSelectRef = React.useRef<HTMLButtonElement>(null);
   const capitalizedReasoningEffort =
     reasoningEffort.charAt(0).toUpperCase() + reasoningEffort.slice(1);
+
+  if (!isUserAuthenticated) {
+    return (
+      <Popover>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              {isMobile ? (
+                <Button
+                  className="flex size-9 items-center justify-center rounded-full border border-input bg-transparent text-accent-foreground dark:bg-secondary"
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  <BrainIcon className="size-4" />
+                </Button>
+              ) : (
+                <Button
+                  className="h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground dark:bg-secondary"
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  <BrainIcon className="size-4" />
+                  {capitalizedReasoningEffort}
+                  <CaretDownIcon className="size-4" />
+                </Button>
+              )}
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Select Reasoning Effort</p>
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContentAuth />
+      </Popover>
+    );
+  }
 
   return (
     <Select
