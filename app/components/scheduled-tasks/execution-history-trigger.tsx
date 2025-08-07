@@ -39,13 +39,4 @@ function ExecutionHistoryTriggerComponent({
 }
 
 // Memoize ExecutionHistoryTrigger component to prevent unnecessary re-renders
-export const ExecutionHistoryTrigger = memo(
-  ExecutionHistoryTriggerComponent,
-  (prevProps, nextProps) => {
-    return (
-      prevProps.taskId === nextProps.taskId &&
-      prevProps.taskTitle === nextProps.taskTitle &&
-      prevProps.trigger === nextProps.trigger
-    );
-  }
-);
+export const ExecutionHistoryTrigger = memo(ExecutionHistoryTriggerComponent);

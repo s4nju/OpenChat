@@ -3,7 +3,7 @@
 import { ArrowLeft, Moon, SignOut, Sun } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/app/providers/theme-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
@@ -17,7 +17,7 @@ export function HeaderGoBack({
   href = '/',
   showControls = true,
 }: HeaderGoBackProps) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { signOut } = useUser();
   const router = useRouter();
 
@@ -46,15 +46,28 @@ export function HeaderGoBack({
       </Link>
       {showControls && (
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            size="icon"
-            variant="ghost"
+          <button
+            aria-label="Switch theme"
+            className="group flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            onClick={() =>
+              setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+            }
+            tabIndex={0}
+            type="button"
           >
-            <Sun className="dark:-rotate-90 h-5 w-5 rotate-0 scale-100 transition-all dark:scale-0" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            {resolvedTheme === 'dark' ? (
+              <Sun
+                className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
+                weight="bold"
+              />
+            ) : (
+              <Moon
+                className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
+                weight="bold"
+              />
+            )}
             <span className="sr-only">Toggle theme</span>
-          </Button>
+          </button>
           <Button
             className="flex items-center gap-1 px-2"
             onClick={handleSignOut}
