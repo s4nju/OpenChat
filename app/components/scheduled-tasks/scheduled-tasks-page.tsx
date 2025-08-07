@@ -13,7 +13,7 @@ import type { TaskStatus } from './types';
 
 // Static constants moved outside component for better performance
 const SCROLL_CONTAINER_STYLES = {
-  maxHeight: '440px',
+  maxHeight: '444px',
   overflowY: 'scroll' as const,
   scrollbarGutter: 'stable' as const,
 };

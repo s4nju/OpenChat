@@ -14,7 +14,6 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Pill, PillIndicator } from '@/components/ui/pill';
 import {
   Tooltip,
   TooltipContent,
@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
 import { ExecutionHistoryDialog } from './execution-history-dialog';
-import { TaskDialog } from './task-dialog';
+import { TaskDrawer } from './task-drawer';
 import type { ScheduledTask } from './types';
 
 // Static constants moved outside component for better performance
@@ -226,45 +226,36 @@ function TaskCardComponent({ task }: TaskCardProps) {
               >
                 {task.title}
               </h3>
-              <Badge
-                className="border-outline-foreground text-xs"
-                variant="secondary"
-              >
+              <Pill className="text-xs" variant="outline">
                 {scheduleDisplay}
-              </Badge>
+              </Pill>
               {weeklyDay && (
-                <Badge
-                  className="border-outline-foreground text-xs"
-                  variant="secondary"
-                >
+                <Pill className="text-xs" variant="outline">
                   {weeklyDay}
-                </Badge>
+                </Pill>
               )}
               {task.emailNotifications && (
-                <Badge
-                  className="border-outline-foreground text-xs"
-                  variant="secondary"
-                >
+                <Pill className="text-xs" variant="outline">
                   Email
-                </Badge>
+                </Pill>
               )}
               {task.status === 'paused' && (
-                <Badge className="text-xs" variant="outline">
-                  <span className="mr-1">⏸️</span>
+                <Pill className="text-xs" variant="outline">
+                  <PillIndicator pulse={false} variant="warning" />
                   Paused
-                </Badge>
+                </Pill>
               )}
               {task.status === 'running' && (
-                <Badge className="text-xs" variant="outline">
-                  <span className="mr-1">⚡</span>
+                <Pill className="text-xs" variant="outline">
+                  <PillIndicator pulse={true} variant="success" />
                   Running
-                </Badge>
+                </Pill>
               )}
               {task.status === 'archived' && (
-                <Badge className="text-xs" variant="outline">
-                  <span className="mr-1">📦</span>
+                <Pill className="text-xs" variant="outline">
+                  <PillIndicator pulse={false} variant="info" />
                   Archived
-                </Badge>
+                </Pill>
               )}
             </div>
 
@@ -307,6 +298,7 @@ function TaskCardComponent({ task }: TaskCardProps) {
                   <Button
                     aria-label="Run task once now"
                     className="h-8 w-8"
+                    disabled={task.status === 'archived'}
                     onClick={handleTriggerNow}
                     size="icon"
                     variant="ghost"
@@ -341,6 +333,7 @@ function TaskCardComponent({ task }: TaskCardProps) {
                   <Button
                     aria-label="Edit task"
                     className="h-8 w-8"
+                    disabled={task.status === 'archived'}
                     onClick={() => setShowEditDialog(true)}
                     size="icon"
                     variant="ghost"
@@ -358,6 +351,7 @@ function TaskCardComponent({ task }: TaskCardProps) {
                   <Button
                     aria-label="Archive task"
                     className="h-8 w-8"
+                    disabled={task.status === 'archived'}
                     onClick={handleArchive}
                     size="icon"
                     variant="ghost"
@@ -425,7 +419,7 @@ function TaskCardComponent({ task }: TaskCardProps) {
         </DialogContent>
       </Dialog>
 
-      <TaskDialog
+      <TaskDrawer
         initialData={taskDialogInitialData}
         isOpen={showEditDialog}
         mode="edit"

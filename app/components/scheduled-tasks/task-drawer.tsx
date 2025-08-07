@@ -39,7 +39,7 @@ function SharedDrawerContent({
 }: SharedDrawerContentProps) {
   return (
     <DrawerContent className="max-h-[90vh]">
-      <div className="flex h-full max-h-[80vh] flex-col">
+      <div className="flex h-full max-h-[80vh] flex-col pb-6">
         <DrawerHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
           <DrawerTitle className="font-semibold text-base">
             {mode === 'edit'
