@@ -1,6 +1,6 @@
 'use client';
 
-import { Info, Plus } from '@phosphor-icons/react';
+import { Info, Plus, Timer } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -57,6 +57,22 @@ export function Header() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>New Chat</TooltipContent>
+              </Tooltip>
+            )}
+            {/* Tasks button - mobile only */}
+            {isMobile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    aria-label="Tasks"
+                    className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    onClick={() => router.push('/tasks')}
+                    type="button"
+                  >
+                    <Timer size={24} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Tasks</TooltipContent>
               </Tooltip>
             )}
             {/* History trigger - always rendered for Cmd+K functionality */}
