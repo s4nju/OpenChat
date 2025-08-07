@@ -1,12 +1,11 @@
 'use client';
 
 import { convexQuery } from '@convex-dev/react-query';
-import { ClockIcon, XIcon } from '@phosphor-icons/react';
+import { ClockIcon } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { memo, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { memo, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,58 +13,53 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
+import { Pill, PillIndicator } from '@/components/ui/pill';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 
 type ExecutionHistoryDialogProps = {
+  trigger: React.ReactNode;
   taskId: Id<'scheduled_tasks'>;
   taskTitle: string;
-  isOpen: boolean;
-  onClose: () => void;
 };
 
 // Static constants for better performance
 const STATUS_CONFIG = {
   pending: {
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
     label: 'Pending',
-    icon: '⏸️',
+    indicator: 'info' as const,
   },
   running: {
-    color: 'bg-orange-100 text-orange-800 border-orange-200',
     label: 'Running',
-    icon: '🔄',
+    indicator: 'warning' as const,
   },
   success: {
-    color: 'bg-green-100 text-green-800 border-green-200',
     label: 'Success',
-    icon: '✅',
+    indicator: 'success' as const,
   },
   failure: {
-    color: 'bg-red-100 text-red-800 border-red-200',
     label: 'Failed',
-    icon: '❌',
+    indicator: 'error' as const,
   },
   cancelled: {
-    color: 'bg-gray-100 text-gray-800 border-gray-200',
     label: 'Cancelled',
-    icon: '⏹️',
+    indicator: 'info' as const,
   },
   timeout: {
-    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     label: 'Timeout',
-    icon: '⏱️',
+    indicator: 'warning' as const,
   },
 } as const;
 
 function ExecutionHistoryDialogComponent({
+  trigger,
   taskId,
   taskTitle,
-  isOpen,
-  onClose,
 }: ExecutionHistoryDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
   // Memoized query configuration
@@ -114,7 +108,8 @@ function ExecutionHistoryDialogComponent({
   }, []);
 
   return (
-    <Dialog onOpenChange={(open) => !open && onClose()} open={isOpen}>
+    <Dialog onOpenChange={setIsOpen} open={isOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-h-[80vh] max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -189,7 +184,7 @@ function ExecutionHistoryDialogComponent({
               )}
 
               {!isHistoryLoading && history.length > 0 && (
-                <div className="space-y-2 pr-4">
+                <div className="space-y-2">
                   {history.map((execution) => {
                     const statusConfig = STATUS_CONFIG[execution.status];
                     const duration = formatDuration(
@@ -204,17 +199,14 @@ function ExecutionHistoryDialogComponent({
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-4">
                           <div className="flex items-center gap-2">
-                            <Badge
-                              className={`text-xs ${statusConfig.color}`}
-                              variant="secondary"
-                            >
-                              <span className="mr-1">{statusConfig.icon}</span>
+                            <Pill className="text-xs">
+                              <PillIndicator variant={statusConfig.indicator} />
                               {statusConfig.label}
-                            </Badge>
+                            </Pill>
                             {execution.isManualTrigger && (
-                              <Badge className="text-xs" variant="outline">
+                              <Pill className="text-xs" variant="outline">
                                 Manual
-                              </Badge>
+                              </Pill>
                             )}
                           </div>
 
@@ -224,14 +216,13 @@ function ExecutionHistoryDialogComponent({
                             </div>
                             <div className="text-muted-foreground text-xs">
                               Duration: {duration}
-                              {execution.metadata?.totalTokens && (
-                                <span className="ml-2">
-                                  •{' '}
-                                  {execution.metadata.totalTokens.toLocaleString()}{' '}
-                                  tokens
-                                </span>
-                              )}
                             </div>
+                            {execution.metadata?.totalTokens !== undefined && (
+                              <div className="text-muted-foreground text-xs">
+                                Tokens:{' '}
+                                {execution.metadata.totalTokens.toLocaleString()}
+                              </div>
+                            )}
                             {execution.errorMessage && (
                               <div className="mt-1 truncate text-red-600 text-xs">
                                 Error: {execution.errorMessage}
@@ -243,9 +234,10 @@ function ExecutionHistoryDialogComponent({
                         <div className="flex items-center gap-2">
                           {execution.chatId && (
                             <Button
-                              onClick={() =>
-                                router.push(`/c/${execution.chatId}`)
-                              }
+                              onClick={() => {
+                                router.push(`/c/${execution.chatId}`);
+                                setIsOpen(false);
+                              }}
                               size="sm"
                               variant="outline"
                             >
@@ -261,13 +253,6 @@ function ExecutionHistoryDialogComponent({
             </ScrollArea>
           </div>
         </div>
-
-        <div className="flex justify-end">
-          <Button onClick={onClose} variant="outline">
-            <XIcon className="mr-2 h-4 w-4" />
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
@@ -280,7 +265,7 @@ export const ExecutionHistoryDialog = memo(
     return (
       prevProps.taskId === nextProps.taskId &&
       prevProps.taskTitle === nextProps.taskTitle &&
-      prevProps.isOpen === nextProps.isOpen
+      prevProps.trigger === nextProps.trigger
     );
   }
 );
