@@ -3,6 +3,7 @@
 import {
   ArchiveIcon,
   ClockIcon,
+  DotsThreeVerticalIcon,
   PauseIcon,
   PencilIcon,
   PlayIcon,
@@ -23,6 +24,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Pill, PillIndicator } from '@/components/ui/pill';
 import {
   Tooltip,
@@ -30,8 +37,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
-import { ExecutionHistoryDialog } from './execution-history-dialog';
-import { TaskDrawer } from './task-drawer';
+import { ExecutionHistoryTrigger } from './execution-history-trigger';
+import { TaskTrigger } from './task-trigger';
 import type { ScheduledTask } from './types';
 
 // Static constants moved outside component for better performance
@@ -53,12 +60,12 @@ const SCHEDULE_TYPE_DISPLAY_MAP = {
 
 type TaskCardProps = {
   task: ScheduledTask;
+  isMobile?: boolean;
 };
 
-function TaskCardComponent({ task }: TaskCardProps) {
+function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const deleteTask = useMutation(api.scheduled_tasks.deleteScheduledTask);
   const updateTask = useMutation(api.scheduled_tasks.updateScheduledTask);
   const triggerTask = useMutation(api.scheduled_tasks.triggerScheduledTask);
@@ -86,11 +93,6 @@ function TaskCardComponent({ task }: TaskCardProps) {
         `Failed to ${task.status === 'active' ? 'pause' : 'resume'} task`
       );
     }
-  };
-
-  const handleEditSuccess = () => {
-    setShowEditDialog(false);
-    // Toast is already shown by the form component
   };
 
   // const handleCopy = () => {
@@ -215,30 +217,34 @@ function TaskCardComponent({ task }: TaskCardProps) {
     ]
   );
 
-  return (
-    <>
-      <div className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-sm">
-        <div className="flex items-start justify-between gap-4">
+  // Mobile layout component
+  const mobileLayout = isMobile ? (
+    // biome-ignore lint/a11y/useSemanticElements: <soh>
+    <div
+      aria-expanded={isExpanded}
+      aria-label={`${task.title} task card${isExpanded ? ', expanded' : ', collapsed'}`}
+      className="w-full cursor-pointer rounded-xl border border-border bg-card text-left transition-all hover:shadow-sm"
+      onClick={() => setIsExpanded(!isExpanded)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setIsExpanded(!isExpanded);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      {/* Mobile: Primary information always visible */}
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <h3
-                className={`font-medium text-lg ${task.status === 'active' || task.status === 'running' ? '' : 'opacity-60'}`}
+                className={`font-medium text-lg leading-tight ${task.status === 'active' || task.status === 'running' ? '' : 'opacity-60'}`}
               >
                 {task.title}
               </h3>
-              <Pill className="text-xs" variant="outline">
-                {scheduleDisplay}
-              </Pill>
-              {weeklyDay && (
-                <Pill className="text-xs" variant="outline">
-                  {weeklyDay}
-                </Pill>
-              )}
-              {task.emailNotifications && (
-                <Pill className="text-xs" variant="outline">
-                  Email
-                </Pill>
-              )}
+              {/* Main status pill */}
               {task.status === 'paused' && (
                 <Pill className="text-xs" variant="outline">
                   <PillIndicator pulse={false} variant="warning" />
@@ -259,143 +265,356 @@ function TaskCardComponent({ task }: TaskCardProps) {
               )}
             </div>
 
-            <div className="mt-4 space-y-1 text-muted-foreground text-sm">
-              <p>Next Run: {nextExecutionDisplay}</p>
-              <p>Last Run: {lastExecutionDisplay}</p>
-            </div>
+            {/* Primary info: Next run time */}
+            <p className="text-muted-foreground text-sm">
+              Next Run: {nextExecutionDisplay}
+            </p>
           </div>
 
-          <div className="flex h-full flex-col justify-between">
-            <div className="flex items-center justify-end gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label={
-                      task.status === 'active' ? 'Pause task' : 'Resume task'
-                    }
-                    className="h-8 w-8"
-                    disabled={
-                      task.status === 'running' || task.status === 'archived'
-                    }
-                    onClick={handlePauseResume}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    {task.status === 'active' ? (
-                      <PauseIcon className="h-4 w-4" />
-                    ) : (
-                      <PlayIcon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{tooltipContent}</p>
-                </TooltipContent>
-              </Tooltip>
+          {/* Quick actions */}
+          <div className="flex items-center gap-2">
+            {/* Primary action button - larger for touch */}
+            <Button
+              aria-label={
+                task.status === 'active' ? 'Pause task' : 'Resume task'
+              }
+              className="h-11 w-11"
+              disabled={task.status === 'running' || task.status === 'archived'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePauseResume();
+              }}
+              size="icon"
+              variant="ghost"
+            >
+              {task.status === 'active' ? (
+                <PauseIcon className="h-5 w-5" />
+              ) : (
+                <PlayIcon className="h-5 w-5" />
+              )}
+            </Button>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="Run task once now"
-                    className="h-8 w-8"
-                    disabled={task.status === 'archived'}
-                    onClick={handleTriggerNow}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <RepeatOnceIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Run task once now</p>
-                </TooltipContent>
-              </Tooltip>
+            {/* More actions menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  aria-label="More task actions"
+                  className="h-11 w-11"
+                  onClick={(e) => e.stopPropagation()}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <DotsThreeVerticalIcon className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={task.status === 'archived'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTriggerNow();
+                  }}
+                >
+                  <RepeatOnceIcon className="mr-2 h-4 w-4" />
+                  Run once now
+                </DropdownMenuItem>
+                <ExecutionHistoryTrigger
+                  taskId={task._id}
+                  taskTitle={task.title}
+                  trigger={
+                    <DropdownMenuItem
+                      onClick={(e) => e.stopPropagation()}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <ClockIcon className="mr-2 h-4 w-4" />
+                      View history
+                    </DropdownMenuItem>
+                  }
+                />
+                <TaskTrigger
+                  initialData={taskDialogInitialData}
+                  mode="edit"
+                  trigger={
+                    <DropdownMenuItem
+                      disabled={task.status === 'archived'}
+                      onClick={(e) => e.stopPropagation()}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <PencilIcon className="mr-2 h-4 w-4" />
+                      Edit task
+                    </DropdownMenuItem>
+                  }
+                />
+                <DropdownMenuItem
+                  disabled={task.status === 'archived'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleArchive();
+                  }}
+                >
+                  <ArchiveIcon className="mr-2 h-4 w-4" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                >
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="View execution history"
-                    className="h-8 w-8"
-                    onClick={() => setShowHistoryDialog(true)}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <ClockIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View execution history</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="Edit task"
-                    className="h-8 w-8"
-                    disabled={task.status === 'archived'}
-                    onClick={() => setShowEditDialog(true)}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit task</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="Archive task"
-                    className="h-8 w-8"
-                    disabled={task.status === 'archived'}
-                    onClick={handleArchive}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <ArchiveIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Archive task</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="Delete task"
-                    className="h-8 w-8"
-                    onClick={() => setShowDeleteDialog(true)}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete task</p>
-                </TooltipContent>
-              </Tooltip>
+        {/* Expandable secondary information */}
+        {isExpanded && (
+          <div className="mt-4 space-y-3 border-border/50 border-t pt-4">
+            {/* Schedule and settings pills */}
+            <div className="flex flex-wrap gap-2">
+              <Pill className="text-xs" variant="outline">
+                {scheduleDisplay}
+              </Pill>
+              {weeklyDay && (
+                <Pill className="text-xs" variant="outline">
+                  {weeklyDay}
+                </Pill>
+              )}
+              {task.emailNotifications && (
+                <Pill className="text-xs" variant="outline">
+                  Email
+                </Pill>
+              )}
             </div>
 
-            <div className="mt-10 flex justify-end">
-              {task.lastExecuted && task.chatId && (
+            {/* Additional info */}
+            <div className="space-y-1 text-muted-foreground text-sm">
+              <p>Last Run: {lastExecutionDisplay}</p>
+            </div>
+
+            {/* View results link */}
+            {task.lastExecuted && task.chatId && (
+              <div className="pt-2">
                 <Link
-                  className="text-primary text-xs hover:underline"
+                  className="text-primary text-sm hover:underline"
                   href={`/c/${task.chatId}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   View Results
                 </Link>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  // Desktop layout (original)
+  const desktopLayout = (
+    <div className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2">
+            <h3
+              className={`font-medium text-lg ${task.status === 'active' || task.status === 'running' ? '' : 'opacity-60'}`}
+            >
+              {task.title}
+            </h3>
+            <Pill className="text-xs" variant="outline">
+              {scheduleDisplay}
+            </Pill>
+            {weeklyDay && (
+              <Pill className="text-xs" variant="outline">
+                {weeklyDay}
+              </Pill>
+            )}
+            {task.emailNotifications && (
+              <Pill className="text-xs" variant="outline">
+                Email
+              </Pill>
+            )}
+            {task.status === 'paused' && (
+              <Pill className="text-xs" variant="outline">
+                <PillIndicator pulse={false} variant="warning" />
+                Paused
+              </Pill>
+            )}
+            {task.status === 'running' && (
+              <Pill className="text-xs" variant="outline">
+                <PillIndicator pulse={true} variant="success" />
+                Running
+              </Pill>
+            )}
+            {task.status === 'archived' && (
+              <Pill className="text-xs" variant="outline">
+                <PillIndicator pulse={false} variant="info" />
+                Archived
+              </Pill>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-1 text-muted-foreground text-sm">
+            <p>Next Run: {nextExecutionDisplay}</p>
+            <p>Last Run: {lastExecutionDisplay}</p>
+          </div>
+        </div>
+
+        <div className="flex h-full flex-col justify-between">
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label={
+                    task.status === 'active' ? 'Pause task' : 'Resume task'
+                  }
+                  className="h-8 w-8"
+                  disabled={
+                    task.status === 'running' || task.status === 'archived'
+                  }
+                  onClick={handlePauseResume}
+                  size="icon"
+                  variant="ghost"
+                >
+                  {task.status === 'active' ? (
+                    <PauseIcon className="h-4 w-4" />
+                  ) : (
+                    <PlayIcon className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{tooltipContent}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="Run task once now"
+                  className="h-8 w-8"
+                  disabled={task.status === 'archived'}
+                  onClick={handleTriggerNow}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <RepeatOnceIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Run task once now</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <ExecutionHistoryTrigger
+              taskId={task._id}
+              taskTitle={task.title}
+              trigger={
+                <span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label="View execution history"
+                        className="h-8 w-8"
+                        size="icon"
+                        variant="ghost"
+                      >
+                        <ClockIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>View execution history</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </span>
+              }
+            />
+
+            <TaskTrigger
+              initialData={taskDialogInitialData}
+              mode="edit"
+              trigger={
+                <span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label="Edit task"
+                        className="h-8 w-8"
+                        disabled={task.status === 'archived'}
+                        size="icon"
+                        variant="ghost"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Edit task</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </span>
+              }
+            />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="Archive task"
+                  className="h-8 w-8"
+                  disabled={task.status === 'archived'}
+                  onClick={handleArchive}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <ArchiveIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Archive task</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="Delete task"
+                  className="h-8 w-8"
+                  onClick={() => setShowDeleteDialog(true)}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete task</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          <div className="mt-10 flex justify-end">
+            {task.lastExecuted && task.chatId && (
+              <Link
+                className="text-primary text-xs hover:underline"
+                href={`/c/${task.chatId}`}
+              >
+                View Results
+              </Link>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
 
+  return (
+    <>
+      {mobileLayout}
+      {!isMobile && desktopLayout}
+
+      {/* Shared dialogs/drawers for both mobile and desktop */}
       <Dialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -418,20 +637,6 @@ function TaskCardComponent({ task }: TaskCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <TaskDrawer
-        initialData={taskDialogInitialData}
-        isOpen={showEditDialog}
-        mode="edit"
-        onClose={handleEditSuccess}
-      />
-
-      <ExecutionHistoryDialog
-        isOpen={showHistoryDialog}
-        onClose={() => setShowHistoryDialog(false)}
-        taskId={task._id}
-        taskTitle={task.title}
-      />
     </>
   );
 }
@@ -444,6 +649,7 @@ export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
 
   // Deep comparison of relevant task properties
   return (
+    prevProps.isMobile === nextProps.isMobile &&
     prevTask._id === nextTask._id &&
     prevTask.title === nextTask.title &&
     prevTask.status === nextTask.status &&
