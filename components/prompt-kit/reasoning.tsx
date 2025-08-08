@@ -101,28 +101,26 @@ export function ReasoningTrigger({ className }: ReasoningTriggerProps) {
           {isLoading ? "Reasoning" : "Reasoned for a few seconds"}
         </span>
         <div className="flex-grow" />
-        {!isLoading && (
-          <div
-            className={cn(
-              "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm shadow-none outline-none transition-all",
-              "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              "disabled:pointer-events-none disabled:opacity-50",
-              "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-              "[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-              "text-muted-foreground shadow-none hover:bg-muted hover:text-muted-foreground",
-              "h-7 w-7 absolute top-1.5 right-1.5"
-            )}
-          >
-            <div style={{ transform: "none" }}>
-              <CaretDown
-                className={cn(
-                  "size-4 transition-transform duration-200",
-                  isExpanded && "rotate-180"
-                )}
-              />
-            </div>
+        <div
+          className={cn(
+            "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm shadow-none outline-none transition-all",
+            "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "disabled:pointer-events-none disabled:opacity-50",
+            "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
+            "[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+            "text-muted-foreground shadow-none hover:bg-muted hover:text-muted-foreground",
+            "h-7 w-7 absolute top-1.5 right-1.5"
+          )}
+        >
+          <div style={{ transform: "none" }}>
+            <CaretDown
+              className={cn(
+                "size-4 transition-transform duration-200",
+                isExpanded && "rotate-180"
+              )}
+            />
           </div>
-        )}
+        </div>
       </button>
     </div>
   )

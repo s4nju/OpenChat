@@ -539,52 +539,103 @@ function MessageAssistantInner({
   const [reasoningStreamingStates, setReasoningStreamingStates] = useState<
     Record<string, boolean>
   >({});
-  const prevStatusRef = useRef(status);
   const initialStatusRef = useRef<Record<string, boolean>>({});
   const [isTouch, setIsTouch] = useState(false);
 
   // Initialize reasoning states - only run once when reasoning parts are first detected
   useEffect(() => {
     if (combinedParts) {
+      // Calculate new states in a single pass
+      let newStates: Record<string, boolean> = {};
+      let newStreamingStates: Record<string, boolean> = {};
+      let hasStateChanges = false;
+      let hasStreamingChanges = false;
+
+      // Update both reasoning states in a single operation
       setReasoningStates((prevStates) => {
-        const newStates = { ...prevStates };
-        let hasChanges = false;
+        setReasoningStreamingStates((prevStreamingStates) => {
+          newStates = { ...prevStates };
+          newStreamingStates = { ...prevStreamingStates };
 
-        combinedParts.forEach((part, index) => {
-          if (part.type === 'reasoning') {
-            const key = `${id}-${index}`;
-            if (!(key in newStates)) {
-              // Check if we have a stored initial status, otherwise use current status
-              const isInitiallyStreaming =
-                initialStatusRef.current[key] ?? status === 'streaming';
-              newStates[key] = isInitiallyStreaming;
-              hasChanges = true;
+          // Single pass through combinedParts to update both states
+          combinedParts.forEach((part, index) => {
+            if (part.type === 'reasoning') {
+              const key = `${id}-${index}`;
+
+              // Handle reasoning states
+              const hasContent = Boolean(
+                part.text && part.text.trim().length > 0
+              );
+              const isCurrentlyStreaming = status === 'streaming';
+
+              if (!(key in newStates)) {
+                // Initialize new reasoning part - start closed if no content
+                newStates[key] = hasContent && isCurrentlyStreaming;
+                hasStateChanges = true;
+              } else if (
+                isCurrentlyStreaming &&
+                hasContent &&
+                !newStates[key]
+              ) {
+                // Expand if we're streaming and content appears for the first time
+                newStates[key] = true;
+                hasStateChanges = true;
+              }
+
+              // Handle streaming states
+              if (!(key in newStreamingStates)) {
+                const isInitiallyStreaming = status === 'streaming';
+                newStreamingStates[key] = isInitiallyStreaming;
+                // Store the initial status in ref to avoid re-initialization
+                initialStatusRef.current[key] = isInitiallyStreaming;
+                hasStreamingChanges = true;
+              }
             }
+          });
+
+          // During streaming, handle collapsing and loading states for reasoning parts that have non-reasoning content after them
+          if (status === 'streaming') {
+            combinedParts.forEach((part, index) => {
+              if (part.type === 'reasoning') {
+                const key = `${id}-${index}`;
+                // Check if there are non-reasoning parts after this reasoning part
+                const hasSubsequentNonReasoningParts = combinedParts
+                  .slice(index + 1)
+                  .some((p) => p.type !== 'reasoning');
+
+                if (hasSubsequentNonReasoningParts) {
+                  // Collapse this specific reasoning block
+                  if (newStates[key]) {
+                    newStates[key] = false;
+                    hasStateChanges = true;
+                  }
+
+                  // Turn off loading for this reasoning part
+                  if (newStreamingStates[key]) {
+                    newStreamingStates[key] = false;
+                    hasStreamingChanges = true;
+                  }
+                }
+              }
+            });
+          } else {
+            // When not streaming, turn off all reasoning streaming states (loading indicators)
+            combinedParts.forEach((part, index) => {
+              if (part.type === 'reasoning') {
+                const key = `${id}-${index}`;
+                // Turn off loading for this reasoning part if it's currently on
+                if (newStreamingStates[key]) {
+                  newStreamingStates[key] = false;
+                  hasStreamingChanges = true;
+                }
+              }
+            });
           }
+
+          return hasStreamingChanges ? newStreamingStates : prevStreamingStates;
         });
 
-        return hasChanges ? newStates : prevStates;
-      });
-
-      // Track which reasoning parts were initially streaming
-      setReasoningStreamingStates((prevStreamingStates) => {
-        const newStreamingStates = { ...prevStreamingStates };
-        let hasChanges = false;
-
-        combinedParts.forEach((part, index) => {
-          if (part.type === 'reasoning') {
-            const key = `${id}-${index}`;
-            if (!(key in newStreamingStates)) {
-              const isInitiallyStreaming = status === 'streaming';
-              newStreamingStates[key] = isInitiallyStreaming;
-              // Store the initial status in ref to avoid re-initialization
-              initialStatusRef.current[key] = isInitiallyStreaming;
-              hasChanges = true;
-            }
-          }
-        });
-
-        return hasChanges ? newStreamingStates : prevStreamingStates;
+        return hasStateChanges ? newStates : prevStates;
       });
     }
   }, [combinedParts, id, status]);
@@ -599,34 +650,6 @@ function MessageAssistantInner({
       setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     }
   }, []);
-
-  // Effect to auto-collapse all reasoning when streaming finishes
-  useEffect(() => {
-    if (prevStatusRef.current === 'streaming' && status !== 'streaming') {
-      // Collapse reasoning parts for this message
-      setReasoningStates((prev) => {
-        const newStates = { ...prev };
-        for (const key of Object.keys(newStates)) {
-          if (key.startsWith(`${id}-`)) {
-            newStates[key] = false;
-          }
-        }
-        return newStates;
-      });
-
-      // Clear streaming states for this message (so they show buttons instead of spinners)
-      setReasoningStreamingStates((prev) => {
-        const newStates = { ...prev };
-        for (const key of Object.keys(newStates)) {
-          if (key.startsWith(`${id}-`)) {
-            newStates[key] = false;
-          }
-        }
-        return newStates;
-      });
-    }
-    prevStatusRef.current = status;
-  }, [status, id]);
 
   // Helper function to toggle individual reasoning part
   const toggleReasoning = (index: number) => {
