@@ -1,14 +1,6 @@
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { gateway } from '@ai-sdk/gateway';
 import { REASONING_FEATURE_BASIC, TOOL_CALLING_FEATURE } from '../features';
 import { openrouter } from '../openrouter';
-
-const nim = createOpenAICompatible({
-  name: 'nim',
-  baseURL: 'https://integrate.api.nvidia.com/v1',
-  headers: {
-    Authorization: `Bearer ${process.env.NIM_API_KEY}`,
-  },
-});
 
 export const DEEPSEEK_MODELS = [
   {
@@ -33,7 +25,7 @@ export const DEEPSEEK_MODELS = [
       'Reasoning model which rocked the world.\nExcels at mathematical reasoning and competitive programming.',
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [REASONING_FEATURE_BASIC],
-    api_sdk: nim('deepseek-ai/deepseek-r1-0528'),
+    api_sdk: gateway('deepseek/deepseek-r1'),
   },
   {
     id: 'deepseek/deepseek-r1-distill-llama-70b:free',

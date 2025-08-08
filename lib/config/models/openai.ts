@@ -41,7 +41,7 @@ export const OPENAI_MODELS = [
       REASONING_FEATURE,
       TOOL_CALLING_FEATURE,
     ],
-    api_sdk: openai('gpt-5-mini'),
+    api_sdk: gateway('gpt-5-mini'),
   },
   {
     id: 'gpt-5-nano',
@@ -57,7 +57,7 @@ export const OPENAI_MODELS = [
       REASONING_FEATURE,
       TOOL_CALLING_FEATURE,
     ],
-    api_sdk: openai('gpt-5-nano'),
+    api_sdk: gateway('gpt-5-nano'),
   },
   {
     id: 'gpt-oss-20b',
