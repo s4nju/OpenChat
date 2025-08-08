@@ -1,3 +1,4 @@
+import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import {
   internalMutation,
@@ -38,7 +39,10 @@ export const listUserConnectors = query({
     })
   ),
   handler: async (ctx) => {
-    const userId = await ensureAuthenticated(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
     const connectors = await ctx.db
       .query('connectors')
       .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -68,7 +72,10 @@ export const getConnectorByType = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const userId = await ensureAuthenticated(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return null;
+    }
     const connector = await ctx.db
       .query('connectors')
       .withIndex('by_user_and_type', (q) =>

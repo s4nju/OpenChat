@@ -4,7 +4,7 @@ import {
   type RateLimitConfig,
 } from '@convex-dev/rate-limiter';
 import { ConvexError, v } from 'convex/values';
-import { MODEL_DEFAULT, RECOMMENDED_MODELS } from '../lib/config';
+import { MODEL_DEFAULT } from '../lib/config';
 import { ERROR_CODES } from '../lib/error-codes';
 import type { Id } from './_generated/dataModel';
 import {
@@ -55,146 +55,12 @@ export const userHasPremium = query({
   },
 });
 
-// Helper function to initialize user fields
-const initializeUserFields = () => ({
-  preferredModel: MODEL_DEFAULT,
-  // By default no models are disabled – an empty array means all are enabled
-  disabledModels: [],
-  // Initialize with recommended models as favorites
-  favoriteModels: [...RECOMMENDED_MODELS],
-});
+// Note: User initialization logic has been moved to convex/auth.ts
+// in the createOrUpdateUser callback for better security and simplicity
 
-// Helper function to get updates for existing user
-const getExistingUserUpdates = (existing: Record<string, unknown>) => {
-  const updates: Record<string, unknown> = {};
-
-  if (existing.preferredModel === undefined) {
-    updates.preferredModel = MODEL_DEFAULT;
-  }
-
-  if (existing.disabledModels === undefined) {
-    updates.disabledModels = [];
-  }
-
-  if (existing.favoriteModels === undefined) {
-    updates.favoriteModels = [...RECOMMENDED_MODELS];
-  }
-
-  return updates;
-};
-
-/**
- * Ensure the authenticated user has a fully-initialised `users` document.
- *
- * Behaviour overview:
- * 1. If the user is returning (including converting an anonymous session into
- *    an authenticated one) we *patch* the existing document with any new
- *    default fields and update the `isAnonymous` flag when provided.
- * 2. If this is the first time we have seen this `userId`, insert a fresh
- *    record with sensible defaults.
- * 3. In both cases we *pre-seed* the relevant rate-limit windows (daily &
- *    monthly) so that the first real user action can be counted immediately
- *    without the overhead of on-the-fly initialisation.
- *
- * The function returns `{ isNew }` where `isNew === true` indicates that a
- * brand-new document was created (i.e. the user never existed before).
- */
-export const storeCurrentUser = mutation({
-  args: { isAnonymous: v.optional(v.boolean()) },
-  returns: v.object({ isNew: v.boolean() }),
-  handler: async (ctx, { isAnonymous }) => {
-    // ---------------------------------------------------------------------
-    // Step 1: Retrieve the authenticated Convex user ID.
-    // If we cannot resolve an ID, exit early (nothing to store).
-    // ---------------------------------------------------------------------
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return { isNew: false };
-    }
-
-    // ---------------------------------------------------------------------
-    // Step 2: Upsert the user document.
-    // We keep track of whether this results in a *new* document so we can
-    // report it back to the caller.
-    // ---------------------------------------------------------------------
-    let targetUserId: Id<'users'> | null = null;
-    let isNew = false;
-
-    const existing = await ctx.db.get(userId);
-    if (existing) {
-      // ---- Existing user: build and apply a minimal patch when needed ----
-      const patch = {
-        ...getExistingUserUpdates(existing),
-        // Only add `isAnonymous` when the caller explicitly provided it and
-        // it differs from the stored value.
-        ...(isAnonymous !== undefined && isAnonymous !== existing.isAnonymous
-          ? { isAnonymous }
-          : {}),
-      } as Record<string, unknown>;
-
-      if (Object.keys(patch).length) {
-        await ctx.db.patch(userId, patch);
-      }
-
-      targetUserId = userId as Id<'users'>;
-      // If the record did *not* previously have `isAnonymous` set at all we
-      // treat this as a first-time initialisation from the application's
-      // perspective (e.g. an auto-created anonymous account).
-      isNew = existing.isAnonymous === undefined;
-    } else {
-      // ---- New user: insert with defaults ----
-      targetUserId = await ctx.db.insert('users', {
-        isAnonymous,
-        ...initializeUserFields(),
-      });
-      isNew = true;
-    }
-
-    // ---------------------------------------------------------------------
-    // Step 3: Pro-actively seed rate-limit counters so that subsequent calls
-    // to the rate-limiter do not incur the initialisation overhead.
-    // ---------------------------------------------------------------------
-    try {
-      const isPremium = false; // Newly-created users are non-premium by default
-
-      const rateLimitPromises: Promise<unknown>[] = [];
-
-      if (!isPremium) {
-        const dailyLimitName = isAnonymous
-          ? 'anonymousDaily'
-          : 'authenticatedDaily';
-        rateLimitPromises.push(
-          rateLimiter.limit(ctx, dailyLimitName, {
-            key: targetUserId,
-            count: 0,
-          })
-        );
-      }
-
-      rateLimitPromises.push(
-        rateLimiter.limit(ctx, 'standardMonthly', {
-          key: targetUserId,
-          count: 0,
-        })
-      );
-
-      // Initialize premium credits counter for all users (will only be used by premium users)
-      rateLimitPromises.push(
-        rateLimiter.limit(ctx, 'premiumMonthly', {
-          key: targetUserId,
-          count: 0,
-        })
-      );
-
-      await Promise.all(rateLimitPromises);
-    } catch {
-      // Non-fatal: rate-limit initialisation failure should never block the
-      // user flow. The rate-limiter will lazily create windows on first use.
-    }
-
-    return { isNew };
-  },
-});
+// Note: storeCurrentUser mutation has been removed.
+// User creation and initialization is now handled by the createOrUpdateUser
+// callback in convex/auth.ts for better security and simplicity.
 
 export const updateUserProfile = mutation({
   args: {
@@ -718,60 +584,9 @@ export const getRateLimitStatus = query({
   },
 });
 
-export const mergeAnonymousToGoogleAccount = mutation({
-  args: { previousAnonymousUserId: v.id('users') },
-  returns: v.null(),
-  handler: async (ctx, { previousAnonymousUserId }) => {
-    const currentId = await getAuthUserId(ctx);
-    if (!currentId) {
-      return null;
-    }
-    if (currentId === previousAnonymousUserId) {
-      return null;
-    }
-    const anon = await ctx.db.get(previousAnonymousUserId);
-    const user = await ctx.db.get(currentId);
-    if (!(anon && user)) {
-      return null;
-    }
-
-    // --- Step 1: Fetch all data in parallel ---
-    const [anonChats, anonMessages, anonAttachments] = await Promise.all([
-      ctx.db
-        .query('chats')
-        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
-        .collect(),
-      ctx.db
-        .query('messages')
-        .withIndex('by_user', (q) => q.eq('userId', previousAnonymousUserId))
-        .collect(),
-      ctx.db
-        .query('chat_attachments')
-        .withIndex('by_userId', (q) => q.eq('userId', previousAnonymousUserId))
-        .collect(),
-    ]);
-
-    // --- Step 2: Reassign all entities in parallel ---
-    await Promise.all([
-      ...anonChats.map((chat) => ctx.db.patch(chat._id, { userId: currentId })),
-      ...anonMessages.map((message) =>
-        ctx.db.patch(message._id, { userId: currentId })
-      ),
-      ...anonAttachments.map((attachment) =>
-        ctx.db.patch(attachment._id, { userId: currentId })
-      ),
-    ]);
-
-    // --- Step 3: Mark as non-anonymous (rate limits are managed automatically) ---
-    await ctx.db.patch(currentId, {
-      isAnonymous: false,
-    });
-
-    // --- Step 4: Delete anonymous user record ---
-    await ctx.db.delete(previousAnonymousUserId);
-    return null;
-  },
-});
+// Note: mergeAnonymousToGoogleAccount mutation has been removed.
+// The application no longer automatically merges anonymous accounts with Google accounts
+// for security and simplicity. Users who sign in with Google will start with fresh accounts.
 
 // Delete account and all associated data
 export const deleteAccount = mutation({

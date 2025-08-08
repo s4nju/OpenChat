@@ -21,14 +21,13 @@ export default function LoginPage() {
 
       await signIn('google');
     } catch (err: unknown) {
+      setIsLoading(false);
       // console.error('Error signing in with Google:', err);
       if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
-    } finally {
-      setIsLoading(false);
     }
   }
 

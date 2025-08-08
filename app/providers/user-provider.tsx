@@ -2,15 +2,8 @@
 import { useAuthActions } from '@convex-dev/auth/react';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
-import { useConvexAuth, useMutation } from 'convex/react';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { useMutation } from 'convex/react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { api } from '../../convex/_generated/api';
 import type { Doc, Id } from '../../convex/_generated/dataModel';
 
@@ -74,7 +67,7 @@ export function UserProvider({
   children: React.ReactNode;
   initialUser?: null;
 }) {
-  const { isAuthenticated } = useConvexAuth(); // isLoading will always be false here
+  // isLoading will always be false here
   const { signIn, signOut } = useAuthActions();
   const { data: user = null, isLoading: isUserLoading } = useTanStackQuery({
     ...convexQuery(api.users.getCurrentUser, {}),
@@ -130,70 +123,10 @@ export function UserProvider({
       // Connectors are relatively stable, cache reasonably
       gcTime: 10 * 60 * 1000, // 10 minutes
     });
-  const storeCurrentUser = useMutation(api.users.storeCurrentUser);
-  const mergeAnonymous = useMutation(api.users.mergeAnonymousToGoogleAccount);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
-  const lastUserId = useRef<Id<'users'> | null>(null);
 
   // Anonymous sign-in is now handled by AnonymousSignIn component in AuthGuard
-
-  // Helper function to handle anonymous account merging
-  const handleAnonymousAccountMerge = useCallback(
-    async (anonId: string) => {
-      try {
-        await mergeAnonymous({
-          previousAnonymousUserId: anonId as Id<'users'>,
-        });
-        localStorage.removeItem('anonymousUserId');
-      } catch {
-        // Error handling without console
-        // You might want to implement proper error reporting here
-      }
-    },
-    [mergeAnonymous]
-  );
-
-  // Helper function to handle user storage and merging
-  const handleUserStorage = useCallback(
-    async (userData: UserProfile) => {
-      try {
-        const res = await storeCurrentUser({
-          isAnonymous: userData.isAnonymous ?? false,
-        });
-        const anonId = localStorage.getItem('anonymousUserId');
-
-        if (!userData.isAnonymous && res?.isNew && anonId) {
-          await handleAnonymousAccountMerge(anonId);
-        } else if (!userData.isAnonymous && anonId) {
-          localStorage.removeItem('anonymousUserId');
-        }
-      } catch {
-        // Error handling without console
-        // You might want to implement proper error reporting here
-      }
-    },
-    [storeCurrentUser, handleAnonymousAccountMerge]
-  );
-
-  // Handle user authentication and storage
-  useEffect(() => {
-    if (!isAuthenticated || isUserLoading || user === null) {
-      return;
-    }
-
-    if (user && user._id !== lastUserId.current) {
-      handleUserStorage(user);
-      lastUserId.current = user._id as Id<'users'>;
-    }
-
-    if (!user) {
-      return;
-    }
-
-    if (user.isAnonymous) {
-      localStorage.setItem('anonymousUserId', user._id as unknown as string);
-    }
-  }, [isAuthenticated, user, isUserLoading, handleUserStorage]);
+  // User creation and account linking is handled by the createOrUpdateUser callback in auth.ts
 
   const signInGoogle = useCallback(async () => {
     await signIn('google');
