@@ -18,7 +18,7 @@ export function AppInfoContent() {
         OpenChat
       </p>
       <p className="mb-4 text-center text-muted-foreground text-sm">
-        AI chat application built with Vercel SDK, RSC, and Shadcn UI
+        AI application built with Vercel SDK, RSC, Convex, and Shadcn UI
       </p>
       <div className="flex w-full flex-col gap-2">
         <Button
