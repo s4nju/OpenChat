@@ -29,6 +29,7 @@ export class ExaSearchProvider implements SearchAdapter {
       excludeDomains,
       startPublishedDate,
       endPublishedDate,
+      category,
     } = options;
 
     const limit = Math.min(maxResults, PROVIDER_LIMITS.exa.maxResults);
@@ -49,7 +50,7 @@ export class ExaSearchProvider implements SearchAdapter {
     try {
       const searchOptions: Record<string, unknown> = {
         numResults: limit,
-        type: 'auto',
+        type: 'hybrid',
       };
 
       // Add text content options ONLY when scraping is enabled
@@ -80,6 +81,12 @@ export class ExaSearchProvider implements SearchAdapter {
       if (endPublishedDate) {
         searchOptions.endPublishedDate = endPublishedDate;
         // console.log('[EXA] 📅 End date filter:', endPublishedDate);
+      }
+
+      // Add category filter
+      if (category) {
+        searchOptions.category = category;
+        // console.log('[EXA] 🎯 Category filter:', category);
       }
 
       // console.log(`[EXA] 🚀 Using ${scrapeContent ? 'searchAndContents' : 'search'} method with options:`, searchOptions);

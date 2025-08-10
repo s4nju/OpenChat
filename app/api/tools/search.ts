@@ -1,7 +1,12 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { searchWithFallback } from './search-provider-factory';
-import { SEARCH_CONFIG, type SearchOptions, type SearchResult } from './types';
+import {
+  type ExaSearchCategory,
+  SEARCH_CONFIG,
+  type SearchOptions,
+  type SearchResult,
+} from './types';
 
 // Result processing utilities
 export const truncateContent = (
@@ -38,33 +43,65 @@ export const searchTool = tool({
   description:
     'Search the web for current information and facts. Use this when you need to verify current facts, find recent events, or get real-time data.',
   inputSchema: z.object({
-    query: z.string().describe('The search query'),
+    query: z
+      .string()
+      .describe('The search query string to find relevant web content'),
     maxResults: z
       .number()
       .optional()
       .default(SEARCH_CONFIG.maxResults)
-      .describe('Maximum number of results to return'),
+      .describe(
+        'Maximum number of search results to return (default: 3). Use higher values (5-10) for comprehensive research, lower values (1-2) for quick facts'
+      ),
     scrapeContent: z
       .boolean()
       .optional()
       .default(SEARCH_CONFIG.scrapeContent)
-      .describe('Whether to include scraped content from the pages'),
+      .describe(
+        'Whether to fetch and include the full text content from web pages (default: true). Enable for detailed analysis, disable for faster searches when only titles/descriptions are needed'
+      ),
     includeDomains: z
       .array(z.string())
       .optional()
-      .describe('List of domains to include in search'),
+      .describe(
+        'Restrict search to specific domains (e.g., ["nytimes.com", "reuters.com"] for news). Use when you need information from trusted or specific sources'
+      ),
     excludeDomains: z
       .array(z.string())
       .optional()
-      .describe('List of domains to exclude from search'),
+      .describe(
+        'Exclude specific domains from search results (e.g., ["reddit.com", "pinterest.com"]). Use to filter out any website, forums, or unreliable sources'
+      ),
     startPublishedDate: z
       .string()
       .optional()
-      .describe('Start date for published results (YYYY-MM-DD)'),
+      .describe(
+        'Filter results published after this date (YYYY-MM-DD format). Use for recent events, news, or time-sensitive information'
+      ),
     endPublishedDate: z
       .string()
       .optional()
-      .describe('End date for published results (YYYY-MM-DD)'),
+      .describe(
+        'Filter results published before this date (YYYY-MM-DD format). Use to find historical information or exclude very recent unverified content'
+      ),
+    category: z
+      .enum([
+        'company',
+        'research paper',
+        'news',
+        'linkedin profile',
+        'github',
+        'tweet',
+        'movie',
+        'song',
+        'personal site',
+        'pdf',
+        'financial report',
+      ] as const)
+      .optional()
+      .describe(
+        'Focus search on specific content type for more targeted results. Options: "company" (businesses/corporations), "research paper" (academic papers), "news" (current events/articles), "linkedin profile" (professional profiles), "github" (code repositories), "tweet" (twitter/X posts), "movie" (film content), "song" (music), "personal site" (blogs/portfolios), "pdf" (PDF documents), "financial report" (financial documents)'
+      ),
   }),
   execute: async ({
     query,
@@ -74,6 +111,7 @@ export const searchTool = tool({
     excludeDomains,
     startPublishedDate,
     endPublishedDate,
+    category,
   }) => {
     const options: SearchOptions = {
       maxResults,
@@ -82,6 +120,7 @@ export const searchTool = tool({
       excludeDomains,
       startPublishedDate,
       endPublishedDate,
+      category: category as ExaSearchCategory,
     };
 
     try {

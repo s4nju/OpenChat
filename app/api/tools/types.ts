@@ -12,6 +12,20 @@ export interface SearchResult {
   markdown?: string;
 }
 
+// Exa search category types for targeted content filtering
+export type ExaSearchCategory =
+  | 'company'
+  | 'research paper'
+  | 'news'
+  | 'linkedin profile'
+  | 'github'
+  | 'tweet'
+  | 'movie'
+  | 'song'
+  | 'personal site'
+  | 'pdf'
+  | 'financial report';
+
 export interface SearchOptions {
   maxResults?: number;
   scrapeContent?: boolean;
@@ -19,6 +33,7 @@ export interface SearchOptions {
   excludeDomains?: string[];
   startPublishedDate?: string;
   endPublishedDate?: string;
+  category?: ExaSearchCategory;
 }
 
 export type SearchProvider = 'exa' | 'tavily' | 'brave';
@@ -48,5 +63,5 @@ export const SEARCH_CONFIG = {
   defaultProvider: getValidatedSearchProvider(),
   maxResults: 3,
   scrapeContent: true,
-  maxTextCharacters: 500,
+  maxTextCharacters: 1000,
 };
