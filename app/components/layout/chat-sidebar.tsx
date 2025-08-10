@@ -263,9 +263,10 @@ const ChatSidebar = memo(function SidebarComponent({
           </Link>
         </div>
 
+        {/* Fixed Action Buttons Section - New Chat, Tasks, Search */}
         <div
           className={cn(
-            'flex flex-grow flex-col gap-3 overflow-y-auto p-4', // Changed px-4 pt-4 to p-2
+            'flex shrink-0 flex-col gap-3 px-4 pt-4 pb-0',
             'transition-opacity duration-300 ease-in-out',
             isOpen ? 'opacity-100 delay-150' : 'opacity-0'
           )}
@@ -300,7 +301,16 @@ const ChatSidebar = memo(function SidebarComponent({
               value={searchQuery}
             />
           </div>
+        </div>
 
+        {/* Scrollable Chat List Section */}
+        <div
+          className={cn(
+            'flex flex-grow flex-col overflow-y-auto px-4 pt-4 pb-4',
+            'transition-opacity duration-300 ease-in-out',
+            isOpen ? 'opacity-100 delay-150' : 'opacity-0'
+          )}
+        >
           {chatsLoading && chats.length === 0 ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }, (_, i) => (
