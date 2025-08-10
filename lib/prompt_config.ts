@@ -7,6 +7,7 @@ import {
   MagnifyingGlassIcon,
   PenNibIcon,
 } from '@phosphor-icons/react/dist/ssr';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
@@ -114,7 +115,35 @@ const mapToolkitSlugToDisplayName = (slug: string): string => {
   return config ? `${config.displayName}: ${config.description}` : slug;
 };
 
-export const getSystemPromptDefault = (enabledToolSlugs?: string[]) =>
+/**
+ * Helper function to format date and time in the user's timezone
+ */
+const formatDateInTimezone = (timezone?: string) => {
+  const now = new Date();
+
+  if (timezone) {
+    try {
+      // Format date as MM/dd/yyyy to match the original format
+      const date = formatInTimeZone(now, timezone, 'MM/dd/yyyy');
+      // Format time with timezone abbreviation
+      const time = formatInTimeZone(now, timezone, 'HH:mm:ss zzz');
+      return { date, time };
+    } catch (_error) {
+      // Fallback if timezone is invalid - silently fall through to server timezone
+    }
+  }
+
+  // Fallback to server timezone for backward compatibility
+  return {
+    date: now.toLocaleDateString(),
+    time: now.toLocaleTimeString(),
+  };
+};
+
+export const getSystemPromptDefault = (
+  enabledToolSlugs?: string[],
+  timezone?: string
+) =>
   `
 <identity>
 You are OpenChat, a thoughtful and clear agentic assistant.
@@ -133,7 +162,7 @@ You're here to help the user think clearly and move forward, not to overwhelm or
 </purpose>
 
 <context>
-The current date is ${new Date().toLocaleDateString()} (MM/DD/YYYY) at ${new Date().toLocaleTimeString()}.
+The current date is ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
 Use this date and time to answer questions about current events, deadlines, or anything time-sensitive.
 Do not use outdated information or make assumptions about the current date and time.
 </context>
@@ -166,6 +195,42 @@ ${
 If the user asks about using an integration that is not in the "Currently enabled" list above, direct them to connect it first in settings.
 </tools>`.trim();
 
+export const getTaskPromptDefault = (
+  enabledToolSlugs?: string[],
+  timezone?: string
+) =>
+  `
+<identity>
+You are OpenChat, an autonomous AI assistant executing a scheduled task. You complete assigned tasks fully and independently.
+</identity>
+
+<execution_approach>
+You operate with complete autonomy. Make informed decisions, use available tools proactively, and deliver comprehensive results. Never request user input or clarification during task execution.
+</execution_approach>
+
+<task_completion>
+Your primary objective is to execute the assigned task thoroughly. Apply domain expertise, handle edge cases, and provide actionable outcomes.
+</task_completion>
+
+<context>
+Current execution time: ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
+Use this timestamp for time-sensitive operations, and context-aware task execution.
+</context>
+
+<available_integrations>
+You have autonomous access to the following connected integrations:
+
+${
+  enabledToolSlugs && enabledToolSlugs.length > 0
+    ? enabledToolSlugs
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')
+    : '- No integrations currently connected.'
+}
+
+If your task requires an integration that is not listed above, inform the user that they need to connect the required integration in settings before this task can be completed successfully.
+</available_integrations>`.trim();
+
 // Search prompt instructions
 export const SEARCH_PROMPT_INSTRUCTIONS = `
 <web_search_capability>
@@ -177,6 +242,7 @@ Use web search for:
 - Dynamic facts: breaking news, sports results, stock prices, ongoing events, recent research.  
 - "Latest", "current", or "today" requests.  
 - Anything that might have changed after your training cutoff.
+- No Parallel Searches: Do not run multiple searches at once.
 </search_usage_guidelines>
 
 <search_methodology>
@@ -184,7 +250,7 @@ When using search:
 1. - Use a detailed, semantic search query to find relevant information to help your task execution. Include keywords, the user's question, and more to optimize your search.
 2. Include user's timezone in the query if necessary.
 3. Specify Date range if the user asks for information from a specific time period.
-4. Run additional queries if the first set looks stale or irrelevant.  
+4. Run additional queries only if the first set looks stale or irrelevant.  
 5. Extract only the needed facts; ignore commentary unless asked for analysis.
 6. If the user asks about a specific time, use the user's timezone to convert the time to the user's timezone.
 7. Cross-check at least two independent sources when the stakes are high.
@@ -212,10 +278,11 @@ export const TOOL_PROMPT_INSTRUCTIONS = `
 <tool_calling>
 You have tools at your disposal to solve the task, with tools for different integrations. Follow these rules regarding tool calls:
 - Call exactly ONE tool every iteration, and continue calling tools until the full task is completed.
+- No Parallel Calls: Do not call multiple tools at once.
 - ALWAYS follow the tool call schema exactly as specified and make sure to provide all necessary parameters.
 - After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding. Use your thinking to plan and iterate based on this new information, and then take the best next action. 
 - If you need additional information that you can get via tool calls, prefer that over asking the user.
-- If you make a plan, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.
+- If you make a plan to use a tool, immediately follow it, do not wait for the user to confirm or tell you to go ahead. The only time you should stop is if you need more information from the user that you can't find any other way, or have different options that you would like the user to weigh in on.
 </tool_calling>
 
 <personalization_instructions>
@@ -295,7 +362,7 @@ Your response will be sent via email notification. Please format your response t
 
 Structure your response like this:
 - Executive Summary
-- Main Content (organized in clear sections)
+- Main Content (organized in clear sections - no more than 3 main sections)
 - Key Takeaways/Next Steps
 </email_formatting>
 `.trim();
@@ -309,9 +376,15 @@ export function buildSystemPrompt(
   enableTools?: boolean,
   timezone?: string,
   enabledToolSlugs?: string[],
-  emailMode?: boolean
+  emailMode?: boolean,
+  taskMode?: boolean
 ) {
-  let prompt = basePrompt ?? getSystemPromptDefault(enabledToolSlugs);
+  // Choose the appropriate base prompt based on mode
+  let prompt =
+    basePrompt ??
+    (taskMode
+      ? getTaskPromptDefault(enabledToolSlugs, timezone)
+      : getSystemPromptDefault(enabledToolSlugs, timezone));
 
   // Add search instructions if search is enabled
   if (enableSearch) {
@@ -329,7 +402,11 @@ export function buildSystemPrompt(
   }
 
   if (timezone) {
-    prompt += `\nThe user's timezone is ${timezone}.`;
+    if (taskMode) {
+      prompt += `\nUser's timezone: ${timezone}. Adjust all times and scheduling accordingly.`;
+    } else {
+      prompt += `\nThe user's timezone is ${timezone}.`;
+    }
   }
 
   if (!user) {
