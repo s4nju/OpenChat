@@ -1,5 +1,6 @@
 'use node';
 
+import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import {
   consumeStream,
   convertToModelMessages,
@@ -85,7 +86,7 @@ export const executeTask = internalAction({
         {
           userId: task.userId,
           title: `${task.title} - ${currentDate} ${currentTime}`,
-          model: 'moonshotai/kimi-k2',
+          model: 'gpt-5-mini',
         }
       );
 
@@ -150,14 +151,14 @@ export const executeTask = internalAction({
         Object.keys(composioTools).length > 0,
         task.timezone,
         toolkitSlugs, // Use derived toolkit slugs from connectors
-        task.emailNotifications // Enable email mode when notifications are enabled
+        task.emailNotifications, // Enable email mode when notifications are enabled
+        true // Enable task mode for autonomous execution
       );
-      // console.log('System prompt:', systemPrompt);
 
-      // Get Kimi K2 model
-      const selectedModel = MODELS_MAP['moonshotai/kimi-k2'];
+      // Get GPT-5 Mini model
+      const selectedModel = MODELS_MAP['gpt-5-mini'];
       if (!selectedModel) {
-        // console.log('Kimi K2 model not found');
+        // console.log('GPT-5 Mini model not found');
         return null;
       }
 
@@ -224,7 +225,7 @@ export const executeTask = internalAction({
         modelId: selectedModel.id,
         modelName: selectedModel.name,
         includeSearch: task.enableSearch,
-        reasoningEffort: 'none' as const,
+        reasoningEffort: 'medium' as const,
       };
 
       // Initialize usage tracking (same as chat route)
@@ -240,11 +241,19 @@ export const executeTask = internalAction({
         model: selectedModel.api_sdk,
         system: systemPrompt,
         messages: convertToModelMessages([userMessage]),
+        toolChoice: 'auto',
         tools: {
           ...(task.enableSearch ? { search: searchTool } : {}),
           ...composioTools,
         },
         stopWhen: stepCountIs(10),
+        providerOptions: {
+          openai: {
+            textVerbosity: 'low',
+            reasoningEffort: 'medium',
+            reasoningSummary: 'detailed',
+          } satisfies OpenAIResponsesProviderOptions,
+        },
         onFinish({ usage }) {
           // Capture usage data (runs on successful completion) - same as chat route
           finalUsage = {

@@ -381,7 +381,10 @@ async function handleImageGeneration({
 
     // Upload image to Convex storage
     const imageBuffer = image.uint8Array;
-    const imageBlob = new Blob([imageBuffer], { type: 'image/png' });
+    // Create a new Uint8Array to ensure proper type compatibility
+    const imageBlob = new Blob([new Uint8Array(imageBuffer)], {
+      type: 'image/png',
+    });
 
     const uploadUrl = await fetchAction(
       api.files.generateUploadUrl,
