@@ -11,14 +11,21 @@ type TaskTriggerProps = {
   trigger: React.ReactNode;
   initialData?: Partial<CreateTaskForm> & { taskId?: Id<'scheduled_tasks'> };
   mode?: 'create' | 'edit';
+  disabled?: boolean;
 };
 
 function TaskTriggerComponent({
   trigger,
   initialData,
   mode = 'create',
+  disabled = false,
 }: TaskTriggerProps) {
   const isMobileOrTablet = useBreakpoint(896); // Same breakpoint as settings
+
+  // If disabled, return the trigger without wrapping it in dialog/drawer
+  if (disabled) {
+    return <>{trigger}</>;
+  }
 
   if (isMobileOrTablet) {
     return (

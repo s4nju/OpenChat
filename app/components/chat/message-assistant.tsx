@@ -767,7 +767,7 @@ function MessageAssistantInner({
               onClick={onBranch}
               type="button"
             >
-              <GitBranch className="size-4" />
+              <GitBranch className="size-4 rotate-180" />
             </button>
           </MessageAction>
           <MessageAction delayDuration={0} side="bottom" tooltip="Regenerate">

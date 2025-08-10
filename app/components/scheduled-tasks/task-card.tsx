@@ -332,6 +332,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                   }
                 />
                 <TaskTrigger
+                  disabled={task.status === 'archived'}
                   initialData={taskDialogInitialData}
                   mode="edit"
                   trigger={
@@ -466,7 +467,14 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
         <div className="flex h-full flex-col justify-between">
           <div className="flex items-center justify-end gap-1">
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger
+                asChild
+                className={
+                  task.status === 'running' || task.status === 'archived'
+                    ? 'cursor-not-allowed'
+                    : ''
+                }
+              >
                 <Button
                   aria-label={
                     task.status === 'active' ? 'Pause task' : 'Resume task'
@@ -492,7 +500,12 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
             </Tooltip>
 
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger
+                asChild
+                className={
+                  task.status === 'archived' ? 'cursor-not-allowed' : ''
+                }
+              >
                 <Button
                   aria-label="Run task once now"
                   className="h-8 w-8"
@@ -534,10 +547,15 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
             />
 
             <TaskTrigger
+              disabled={task.status === 'archived'}
               initialData={taskDialogInitialData}
               mode="edit"
               trigger={
-                <span>
+                <span
+                  className={
+                    task.status === 'archived' ? 'cursor-not-allowed' : ''
+                  }
+                >
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -559,7 +577,12 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
             />
 
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger
+                asChild
+                className={
+                  task.status === 'archived' ? 'cursor-not-allowed' : ''
+                }
+              >
                 <Button
                   aria-label="Archive task"
                   className="h-8 w-8"
