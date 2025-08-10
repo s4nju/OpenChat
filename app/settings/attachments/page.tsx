@@ -9,6 +9,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -39,6 +47,11 @@ export default function AttachmentsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<Id<'chat_attachments'>>>(
     new Set()
   );
+  const [showDeleteSelectedDialog, setShowDeleteSelectedDialog] =
+    useState(false);
+  const [showDeleteSingleDialog, setShowDeleteSingleDialog] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] =
+    useState<Id<'chat_attachments'> | null>(null);
 
   const isSelected = (id: Id<'chat_attachments'>) => selectedIds.has(id);
   const toggleSelect = (id: Id<'chat_attachments'>) => {
@@ -62,31 +75,42 @@ export default function AttachmentsPage() {
   };
   const clearSelection = () => setSelectedIds(new Set());
 
-  const deleteSelected = async () => {
+  const deleteSelected = () => {
     if (selectedIds.size === 0) {
       return;
     }
-    if (!confirm(`Delete ${selectedIds.size} selected attachment(s)?`)) {
-      return;
-    }
+    setShowDeleteSelectedDialog(true);
+  };
+
+  const confirmDeleteSelected = async () => {
     try {
       await deleteAttachments({ attachmentIds: Array.from(selectedIds) });
       toast({ title: 'Selected attachments deleted', status: 'success' });
       setSelectedIds(new Set());
     } catch {
       toast({ title: 'Failed to delete some attachments', status: 'error' });
+    } finally {
+      setShowDeleteSelectedDialog(false);
     }
   };
 
-  const handleDelete = async (attachmentId: Id<'chat_attachments'>) => {
-    if (!confirm('Are you sure you want to delete this attachment?')) {
+  const handleDelete = (attachmentId: Id<'chat_attachments'>) => {
+    setAttachmentToDelete(attachmentId);
+    setShowDeleteSingleDialog(true);
+  };
+
+  const confirmDeleteSingle = async () => {
+    if (!attachmentToDelete) {
       return;
     }
     try {
-      await deleteAttachments({ attachmentIds: [attachmentId] });
+      await deleteAttachments({ attachmentIds: [attachmentToDelete] });
       toast({ title: 'Attachment deleted', status: 'success' });
     } catch {
       toast({ title: 'Failed to delete attachment', status: 'error' });
+    } finally {
+      setShowDeleteSingleDialog(false);
+      setAttachmentToDelete(null);
     }
   };
 
@@ -235,6 +259,64 @@ export default function AttachmentsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete selected attachments dialog */}
+      <Dialog
+        onOpenChange={setShowDeleteSelectedDialog}
+        open={showDeleteSelectedDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete selected attachments?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete{' '}
+              {selectedIds.size} selected attachment
+              {selectedIds.size === 1 ? '' : 's'}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDeleteSelectedDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteSelected} variant="destructive">
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete single attachment dialog */}
+      <Dialog
+        onOpenChange={setShowDeleteSingleDialog}
+        open={showDeleteSingleDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete attachment?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete this
+              attachment and remove it from the relevant chats.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowDeleteSingleDialog(false);
+                setAttachmentToDelete(null);
+              }}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteSingle} variant="destructive">
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

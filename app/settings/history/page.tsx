@@ -21,6 +21,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
@@ -105,6 +113,27 @@ export default function HistoryPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<Id<'chats'>>>(new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [showDeleteSelectedDialog, setShowDeleteSelectedDialog] =
+    useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [importChatCount, setImportChatCount] = useState(0);
+  const [importData, setImportData] = useState<
+    Array<{
+      chat?: { title?: string; model?: string };
+      messages?: Array<{
+        role?: string;
+        content: string;
+        parts?: unknown[];
+        metadata?: unknown;
+        _id?: string;
+        id?: string;
+        parentMessageId?: string;
+        createdAt?: number;
+        model?: string;
+      }>;
+    }>
+  >([]);
 
   const isSelected = (id: Id<'chats'>) => selectedIds.has(id);
   const toggleSelect = (id: Id<'chats'>) => {
@@ -128,13 +157,14 @@ export default function HistoryPage() {
     setSelectedIds(new Set());
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedIds.size === 0) {
       return;
     }
-    if (!confirm(`Delete ${selectedIds.size} selected chat(s)?`)) {
-      return;
-    }
+    setShowDeleteSelectedDialog(true);
+  };
+
+  const confirmDeleteSelected = async () => {
     try {
       // Use bulk delete for better performance when deleting multiple chats
       if (selectedIds.size === 1) {
@@ -149,6 +179,8 @@ export default function HistoryPage() {
       setSelectedIds(new Set());
     } catch {
       toast({ title: 'Failed to delete some chats', status: 'error' });
+    } finally {
+      setShowDeleteSelectedDialog(false);
     }
   };
 
@@ -233,66 +265,102 @@ export default function HistoryPage() {
     if (chatCount === 0) {
       throw new Error('No chats found in file');
     }
-    if (!confirm(`Import ${chatCount} chat(s) into your account?`)) {
-      return;
-    }
-    toast({ title: `Importing ${chatCount} chat(s)…`, status: 'info' });
 
-    // Use the new bulk import mutation
-    await Promise.all(
-      dataArr.map(async (item) => {
-        const chatMeta = item.chat ?? {};
-        const messages = (item.messages ?? [])
-          .filter(
-            (msg) =>
-              msg &&
-              typeof msg.content === 'string' &&
-              msg.content.length > 0 &&
-              msg.content.length <= MESSAGE_MAX_LENGTH
-          )
-          .map((msg) => ({
-            role: (msg.role || 'assistant') as 'user' | 'assistant' | 'system',
-            content: msg.content,
-            parts: msg.parts,
-            metadata:
-              msg.metadata ??
-              (msg.model ? { modelName: msg.model } : undefined),
-            originalId: msg._id || msg.id,
-            parentOriginalId: msg.parentMessageId,
-            createdAt:
-              typeof msg.createdAt === 'number' ? msg.createdAt : undefined,
-          }));
-
-        if (messages.length === 0) {
-          return;
-        }
-
-        await convex.mutation(api.import_export.bulkImportChat, {
-          chat: {
-            title:
-              typeof chatMeta.title === 'string' && chatMeta.title.length <= 100
-                ? chatMeta.title
-                : undefined,
-            model:
-              typeof chatMeta.model === 'string' && chatMeta.model.length <= 50
-                ? chatMeta.model
-                : undefined,
-          },
-          messages,
-        });
-      })
-    );
-
-    toast({ title: 'Import completed', status: 'success' });
-    setSelectedIds(new Set());
+    // Store data and chat count, then show confirmation dialog
+    setImportData(dataArr);
+    setImportChatCount(chatCount);
+    setShowImportDialog(true);
   }
+
+  const confirmImport = async () => {
+    try {
+      toast({ title: `Importing ${importChatCount} chat(s)…`, status: 'info' });
+
+      // Use the new bulk import mutation
+      await Promise.all(
+        importData.map(async (item) => {
+          const chatMeta = item.chat ?? {};
+          const messages = (item.messages ?? [])
+            .filter(
+              (msg) =>
+                msg &&
+                typeof msg.content === 'string' &&
+                msg.content.length > 0 &&
+                msg.content.length <= MESSAGE_MAX_LENGTH
+            )
+            .map((msg) => ({
+              role: (msg.role || 'assistant') as
+                | 'user'
+                | 'assistant'
+                | 'system',
+              content: msg.content,
+              parts: msg.parts,
+              metadata:
+                msg.metadata ??
+                (msg.model ? { modelName: msg.model } : undefined),
+              originalId: msg._id || msg.id,
+              parentOriginalId: msg.parentMessageId,
+              createdAt:
+                typeof msg.createdAt === 'number' ? msg.createdAt : undefined,
+            }));
+
+          if (messages.length === 0) {
+            return;
+          }
+
+          await convex.mutation(api.import_export.bulkImportChat, {
+            chat: {
+              title:
+                typeof chatMeta.title === 'string' &&
+                chatMeta.title.length <= 100
+                  ? chatMeta.title
+                  : undefined,
+              model:
+                typeof chatMeta.model === 'string' &&
+                chatMeta.model.length <= 50
+                  ? chatMeta.model
+                  : undefined,
+            },
+            messages,
+          });
+        })
+      );
+
+      toast({ title: 'Import completed', status: 'success' });
+      setSelectedIds(new Set());
+    } catch (_error) {
+      toast({ title: 'Import failed', status: 'error' });
+    } finally {
+      setShowImportDialog(false);
+      setImportData([]);
+      setImportChatCount(0);
+    }
+  };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       return;
     }
-    await processImportFile(file);
+    try {
+      await processImportFile(file);
+    } catch (error) {
+      toast({
+        title: error instanceof Error ? error.message : 'Import failed',
+        status: 'error',
+      });
+    }
+  };
+
+  const confirmDeleteAll = async () => {
+    try {
+      await deleteAllChats({});
+      toast({ title: 'All chats deleted', status: 'success' });
+    } catch {
+      toast({ title: 'Failed to delete chats', status: 'error' });
+    } finally {
+      setShowDeleteAllDialog(false);
+    }
   };
 
   return (
@@ -460,21 +528,7 @@ export default function HistoryPage() {
           </CardHeader>
           <CardContent>
             <Button
-              onClick={async () => {
-                if (
-                  !confirm(
-                    'This will permanently delete all chat history. Are you sure?'
-                  )
-                ) {
-                  return;
-                }
-                try {
-                  await deleteAllChats({});
-                  toast({ title: 'All chats deleted', status: 'success' });
-                } catch {
-                  toast({ title: 'Failed to delete chats', status: 'error' });
-                }
-              }}
+              onClick={() => setShowDeleteAllDialog(true)}
               size="sm"
               variant="destructive"
             >
@@ -488,6 +542,89 @@ export default function HistoryPage() {
           *The retention policies of our LLM hosting partners may vary.
         </p>
       </div>
+
+      {/* Delete selected chats dialog */}
+      <Dialog
+        onOpenChange={setShowDeleteSelectedDialog}
+        open={showDeleteSelectedDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete selected chats?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete{' '}
+              {selectedIds.size} selected chat
+              {selectedIds.size === 1 ? '' : 's'}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDeleteSelectedDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteSelected} variant="destructive">
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import chats dialog */}
+      <Dialog onOpenChange={setShowImportDialog} open={showImportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Import {importChatCount} chat{importChatCount === 1 ? '' : 's'}?
+            </DialogTitle>
+            <DialogDescription>
+              This will import {importChatCount} chat
+              {importChatCount === 1 ? '' : 's'} into your account. Importing
+              will NOT delete existing messages.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowImportDialog(false);
+                setImportData([]);
+                setImportChatCount(0);
+              }}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmImport} variant="default">
+              Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete all chats dialog */}
+      <Dialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete all chat history?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete all of
+              your chat history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDeleteAllDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteAll} variant="destructive">
+              Delete All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

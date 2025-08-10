@@ -4,6 +4,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConnectorIcon } from '@/app/components/common/connector-icon';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { Id } from '@/convex/_generated/dataModel';
 import { getConnectorConfig } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
@@ -30,12 +38,17 @@ export function ConnectorCard({
   isConnecting,
 }: ConnectorCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   const handleConnect = () => {
     onConnect(connector.type);
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
+    setShowDisconnectDialog(true);
+  };
+
+  const confirmDisconnect = async () => {
     setIsDisconnecting(true);
     try {
       await onDisconnect(connector.type);
@@ -44,6 +57,7 @@ export function ConnectorCard({
       toast.error(`Failed to disconnect ${config.displayName}`);
     } finally {
       setIsDisconnecting(false);
+      setShowDisconnectDialog(false);
     }
   };
 
@@ -88,6 +102,33 @@ export function ConnectorCard({
           </Button>
         )}
       </div>
+
+      {/* Disconnect confirmation dialog */}
+      <Dialog
+        onOpenChange={setShowDisconnectDialog}
+        open={showDisconnectDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disconnect {config.displayName}?</DialogTitle>
+            <DialogDescription>
+              This will disconnect your {config.displayName} account. You can
+              reconnect it at any time.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDisconnectDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDisconnect} variant="destructive">
+              Disconnect
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

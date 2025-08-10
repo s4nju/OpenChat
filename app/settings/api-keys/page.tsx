@@ -6,6 +6,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
@@ -231,6 +239,10 @@ export default function ApiKeysPage() {
     Record<string, string>
   >({});
   const [isValidating, setIsValidating] = useState<Record<string, boolean>>({});
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState<Provider | null>(
+    null
+  );
 
   // Clear all input values on component unmount for security
   useEffect(() => {
@@ -295,21 +307,26 @@ export default function ApiKeysPage() {
     [validationErrors]
   );
 
-  const handleDelete = useCallback(
-    async (provider: Provider) => {
-      if (!confirm('Delete saved API key?')) {
-        return;
-      }
-      try {
-        await deleteApiKey({ provider });
-        toast({ title: 'API key deleted', status: 'success' });
-      } catch {
-        // Error handling without console
-        toast({ title: 'Failed to delete key', status: 'error' });
-      }
-    },
-    [deleteApiKey]
-  );
+  const handleDelete = useCallback((provider: Provider) => {
+    setProviderToDelete(provider);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!providerToDelete) {
+      return;
+    }
+    try {
+      await deleteApiKey({ provider: providerToDelete });
+      toast({ title: 'API key deleted', status: 'success' });
+    } catch {
+      // Error handling without console
+      toast({ title: 'Failed to delete key', status: 'error' });
+    } finally {
+      setShowDeleteDialog(false);
+      setProviderToDelete(null);
+    }
+  }, [deleteApiKey, providerToDelete]);
 
   const handleToggle = useCallback(
     async (provider: Provider, checked: boolean) => {
@@ -353,6 +370,33 @@ export default function ApiKeysPage() {
           />
         ))}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete API key?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the
+              saved API key for{' '}
+              {providerToDelete &&
+                PROVIDERS.find((p) => p.id === providerToDelete)?.title}
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDeleteDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDelete} variant="destructive">
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

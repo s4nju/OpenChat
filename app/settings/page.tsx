@@ -7,11 +7,20 @@ import { useCallback, useState } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/convex/_generated/api';
 
 export default function AccountSettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const deleteAccount = useMutation(api.users.deleteAccount);
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink);
   const generateCustomerPortalUrl = useAction(
@@ -60,14 +69,11 @@ export default function AccountSettingsPage() {
   }, [generateCustomerPortalUrl]);
 
   // Memoize the delete account handler
-  const handleDeleteAccount = useCallback(async () => {
-    if (
-      !confirm(
-        'This will permanently delete your account and all associated data. This action cannot be undone. Continue?'
-      )
-    ) {
-      return;
-    }
+  const handleDeleteAccount = useCallback(() => {
+    setShowDeleteAccountDialog(true);
+  }, []);
+
+  const confirmDeleteAccount = useCallback(async () => {
     setIsDeleting(true);
     try {
       await deleteAccount({});
@@ -81,6 +87,7 @@ export default function AccountSettingsPage() {
       });
     } finally {
       setIsDeleting(false);
+      setShowDeleteAccountDialog(false);
     }
   }, [deleteAccount, signOut, router]);
 
@@ -209,6 +216,34 @@ export default function AccountSettingsPage() {
           </div>
         </section>
       </div>
+
+      {/* Delete account confirmation dialog */}
+      <Dialog
+        onOpenChange={setShowDeleteAccountDialog}
+        open={showDeleteAccountDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete account?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your
+              account and all associated data including chat history, API keys,
+              and all other settings.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDeleteAccountDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteAccount} variant="destructive">
+              Delete Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
