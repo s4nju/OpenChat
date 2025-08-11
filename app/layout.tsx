@@ -8,6 +8,7 @@ import { APP_BASE_URL, APP_DESCRIPTION, APP_NAME } from '@/lib/config';
 import { AuthGuard } from './components/auth/auth-guard';
 import { LayoutClient } from './layout-client';
 import { ConvexClientProvider } from './providers/convex-client-provider';
+import { SidebarProvider } from './providers/sidebar-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -75,7 +76,7 @@ export default function RootLayout({
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
             <AuthGuard>
-              {children}
+              <SidebarProvider>{children}</SidebarProvider>
               <Analytics />
               <SpeedInsights />
             </AuthGuard>

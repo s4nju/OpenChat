@@ -1,28 +1,15 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useSidebar } from '@/app/providers/sidebar-provider';
 import ChatSidebar from './chat-sidebar';
 import { Header } from './header';
 
 export default function LayoutApp({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedState = localStorage.getItem('sidebarOpen');
-      return savedState !== null ? savedState === 'true' : false;
-    }
-    return false;
-  });
+  const { toggleSidebar } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => {
-      const newState = !prev;
-      localStorage.setItem('sidebarOpen', String(newState));
-      return newState;
-    });
-  }, []);
 
   // Helper functions to reduce complexity
   const isInputElementFocused = useCallback((target: EventTarget | null) => {
@@ -101,7 +88,7 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
     // Main flex container
     <div className="flex h-dvh overflow-hidden bg-background">
       {/* Sidebar */}
-      <ChatSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      <ChatSidebar />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">

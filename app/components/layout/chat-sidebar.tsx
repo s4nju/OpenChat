@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useChatSession } from '@/app/providers/chat-session-provider';
+import { useSidebar } from '@/app/providers/sidebar-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,16 +31,8 @@ import { ChatList } from './chat-list';
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ');
 
-// Define props
-interface ChatSidebarProps {
-  isOpen: boolean;
-  toggleSidebar: () => void;
-}
-
-const ChatSidebar = memo(function SidebarComponent({
-  isOpen,
-  toggleSidebar,
-}: ChatSidebarProps) {
+const ChatSidebar = memo(function SidebarComponent() {
+  const { isSidebarOpen: isOpen, toggleSidebar } = useSidebar();
   const { data: chatsQuery = [], isLoading: chatsLoading } = useTanStackQuery({
     ...convexQuery(api.chats.listChatsForUser, {}),
     // Extended cache for chat list to prevent flickering

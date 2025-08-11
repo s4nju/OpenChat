@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useMemo, useState } from 'react';
+import { useSidebar } from '@/app/providers/sidebar-provider';
 import { cn } from '@/lib/utils';
 import { Personas } from './personas';
 import { Suggestions } from './suggestions';
@@ -22,6 +23,7 @@ export const PromptSystem = memo(function PromptSystemComponent({
   selectedPersonaId,
 }: PromptSystemProps) {
   const [isPersonaMode, setIsPersonaMode] = useState(false);
+  const { isSidebarOpen } = useSidebar();
 
   const tabs = useMemo(
     () => [
@@ -65,7 +67,14 @@ export const PromptSystem = memo(function PromptSystemComponent({
           )}
         </AnimatePresence>
       </div>
-      <div className="relative right-0 bottom-0 left-0 mx-auto mb-4 flex h-8 w-auto items-center justify-center rounded-lg p-1 md:fixed md:bottom-0">
+      <div
+        className={cn(
+          'relative right-0 bottom-0 left-0 mx-auto mb-4 flex h-8 w-auto items-center justify-center rounded-lg p-1 md:fixed md:bottom-0',
+          isSidebarOpen
+            ? 'md:-translate-x-1/2 md:left-[calc(50%+128px)]'
+            : 'md:-translate-x-1/2 md:left-1/2'
+        )}
+      >
         <div className="relative flex h-full flex-row gap-3">
           {tabs.map((tab) => (
             <button
