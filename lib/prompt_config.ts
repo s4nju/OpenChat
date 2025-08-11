@@ -7,6 +7,7 @@ import {
   MagnifyingGlassIcon,
   PenNibIcon,
 } from '@phosphor-icons/react/dist/ssr';
+import { format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
@@ -118,7 +119,9 @@ const mapToolkitSlugToDisplayName = (slug: string): string => {
 /**
  * Helper function to format date and time in the user's timezone
  */
-const formatDateInTimezone = (timezone?: string) => {
+const formatDateInTimezone = (
+  timezone?: string
+): { date: string; time: string } => {
   const now = new Date();
 
   if (timezone) {
@@ -133,10 +136,12 @@ const formatDateInTimezone = (timezone?: string) => {
     }
   }
 
-  // Fallback to server timezone for backward compatibility
+  // Fallback to server timezone with consistent formatting
+  // Get the system's timezone name
+  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
-    date: now.toLocaleDateString(),
-    time: now.toLocaleTimeString(),
+    date: format(now, 'MM/dd/yyyy'),
+    time: `${format(now, 'HH:mm:ss')} ${systemTimezone}`,
   };
 };
 
