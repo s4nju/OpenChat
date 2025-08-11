@@ -1,4 +1,4 @@
-import { Moonshot, ZAI } from '@lobehub/icons';
+import { Flux, Moonshot, ZAI } from '@lobehub/icons';
 import {
   AnthropicDark,
   AnthropicLight,
@@ -32,7 +32,7 @@ export const PROVIDERS = [
   {
     id: 'fal',
     name: 'Fal.ai',
-    icon: Gemini,
+    icon: Flux,
   },
   {
     id: 'gemini',
