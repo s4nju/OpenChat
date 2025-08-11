@@ -11,10 +11,15 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const savedState = localStorage.getItem('sidebarOpen');
-      return savedState !== null ? savedState === 'true' : false;
+      try {
+        const savedState = localStorage.getItem('sidebarOpen');
+        return savedState === 'true';
+      } catch {
+        // Fallback to false if localStorage is blocked/unavailable
+        return false;
+      }
     }
     return false;
   });
@@ -22,7 +27,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => {
       const newState = !prev;
-      localStorage.setItem('sidebarOpen', String(newState));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem('sidebarOpen', String(newState));
+        } catch {
+          // Silently handle localStorage errors (private mode, quota exceeded, etc.)
+        }
+      }
       return newState;
     });
   }, []);

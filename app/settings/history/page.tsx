@@ -117,6 +117,7 @@ export default function HistoryPage() {
     useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [importChatCount, setImportChatCount] = useState(0);
   const [importData, setImportData] = useState<
     Array<{
@@ -349,10 +350,19 @@ export default function HistoryPage() {
         title: error instanceof Error ? error.message : 'Import failed',
         status: 'error',
       });
+    } finally {
+      // Clear the input value so the same file can be selected again
+      e.currentTarget.value = '';
     }
   };
 
   const confirmDeleteAll = async () => {
+    // Guard against duplicate requests
+    if (isDeletingAll) {
+      return;
+    }
+
+    setIsDeletingAll(true);
     try {
       await deleteAllChats({});
       toast({ title: 'All chats deleted', status: 'success' });
@@ -360,6 +370,7 @@ export default function HistoryPage() {
       toast({ title: 'Failed to delete chats', status: 'error' });
     } finally {
       setShowDeleteAllDialog(false);
+      setIsDeletingAll(false);
     }
   };
 
@@ -528,6 +539,7 @@ export default function HistoryPage() {
           </CardHeader>
           <CardContent>
             <Button
+              disabled={isDeletingAll}
               onClick={() => setShowDeleteAllDialog(true)}
               size="sm"
               variant="destructive"
@@ -603,7 +615,15 @@ export default function HistoryPage() {
       </Dialog>
 
       {/* Delete all chats dialog */}
-      <Dialog onOpenChange={setShowDeleteAllDialog} open={showDeleteAllDialog}>
+      <Dialog
+        onOpenChange={(open) => {
+          // Prevent closing dialog while deletion is in progress
+          if (!isDeletingAll) {
+            setShowDeleteAllDialog(open);
+          }
+        }}
+        open={showDeleteAllDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete all chat history?</DialogTitle>
@@ -614,13 +634,18 @@ export default function HistoryPage() {
           </DialogHeader>
           <DialogFooter>
             <Button
+              disabled={isDeletingAll}
               onClick={() => setShowDeleteAllDialog(false)}
               variant="outline"
             >
               Cancel
             </Button>
-            <Button onClick={confirmDeleteAll} variant="destructive">
-              Delete All
+            <Button
+              disabled={isDeletingAll}
+              onClick={confirmDeleteAll}
+              variant="destructive"
+            >
+              {isDeletingAll ? 'Deleting...' : 'Delete All'}
             </Button>
           </DialogFooter>
         </DialogContent>

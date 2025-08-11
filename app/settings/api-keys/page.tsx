@@ -243,6 +243,7 @@ export default function ApiKeysPage() {
   const [providerToDelete, setProviderToDelete] = useState<Provider | null>(
     null
   );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Clear all input values on component unmount for security
   useEffect(() => {
@@ -312,10 +313,31 @@ export default function ApiKeysPage() {
     setShowDeleteDialog(true);
   }, []);
 
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      // Prevent closing dialog while delete is in progress
+      if (!open && isDeleting) {
+        return;
+      }
+
+      setShowDeleteDialog(open);
+      if (!open) {
+        setProviderToDelete(null);
+      }
+    },
+    [isDeleting]
+  );
+
+  const handleCancelDelete = useCallback(() => {
+    setShowDeleteDialog(false);
+    setProviderToDelete(null);
+  }, []);
+
   const confirmDelete = useCallback(async () => {
     if (!providerToDelete) {
       return;
     }
+    setIsDeleting(true);
     try {
       await deleteApiKey({ provider: providerToDelete });
       toast({ title: 'API key deleted', status: 'success' });
@@ -323,6 +345,7 @@ export default function ApiKeysPage() {
       // Error handling without console
       toast({ title: 'Failed to delete key', status: 'error' });
     } finally {
+      setIsDeleting(false);
       setShowDeleteDialog(false);
       setProviderToDelete(null);
     }
@@ -372,7 +395,7 @@ export default function ApiKeysPage() {
       </div>
 
       {/* Delete confirmation dialog */}
-      <Dialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
+      <Dialog onOpenChange={handleDialogOpenChange} open={showDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete API key?</DialogTitle>
@@ -385,14 +408,15 @@ export default function ApiKeysPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              onClick={() => setShowDeleteDialog(false)}
-              variant="outline"
-            >
+            <Button onClick={handleCancelDelete} variant="outline">
               Cancel
             </Button>
-            <Button onClick={confirmDelete} variant="destructive">
-              Delete
+            <Button
+              disabled={isDeleting}
+              onClick={confirmDelete}
+              variant="destructive"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
