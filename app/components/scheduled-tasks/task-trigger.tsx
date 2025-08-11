@@ -1,14 +1,24 @@
 'use client';
 
-import { memo } from 'react';
+import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, memo } from 'react';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import type { Id } from '@/convex/_generated/dataModel';
 import { TaskDialog } from './task-dialog';
 import { TaskDrawer } from './task-drawer';
 import type { CreateTaskForm } from './types';
 
+// Minimal common props many interactive triggers support
+interface CommonTriggerProps {
+  disabled?: boolean;
+  'aria-disabled'?: boolean;
+  className?: string;
+  tabIndex?: number;
+  onClick?: (e: React.MouseEvent) => void;
+}
+
 type TaskTriggerProps = {
-  trigger: React.ReactNode;
+  trigger: ReactNode;
   initialData?: Partial<CreateTaskForm> & { taskId?: Id<'scheduled_tasks'> };
   mode?: 'create' | 'edit';
   disabled?: boolean;
@@ -22,8 +32,25 @@ function TaskTriggerComponent({
 }: TaskTriggerProps) {
   const isMobileOrTablet = useBreakpoint(896); // Same breakpoint as settings
 
-  // If disabled, return the trigger without wrapping it in dialog/drawer
+  // If disabled, render a non-interactive trigger with clear disabled semantics
   if (disabled) {
+    if (isValidElement<CommonTriggerProps>(trigger)) {
+      const t = trigger;
+      return cloneElement(t, {
+        disabled: true,
+        'aria-disabled': true,
+        tabIndex: -1,
+        // Visually and interactively indicate disabled (Tailwind)
+        className: [t.props.className, 'pointer-events-none opacity-50']
+          .filter(Boolean)
+          .join(' '),
+        onClick: (e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+      });
+    }
+    // Fallback for non-elements
     return <>{trigger}</>;
   }
 
