@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
+import { CodeBlock, CodeBlockCode } from '@/components/prompt-kit/code-block';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +19,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ThemeFontControls } from '@/components/ui/theme-font-controls';
+import { ThemeSelector } from '@/components/ui/theme-selector';
 import { toast } from '@/components/ui/toast';
 import { APP_NAME } from '@/lib/config';
+import { useEditorStore } from '@/store/editor-store';
+import type { FontCategory, FontOption } from '@/utils/theme-fonts';
 
 export default function CustomizationPage() {
   const { user, updateUser } = useUser();
   const router = useRouter();
+  const { themeState, updateFont } = useEditorStore();
 
   const [preferredName, setPreferredName] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -167,6 +173,13 @@ export default function CustomizationPage() {
       e.preventDefault();
       handleSave();
     }
+  };
+
+  const handleFontChange = (
+    category: FontCategory,
+    fontOption: FontOption
+  ): void => {
+    updateFont(category, fontOption);
   };
 
   const defaultTraits = [
@@ -317,6 +330,73 @@ export default function CustomizationPage() {
             <Button disabled={!hasUnsavedChanges} onClick={handleSave}>
               Save Preferences
             </Button>
+          </div>
+          <div>
+            <h2 className="mb-4 font-semibold text-lg">Visual Options</h2>
+            <div className="space-y-6">
+              <div>
+                <Label className="mb-2 block" htmlFor="theme-selector">
+                  Theme
+                </Label>
+                <p className="mb-3 text-muted-foreground text-sm">
+                  Choose a visual theme that affects the overall appearance and
+                  color scheme.
+                </p>
+                <ThemeSelector />
+              </div>
+              <div>
+                <Label className="mb-2 block">Typography</Label>
+                <p className="mb-3 text-muted-foreground text-sm">
+                  Customize font families for different text types. Changes will
+                  create a custom theme.
+                </p>
+                <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-[1fr_480px]">
+                  <div className="min-w-0">
+                    <ThemeFontControls
+                      onFontChange={handleFontChange}
+                      themeStyles={themeState.styles[themeState.currentMode]}
+                    />
+                  </div>
+                  <div className="min-h-full">
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-base">Fonts Preview</h3>
+                      <div className="rounded-lg border border-input border-dashed p-4">
+                        <div className="prose prose-neutral dark:prose-invert prose-pre:m-0 max-w-none prose-pre:bg-transparent prose-pre:p-0 font-sans">
+                          {/* User message (right aligned) */}
+                          <div className="flex justify-end">
+                            <div className="inline-block max-w-[78%] whitespace-pre-line break-words rounded-xl bg-accent px-5 py-2.5 text-left font-sans leading-relaxed shadow-sm">
+                              Can you write me a simple hello world program?
+                            </div>
+                          </div>
+                          {/* Assistant message (left aligned) */}
+                          <div className="mt-4">
+                            <div className="mb-2 font-sans leading-relaxed">
+                              Sure, here you go:
+                            </div>
+                            <div className="relative flex w-full flex-col pt-9">
+                              <div className="absolute inset-x-0 top-0 flex h-9 items-center rounded-t bg-secondary px-4 py-2 text-secondary-foreground text-sm">
+                                <span className="font-mono lowercase">
+                                  python
+                                </span>
+                              </div>
+                              <CodeBlock className="not-prose border-none bg-transparent p-0 shadow-none">
+                                <CodeBlockCode
+                                  className="[&_pre]:!bg-transparent font-mono text-sm [&_pre]:overflow-auto [&_pre]:px-4 [&_pre]:py-4"
+                                  code={
+                                    'def greet(name):\n    print(f"Hello, {name}!")\n\nif __name__ == "__main__":\n    greet("world")'
+                                  }
+                                  language="python"
+                                />
+                              </CodeBlock>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
