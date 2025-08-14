@@ -9,7 +9,7 @@ import {
 
 export class ExaSearchProvider implements SearchAdapter {
   readonly name = 'exa';
-  private client: Exa;
+  private readonly client: Exa;
 
   constructor(apiKey: string) {
     if (!apiKey) {
