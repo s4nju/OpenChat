@@ -3,10 +3,10 @@
 import { ArrowLeft, Moon, SignOut, Sun } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from '@/app/providers/theme-provider';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
+import { useTheme } from '@/hooks/use-theme';
 
 interface HeaderGoBackProps {
   href?: string;

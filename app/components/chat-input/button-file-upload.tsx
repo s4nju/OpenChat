@@ -42,10 +42,10 @@ export function ButtonFileUpload({
             <PopoverTrigger asChild>
               <Button
                 aria-label="Add files"
-                className="size-9 rounded-full border border-border bg-transparent dark:bg-secondary"
+                className="size-9 rounded-full"
                 size="sm"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -72,10 +72,10 @@ export function ButtonFileUpload({
             <PopoverTrigger asChild>
               <Button
                 aria-label="Add files"
-                className="size-9 rounded-full border border-border bg-transparent dark:bg-secondary"
+                className="size-9 rounded-full"
                 size="sm"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -101,13 +101,13 @@ export function ButtonFileUpload({
             <Button
               aria-label="Add files"
               className={cn(
-                'size-9 rounded-full border border-border bg-transparent dark:bg-secondary',
+                'size-9 rounded-full',
                 !isUserAuthenticated && 'opacity-50'
               )}
               disabled={!isUserAuthenticated}
               size="sm"
               type="button"
-              variant="secondary"
+              variant="outline"
             >
               <Paperclip className="size-4" />
             </Button>

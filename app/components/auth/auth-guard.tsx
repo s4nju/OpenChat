@@ -3,15 +3,15 @@
 import { Authenticated, AuthLoading, Unauthenticated } from 'convex/react';
 import { ChatSessionProvider } from '@/app/providers/chat-session-provider';
 import { CSPostHogProvider } from '@/app/providers/posthog-provider';
-import { ThemeProvider } from '@/app/providers/theme-provider';
 import { UserProvider } from '@/app/providers/user-provider';
 import { Loader } from '@/components/prompt-kit/loader';
+import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { AnonymousSignIn } from './anonymous-sign-in';
 
-interface AuthGuardProps {
+type AuthGuardProps = {
   children: React.ReactNode;
-}
+};
 
 export function AuthGuard({ children }: AuthGuardProps) {
   return (

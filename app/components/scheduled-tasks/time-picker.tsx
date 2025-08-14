@@ -231,7 +231,7 @@ function TimePickerComponent({
               <PopoverTrigger asChild>
                 <Button
                   className={cn(
-                    'h-9 w-full justify-between border-input bg-transparent text-left font-normal shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-secondary dark:hover:bg-secondary/50',
+                    'h-9 w-full justify-between border-input bg-transparent text-left font-normal shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                     !selectedDate && 'text-muted-foreground'
                   )}
                   size="sm"
