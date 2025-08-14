@@ -48,6 +48,10 @@ agent.md
 .windsurf
 .claude
 .kiro
+.zed
+.rules
+.github/copilot-instructions.md
 
 .env.local
 .agent.md
+tweakcn-main
