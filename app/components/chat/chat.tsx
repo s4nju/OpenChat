@@ -132,7 +132,7 @@ export default function Chat() {
       api.messages.getMessagesForChat,
       chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
     ),
-    enabled: !!chatId,
+    enabled: Boolean(chatId),
   });
 
   const { data: currentChat } = useTanStackQuery({
@@ -140,7 +140,7 @@ export default function Chat() {
       api.chats.getChat,
       chatId ? { chatId: chatId as Id<'chats'> } : 'skip'
     ),
-    enabled: !!chatId,
+    enabled: Boolean(chatId),
   });
 
   // Derived state

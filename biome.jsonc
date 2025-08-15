@@ -1,25 +1,32 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
   "extends": ["ultracite"],
   "files": {
     "includes": [
       "**",
-      "!components/**",
-      "!hooks/**",
-      "!node_modules/**",
-      "!convex/_generated/**",
+      "!components",
+      "!hooks",
+      "!node_modules",
+      "!convex/_generated",
       "!app/globals.css",
       "!*.lock",
-      "!ai-chatbot-main/**"
+      "!ai-chatbot-main",
+      "!tweakcn-main"
     ]
   },
   "linter": {
     "rules": {
       "style": {
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "noMagicNumbers": "off"
       },
       "complexity": {
-        "noExcessiveCognitiveComplexity": "off"
+        "noExcessiveCognitiveComplexity": "off",
+        "noExcessiveLinesPerFunction": "off"
+      },
+      "nursery": {
+        "noUnnecessaryConditions": "off",
+        "useMaxParams": "off"
       }
     },
     "domains": {

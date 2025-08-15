@@ -16,22 +16,22 @@ import { jsonSchema } from 'ai';
 /**
  * Tool execution response
  */
-interface ToolExecuteResponse {
+type ToolExecuteResponse = {
   data: Record<string, unknown>;
   error: string | null;
   successful: boolean;
-}
+};
 
 /**
  * Composio tool structure (v4 format)
  */
-interface ComposioTool {
+type ComposioTool = {
   description: string;
   parameters: {
     jsonSchema: JSONSchema7;
   };
   execute: (params: Record<string, unknown>) => Promise<ToolExecuteResponse>;
-}
+};
 
 /**
  * Clean JSON Schema to ensure compatibility with AI SDK v5

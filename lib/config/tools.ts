@@ -15,14 +15,14 @@ import { GoogleDocsIcon } from '@/components/icons/google-docs';
 import { GoogleSheetsIcon } from '@/components/icons/google-sheets';
 import type { ConnectorType } from '@/lib/types';
 
-export interface ConnectorConfig {
+export type ConnectorConfig = {
   type: ConnectorType;
   displayName: string;
   icon: ComponentType<{ className?: string }>;
   icon_light?: ComponentType<{ className?: string }>;
   description: string;
   authConfigId: string;
-}
+};
 
 export const CONNECTOR_CONFIGS: Record<ConnectorType, ConnectorConfig> = {
   gmail: {

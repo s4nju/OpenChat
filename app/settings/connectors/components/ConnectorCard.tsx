@@ -16,20 +16,20 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { getConnectorConfig } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
 
-interface ConnectorData {
+type ConnectorData = {
   _id?: Id<'connectors'>;
   type: ConnectorType;
   isConnected: boolean;
   displayName?: string;
   connectionId?: string;
-}
+};
 
-interface ConnectorCardProps {
+type ConnectorCardProps = {
   connector: ConnectorData;
   onConnect: (type: ConnectorType) => void;
   onDisconnect: (type: ConnectorType) => Promise<void>;
   isConnecting: boolean;
-}
+};
 
 export function ConnectorCard({
   connector,
@@ -64,8 +64,8 @@ export function ConnectorCard({
   const config = getConnectorConfig(connector.type);
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
-      <div className="flex flex-col space-y-2">
+    <div className="flex h-full min-h-[140px] flex-col rounded-lg border p-4">
+      <div className="flex flex-1 flex-col space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
             <ConnectorIcon className="size-5" connector={config} />
@@ -80,7 +80,7 @@ export function ConnectorCard({
         )}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4">
         {connector.isConnected ? (
           <Button
             disabled={isDisconnecting}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-interface ProgressRingProps {
+type ProgressRingProps = {
   value: number;
   max: number;
   size?: number;
@@ -10,7 +10,7 @@ interface ProgressRingProps {
   showLabel?: boolean;
   label?: string;
   color?: 'primary' | 'warning' | 'success' | 'danger';
-}
+};
 
 export const ProgressRing: React.FC<ProgressRingProps> = ({
   value,

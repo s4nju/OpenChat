@@ -62,7 +62,7 @@ export function CommandHistory() {
       api.messages.searchMessages,
       searchQuery ? { query: searchQuery } : 'skip'
     ),
-    enabled: !!searchQuery,
+    enabled: Boolean(searchQuery),
   });
   const [editingId, setEditingId] = useState<Id<'chats'> | null>(null);
   const [editTitle, setEditTitle] = useState('');

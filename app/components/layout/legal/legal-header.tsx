@@ -16,9 +16,9 @@ const LEGAL_NAV_ITEMS = [
   { name: 'Security Policy', href: '/security' },
 ] as const;
 
-interface LogoSectionProps {
+type LogoSectionProps = {
   appName: string;
-}
+};
 
 function LogoSection({ appName }: LogoSectionProps) {
   return (
@@ -39,10 +39,10 @@ function LogoSection({ appName }: LogoSectionProps) {
   );
 }
 
-interface DesktopNavigationProps {
+type DesktopNavigationProps = {
   activeTab: string | undefined;
   navItems: typeof LEGAL_NAV_ITEMS;
-}
+};
 
 function DesktopNavigation({ activeTab, navItems }: DesktopNavigationProps) {
   return (
@@ -58,10 +58,10 @@ function DesktopNavigation({ activeTab, navItems }: DesktopNavigationProps) {
   );
 }
 
-interface MobileHamburgerMenuProps {
+type MobileHamburgerMenuProps = {
   isOpen: boolean;
   onToggle: () => void;
-}
+};
 
 function MobileHamburgerMenu({ isOpen, onToggle }: MobileHamburgerMenuProps) {
   return (

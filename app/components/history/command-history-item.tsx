@@ -22,7 +22,7 @@ import {
 import type { Doc, Id } from '@/convex/_generated/dataModel';
 import { cn } from '@/lib/utils';
 
-interface CommandHistoryItemProps {
+type CommandHistoryItemProps = {
   chat: Doc<'chats'>;
   chatHistory?: Doc<'chats'>[];
   editingId: Id<'chats'> | null;
@@ -37,7 +37,7 @@ interface CommandHistoryItemProps {
   handleTogglePin: (chat: Doc<'chats'>) => void;
   setIsOpen: (isOpen: boolean) => void;
   setEditTitle: (title: string) => void;
-}
+};
 
 export const CommandHistoryItem = React.memo(
   function CommandHistoryItemComponent({

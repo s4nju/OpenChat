@@ -231,14 +231,14 @@ export function ChatInput({
       )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
         <PromptInput
-          className="relative z-10 bg-popover p-0 pb-2 shadow-xs backdrop-blur-xl"
+          className="relative z-10 p-0 pb-2 backdrop-blur-xl"
           maxHeight={200}
           onValueChange={setValue}
           value={value}
         >
           <FileList files={files} onFileRemoveAction={onFileRemoveAction} />
           <PromptInputTextarea
-            className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base"
+            className="mt-2 ml-2 text-foreground leading-[1.3]"
             disabled={isSubmitting}
             onKeyDown={handleKeyDown}
             placeholder={`Ask ${APP_NAME}`}

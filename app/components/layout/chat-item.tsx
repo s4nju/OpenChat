@@ -25,7 +25,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ');
 
-interface ChatItemProps {
+type ChatItemProps = {
   id: Id<'chats'>;
   title: string | undefined;
   originalChatId?: Id<'chats'>;
@@ -35,7 +35,7 @@ interface ChatItemProps {
   handleTogglePin: (id: Id<'chats'>) => void;
   isPinned: boolean;
   activeChatId?: string | null;
-}
+};
 
 const ChatItemComponent = function ChatItemComponent({
   id,

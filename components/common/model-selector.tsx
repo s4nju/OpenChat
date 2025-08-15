@@ -295,7 +295,7 @@ return {
           <Button
             variant="outline"
             className={cn(
-              "dark:bg-secondary justify-between",
+              "justify-between",
               isMobile && "py-3",
               className
             )}

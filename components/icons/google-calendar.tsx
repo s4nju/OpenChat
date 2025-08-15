@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { memo } from 'react';
 
-interface GoogleCalendarIconProps extends React.ComponentProps<'svg'> {
+type GoogleCalendarIconProps = React.ComponentProps<'svg'> & {
   className?: string;
-}
+};
 
 const GoogleCalendarIconComponent = ({ className, ...props }: GoogleCalendarIconProps) => (
   <svg

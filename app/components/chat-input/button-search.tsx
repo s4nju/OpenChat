@@ -38,11 +38,11 @@ export function ButtonSearch({
   if (isMobile) {
     enabledButtonClass = searchEnabled
       ? 'h-9 w-auto rounded-full bg-blue-500/50 text-accent-foreground transition hover:bg-blue-600/50'
-      : 'flex h-9 w-auto items-center rounded-full border border-border bg-transparent px-3 dark:bg-secondary';
+      : 'h-9 w-auto rounded-full px-3';
   } else {
     enabledButtonClass = searchEnabled
       ? 'size-9 rounded-full bg-blue-500/50 transition hover:bg-blue-600/50'
-      : 'size-9 rounded-full border border-border bg-transparent dark:bg-secondary';
+      : 'size-9 rounded-full';
   }
 
   if (!isToolCallingAvailable) {
@@ -54,13 +54,13 @@ export function ButtonSearch({
               aria-label="Search the internet"
               className={
                 isMobile
-                  ? 'h-9 w-auto cursor-not-allowed rounded-full border border-border bg-transparent text-accent-foreground opacity-50 dark:bg-secondary'
-                  : 'size-9 cursor-not-allowed rounded-full border border-border bg-transparent opacity-50 dark:bg-secondary'
+                  ? 'h-9 w-auto cursor-not-allowed rounded-full px-3 opacity-50'
+                  : 'size-9 cursor-not-allowed rounded-full opacity-50'
               }
               disabled
               size="sm"
               type="button"
-              variant="secondary"
+              variant="outline"
             >
               <Globe className="size-5" />
               {/* {isMobile && <span className="text-sm">Search</span>} */}
@@ -81,12 +81,12 @@ export function ButtonSearch({
                 aria-label="Search the internet"
                 className={
                   isMobile
-                    ? 'h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground dark:bg-secondary'
-                    : 'size-9 rounded-full border border-border bg-transparent dark:bg-secondary'
+                    ? 'h-9 w-auto rounded-full px-3'
+                    : 'size-9 rounded-full'
                 }
                 size="sm"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
                 <Globe className="size-5" />
                 {/* {isMobile && <span className="text-sm">Search</span>} */}
@@ -109,7 +109,7 @@ export function ButtonSearch({
           onClick={onSearch}
           size="sm"
           type="button"
-          variant={searchEnabled ? 'ghost' : 'secondary'}
+          variant={searchEnabled ? 'ghost' : 'outline'}
         >
           <Globe
             className={searchEnabled ? 'size-5 text-blue-400' : 'size-5'}

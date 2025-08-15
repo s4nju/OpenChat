@@ -86,14 +86,14 @@ export function UserProvider({
 
   const { data: hasPremium, isLoading: isPremiumLoading } = useTanStackQuery({
     ...convexQuery(api.users.userHasPremium, {}),
-    enabled: !!user && !user.isAnonymous,
+    enabled: Boolean(user) && !user?.isAnonymous,
     // Premium status changes infrequently, cache longer
     gcTime: 15 * 60 * 1000, // 15 minutes
   });
 
   const { data: products, isLoading: isProductsLoading } = useTanStackQuery({
     ...convexQuery(api.polar.getConfiguredProducts, {}),
-    enabled: !!user && !user.isAnonymous,
+    enabled: Boolean(user) && !user?.isAnonymous,
     // Product configurations are very stable, cache aggressively
     gcTime: 60 * 60 * 1000, // 60 minutes
   });
@@ -101,14 +101,14 @@ export function UserProvider({
   const { data: rateLimitStatus, isLoading: isRateLimitLoading } =
     useTanStackQuery({
       ...convexQuery(api.users.getRateLimitStatus, {}),
-      enabled: !!user,
+      enabled: Boolean(user),
       // Rate limits update more frequently, shorter cache
       gcTime: 5 * 60 * 1000, // 5 minutes
     });
 
   const { data: apiKeysQuery, isLoading: isApiKeysLoading } = useTanStackQuery({
     ...convexQuery(api.api_keys.getApiKeys, {}),
-    enabled: !!user && !user.isAnonymous,
+    enabled: Boolean(user) && !user?.isAnonymous,
     // API keys are relatively stable, cache reasonably
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -117,9 +117,9 @@ export function UserProvider({
     useTanStackQuery({
       ...convexQuery(
         api.connectors.listUserConnectors,
-        user && !user.isAnonymous ? {} : 'skip'
+        user && !user?.isAnonymous ? {} : 'skip'
       ),
-      enabled: !!user && !user.isAnonymous,
+      enabled: Boolean(user) && !user?.isAnonymous,
       // Connectors are relatively stable, cache reasonably
       gcTime: 10 * 60 * 1000, // 10 minutes
     });

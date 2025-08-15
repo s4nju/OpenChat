@@ -5,20 +5,20 @@ import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
 import { ConnectorCard } from './ConnectorCard';
 
-interface ConnectorData {
+type ConnectorData = {
   _id?: Id<'connectors'>;
   type: ConnectorType;
   isConnected: boolean;
   displayName?: string;
   connectionId?: string;
-}
+};
 
-interface ConnectorGridProps {
+type ConnectorGridProps = {
   connectors: ConnectorData[];
   onConnect: (type: ConnectorType) => void;
   onDisconnect: (type: ConnectorType) => Promise<void>;
   connectingStates: Record<ConnectorType, boolean>;
-}
+};
 
 export function ConnectorGrid({
   connectors,

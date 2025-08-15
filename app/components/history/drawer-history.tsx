@@ -43,7 +43,7 @@ type DrawerHistoryProps = {
   setIsOpen: (open: boolean) => void;
 };
 
-interface DrawerHistoryItemProps {
+type DrawerHistoryItemProps = {
   chat: Doc<'chats'>;
   pinned: boolean;
   editingId: Id<'chats'> | null;
@@ -59,7 +59,7 @@ interface DrawerHistoryItemProps {
   setEditTitle: (title: string) => void;
   currentChatId?: string;
   closeDrawer: () => void;
-}
+};
 
 function DrawerHistoryItem({
   chat,

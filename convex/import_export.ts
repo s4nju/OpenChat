@@ -69,7 +69,6 @@ export const bulkImportChat = mutation({
         ? idMap.get(msg.parentOriginalId)
         : undefined;
 
-      // biome-ignore lint/nursery/noAwaitInLoop: <need sequential processing to preserve threading>
       const messageId = await ctx.db.insert('messages', {
         chatId,
         userId, // Always attribute imported messages to the importing user for consistency

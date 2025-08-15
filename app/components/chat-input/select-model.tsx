@@ -34,7 +34,7 @@ export function SelectModelComponent({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                className="h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground dark:bg-secondary"
+                className="h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground"
                 size="sm"
                 type="button"
                 variant="secondary"

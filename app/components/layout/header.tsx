@@ -21,7 +21,7 @@ export function Header() {
   const { user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const isLoggedIn = !!user && !user.isAnonymous;
+  const isLoggedIn = Boolean(user) && !user?.isAnonymous;
   const isMobile = useBreakpoint(768);
 
   return (
@@ -79,7 +79,7 @@ export function Header() {
             {/* History trigger - always rendered for Cmd+K functionality */}
             <HistoryTrigger />
             <ThemeSwitchIcon />
-            <UserMenu user={user} />
+            {user && <UserMenu user={user} />}
           </div>
         ) : (
           <div className="flex items-center gap-4">

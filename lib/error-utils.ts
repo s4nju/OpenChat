@@ -25,7 +25,7 @@ function isConvexError(error: unknown): error is ConvexError<string> {
   return error instanceof ConvexError;
 }
 
-export interface ClassifiedError {
+export type ClassifiedError = {
   displayType: ErrorDisplayType;
   code: string;
   message: string;
@@ -33,7 +33,7 @@ export interface ClassifiedError {
   httpStatus: number;
   responseType: string;
   originalError?: Error | unknown;
-}
+};
 
 /**
  * HTTP status code mapping for different error types

@@ -24,11 +24,11 @@ export const convertTo24Hour = (hour12: number, ampm: string): number => {
 };
 
 // Return type interface for formatTime12Hour function
-export interface Time12HourFormat {
+export type Time12HourFormat = {
   hour12: string;
   minute: string;
   ampm: 'AM' | 'PM';
-}
+};
 
 export const formatTime12Hour = (time24: string): Time12HourFormat => {
   // Validate input format using regex - expects "HH:mm" format

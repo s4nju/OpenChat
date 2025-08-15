@@ -324,7 +324,7 @@ export function TaskFormContent({
               checked={form.enableSearch}
               id="enableSearch"
               onCheckedChange={(checked) =>
-                updateForm('enableSearch', !!checked)
+                updateForm('enableSearch', Boolean(checked))
               }
             />
             <Label htmlFor="enableSearch">Enable web search</Label>
@@ -335,7 +335,7 @@ export function TaskFormContent({
               checked={form.emailNotifications}
               id="emailNotifications"
               onCheckedChange={(checked) =>
-                updateForm('emailNotifications', !!checked)
+                updateForm('emailNotifications', Boolean(checked))
               }
             />
             <Label htmlFor="emailNotifications">

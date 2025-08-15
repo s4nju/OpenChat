@@ -15,9 +15,9 @@ import { getAuthConfigId } from './composio-utils';
 import type { ConnectorType } from './types';
 
 // Interface for cached tool's inputSchema structure
-interface CachedInputSchema {
+type CachedInputSchema = {
   jsonSchema: JSONSchema7;
-}
+};
 
 // Server-side Composio client initialization (following official example)
 const apiKey = process.env.COMPOSIO_API_KEY;

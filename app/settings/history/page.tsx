@@ -13,13 +13,6 @@ import { useRef, useState } from 'react';
 import superjson from 'superjson';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -375,7 +368,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-12">
       <div className="space-y-6">
         <h1 className="flex items-center gap-2 font-bold text-2xl">
           Message History{' '}
@@ -391,13 +384,11 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2">
               <Label className="flex items-center gap-3 rounded-lg border px-4 py-1.5 hover:bg-accent/25 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
                 <Checkbox
-                  checked={
-                    !!(
-                      chats &&
+                  checked={Boolean(
+                    chats &&
                       chats.length > 0 &&
                       selectedIds.size === chats.length
-                    )
-                  }
+                  )}
                   className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
                   disabled={!chats}
                   id="select-all"
@@ -528,32 +519,31 @@ export default function HistoryPage() {
             </div>
           )}
         </div>
-        {/* Danger Zone */}
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>
-              Permanently delete all of your chat history. This action cannot be
-              undone.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              disabled={isDeletingAll}
-              onClick={() => setShowDeleteAllDialog(true)}
-              size="sm"
-              variant="destructive"
-            >
-              <Trash className="mr-2 size-4" /> Delete All Chats
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Retention policy note */}
-        <p className="mt-6 text-muted-foreground text-xs italic">
-          *The retention policies of our LLM hosting partners may vary.
-        </p>
       </div>
+
+      {/* Danger Zone - Moved outside and styled to match theme */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <h2 className="text-left font-bold text-2xl">Danger Zone</h2>
+        </div>
+        <p className="mb-4 text-muted-foreground/80 text-sm">
+          Permanently delete all of your chat history. This action cannot be
+          undone.
+        </p>
+        <Button
+          disabled={isDeletingAll}
+          onClick={() => setShowDeleteAllDialog(true)}
+          size="sm"
+          variant="destructive"
+        >
+          <Trash className="mr-2 size-4" /> Delete All Chats
+        </Button>
+      </section>
+
+      {/* Retention policy note */}
+      <p className="mt-6 text-muted-foreground text-xs italic">
+        *The retention policies of our LLM hosting partners may vary.
+      </p>
 
       {/* Delete selected chats dialog */}
       <Dialog

@@ -8,8 +8,8 @@ import {
 
 export class BraveSearchProvider implements SearchAdapter {
   readonly name = 'brave';
-  private apiKey: string;
-  private baseUrl = 'https://api.search.brave.com/res/v1/web/search';
+  private readonly apiKey: string;
+  private readonly baseUrl = 'https://api.search.brave.com/res/v1/web/search';
 
   constructor(apiKey: string) {
     if (!apiKey) {

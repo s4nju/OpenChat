@@ -15,5 +15,5 @@ export function useBreakpoint(breakpoint: number) {
     return () => mql.removeEventListener('change', onChange);
   }, [breakpoint]);
 
-  return !!isBelowBreakpoint;
+  return Boolean(isBelowBreakpoint);
 }
