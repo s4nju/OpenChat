@@ -2,7 +2,7 @@ import type { ThemePreset } from '../types/theme';
 
 /**
  * Adding Custom Fonts to Themes:
- * 
+ *
  * 1. Import font in app/layout.tsx from next/font/google
  * 2. Create font instance with CSS variable (e.g., --font-dm-sans)
  * 3. Add variable to body className in layout.tsx
@@ -10,7 +10,7 @@ import type { ThemePreset } from '../types/theme';
  *    - Sans format: 'FontName, ui-sans-serif, system-ui, sans-serif'
  *    - Mono format: 'FontName, ui-monospace, monospace'
  * 5. Use EXACT same format in theme presets below (both light & dark modes)
- * 
+ *
  * Font values must match theme-fonts.ts exactly for dropdowns to work correctly.
  */
 export const defaultPresets: Record<string, ThemePreset> = {
@@ -551,7 +551,8 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': '#e5e7eb',
         'sidebar-ring': '#22c55e',
         'font-sans': 'DM Sans, ui-sans-serif, system-ui, sans-serif',
-        'font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+        'font-serif':
+          'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
         'font-mono': 'IBM Plex Mono, ui-monospace, monospace',
         'shadow-color': 'hsl(0 0% 0%)',
         'shadow-opacity': '0.1',
@@ -595,7 +596,8 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': '#4b5563',
         'sidebar-ring': '#34d399',
         'font-sans': 'DM Sans, ui-sans-serif, system-ui, sans-serif',
-        'font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+        'font-serif':
+          'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
         'font-mono': 'IBM Plex Mono, ui-monospace, monospace',
       },
     },
@@ -639,7 +641,8 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': 'oklch(0.94 0 0)',
         'sidebar-ring': 'oklch(0 0 0)',
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
-        'font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+        'font-serif':
+          'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
         'font-mono': 'Geist Mono, ui-monospace, monospace',
         radius: '0.5rem',
         'shadow-color': 'hsl(0 0% 0%)',
@@ -684,7 +687,8 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': 'oklch(0.32 0 0)',
         'sidebar-ring': 'oklch(0.72 0 0)',
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
-        'font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+        'font-serif':
+          'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
         'font-mono': 'Geist Mono, ui-monospace, monospace',
       },
     },

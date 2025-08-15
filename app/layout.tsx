@@ -3,15 +3,15 @@ import {
   Architects_Daughter,
   Atkinson_Hyperlegible,
   Atkinson_Hyperlegible_Mono,
+  DM_Sans,
   Fira_Mono,
   Geist,
   Geist_Mono,
+  IBM_Plex_Mono,
   Inter,
   JetBrains_Mono,
   Open_Sans,
   Space_Grotesk,
-  DM_Sans,
-  IBM_Plex_Mono,
 } from 'next/font/google';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/next';

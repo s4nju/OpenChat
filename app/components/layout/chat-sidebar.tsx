@@ -241,7 +241,7 @@ const ChatSidebar = memo(function SidebarComponent() {
       {/* The actual sidebar panel - NO LONGER FIXED or TRANSLATING */}
       <aside
         className={cn(
-          'flex h-dvh flex-col border-muted-foreground/10 border-r bg-background shadow-lg overflow-hidden',
+          'flex h-dvh flex-col overflow-hidden border-muted-foreground/10 border-r bg-background shadow-lg',
           isOpen ? 'w-64' : 'w-0',
           'transition-[width] duration-300 ease-in-out'
         )}
