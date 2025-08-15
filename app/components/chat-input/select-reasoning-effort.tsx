@@ -42,6 +42,7 @@ export function SelectReasoningEffort({
             <PopoverTrigger asChild>
               {isMobile ? (
                 <Button
+                  aria-label="Select reasoning effort"
                   className="size-9 rounded-full bg-transparent"
                   size="sm"
                   type="button"
@@ -79,6 +80,7 @@ export function SelectReasoningEffort({
           <DropdownMenuTrigger asChild>
             {isMobile ? (
               <Button
+                aria-label="Select reasoning effort"
                 className="size-9 rounded-full"
                 size="sm"
                 variant="outline"
