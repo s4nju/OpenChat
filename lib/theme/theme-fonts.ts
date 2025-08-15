@@ -24,22 +24,32 @@ export const SANS_FONTS: readonly FontOption[] = [
   },
   {
     label: 'Geist',
-    value: 'var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif',
+    value: 'Geist, ui-sans-serif, system-ui, sans-serif',
     isSystem: false,
   },
   {
     label: 'Inter',
-    value: 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
+    value: 'Inter, ui-sans-serif, system-ui, sans-serif',
     isSystem: false,
   },
   {
     label: 'Space Grotesk',
-    value: 'var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif',
+    value: 'Space Grotesk, ui-sans-serif, system-ui, sans-serif',
     isSystem: false,
   },
   {
     label: 'Open Sans',
-    value: 'var(--font-open-sans), ui-sans-serif, system-ui, sans-serif',
+    value: 'Open Sans, ui-sans-serif, system-ui, sans-serif',
+    isSystem: false,
+  },
+  {
+    label: 'Atkinson Hyperlegible',
+    value: 'Atkinson Hyperlegible, ui-sans-serif, system-ui, sans-serif',
+    isSystem: false,
+  },
+  {
+    label: 'Architects Daughter',
+    value: 'Architects Daughter, ui-sans-serif, system-ui, sans-serif',
     isSystem: false,
   },
 ] as const;
@@ -53,12 +63,22 @@ export const MONO_FONTS: readonly FontOption[] = [
   },
   {
     label: 'Geist Mono',
-    value: 'var(--font-geist-mono), ui-monospace, monospace',
+    value: 'Geist Mono, ui-monospace, monospace',
     isSystem: false,
   },
   {
     label: 'Fira Mono',
-    value: 'var(--font-fira-mono), ui-monospace, monospace',
+    value: 'Fira Mono, ui-monospace, monospace',
+    isSystem: false,
+  },
+  {
+    label: 'JetBrains Mono',
+    value: 'JetBrains Mono, ui-monospace, monospace',
+    isSystem: false,
+  },
+  {
+    label: 'Atkinson Hyperlegible Mono',
+    value: 'Atkinson Hyperlegible Mono, ui-monospace, monospace',
     isSystem: false,
   },
 ] as const;

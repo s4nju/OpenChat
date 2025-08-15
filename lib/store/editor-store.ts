@@ -1,21 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { defaultThemeState } from '../config/theme';
-import { isDeepEqual } from '../lib/utils';
+import type { FontCategory, FontOption } from '../theme/theme-fonts';
+import { hasCustomFonts, updateThemeFont } from '../theme/theme-fonts';
+import { getPresetThemeStyles } from '../theme/theme-preset-helper';
 import type { ThemeEditorState } from '../types/theme';
-import type { FontCategory, FontOption } from '../utils/theme-fonts';
-import { hasCustomFonts, updateThemeFont } from '../utils/theme-fonts';
-import { getPresetThemeStyles } from '../utils/theme-preset-helper';
+import { isDeepEqual } from '../utils';
 
 const MAX_HISTORY_COUNT = 30;
 const HISTORY_OVERRIDE_THRESHOLD_MS = 500; // 0.5 seconds
 
-interface ThemeHistoryEntry {
+type ThemeHistoryEntry = {
   state: ThemeEditorState;
   timestamp: number;
-}
+};
 
-interface EditorStore {
+type EditorStore = {
   themeState: ThemeEditorState;
   themeCheckpoint: ThemeEditorState | null;
   history: ThemeHistoryEntry[];
@@ -32,7 +32,7 @@ interface EditorStore {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-}
+};
 
 export const useEditorStore = create<EditorStore>()(
   persist(

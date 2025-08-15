@@ -61,9 +61,9 @@ export const defaultLightThemeStyles = {
   'sidebar-border': 'oklch(0.92 0.004 286.32)',
   'sidebar-ring': 'oklch(0.705 0.015 286.067)',
   // Updated to use Geist font families
-  'font-sans': 'var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif',
+  'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
   'font-serif': DEFAULT_FONT_SERIF,
-  'font-mono': 'var(--font-geist-mono), ui-monospace, monospace',
+  'font-mono': 'Geist Mono, ui-monospace, monospace',
 
   'shadow-color': 'oklch(0 0 0)',
   'shadow-opacity': '0.1',

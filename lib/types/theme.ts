@@ -101,7 +101,7 @@ export const themeStylesSchema = z.object({
 export type ThemeStyleProps = z.infer<typeof themeStylePropsSchema>;
 export type ThemeStyles = z.infer<typeof themeStylesSchema>;
 
-export interface ThemeEditorState {
+export type ThemeEditorState = {
   styles: ThemeStyles;
   currentMode: 'light' | 'dark';
   preset?: string;
@@ -110,7 +110,7 @@ export interface ThemeEditorState {
     saturationScale: number;
     lightnessScale: number;
   };
-}
+};
 
 export type ThemePreset = {
   source?: 'SAVED' | 'BUILT_IN';

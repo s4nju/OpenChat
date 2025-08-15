@@ -73,22 +73,6 @@ export const applyThemeToElement = (
   // Apply mode-specific colors
   applyThemeColors(rootElement, themeStyles, mode);
 
-  // Force inline font application to mitigate stylesheet ordering / hydration race conditions
-  try {
-    const body = document.body;
-    if (body) {
-      body.style.fontFamily = 'var(--font-sans)';
-    }
-    const monoTargets = document.querySelectorAll('code, pre, kbd, samp');
-    for (const el of monoTargets) {
-      (el as HTMLElement).style.fontFamily = 'var(--font-mono)';
-    }
-    requestAnimationFrame(() => {
-      if (body) {
-        body.style.fontFamily = 'var(--font-sans)';
-      }
-    });
-  } catch {
-    // Silent: inline font application is a best-effort enhancement.
-  }
+  // Note: Font family is now applied directly through CSS variables set by the theme system
+  // No additional font forcing needed since we use actual font names instead of CSS variable references
 };
