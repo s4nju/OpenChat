@@ -32,17 +32,31 @@ function ThemeColorPreview({ preset, mode }: ThemeColorPreviewProps) {
 export function ThemeSelector() {
   const { themeState, applyThemePreset } = useEditorStore();
 
+  // Use simple string fallback for custom themes
+  const selectValue = themeState.preset || "custom";
+  
+  // Simple display logic
+  const displayText = themeState.preset 
+    ? (defaultPresets[themeState.preset]?.label || themeState.preset)
+    : "Custom";
+
   return (
-    <Select value={themeState.preset} onValueChange={applyThemePreset}>
+    <Select 
+      value={selectValue} 
+      onValueChange={(value) => {
+        // Only apply if it's an actual preset
+        if (value !== "custom" && defaultPresets[value]) {
+          applyThemePreset(value);
+        }
+      }}
+    >
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select theme">
+        <SelectValue asChild>
           <div className="flex items-center">
-            {themeState.preset && (
+            {themeState.preset && defaultPresets[themeState.preset] && (
               <ThemeColorPreview preset={themeState.preset} mode={themeState.currentMode} />
             )}
-            <span className="ml-1">
-              {themeState.preset ? defaultPresets[themeState.preset]?.label || themeState.preset : "Select theme"}
-            </span>
+            <span className="ml-1">{displayText}</span>
           </div>
         </SelectValue>
       </SelectTrigger>
