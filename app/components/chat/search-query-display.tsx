@@ -5,15 +5,15 @@ import { memo, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-interface SearchQuery {
+type SearchQuery = {
   query: string;
   toolName?: string;
-}
+};
 
-interface SearchQueryDisplayProps {
+type SearchQueryDisplayProps = {
   queries: SearchQuery[];
   className?: string;
-}
+};
 
 export const SearchQueryDisplay = memo<SearchQueryDisplayProps>(
   ({ queries, className }) => {

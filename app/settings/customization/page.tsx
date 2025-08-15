@@ -23,8 +23,8 @@ import { ThemeFontControls } from '@/components/ui/theme-font-controls';
 import { ThemeSelector } from '@/components/ui/theme-selector';
 import { toast } from '@/components/ui/toast';
 import { APP_NAME } from '@/lib/config';
-import { useEditorStore } from '@/store/editor-store';
-import type { FontCategory, FontOption } from '@/utils/theme-fonts';
+import { useEditorStore } from '@/lib/store/editor-store';
+import type { FontCategory, FontOption } from '@/lib/theme/theme-fonts';
 
 export default function CustomizationPage() {
   const { user, updateUser } = useUser();
@@ -201,7 +201,10 @@ export default function CustomizationPage() {
         <div className="space-y-6">
           <div>
             <div className="flex justify-between">
-              <Label className="mb-2 block" htmlFor="preferred-name">
+              <Label
+                className="mb-2 block font-medium text-base"
+                htmlFor="preferred-name"
+              >
                 What should {APP_NAME} call you?
               </Label>
               <span className="text-muted-foreground text-sm">
@@ -222,7 +225,10 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <Label className="mb-2 block" htmlFor="occupation">
+              <Label
+                className="mb-2 block font-medium text-base"
+                htmlFor="occupation"
+              >
                 What do you do?
               </Label>
               <span className="text-muted-foreground text-sm">
@@ -243,9 +249,12 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <Label className="mb-2 block" htmlFor="traits-input">
+              <Label
+                className="mb-2 block font-medium text-base"
+                htmlFor="traits-input"
+              >
                 What traits should {APP_NAME} have?{' '}
-                <span className="text-muted-foreground">
+                <span className="ml-2 font-normal text-muted-foreground text-xs">
                   (up to 50, max 100 chars each)
                 </span>
               </Label>
@@ -253,7 +262,7 @@ export default function CustomizationPage() {
                 {traits.length}/50
               </span>
             </div>
-            <div className="rounded-lg border bg-background p-2">
+            <div className="rounded-lg border p-2">
               <div className="mb-2 flex flex-wrap gap-2">
                 {traits.map((trait) => (
                   <Badge
@@ -305,7 +314,10 @@ export default function CustomizationPage() {
           </div>
           <div>
             <div className="flex justify-between">
-              <Label className="mb-2 block" htmlFor="about">
+              <Label
+                className="mb-2 block font-medium text-base"
+                htmlFor="about"
+              >
                 Anything else {APP_NAME} should know about you?
               </Label>
               <span className="text-muted-foreground text-sm">
@@ -332,10 +344,13 @@ export default function CustomizationPage() {
             </Button>
           </div>
           <div>
-            <h2 className="mb-4 font-semibold text-lg">Visual Options</h2>
-            <div className="space-y-6">
+            <h2 className="font-bold text-2xl">Visual Options</h2>
+            <div className="mt-8 space-y-6">
               <div>
-                <Label className="mb-2 block" htmlFor="theme-selector">
+                <Label
+                  className="mb-2 block font-medium text-base"
+                  htmlFor="theme-selector"
+                >
                   Theme
                 </Label>
                 <p className="mb-3 text-muted-foreground text-sm">
@@ -345,11 +360,6 @@ export default function CustomizationPage() {
                 <ThemeSelector />
               </div>
               <div>
-                <Label className="mb-2 block">Typography</Label>
-                <p className="mb-3 text-muted-foreground text-sm">
-                  Customize font families for different text types. Changes will
-                  create a custom theme.
-                </p>
                 <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-[1fr_480px]">
                   <div className="min-w-0">
                     <ThemeFontControls
@@ -361,7 +371,7 @@ export default function CustomizationPage() {
                     <div className="space-y-3">
                       <h3 className="font-medium text-base">Fonts Preview</h3>
                       <div className="rounded-lg border border-input border-dashed p-4">
-                        <div className="prose prose-neutral dark:prose-invert prose-pre:m-0 max-w-none prose-pre:bg-transparent prose-pre:p-0 font-sans">
+                        <div>
                           {/* User message (right aligned) */}
                           <div className="flex justify-end">
                             <div className="inline-block max-w-[78%] whitespace-pre-line break-words rounded-xl bg-accent px-5 py-2.5 text-left font-sans leading-relaxed shadow-sm">

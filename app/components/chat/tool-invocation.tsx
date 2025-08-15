@@ -24,24 +24,24 @@ type CustomToolInvocationUIPart = {
   toolInvocation: CustomToolInvocation;
 };
 
-interface ToolInvocationProps {
+type ToolInvocationProps = {
   data: CustomToolInvocationUIPart | CustomToolInvocationUIPart[];
   className?: string;
   defaultOpen?: boolean;
-}
+};
 
 // Types for parsed results
-interface SearchResult {
+type SearchResult = {
   url: string;
   title: string;
   snippet?: string;
-}
+};
 
-interface ObjectResult {
+type ObjectResult = {
   title?: string;
   html_url?: string;
   [key: string]: unknown;
-}
+};
 
 type ParsedResult = SearchResult[] | ObjectResult | string | unknown;
 

@@ -13,11 +13,11 @@ export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
 }
 
 // Define types for PostHog user properties
-interface PostHogUserProperties {
+type PostHogUserProperties = {
   email?: string;
   name?: string;
   isAnonymous?: boolean;
-}
+};
 
 // Validate user properties before accessing them
 function validateUserProperties(user: UserProfile): PostHogUserProperties {

@@ -8,9 +8,9 @@ import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { useUser } from '@/app/providers/user-provider';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
-interface SettingsTriggerProps {
+type SettingsTriggerProps = {
   isMenuItem?: boolean;
-}
+};
 
 export function SettingsTrigger({ isMenuItem = false }: SettingsTriggerProps) {
   const { user } = useUser();

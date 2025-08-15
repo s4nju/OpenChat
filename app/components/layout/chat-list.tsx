@@ -8,7 +8,7 @@ import { ChatItem } from './chat-item';
 
 // Helper function for conditional classes
 
-interface ChatListProps {
+type ChatListProps = {
   pinnedChats: Doc<'chats'>[];
   groupedChats: Record<string, Doc<'chats'>[]>;
   orderedGroupKeys: TimeGroup[];
@@ -20,7 +20,7 @@ interface ChatListProps {
     groupKey: TimeGroup
   ) => boolean;
   activeChatId?: string | null;
-}
+};
 
 export const ChatList = memo(function ChatListComponent({
   pinnedChats,

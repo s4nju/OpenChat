@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect } from "react";
-import { useEditorStore } from "../store/editor-store";
-import { applyThemeToElement } from "../utils/apply-theme";
+import { useEditorStore } from "../lib/store/editor-store";
+import { applyThemeToElement } from "../lib/theme/apply-theme";
 
 type Theme = "dark" | "light";
 
@@ -46,26 +46,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   const handleThemeToggle = (coords?: Coords) => {
-    const root = document.documentElement;
     const newMode = themeState.currentMode === "light" ? "dark" : "light";
-
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (!document.startViewTransition || prefersReducedMotion) {
-      handleThemeChange(newMode);
-      return;
-    }
-
-    if (coords) {
-      root.style.setProperty("--x", `${coords.x}px`);
-      root.style.setProperty("--y", `${coords.y}px`);
-    }
-
-    document.startViewTransition(() => {
-      handleThemeChange(newMode);
-    });
+    handleThemeChange(newMode);
   };
 
   const handlePresetChange = (preset: string) => {

@@ -9,13 +9,13 @@ import { TaskDrawer } from './task-drawer';
 import type { CreateTaskForm } from './types';
 
 // Minimal common props many interactive triggers support
-interface CommonTriggerProps {
+type CommonTriggerProps = {
   disabled?: boolean;
   'aria-disabled'?: boolean;
   className?: string;
   tabIndex?: number;
   onClick?: (e: React.MouseEvent) => void;
-}
+};
 
 type TaskTriggerProps = {
   trigger: ReactNode;

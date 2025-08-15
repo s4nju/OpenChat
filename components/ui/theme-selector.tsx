@@ -1,13 +1,13 @@
 "use client";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { useEditorStore } from "../../store/editor-store";
-import { defaultPresets } from "../../utils/theme-presets";
+import { useEditorStore } from "../../lib/store/editor-store";
+import { defaultPresets } from "../../lib/theme/theme-presets";
 
-interface ThemeColorPreviewProps {
+type ThemeColorPreviewProps = {
   preset: string;
   mode: "light" | "dark";
-}
+};
 
 const ColorBox = ({ color }: { color: string }) => (
   <div className="w-3 h-3 rounded-sm border" style={{ backgroundColor: color }} />

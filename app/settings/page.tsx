@@ -128,10 +128,10 @@ export default function AccountSettingsPage() {
   ]);
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-8">
       <div className="space-y-12">
         {/* Pro Plan Benefits */}
-        <section>
+        <section className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <h2 className="text-left font-bold text-2xl">Pro Plan Benefits</h2>
           </div>
@@ -178,7 +178,7 @@ export default function AccountSettingsPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-4 pt-4 pb-4 md:flex-row">
+          <div className="flex flex-col gap-4 md:flex-row">
             {renderSubscriptionButton()}
           </div>
           <p className="text-muted-foreground/60 text-sm">
@@ -190,32 +190,32 @@ export default function AccountSettingsPage() {
             <MessageUsageCard />
           </div>
         </section>
-
-        {/* Danger Zone */}
-        <section>
-          <div className="rounded-lg border bg-card p-4">
-            <h3 className="mb-4 font-semibold text-destructive">Danger Zone</h3>
-            <p className="mb-4 text-muted-foreground text-sm">
-              Permanently delete your account and all associated data.
-            </p>
-            <Button
-              disabled={isDeleting}
-              onClick={handleDeleteAccount}
-              size="sm"
-              variant="destructive"
-            >
-              {isDeleting ? (
-                <>
-                  <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Account'
-              )}
-            </Button>
-          </div>
-        </section>
       </div>
+
+      {/* Danger Zone - Moved outside and styled to match theme */}
+      <section className="mt-20 space-y-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <h2 className="text-left font-bold text-2xl">Danger Zone</h2>
+        </div>
+        <p className="px-0.25 py-1.5 text-muted-foreground/80 text-sm">
+          Permanently delete your account and all associated data.
+        </p>
+        <Button
+          disabled={isDeleting}
+          onClick={handleDeleteAccount}
+          size="sm"
+          variant="destructive"
+        >
+          {isDeleting ? (
+            <>
+              <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            'Delete Account'
+          )}
+        </Button>
+      </section>
 
       {/* Delete account confirmation dialog */}
       <Dialog

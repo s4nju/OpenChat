@@ -1,21 +1,24 @@
 'use client';
 
+import type { ThemeStyleProps } from '../../lib/types/theme';
+import type { FontCategory, FontOption } from '../../lib/theme/theme-fonts';
+import { getCurrentFontSelection } from '../../lib/theme/theme-fonts';
 import { FontSelector } from './font-selector';
 import { Label } from './label';
-import type { FontOption, FontCategory } from '../../utils/theme-fonts';
-import { getCurrentFontSelection } from '../../utils/theme-fonts';
-import type { ThemeStyleProps } from '../../types/theme';
 
-interface ThemeFontControlsProps {
+type ThemeFontControlsProps = {
   readonly themeStyles: Partial<ThemeStyleProps>;
-  readonly onFontChange: (category: FontCategory, fontOption: FontOption) => void;
+  readonly onFontChange: (
+    category: FontCategory,
+    fontOption: FontOption
+  ) => void;
   readonly disabled?: boolean;
-}
+};
 
-export function ThemeFontControls({ 
-  themeStyles, 
-  onFontChange, 
-  disabled = false 
+export function ThemeFontControls({
+  themeStyles,
+  onFontChange,
+  disabled = false,
 }: ThemeFontControlsProps) {
   const currentSansFont = getCurrentFontSelection(themeStyles, 'sans');
   const currentMonoFont = getCurrentFontSelection(themeStyles, 'mono');
@@ -31,9 +34,9 @@ export function ThemeFontControls({
   return (
     <div className="space-y-4">
       <div>
-        <Label 
-          htmlFor="sans-font-selector" 
-          className="mb-2 block text-sm font-medium"
+        <Label
+          className="mb-2 block font-medium text-base"
+          htmlFor="sans-font-selector"
         >
           Sans-serif Font
         </Label>
@@ -41,18 +44,18 @@ export function ThemeFontControls({
           Choose the primary font family for text content.
         </p>
         <FontSelector
-          category="sans"
-          value={currentSansFont}
-          onValueChange={handleSansFontChange}
-          disabled={disabled}
           aria-label="Select sans-serif font family"
+          category="sans"
+          disabled={disabled}
+          onValueChange={handleSansFontChange}
+          value={currentSansFont}
         />
       </div>
 
       <div>
-        <Label 
-          htmlFor="mono-font-selector" 
-          className="mb-2 block text-sm font-medium"
+        <Label
+          className="mb-2 block font-medium text-base"
+          htmlFor="mono-font-selector"
         >
           Monospace Font
         </Label>
@@ -60,11 +63,11 @@ export function ThemeFontControls({
           Choose the font family for code blocks and monospace text.
         </p>
         <FontSelector
-          category="mono"
-          value={currentMonoFont}
-          onValueChange={handleMonoFontChange}
-          disabled={disabled}
           aria-label="Select monospace font family"
+          category="mono"
+          disabled={disabled}
+          onValueChange={handleMonoFontChange}
+          value={currentMonoFont}
         />
       </div>
     </div>

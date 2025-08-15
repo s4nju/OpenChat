@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "@/hooks/use-theme"
+import { useTheme } from "@/components/theme-provider"
 import { Toaster as Sonner, ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {

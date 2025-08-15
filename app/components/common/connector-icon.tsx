@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/components/theme-provider';
 import type { ConnectorConfig } from '@/lib/config/tools';
 
 type ConnectorIconProps = {
@@ -9,9 +9,9 @@ type ConnectorIconProps = {
 };
 
 export function ConnectorIcon({ connector, className }: ConnectorIconProps) {
-  const { resolvedTheme } = useTheme();
+  const { theme } = useTheme();
   const Icon =
-    resolvedTheme === 'light' && connector.icon_light
+    theme === 'light' && connector.icon_light
       ? connector.icon_light
       : connector.icon;
   return <Icon className={className} />;

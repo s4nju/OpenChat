@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/components/theme-provider';
 import type { Provider } from '@/lib/config';
 
 type ProviderIconProps = {
@@ -9,9 +9,9 @@ type ProviderIconProps = {
 };
 
 export function ProviderIcon({ provider, className }: ProviderIconProps) {
-  const { resolvedTheme } = useTheme();
+  const { theme } = useTheme();
   const Icon =
-    resolvedTheme === 'light' && provider.icon_light
+    theme === 'light' && provider.icon_light
       ? provider.icon_light
       : provider.icon;
   return <Icon className={className} />;

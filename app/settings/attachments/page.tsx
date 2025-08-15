@@ -130,13 +130,11 @@ export default function AttachmentsPage() {
             <div className="flex items-center gap-2">
               <Label className="flex items-center gap-3 rounded-lg border px-4 py-1.5 hover:bg-accent/25 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
                 <Checkbox
-                  checked={
-                    !!(
-                      attachments &&
+                  checked={Boolean(
+                    attachments &&
                       attachments.length > 0 &&
                       selectedIds.size === attachments.length
-                    )
-                  }
+                  )}
                   className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
                   disabled={!attachments}
                   id="select-all"

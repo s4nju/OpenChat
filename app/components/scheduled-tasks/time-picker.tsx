@@ -55,7 +55,7 @@ const TIME_OPTIONS = (() => {
   return options;
 })();
 
-interface TimePickerProps {
+type TimePickerProps = {
   value: string;
   onChange: (value: string) => void;
   name: string;
@@ -66,7 +66,7 @@ interface TimePickerProps {
   selectedDay?: number;
   onDayChange?: (day: number) => void;
   showDayPicker?: boolean;
-}
+};
 
 function TimePickerComponent({
   value,

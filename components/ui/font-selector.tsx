@@ -1,7 +1,7 @@
 'use client';
 
-import type { FontCategory, FontOption } from '../../utils/theme-fonts';
-import { getFontOptions } from '../../utils/theme-fonts';
+import type { FontCategory, FontOption } from '../../lib/theme/theme-fonts';
+import { getFontOptions } from '../../lib/theme/theme-fonts';
 import {
   Select,
   SelectContent,
@@ -10,13 +10,13 @@ import {
   SelectValue,
 } from './select';
 
-interface FontSelectorProps {
+type FontSelectorProps = {
   readonly category: FontCategory;
   readonly value: FontOption;
   readonly onValueChange: (fontOption: FontOption) => void;
   readonly disabled?: boolean;
   readonly 'aria-label'?: string;
-}
+};
 
 export function FontSelector({
   category,

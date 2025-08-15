@@ -202,7 +202,7 @@ const ChatSidebar = memo(function SidebarComponent() {
           <TooltipTrigger asChild>
             <button
               aria-label="Search"
-              className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-all duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
+              className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-[transform,opacity] duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
               onClick={handleSearchButtonClick}
               style={{ transitionDelay: isOpen ? '0ms' : '100ms' }}
               tabIndex={isOpen ? -1 : 0}
@@ -221,7 +221,7 @@ const ChatSidebar = memo(function SidebarComponent() {
             <TooltipTrigger asChild>
               <button
                 aria-label="New chat"
-                className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-all duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
+                className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-[transform,opacity] duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
                 onClick={handleNewChatClick}
                 style={{ transitionDelay: isOpen ? '0ms' : '200ms' }}
                 tabIndex={isOpen ? -1 : 0}
@@ -243,7 +243,7 @@ const ChatSidebar = memo(function SidebarComponent() {
         className={cn(
           'flex h-dvh flex-col border-muted-foreground/10 border-r bg-background shadow-lg',
           isOpen ? 'w-64' : 'hidden w-0',
-          'transition-all duration-300 ease-in-out'
+          'transition-[width,transform] duration-300 ease-in-out'
         )}
       >
         <div className="flex h-[60px] shrink-0 items-center justify-center pt-1">

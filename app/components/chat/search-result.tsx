@@ -14,19 +14,19 @@ import { cn } from '@/lib/utils';
 // Regex pattern defined at top level for performance
 const WWW_PREFIX_REGEX = /^www\./;
 
-interface SearchResult {
+type SearchResult = {
   url: string;
   title: string;
   description: string;
   content?: string;
   markdown?: string;
-}
+};
 
-interface SearchResultsProps {
+type SearchResultsProps = {
   results: SearchResult[];
   isLoading?: boolean;
   error?: string;
-}
+};
 
 export function SearchResults({
   results,
