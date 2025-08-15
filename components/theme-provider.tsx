@@ -32,7 +32,10 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const { themeState, setThemeState, applyThemePreset } = useEditorStore();
+  // Use selector functions to only subscribe to the specific parts we need
+  const themeState = useEditorStore((state) => state.themeState);
+  const setThemeState = useEditorStore((state) => state.setThemeState);
+  const applyThemePreset = useEditorStore((state) => state.applyThemePreset);
 
   useEffect(() => {
     const root = document.documentElement;

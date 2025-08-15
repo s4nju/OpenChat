@@ -29,7 +29,9 @@ import type { FontCategory, FontOption } from '@/lib/theme/theme-fonts';
 export default function CustomizationPage() {
   const { user, updateUser } = useUser();
   const router = useRouter();
-  const { themeState, updateFont } = useEditorStore();
+  // Use selector functions to only subscribe to the specific parts we need
+  const themeState = useEditorStore((state) => state.themeState);
+  const updateFont = useEditorStore((state) => state.updateFont);
 
   const [preferredName, setPreferredName] = useState('');
   const [occupation, setOccupation] = useState('');

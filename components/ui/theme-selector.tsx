@@ -30,7 +30,10 @@ function ThemeColorPreview({ preset, mode }: ThemeColorPreviewProps) {
 }
 
 export function ThemeSelector() {
-  const { themeState, applyThemePreset } = useEditorStore();
+  // Use selector functions to only subscribe to the specific parts of the store we need
+  // This prevents unnecessary re-renders when unrelated state changes (e.g., history, future)
+  const themeState = useEditorStore((state) => state.themeState);
+  const applyThemePreset = useEditorStore((state) => state.applyThemePreset);
 
   // Use simple string fallback for custom themes
   const selectValue = themeState.preset || "custom";
