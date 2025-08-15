@@ -14,7 +14,7 @@ export const COMMON_STYLES = [
   'shadow-offset-y',
   'letter-spacing',
   'spacing',
-];
+] as const;
 
 export const DEFAULT_FONT_SANS =
   "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -124,11 +124,7 @@ export const defaultThemeState: ThemeEditorState = {
     light: defaultLightThemeStyles,
     dark: defaultDarkThemeStyles,
   },
-  currentMode:
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light',
+  currentMode: 'light', // Always default to light for SSR compatibility
   preset: 'openchat',
   hslAdjustments: {
     hueShift: 0,

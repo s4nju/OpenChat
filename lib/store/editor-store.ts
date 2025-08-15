@@ -34,6 +34,16 @@ type EditorStore = {
   canRedo: () => boolean;
 };
 
+// Helper function to safely detect system preference on client-side only
+const getSystemPreference = (): 'light' | 'dark' => {
+  if (typeof window === 'undefined') {
+    return 'light'; // Safe server-side default
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+};
+
 export const useEditorStore = create<EditorStore>()(
   persist(
     (set, get) => ({
@@ -199,6 +209,10 @@ export const useEditorStore = create<EditorStore>()(
       },
       hasThemeChangedFromCheckpoint: () => {
         const checkpoint = get().themeCheckpoint;
+        // If no checkpoint exists, there are no changes to compare against
+        if (!checkpoint) {
+          return false;
+        }
         return !isDeepEqual(get().themeState, checkpoint);
       },
       hasUnsavedChanges: () => {
@@ -303,6 +317,20 @@ export const useEditorStore = create<EditorStore>()(
     }),
     {
       name: 'editor-storage',
+      onRehydrateStorage: () => (state) => {
+        // Only run on client-side after hydration
+        if (state && typeof window !== 'undefined') {
+          // If no theme state exists in storage (first visit), detect system preference
+          const hasStoredTheme = localStorage.getItem('editor-storage');
+          if (!hasStoredTheme) {
+            const systemPreference = getSystemPreference();
+            state.themeState = {
+              ...state.themeState,
+              currentMode: systemPreference,
+            };
+          }
+        }
+      },
     }
   )
 );
