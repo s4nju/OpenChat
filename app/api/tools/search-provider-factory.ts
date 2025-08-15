@@ -117,11 +117,11 @@ export async function searchWithFallback(
 function hasApiKeyForProvider(provider: SearchProvider): boolean {
   switch (provider) {
     case 'brave':
-      return !!process.env.BRAVE_API_KEY;
+      return Boolean(process.env.BRAVE_API_KEY);
     case 'tavily':
-      return !!process.env.TAVILY_API_KEY;
+      return Boolean(process.env.TAVILY_API_KEY);
     case 'exa':
-      return !!process.env.EXA_API_KEY;
+      return Boolean(process.env.EXA_API_KEY);
     default:
       return false;
   }

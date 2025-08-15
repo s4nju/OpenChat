@@ -17,14 +17,16 @@
   "linter": {
     "rules": {
       "style": {
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "noMagicNumbers": "off"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "off",
         "noExcessiveLinesPerFunction": "off"
       },
       "nursery": {
-        "noUnnecessaryConditions": "off"
+        "noUnnecessaryConditions": "off",
+        "useMaxParams": "off"
       }
     },
     "domains": {

@@ -923,7 +923,7 @@ export async function POST(req: Request) {
         }
 
         const fallbackIsPossible =
-          primaryIsUserKey || (!primaryIsUserKey && !!userApiKey);
+          primaryIsUserKey || (!primaryIsUserKey && Boolean(userApiKey));
 
         if (fallbackIsPossible) {
           const fallbackIsUserKey = !primaryIsUserKey;

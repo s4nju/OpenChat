@@ -7,9 +7,9 @@ export type TimeGroup =
   | 'Last 30 Days'
   | 'Older';
 
-export interface GroupedChats {
+export type GroupedChats = {
   [key: string]: Doc<'chats'>[];
-}
+};
 
 // Cache date boundaries to avoid recalculating on every call
 const DAY_MS = 24 * 60 * 60 * 1000;

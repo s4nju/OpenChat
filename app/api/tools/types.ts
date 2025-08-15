@@ -1,16 +1,16 @@
 // Search provider interfaces and types
-export interface SearchAdapter {
+export type SearchAdapter = {
   readonly name: string;
   search(query: string, options?: SearchOptions): Promise<SearchResult[]>;
-}
+};
 
-export interface SearchResult {
+export type SearchResult = {
   url: string;
   title: string;
   description: string;
   content?: string;
   markdown?: string;
-}
+};
 
 // Exa search category types for targeted content filtering
 export type ExaSearchCategory =
@@ -26,7 +26,7 @@ export type ExaSearchCategory =
   | 'pdf'
   | 'financial report';
 
-export interface SearchOptions {
+export type SearchOptions = {
   maxResults?: number;
   scrapeContent?: boolean;
   includeDomains?: string[];
@@ -34,7 +34,7 @@ export interface SearchOptions {
   startPublishedDate?: string;
   endPublishedDate?: string;
   category?: ExaSearchCategory;
-}
+};
 
 export type SearchProvider = 'exa' | 'tavily' | 'brave';
 

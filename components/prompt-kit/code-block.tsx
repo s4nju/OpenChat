@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useTheme } from "@/hooks/use-theme"
+import { useTheme } from "@/components/theme-provider"
 import React, { useEffect, useState } from "react"
 import { codeToHtml } from "shiki"
 

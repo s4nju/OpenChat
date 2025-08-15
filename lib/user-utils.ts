@@ -29,7 +29,7 @@ export function getDisplayName(user: Doc<'users'> | null): string | null {
  * Checks if user is authenticated (not anonymous)
  */
 export function isUserAuthenticated(user: Doc<'users'> | null): boolean {
-  return !!user && !user.isAnonymous;
+  return Boolean(user) && !user?.isAnonymous;
 }
 
 /**

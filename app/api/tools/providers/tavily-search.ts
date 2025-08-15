@@ -8,8 +8,8 @@ import {
 
 export class TavilySearchProvider implements SearchAdapter {
   readonly name = 'tavily';
-  private apiKey: string;
-  private baseUrl = 'https://api.tavily.com/search';
+  private readonly apiKey: string;
+  private readonly baseUrl = 'https://api.tavily.com/search';
 
   constructor(apiKey: string) {
     if (!apiKey) {

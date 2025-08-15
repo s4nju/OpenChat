@@ -17,12 +17,12 @@ type MessageParts = Array<
 const CONVEX_STORAGE_ID_REGEX = /^[a-z0-9]{32}$/;
 
 // AI SDK Attachment type
-export interface Attachment {
+export type Attachment = {
   name?: string;
   contentType?: string;
   url: string;
   storageId?: string;
-}
+};
 
 /**
  * Extract attachment objects from FileParts

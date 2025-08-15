@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { memo } from 'react';
 
-interface GoogleSheetsIconProps extends React.ComponentProps<'svg'> {
+type GoogleSheetsIconProps = React.ComponentProps<'svg'> & {
   className?: string;
-}
+};
 
 const GoogleSheetsIconComponent = ({ className, ...props }: GoogleSheetsIconProps) => (
   <svg

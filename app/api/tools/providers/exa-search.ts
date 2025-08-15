@@ -135,7 +135,7 @@ export class ExaSearchProvider implements SearchAdapter {
         text?: string;
       };
 
-      const hasText = !!item.text;
+      const hasText = Boolean(item.text);
       const willIncludeContent = includeContent && hasText;
 
       // console.log(`[EXA] 📝 Result ${index + 1}:`, {
