@@ -52,6 +52,11 @@ export const SANS_FONTS: readonly FontOption[] = [
     value: 'Architects Daughter, ui-sans-serif, system-ui, sans-serif',
     isSystem: false,
   },
+  {
+    label: 'DM Sans',
+    value: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
+    isSystem: false,
+  },
 ] as const;
 
 // Monospace font options as requested
@@ -79,6 +84,11 @@ export const MONO_FONTS: readonly FontOption[] = [
   {
     label: 'Atkinson Hyperlegible Mono',
     value: 'Atkinson Hyperlegible Mono, ui-monospace, monospace',
+    isSystem: false,
+  },
+  {
+    label: 'IBM Plex Mono',
+    value: 'IBM Plex Mono, ui-monospace, monospace',
     isSystem: false,
   },
 ] as const;
