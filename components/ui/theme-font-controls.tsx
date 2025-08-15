@@ -47,6 +47,7 @@ export function ThemeFontControls({
           aria-label="Select sans-serif font family"
           category="sans"
           disabled={disabled}
+          id="sans-font-selector"
           onValueChange={handleSansFontChange}
           value={currentSansFont}
         />
@@ -66,6 +67,7 @@ export function ThemeFontControls({
           aria-label="Select monospace font family"
           category="mono"
           disabled={disabled}
+          id="mono-font-selector"
           onValueChange={handleMonoFontChange}
           value={currentMonoFont}
         />

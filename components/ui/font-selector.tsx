@@ -16,6 +16,7 @@ type FontSelectorProps = {
   readonly onValueChange: (fontOption: FontOption) => void;
   readonly disabled?: boolean;
   readonly 'aria-label'?: string;
+  readonly id?: string;
 };
 
 export function FontSelector({
@@ -24,6 +25,7 @@ export function FontSelector({
   onValueChange,
   disabled = false,
   'aria-label': ariaLabel,
+  id,
 }: FontSelectorProps) {
   const fontOptions = getFontOptions(category);
 
@@ -50,6 +52,7 @@ export function FontSelector({
       <SelectTrigger
         aria-label={ariaLabel ?? `Select ${category} font`}
         className="w-full"
+        id={id}
       >
         <SelectValue>
           <span className="truncate" style={{ fontFamily: value.value }}>
