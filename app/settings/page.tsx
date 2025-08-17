@@ -110,7 +110,7 @@ export default function AccountSettingsPage() {
           className="w-full cursor-pointer md:w-64"
           onClick={handleUpgrade}
         >
-          Upgrade to Premium - $15/month
+          Upgrade to Premium - $10/month
         </Button>
       );
     }
