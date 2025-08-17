@@ -2,7 +2,9 @@ export const PREMIUM_CREDITS = 100;
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2;
 export const DAILY_FILE_UPLOAD_LIMIT = 5;
 
-export const APP_NAME = 'OpenChat ';
+export const APP_NAME = 'OpenChat';
+export const META_TITLE =
+  'OpenChat - Open Source T3 Chat & ChatGPT Alternative';
 export const APP_DOMAIN = 'https://chat.ajanraj.com';
 export const APP_DESCRIPTION =
   'OpenChat is a AI chat app with multi-model support.';

@@ -17,7 +17,12 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
-import { APP_BASE_URL, APP_DESCRIPTION, APP_NAME } from '@/lib/config';
+import {
+  APP_BASE_URL,
+  APP_DESCRIPTION,
+  APP_NAME,
+  META_TITLE,
+} from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from './components/auth/auth-guard';
 import { LayoutClient } from './layout-client';
@@ -92,11 +97,11 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: APP_NAME,
+  title: META_TITLE,
   description: APP_DESCRIPTION,
   metadataBase: new URL(APP_BASE_URL),
   openGraph: {
-    title: APP_NAME,
+    title: META_TITLE,
     description: APP_DESCRIPTION,
     url: APP_BASE_URL,
     siteName: APP_NAME,
@@ -113,7 +118,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: APP_NAME,
+    title: META_TITLE,
     description: APP_DESCRIPTION,
     images: ['/opengraph-image.jpg'],
   },

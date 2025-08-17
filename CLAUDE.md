@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # **Global Rules**
 
 - You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved.
-- If you are not sure about file content or codebase structure pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
+- If you are not sure about file content or codebase structure pertaining to the user's request, and to save main context space, for code searches, inspections, troubleshooting or analysis, use code-searcher subagent where appropriate - giving the subagent full context background for the task(s) you assign it to gather the relevant information: do NOT guess or make up an answer.
 - You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls. DO NOT do this entire process by making function calls only, as this can impair your ability to solve the problem and think insightfully.
 - Your thinking should be thorough and so it's fine if it's very long. You can think step by step before and after each action you decide to take.
 - You MUST iterate and keep going until the problem is solved.
@@ -14,9 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - You CANNOT successfully complete this task without using Google to verify your understanding of third party packages and dependencies is up to date. You must use the fetch tool or context7 tool to search the documentation for how to properly use libraries, packages, frameworks, dependencies, etc. every single time you install or implement one. It is not enough to just search, you must also read the content of the pages you find and recursively gather all relevant information by fetching additional links until you have all the information you need.
 - Only terminate your turn when you are sure that the problem is solved. Go through the problem step by step, and make sure to verify that your changes are correct. NEVER end your turn without having solved the problem, and when you say you are going to make a tool call, make sure you ACTUALLY make the tool call, instead of ending your turn.
 - Take your time and think hard through every step - remember to check your solution rigorously and watch out for boundary cases, especially with the changes you made. Your solution must be perfect. If not, continue working on it. At the end, you must test your code rigorously using the tools provided, and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect. Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks; make sure you handle all edge cases, and run existing tests if they are provided.
+- LESS COMPLEXITY IS BETTER, the fewer lines, the less complex logic the better
 - Do not assume anything. Use the docs from context7 tool.
 - If there is a lint error (bun run lint), fix it before moving on.
-- Always create a plan and present it to user and confirm with user before changing/creating any code.
 - Use `agent_rules/commit.md` for commit instructions.
 
 # **Project Details**
@@ -35,6 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Use TypeScript with strict mode enabled. Avoid `any` and `unknown` types. Prefer explicit types and interfaces. Do not use `@ts-ignore` or disable type checks.
 - Use functional React components. Always use hooks at the top level. Do not use default exports for components or functions.
+- When working on anything, try to split off components, utils, anything reusable to ensure better loading speed and less complexity
 - Follow Next.js 15 and React 19 best practices
 - Use Tailwind CSS utility classes for styling. Avoid inline styles.
 - Use Bun for all package management and scripts (`bun install`).
@@ -42,6 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use Shadcn UI and Prompt-kit components as documented. Do not modify library code directly. Prefer composition over modification. Follow guidelines in `agent_rules/ui.md` when creating or editing UI components.
 - Use Biome for all linting and formatting. Run Biome (`bun run lint`) before committing. Follow all rules specified in `biome.jsonc`. Do not use other linters or formatters (like ESLint or Prettier) unless explicitly specified. Check `biome.jsonc` for custom or overridden rules. Biome extends the `ultracite` ruleset for this project.
 - Ensure accessibility: use semantic HTML, provide alt text for images, use ARIA attributes appropriately, and follow accessibility rules in `agent_rules/ultracite.md`.
+- use Icon at the end of phosphor react icons, like CaretIcon not Caret
 - Update this section whenever the stack or tooling changes.
 
 # **Architecture Overview**
@@ -124,7 +126,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # **Reference Files**
 
 - `agent_rules/commit.md` - Commit message conventions and process
-- `agent_rules/convex_rules.md` - Convex-specific development guidelines  
+- `agent_rules/convex_rules.md` - Convex-specific development guidelines
 - `agent_rules/ultracite.md` - Complete linting rules (read to avoid lint errors)
 - `agent_rules/ui.md` - shadcn/ui development guidelines and best practices
 
