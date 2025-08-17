@@ -42,12 +42,25 @@ function calculateNextExecution(
     if (scheduledDate) {
       // Use the provided date in "YYYY-MM-DD" format and create directly in user timezone
       const [year, month, day] = scheduledDate.split('-').map(Number);
-      utcDate = dayjs.tz(`${year}-${month}-${day} ${hours}:${minutes}`, 'YYYY-M-D H:m', timezone).utc().toDate();
+      utcDate = dayjs
+        .tz(
+          `${year}-${month}-${day} ${hours}:${minutes}`,
+          'YYYY-M-D H:m',
+          timezone
+        )
+        .utc()
+        .toDate();
     } else {
       // Fallback to tomorrow if no date provided (backward compatibility)
       // Create tomorrow's date directly in user timezone
       const tomorrow = dayjs().tz(timezone).add(1, 'day');
-      utcDate = tomorrow.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
+      utcDate = tomorrow
+        .hour(hours)
+        .minute(minutes)
+        .second(0)
+        .millisecond(0)
+        .utc()
+        .toDate();
     }
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
@@ -66,7 +79,13 @@ function calculateNextExecution(
 
     // Create today's date at the specified time directly in user timezone
     const today = dayjs().tz(timezone);
-    let utcDate = today.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
+    let utcDate = today
+      .hour(hours)
+      .minute(minutes)
+      .second(0)
+      .millisecond(0)
+      .utc()
+      .toDate();
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
       throw new Error(`Invalid timezone: ${timezone}`);
@@ -76,7 +95,13 @@ function calculateNextExecution(
     let currentDay = today;
     while (utcDate.getTime() <= now) {
       currentDay = currentDay.add(1, 'day');
-      utcDate = currentDay.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
+      utcDate = currentDay
+        .hour(hours)
+        .minute(minutes)
+        .second(0)
+        .millisecond(0)
+        .utc()
+        .toDate();
 
       if (!utcDate || Number.isNaN(utcDate.getTime())) {
         throw new Error(`Invalid timezone: ${timezone}`);
@@ -99,7 +124,13 @@ function calculateNextExecution(
     const daysToTarget = (targetDay - currentDay + 7) % 7;
 
     const targetDate = nowInUserTz.add(daysToTarget, 'day');
-    let utcDate = targetDate.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
+    let utcDate = targetDate
+      .hour(hours)
+      .minute(minutes)
+      .second(0)
+      .millisecond(0)
+      .utc()
+      .toDate();
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
       throw new Error(`Invalid timezone: ${timezone}`);
@@ -109,7 +140,13 @@ function calculateNextExecution(
     const nowTimestamp = Date.now();
     if (utcDate.getTime() <= nowTimestamp) {
       const nextWeekDate = targetDate.add(7, 'day');
-      utcDate = nextWeekDate.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
+      utcDate = nextWeekDate
+        .hour(hours)
+        .minute(minutes)
+        .second(0)
+        .millisecond(0)
+        .utc()
+        .toDate();
 
       if (!utcDate || Number.isNaN(utcDate.getTime())) {
         throw new Error(`Invalid timezone: ${timezone}`);
