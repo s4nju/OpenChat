@@ -11,7 +11,7 @@ import {
   TrashIcon,
 } from '@phosphor-icons/react';
 import { useMutation } from 'convex/react';
-import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import Link from 'next/link';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -138,7 +138,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
     if (!timestamp) {
       return 'Never';
     }
-    return format(new Date(timestamp), 'MMM d, h:mm a');
+    return dayjs(timestamp).format('MMM D, h:mm a');
   }, []);
 
   // Memoized next execution display

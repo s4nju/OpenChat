@@ -1,6 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import {
@@ -238,7 +238,7 @@ function TimePickerComponent({
                   variant="outline"
                 >
                   {selectedDate ? (
-                    format(selectedDate, 'MMM d, yyyy')
+                    dayjs(selectedDate).format('MMM D, YYYY')
                   ) : (
                     <span>Pick date</span>
                   )}

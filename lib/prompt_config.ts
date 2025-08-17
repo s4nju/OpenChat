@@ -7,11 +7,18 @@ import {
   MagnifyingGlassIcon,
   PenNibIcon,
 } from '@phosphor-icons/react/dist/ssr';
-import { format } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+import dayjs from 'dayjs';
+import advancedFormat from 'dayjs/plugin/advancedFormat';
+import timezonePlugin from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
+
+// Extend dayjs with plugins
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
+dayjs.extend(advancedFormat);
 
 export const PERSONAS = [
   {
@@ -123,13 +130,14 @@ const formatDateInTimezone = (
   timezone?: string
 ): { date: string; time: string } => {
   const now = new Date();
-
+  // console.log('Current date/time:', now);
   if (timezone) {
     try {
-      // Format date as MM/dd/yyyy to match the original format
-      const date = formatInTimeZone(now, timezone, 'MM/dd/yyyy');
+      // Format date as MM/DD/YYYY to match the original format
+      const date = dayjs(now).tz(timezone).format('MM/DD/YYYY');
       // Format time with timezone abbreviation
-      const time = formatInTimeZone(now, timezone, 'HH:mm:ss zzz');
+      const time = dayjs(now).tz(timezone).format('HH:mm:ss z');
+      // console.log('Formatted date/time:', { date, time });
       return { date, time };
     } catch (_error) {
       // Fallback if timezone is invalid - silently fall through to server timezone
@@ -140,8 +148,8 @@ const formatDateInTimezone = (
   // Get the system's timezone name
   const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
-    date: format(now, 'MM/dd/yyyy'),
-    time: `${format(now, 'HH:mm:ss')} ${systemTimezone}`,
+    date: dayjs(now).tz(systemTimezone).format('MM/DD/YYYY'),
+    time: dayjs(now).tz(systemTimezone).format('HH:mm:ss z'),
   };
 };
 
@@ -160,6 +168,7 @@ You avoid cliches, speak simply, and offer helpful, grounded answers.
 When needed, you ask good questions. You don't try to impress, you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. 
 Do not use em dashes.
 Always write code within a markdown code block for better readability and formatting.
+Do not write math in code blocks, use LaTeX format instead.
 </communication_style>
 
 <purpose>
@@ -350,6 +359,24 @@ Actions are configured through Config.NOTION_ACTIONS.
 
 `.trim();
 
+// LaTeX/Math formatting instructions
+export const LATEX_FORMATTING_INSTRUCTIONS = `
+<math_latex_formatting>
+## Math/LaTeX Instructions
+- Always solve step-by-step, showing your work.
+- Use LaTeX formatting for all mathematical expressions, equations, and symbols.
+- Mandatory: Use '$' for ALL inline equations without exception
+  $b>9$
+- Mandatory: Use '$$' for ALL block equations without exception
+  $$
+  17_{(b)}=b+7,quad 97_{(b)}=9b+7
+  $$
+- Mandatory: Mathematical expressions must always be properly delimited using dollar signs.
+- Never use other delimiting characters like backticks, parentheses, or brackets for mathematical expressions.
+- Never use code blocks for mathematical expressions.
+</math_latex_formatting>
+`.trim();
+
 // Email-specific prompt instructions
 export const EMAIL_PROMPT_INSTRUCTIONS = `
 <email_formatting>
@@ -405,6 +432,9 @@ export function buildSystemPrompt(
   if (emailMode) {
     prompt += `\n\n${EMAIL_PROMPT_INSTRUCTIONS}`;
   }
+
+  // Always add LaTeX formatting instructions
+  prompt += `\n\n${LATEX_FORMATTING_INSTRUCTIONS}`;
 
   if (timezone) {
     if (taskMode) {

@@ -9,7 +9,9 @@ import {
   type UIMessage,
 } from 'ai';
 import { ConvexError, v } from 'convex/values';
-import { fromZonedTime } from 'date-fns-tz';
+import dayjs from 'dayjs';
+import timezonePlugin from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { searchTool } from '@/app/api/tools';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
@@ -19,6 +21,10 @@ import { buildSystemPrompt } from '@/lib/prompt_config';
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
 import { internalAction } from './_generated/server';
+
+// Extend dayjs with plugins
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
 
 // Execute a scheduled task
 export const executeTask = internalAction({
@@ -413,12 +419,12 @@ export const executeTask = internalAction({
           );
 
           // Convert from user timezone to UTC
-          let utcDate = fromZonedTime(userDate, task.timezone);
+          let utcDate = dayjs.tz(userDate, task.timezone).utc().toDate();
 
           // Keep adding days until we find the next future occurrence
           while (utcDate.getTime() <= now) {
             userDate.setDate(userDate.getDate() + 1);
-            utcDate = fromZonedTime(userDate, task.timezone);
+            utcDate = dayjs.tz(userDate, task.timezone).utc().toDate();
           }
 
           nextExecution = utcDate.getTime();
@@ -445,12 +451,12 @@ export const executeTask = internalAction({
           );
 
           // Convert from user timezone to UTC
-          let utcDate = fromZonedTime(userDate, task.timezone);
+          let utcDate = dayjs.tz(userDate, task.timezone).utc().toDate();
 
           // If this week's occurrence is in the past, add 7 days
           if (utcDate.getTime() <= now) {
             userDate.setDate(userDate.getDate() + 7);
-            utcDate = fromZonedTime(userDate, task.timezone);
+            utcDate = dayjs.tz(userDate, task.timezone).utc().toDate();
           }
 
           nextExecution = utcDate.getTime();

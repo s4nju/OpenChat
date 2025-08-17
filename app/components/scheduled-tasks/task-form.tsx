@@ -3,7 +3,7 @@
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
-import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { Info } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ const TASK_LIMITS = {
 const getTomorrowDate = () => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return format(tomorrow, 'yyyy-MM-dd');
+  return dayjs(tomorrow).format('YYYY-MM-DD');
 };
 
 // Pure function to compute initial form state - no side effects
@@ -183,7 +183,10 @@ export function TaskFormContent({
 
   // Helper to handle date changes
   const handleDateChange = (date: Date | undefined) => {
-    updateForm('scheduledDate', date ? format(date, 'yyyy-MM-dd') : undefined);
+    updateForm(
+      'scheduledDate',
+      date ? dayjs(date).format('YYYY-MM-DD') : undefined
+    );
   };
 
   // Check if user has reached limits for current schedule type

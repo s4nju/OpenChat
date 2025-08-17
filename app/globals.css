@@ -170,3 +170,32 @@ samp {
 @utility scrollbar-gutter-both {
     scrollbar-gutter: stable both-edges;
 }
+
+@layer utilities {
+    .markdown-body .katex {
+        font-size: 1.1em;
+    }
+
+    .markdown-body .katex-display {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-top: 0.5em;
+        padding-bottom: 0.5em;
+        margin-top: 1em;
+        margin-bottom: 1em;
+    }
+
+    .markdown-body .katex-display > .katex {
+        font-size: 1.21em;
+    }
+
+    .markdown-body .katex-display > .katex > .katex-html {
+        display: block;
+        position: relative;
+    }
+
+    .markdown-body .katex-display > .katex > .katex-html > .tag {
+        position: absolute;
+        right: 0;
+    }
+}

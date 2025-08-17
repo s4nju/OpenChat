@@ -1,5 +1,7 @@
 import { ConvexError, v } from 'convex/values';
-import { fromZonedTime } from 'date-fns-tz';
+import dayjs from 'dayjs';
+import timezonePlugin from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { ERROR_CODES } from '../lib/error-codes';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
@@ -10,6 +12,10 @@ import {
   query,
 } from './_generated/server';
 import { ensureAuthenticated } from './lib/auth_helper';
+
+// Extend dayjs with plugins
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
 
 // Constants for task limits
 const TASK_LIMITS = {
@@ -31,28 +37,18 @@ function calculateNextExecution(
     // For one-time tasks, scheduledTime is "HH:MM" format
     const [hours, minutes] = scheduledTime.split(':').map(Number);
 
-    let userDate: Date;
+    let utcDate: Date;
 
     if (scheduledDate) {
-      // Use the provided date in "YYYY-MM-DD" format
+      // Use the provided date in "YYYY-MM-DD" format and create directly in user timezone
       const [year, month, day] = scheduledDate.split('-').map(Number);
-      userDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      utcDate = dayjs.tz(`${year}-${month}-${day} ${hours}:${minutes}`, 'YYYY-M-D H:m', timezone).utc().toDate();
     } else {
       // Fallback to tomorrow if no date provided (backward compatibility)
-      const nowInUserTz = new Date();
-      userDate = new Date(
-        nowInUserTz.getFullYear(),
-        nowInUserTz.getMonth(),
-        nowInUserTz.getDate() + 1, // Tomorrow
-        hours,
-        minutes,
-        0,
-        0
-      );
+      // Create tomorrow's date directly in user timezone
+      const tomorrow = dayjs().tz(timezone).add(1, 'day');
+      utcDate = tomorrow.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
     }
-
-    // Convert from user timezone to UTC
-    const utcDate = fromZonedTime(userDate, timezone);
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
       throw new Error(`Invalid timezone: ${timezone}`);
@@ -68,29 +64,19 @@ function calculateNextExecution(
     // scheduledTime format: "HH:MM"
     const [hours, minutes] = scheduledTime.split(':').map(Number);
 
-    // Create a date in the user's timezone
-    const nowInUserTz = new Date();
-    const userDate = new Date(
-      nowInUserTz.getFullYear(),
-      nowInUserTz.getMonth(),
-      nowInUserTz.getDate(),
-      hours,
-      minutes,
-      0,
-      0
-    );
-
-    // Convert from user timezone to UTC
-    let utcDate = fromZonedTime(userDate, timezone);
+    // Create today's date at the specified time directly in user timezone
+    const today = dayjs().tz(timezone);
+    let utcDate = today.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
       throw new Error(`Invalid timezone: ${timezone}`);
     }
 
     // Keep adding days until we find the next future occurrence
+    let currentDay = today;
     while (utcDate.getTime() <= now) {
-      userDate.setDate(userDate.getDate() + 1);
-      utcDate = fromZonedTime(userDate, timezone);
+      currentDay = currentDay.add(1, 'day');
+      utcDate = currentDay.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
 
       if (!utcDate || Number.isNaN(utcDate.getTime())) {
         throw new Error(`Invalid timezone: ${timezone}`);
@@ -107,32 +93,23 @@ function calculateNextExecution(
     const hours = Number.parseInt(parts[1], 10);
     const minutes = Number.parseInt(parts[2], 10);
 
-    // Create a date in the user's timezone
-    const nowInUserTz = new Date();
-    const currentDay = nowInUserTz.getDay();
+    // Create target date directly in the user's timezone
+    const nowInUserTz = dayjs().tz(timezone);
+    const currentDay = nowInUserTz.day();
     const daysToTarget = (targetDay - currentDay + 7) % 7;
 
-    const userDate = new Date(
-      nowInUserTz.getFullYear(),
-      nowInUserTz.getMonth(),
-      nowInUserTz.getDate() + daysToTarget,
-      hours,
-      minutes,
-      0,
-      0
-    );
-
-    // Convert from user timezone to UTC
-    let utcDate = fromZonedTime(userDate, timezone);
+    const targetDate = nowInUserTz.add(daysToTarget, 'day');
+    let utcDate = targetDate.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
 
     if (!utcDate || Number.isNaN(utcDate.getTime())) {
       throw new Error(`Invalid timezone: ${timezone}`);
     }
 
     // If this week's occurrence is in the past, add 7 days
-    if (utcDate.getTime() <= now) {
-      userDate.setDate(userDate.getDate() + 7);
-      utcDate = fromZonedTime(userDate, timezone);
+    const nowTimestamp = Date.now();
+    if (utcDate.getTime() <= nowTimestamp) {
+      const nextWeekDate = targetDate.add(7, 'day');
+      utcDate = nextWeekDate.hour(hours).minute(minutes).second(0).millisecond(0).utc().toDate();
 
       if (!utcDate || Number.isNaN(utcDate.getTime())) {
         throw new Error(`Invalid timezone: ${timezone}`);

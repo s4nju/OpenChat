@@ -3,7 +3,7 @@
 import { convexQuery } from '@convex-dev/react-query';
 import { ClockIcon, XIcon } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { memo, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -89,7 +89,7 @@ function ExecutionHistoryDrawerComponent({
 
   // Memoized formatters
   const formatTime = useMemo(() => {
-    return (timestamp: number) => format(new Date(timestamp), 'MMM d, h:mm a');
+    return (timestamp: number) => dayjs(timestamp).format('MMM D, h:mm a');
   }, []);
 
   const formatDuration = useMemo(() => {
