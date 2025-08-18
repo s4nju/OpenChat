@@ -36,15 +36,19 @@ function MessageUsageCardComponent() {
         return resetDate.calendar(null, {
           sameDay: '[today at] h:mm A',
           nextDay: '[tomorrow at] h:mm A',
-          nextWeek: 'MMM D [at] h:mm A',
+          nextWeek() {
+            return resetDate.format('MMM D [at] h:mm A');
+          },
           lastDay: '[yesterday at] h:mm A',
-          lastWeek: 'MMM D [at] h:mm A',
-          sameElse(_now: dayjs.Dayjs) {
+          lastWeek() {
+            return resetDate.format('MMM D [at] h:mm A');
+          },
+          sameElse() {
             // Check if same year
             if (resetDate.year() === dayjs().year()) {
-              return 'MMM D [at] h:mm A';
+              return resetDate.format('MMM D [at] h:mm A');
             }
-            return 'MMM D, YYYY [at] h:mm A';
+            return resetDate.format('MMM D, YYYY [at] h:mm A');
           },
         });
       } catch {
