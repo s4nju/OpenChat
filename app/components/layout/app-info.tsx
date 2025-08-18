@@ -1,7 +1,13 @@
 'use client';
 
-import { Info } from '@phosphor-icons/react';
+import {
+  EnvelopeSimple,
+  FileText,
+  Info,
+  ShieldCheck,
+} from '@phosphor-icons/react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,9 +51,40 @@ const InfoContent = () => (
         rel="noopener noreferrer"
         target="_blank"
       >
-        @ibelick
+        @ajanraj25
       </a>
       .
+    </p>
+    <p className="text-foreground leading-relaxed">
+      <a
+        className="underline"
+        href="mailto:support@oschat.ai"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <EnvelopeSimple className="mr-1 inline size-4 align-text-bottom" />
+        support@oschat.ai
+      </a>
+      <span className="mx-2">·</span>
+      <Link
+        className="underline"
+        href="/terms"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <FileText className="mr-1 inline size-4 align-text-bottom" />
+        Terms
+      </Link>
+      <span className="mx-2">·</span>
+      <Link
+        className="underline"
+        href="/privacy"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <ShieldCheck className="mr-1 inline size-4 align-text-bottom" />
+        Privacy Policy
+      </Link>
     </p>
   </div>
 );
