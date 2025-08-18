@@ -807,7 +807,7 @@ function createMonospaceTemplate({
                 </div>
                 
                 <div class="button-container">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.oschat.ai'}/c/${chatId}" class="cli-button">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://oschat.ai'}/c/${chatId}" class="cli-button">
                         open dashboard
                     </a>
                 </div>
@@ -827,7 +827,7 @@ function createMonospaceTemplate({
             </div>
             <div class="footer-line">
                 <span class="comment">// Configure settings: </span>
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.oschat.ai'}/settings" class="footer-link">account_settings</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://oschat.ai'}/settings" class="footer-link">account_settings</a>
             </div>
         </div>
     </div>
@@ -1217,7 +1217,7 @@ function createMonospaceTemplate({
 //             </div>
 
 //             <div class="cta-section">
-//                 <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.oschat.ai'}/chat/${chatId}" class="cta-button">
+//                 <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://oschat.ai'}/chat/${chatId}" class="cta-button">
 //                     View Full Results
 //                 </a>
 //             </div>
@@ -1225,7 +1225,7 @@ function createMonospaceTemplate({
 
 //         <div class="footer">
 //             <p class="footer-text">This email was sent because you enabled email notifications for this scheduled task.</p>
-//             <p class="footer-text">You can manage your notification preferences in your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.oschat.ai'}/settings" class="footer-link">account settings</a>.</p>
+//             <p class="footer-text">You can manage your notification preferences in your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://oschat.ai'}/settings" class="footer-link">account settings</a>.</p>
 //         </div>
 //     </div>
 // </body>
@@ -1262,7 +1262,7 @@ Completed: ${executionDate}
 Results:
 ${taskContent}${contentTruncated ? '\n\n[Content truncated - view full results in the app]' : ''}
 
-View full results: ${process.env.NEXT_PUBLIC_APP_URL || 'https://www.oschat.ai'}/chat/${chatId}
+View full results: ${process.env.NEXT_PUBLIC_APP_URL || 'https://oschat.ai'}/chat/${chatId}
 
 This email was sent because you enabled email notifications for this scheduled task.
 You can manage your notification preferences in your account settings.

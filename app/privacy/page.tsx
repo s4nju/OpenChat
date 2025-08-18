@@ -301,7 +301,7 @@ export default function PrivacyPage() {
             <a href="mailto:support@oschat.ai">support@oschat.ai</a>
             <br />
             <strong>Website:</strong>{' '}
-            <a href="https://www.oschat.ai">https://www.oschat.ai</a>
+            <a href="https://oschat.ai">https://oschat.ai</a>
           </p>
 
           <p>
