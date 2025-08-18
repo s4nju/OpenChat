@@ -146,7 +146,7 @@ export const ModelCard = React.memo(function ModelCard({
     }
 
     const tooltipDisplay = (
-      <div className="flex items-center gap-1.5 text-xs font-medium text-primary-foreground">
+      <div className="flex items-center gap-1.5 text-xs font-medium">
         {tooltipContentParts.map((part, i) => (
           <React.Fragment key={i}>
             {part}
