@@ -114,7 +114,7 @@ export function ReasoningTrigger({ className }: ReasoningTriggerProps) {
             'absolute top-1.5 right-1.5 h-7 w-7'
           )}
         >
-          <div style={{ transform: 'none' }}>
+          <div className="transform-none">
             <CaretDown
               className={cn(
                 'size-4 transition-transform duration-200',

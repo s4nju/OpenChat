@@ -25,7 +25,7 @@ const TASK_LIMITS = {
 } as const;
 
 // Helper function to parse scheduled time and convert to next execution timestamp
-function calculateNextExecution(
+export function calculateNextExecution(
   scheduleType: 'onetime' | 'daily' | 'weekly',
   scheduledTime: string,
   timezone: string,
@@ -42,14 +42,13 @@ function calculateNextExecution(
     if (scheduledDate) {
       // Use the provided date in "YYYY-MM-DD" format and create directly in user timezone
       const [year, month, day] = scheduledDate.split('-').map(Number);
-      utcDate = dayjs
-        .tz(
-          `${year}-${month}-${day} ${hours}:${minutes}`,
-          'YYYY-M-D H:m',
-          timezone
-        )
-        .utc()
-        .toDate();
+      // Build a zero-padded ISO 8601 local datetime to avoid ambiguous parsing
+      const mm = String(month).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      const HH = String(hours).padStart(2, '0');
+      const MM = String(minutes).padStart(2, '0');
+      const isoLocal = `${year}-${mm}-${dd}T${HH}:${MM}`;
+      utcDate = dayjs.tz(isoLocal, timezone).utc().toDate();
     } else {
       // Fallback to tomorrow if no date provided (backward compatibility)
       // Create tomorrow's date directly in user timezone

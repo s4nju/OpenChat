@@ -12,12 +12,11 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isSettings = pathname?.startsWith('/settings');
   const isAuth = pathname?.startsWith('/auth');
-  const isLegal = (
+  const isLegal =
     pathname?.startsWith('/terms') ||
     pathname?.startsWith('/privacy') ||
     pathname?.startsWith('/security') ||
-    pathname?.startsWith('/legal')
-  );
+    pathname?.startsWith('/legal');
 
   // Helper functions to reduce complexity
   const isInputElementFocused = useCallback((target: EventTarget | null) => {

@@ -21,11 +21,16 @@ export default function SettingsLayout({
       return;
     }
 
-    if (user?.isAnonymous) {
-      router.replace('/');
-    }
+    // Redirect unauthenticated users to login page (middleware should catch this)
     if (!user) {
-      router.replace('/');
+      router.replace('/auth');
+      return;
+    }
+
+    // Redirect anonymous users to login page to upgrade their account
+    if (user?.isAnonymous) {
+      router.replace('/auth');
+      return;
     }
   }, [user, isLoading, router]);
 

@@ -363,13 +363,13 @@ Actions are configured through Config.NOTION_ACTIONS.
 export const LATEX_FORMATTING_INSTRUCTIONS = `
 <math_latex_formatting>
 ## Math/LaTeX Instructions
-- Always solve step-by-step, showing your work.
+- Show steps when they meaningfully aid clarity; otherwise keep algebraic steps concise.
 - Use LaTeX formatting for all mathematical expressions, equations, and symbols.
 - Mandatory: Use '$' for ALL inline equations without exception
   $b>9$
 - Mandatory: Use '$$' for ALL block equations without exception
   $$
-  17_{(b)}=b+7,quad 97_{(b)}=9b+7
+  17_{(b)}=b+7,\\quad 97_{(b)}=9b+7
   $$
 - Mandatory: Mathematical expressions must always be properly delimited using dollar signs.
 - Never use other delimiting characters like backticks, parentheses, or brackets for mathematical expressions.
