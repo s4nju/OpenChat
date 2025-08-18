@@ -17,7 +17,7 @@ import {
 } from 'ai';
 import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
 import { ConvexError, type Infer } from 'convex/values';
-import { searchTool } from '@/app/api/tools';
+import { searchTool } from '@/app/api/tools/search';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';

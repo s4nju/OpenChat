@@ -12,7 +12,7 @@ import { ConvexError, v } from 'convex/values';
 import dayjs from 'dayjs';
 import timezonePlugin from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import { searchTool } from '@/app/api/tools';
+import { searchTool } from '@/app/api/tools/search';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
 import { limitDepth } from '@/lib/depth-limiter';

@@ -2,6 +2,7 @@
 // This file maintains backward compatibility while the actual config is now organized in separate modules
 
 // Constants
+// biome-ignore lint/performance/noBarrelFile: This file maintains backward compatibility for existing imports
 export * from './config/constants';
 // Features
 export * from './config/features';
