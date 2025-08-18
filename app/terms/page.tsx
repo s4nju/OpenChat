@@ -191,10 +191,10 @@ export default function TermsPage() {
           <p>Questions about these terms? Contact us:</p>
           <p>
             <strong>Email:</strong>{' '}
-            <a href="mailto:support@ajanraj.com">support@ajanraj.com</a>
+            <a href="mailto:support@oschat.ai">support@oschat.ai</a>
             <br />
             <strong>Website:</strong>{' '}
-            <a href="https://chat.ajanraj.com">https://chat.ajanraj.com</a>
+            <a href="https://www.oschat.ai">https://www.oschat.ai</a>
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # OpenChat
 
-[![Visit OpenChat](https://img.shields.io/badge/Visit-OpenChat-blue)](https://chat.ajanraj.com)
+[![Visit OpenChat](https://img.shields.io/badge/Visit-OpenChat-blue)](https://www.oschat.ai)
 
 **OpenChat** is a free, open-source AI chat application that provides a seamless interface for multiple language models in one place.
 

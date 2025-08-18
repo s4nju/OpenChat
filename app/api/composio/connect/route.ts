@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.NODE_ENV === 'production'
-        ? 'https://chat.ajanraj.com'
+        ? 'https://www.oschat.ai'
         : 'http://localhost:3000');
     const callbackUrl = `${baseUrl}/auth/callback?type=${connectorType}`;
 
