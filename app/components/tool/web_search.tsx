@@ -37,7 +37,7 @@ const formatUrl = (url: string) => {
 
 const addUTM = (url: string) => {
   const u = new URL(url);
-  u.searchParams.set('utm_source', 'chat.ajanraj.com');
+  u.searchParams.set('utm_source', 'www.oschat.ai');
   u.searchParams.set('utm_medium', 'web-search');
   return u.toString();
 };

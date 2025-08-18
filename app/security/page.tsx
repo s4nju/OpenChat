@@ -180,7 +180,7 @@ export default function SecurityPage() {
           <ul>
             <li>
               Please report it to:{' '}
-              <a href="mailto:support@ajanraj.com">support@ajanraj.com</a>
+              <a href="mailto:support@oschat.ai">support@oschat.ai</a>
             </li>
             <li>Include details about the issue and how to reproduce it</li>
             <li>Allow us reasonable time to investigate and fix the issue</li>

@@ -175,9 +175,9 @@ export default function TermsPage() {
 
           <h3>13. Dispute Resolution</h3>
           <p>
-            Before pursuing legal action, please contact us at
-            support@ajanraj.com to resolve disputes informally. These terms are
-            governed by applicable law where OpenChat operates.
+            Before pursuing legal action, please contact us at support@oschat.ai
+            to resolve disputes informally. These terms are governed by
+            applicable law where OpenChat operates.
           </p>
 
           <h3>14. Changes to Terms</h3>

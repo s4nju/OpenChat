@@ -231,7 +231,7 @@ export default function PrivacyPage() {
             Our AI systems automatically generate responses and may flag
             inappropriate content. You can request human review of automated
             decisions by contacting us at{' '}
-            <a href="mailto:support@ajanraj.com">support@ajanraj.com</a>.
+            <a href="mailto:support@oschat.ai">support@oschat.ai</a>.
           </p>
 
           <h3>8. International Transfers</h3>
