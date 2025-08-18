@@ -10,6 +10,14 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
   const { toggleSidebar } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
+  const isSettings = pathname?.startsWith('/settings');
+  const isAuth = pathname?.startsWith('/auth');
+  const isLegal = (
+    pathname?.startsWith('/terms') ||
+    pathname?.startsWith('/privacy') ||
+    pathname?.startsWith('/security') ||
+    pathname?.startsWith('/legal')
+  );
 
   // Helper functions to reduce complexity
   const isInputElementFocused = useCallback((target: EventTarget | null) => {
@@ -83,6 +91,11 @@ export default function LayoutApp({ children }: { children: React.ReactNode }) {
     document.addEventListener('keydown', handler, true);
     return () => document.removeEventListener('keydown', handler, true);
   }, [handler]);
+
+  // Settings, Auth, and Legal pages use their own layout; do not render ChatSidebar/Header
+  if (isSettings || isAuth || isLegal) {
+    return <>{children}</>; // allow nested settings layout to control structure
+  }
 
   return (
     // Main flex container

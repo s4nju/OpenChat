@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import LayoutApp from '@/app/components/layout/layout-app';
 import { ScheduledTasksPage } from '@/app/components/scheduled-tasks/scheduled-tasks-page';
 import { useUser } from '@/app/providers/user-provider';
 
@@ -25,9 +24,5 @@ export default function TasksPage() {
     return null;
   }
 
-  return (
-    <LayoutApp>
-      <ScheduledTasksPage />
-    </LayoutApp>
-  );
+  return <ScheduledTasksPage />;
 }

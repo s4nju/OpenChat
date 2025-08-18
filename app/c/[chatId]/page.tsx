@@ -5,7 +5,6 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 
 import Chat from '../../components/chat/chat';
-import LayoutApp from '../../components/layout/layout-app';
 
 export default async function ChatPage({
   params,
@@ -41,11 +40,7 @@ export default async function ChatPage({
 
     // Render the regular chat shell. The Chat component is a client component
     // and will fetch its messages as usual.
-    return (
-      <LayoutApp>
-        <Chat />
-      </LayoutApp>
-    );
+    return <Chat />;
   } catch (_error) {
     // Handle ArgumentValidationError or any other errors gracefully
     redirect('/');

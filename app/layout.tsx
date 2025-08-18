@@ -17,6 +17,7 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   APP_BASE_URL,
   APP_DESCRIPTION,
@@ -25,6 +26,7 @@ import {
 } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { AuthGuard } from './components/auth/auth-guard';
+import LayoutApp from './components/layout/layout-app';
 import { LayoutClient } from './layout-client';
 import { ConvexClientProvider } from './providers/convex-client-provider';
 import { SidebarProvider } from './providers/sidebar-provider';
@@ -163,15 +165,19 @@ export default function RootLayout({
             />
           )}
         <LayoutClient />
-        <ConvexAuthNextjsServerProvider>
-          <ConvexClientProvider>
-            <AuthGuard>
-              <SidebarProvider>{children}</SidebarProvider>
-              <Analytics />
-              <SpeedInsights />
-            </AuthGuard>
-          </ConvexClientProvider>
-        </ConvexAuthNextjsServerProvider>
+        <TooltipProvider>
+          <ConvexAuthNextjsServerProvider>
+            <ConvexClientProvider>
+              <AuthGuard>
+                <SidebarProvider>
+                  <LayoutApp>{children}</LayoutApp>
+                </SidebarProvider>
+                <Analytics />
+                <SpeedInsights />
+              </AuthGuard>
+            </ConvexClientProvider>
+          </ConvexAuthNextjsServerProvider>
+        </TooltipProvider>
       </body>
     </html>
   );
