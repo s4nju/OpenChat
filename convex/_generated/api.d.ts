@@ -29,7 +29,6 @@ import type * as schema_chat from "../schema/chat.js";
 import type * as schema_chat_attachment from "../schema/chat_attachment.js";
 import type * as schema_connectors from "../schema/connectors.js";
 import type * as schema_feedback from "../schema/feedback.js";
-import type * as schema_index from "../schema/index.js";
 import type * as schema_message from "../schema/message.js";
 import type * as schema_scheduled_task from "../schema/scheduled_task.js";
 import type * as schema_task_history from "../schema/task_history.js";
@@ -76,7 +75,6 @@ declare const fullApi: ApiFromModules<{
   "schema/chat_attachment": typeof schema_chat_attachment;
   "schema/connectors": typeof schema_connectors;
   "schema/feedback": typeof schema_feedback;
-  "schema/index": typeof schema_index;
   "schema/message": typeof schema_message;
   "schema/scheduled_task": typeof schema_scheduled_task;
   "schema/task_history": typeof schema_task_history;
