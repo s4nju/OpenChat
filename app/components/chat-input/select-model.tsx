@@ -1,5 +1,6 @@
 import { CaretDownIcon } from '@phosphor-icons/react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
+import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { ModelSelector } from '@/components/common/model-selector';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
@@ -8,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from '../../../lib/config';
 import { PopoverContentAuth } from './popover-content-auth';
 
@@ -22,6 +24,7 @@ export function SelectModelComponent({
   onSelectModel,
   isUserAuthenticated,
 }: SelectModelProps) {
+  const isMobile = useBreakpoint(768);
   const modelOption = MODELS_OPTIONS.find((m) => m.id === selectedModel);
   const providerOption = PROVIDERS_OPTIONS.find(
     (p) => p.id === modelOption?.provider
@@ -34,16 +37,23 @@ export function SelectModelComponent({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                className="h-9 w-auto rounded-full border border-border bg-transparent text-accent-foreground"
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                {providerOption && (
-                  <ProviderIcon className="size-5" provider={providerOption} />
+                className={cn(
+                  'justify-between rounded-full',
+                  isMobile && 'py-3'
                 )}
-                {modelOption?.name}
-                <CaretDownIcon className="size-4" />
+                type="button"
+                variant="outline"
+              >
+                <div className="flex items-center gap-2">
+                  {providerOption && (
+                    <ProviderIcon
+                      className="size-5"
+                      provider={providerOption}
+                    />
+                  )}
+                  <span>{modelOption?.name}</span>
+                </div>
+                <CaretDownIcon className="size-4 opacity-50" />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
