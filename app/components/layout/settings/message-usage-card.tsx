@@ -8,7 +8,6 @@ import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { PREMIUM_CREDITS } from '@/lib/config';
@@ -90,18 +89,16 @@ function MessageUsageCardComponent() {
             <div className="mb-1 flex justify-between text-sm">
               <span className="flex items-center gap-1">
                 Premium
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info size={14} />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Premium credits are used for Claude 4 Sonnet and Grok 3.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info size={14} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Premium credits are used for Claude 4 Sonnet and Grok 3.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               </span>
               <span>
                 {premiumCount} / {premiumLimit}

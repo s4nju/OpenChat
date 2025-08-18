@@ -9,7 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAction } from 'convex/react';
 import { EyeOff, ImagePlus, Key, Pin } from 'lucide-react';
-import * as React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import {
@@ -29,7 +29,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
@@ -58,11 +57,11 @@ export function ModelSelector({
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink);
 
   // State for dropdown, search, and extended mode
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [isExtendedMode, setIsExtendedMode] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isExtendedMode, setIsExtendedMode] = useState(false);
 
-  const handleSelect = React.useCallback(
+  const handleSelect = useCallback(
     (id: string) => {
       setSelectedModelId(id);
       setIsOpen(false); // Close dropdown on selection
@@ -74,7 +73,7 @@ export function ModelSelector({
   const isExtended = searchQuery.length > 0 || isExtendedMode;
 
   // Helper function to format display name with subName
-  const getDisplayName = React.useCallback(
+  const getDisplayName = useCallback(
     (modelName: string, subName?: string) => {
       return subName ? `${modelName} (${subName})` : modelName;
     },
@@ -83,7 +82,7 @@ export function ModelSelector({
 
   // Optimized model filtering using pre-computed enriched models
   const { normalModeModels, favoritesModels, othersModels, disabledModels } =
-    React.useMemo(() => {
+    useMemo(() => {
       let favorites = categorizedModels.favorites;
       let others = categorizedModels.others.filter(
         (model) => !disabledModelsSet.has(model.id)
@@ -124,7 +123,7 @@ export function ModelSelector({
     }, [categorizedModels, searchQuery, disabledModelsSet, getDisplayName]);
 
   // Handle toggle between normal and extended mode
-  const handleToggleMode = React.useCallback(() => {
+  const handleToggleMode = useCallback(() => {
     if (isExtended && searchQuery) {
       // If in extended mode with search, clear search to go back to normal
       setSearchQuery('');
@@ -135,7 +134,7 @@ export function ModelSelector({
   }, [isExtended, searchQuery, isExtendedMode]);
 
   // Handle favorite toggle
-  const handleToggleFavorite = React.useCallback(
+  const handleToggleFavorite = useCallback(
     (modelId: string) => {
       toggleFavoriteModel(modelId);
     },
@@ -143,7 +142,7 @@ export function ModelSelector({
   );
 
   // Handle upgrade button click
-  const handleUpgrade = React.useCallback(async () => {
+  const handleUpgrade = useCallback(async () => {
     if (!products?.premium?.id) return;
 
     try {
@@ -159,12 +158,12 @@ export function ModelSelector({
     }
   }, [products?.premium?.id, generateCheckoutLink]);
 
-  const model = React.useMemo(() => {
+  const model = useMemo(() => {
     // Always look in the full MODELS_OPTIONS list, not just filtered results
     return MODELS_OPTIONS.find((model) => model.id === selectedModelId);
   }, [selectedModelId]);
 
-  const provider = React.useMemo(
+  const provider = useMemo(
     () =>
       PROVIDERS_OPTIONS.find(
         (provider) =>
@@ -173,7 +172,7 @@ export function ModelSelector({
     [model]
   );
 
-  const renderModelOption = React.useCallback(
+  const renderModelOption = useCallback(
     (modelOption: EnrichedModel) => {
       const providerOption = modelOption.providerInfo;
       // Optimized feature flags using pre-computed featuresMap
@@ -347,167 +346,165 @@ export function ModelSelector({
   );
 
   return (
-    <TooltipProvider>
-      <DropdownMenu modal={false} onOpenChange={setIsOpen} open={isOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            className={cn('justify-between', isMobile && 'py-3', className)}
-            variant="outline"
-          >
-            <div className="flex items-center gap-2">
-              {provider && (
-                <ProviderIcon className="size-5" provider={provider} />
-              )}
-              {isMobile ? (
-                <div className="flex flex-col items-start">
-                  <span className="text-sm leading-tight">
-                    {model?.name ?? 'Select Model'}
-                  </span>
-                  {model?.subName && (
-                    <span className="text-muted-foreground text-xs leading-tight">
-                      {model.subName}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span>
-                  {model
-                    ? getDisplayName(model.name, model.subName)
-                    : 'Select Model'}
-                </span>
-              )}
-            </div>
-            <CaretDownIcon className="size-4 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className={cn(
-            '!border-none relative flex max-w-[calc(100vw-2.5rem)] flex-col overflow-y-auto rounded-lg p-0 transition-[height,width] ease-snappy max-sm:mx-4 sm:rounded-lg',
-            isExtended ? 'sm:w-[640px]' : 'sm:w-[420px]'
-          )}
-          collisionPadding={16}
-          side="top"
-          sideOffset={4}
+    <DropdownMenu modal={false} onOpenChange={setIsOpen} open={isOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className={cn('justify-between', isMobile && 'py-3', className)}
+          variant="outline"
         >
-          {/* Fixed Search Header */}
-          <ModelSelectorSearchHeader
-            onChange={setSearchQuery}
-            value={searchQuery}
-          />
-
-          {/* Scrollable Content */}
-          <div className="px-1.5 py-3">
-            {/* Premium Upgrade Section */}
-            {!hasPremium && products?.premium?.id && (
-              <>
-                <div className="p-3">
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-2 font-semibold text-lg">
-                      Unlock all models + higher limits
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-2xl">
-                        $10
-                        <span className="font-normal text-muted-foreground text-sm">
-                          /month
-                        </span>
-                      </div>
-                      <Button
-                        className="cursor-pointer"
-                        onClick={handleUpgrade}
-                        size="sm"
-                      >
-                        Upgrade now
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="mx-2 my-1 border-border border-t" />
-              </>
+          <div className="flex items-center gap-2">
+            {provider && (
+              <ProviderIcon className="size-5" provider={provider} />
             )}
-
-            {isExtended ? (
-              <div className="flex w-full flex-wrap justify-start gap-3.5 pt-2.5 pr-0 pb-4 pl-3">
-                {/* Favorites Section */}
-                {favoritesModels.length > 0 && (
-                  <>
-                    <div className="-mb-2 ml-0 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
-                      <Pin className="mt-px size-4" />
-                      Favorites
-                    </div>
-                    {favoritesModels.map((modelOption) => (
-                      <ModelCard
-                        isDisabled={!modelOption.available}
-                        isFavorite={true}
-                        isLastFavorite={favoritesModels.length === 1}
-                        isSelected={selectedModelId === modelOption.id}
-                        key={modelOption.id}
-                        model={modelOption}
-                        onSelect={handleSelect}
-                        onToggleFavorite={handleToggleFavorite}
-                      />
-                    ))}
-                  </>
-                )}
-
-                {/* Others Section */}
-                {othersModels.length > 0 && (
-                  <>
-                    <div className="-mb-2 mt-1 ml-2 w-full select-none text-color-heading">
-                      Others
-                    </div>
-                    {othersModels.map((modelOption) => (
-                      <ModelCard
-                        isDisabled={!modelOption.available}
-                        isFavorite={false}
-                        isLastFavorite={false}
-                        isSelected={selectedModelId === modelOption.id}
-                        key={modelOption.id}
-                        model={modelOption}
-                        onSelect={handleSelect}
-                        onToggleFavorite={handleToggleFavorite}
-                      />
-                    ))}
-                  </>
-                )}
-
-                {/* Disabled Section */}
-                {disabledModels.length > 0 && (
-                  <>
-                    <div className="-mb-2 mt-1 ml-2 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
-                      <EyeOff className="mt-px size-4" />
-                      Disabled
-                    </div>
-                    {disabledModels.map((modelOption) => (
-                      <ModelCard
-                        isDisabled={true}
-                        isFavorite={false}
-                        isLastFavorite={false}
-                        isSelected={selectedModelId === modelOption.id}
-                        key={modelOption.id}
-                        model={modelOption}
-                        onSelect={handleSelect}
-                        onToggleFavorite={handleToggleFavorite}
-                      />
-                    ))}
-                  </>
+            {isMobile ? (
+              <div className="flex flex-col items-start">
+                <span className="text-sm leading-tight">
+                  {model?.name ?? 'Select Model'}
+                </span>
+                {model?.subName && (
+                  <span className="text-muted-foreground text-xs leading-tight">
+                    {model.subName}
+                  </span>
                 )}
               </div>
             ) : (
-              normalModeModels.map((modelOption) =>
-                renderModelOption(modelOption)
-              )
+              <span>
+                {model
+                  ? getDisplayName(model.name, model.subName)
+                  : 'Select Model'}
+              </span>
             )}
           </div>
+          <CaretDownIcon className="size-4 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className={cn(
+          '!border-none relative flex max-w-[calc(100vw-2.5rem)] flex-col overflow-y-auto rounded-lg p-0 transition-[height,width] ease-snappy max-sm:mx-4 sm:rounded-lg',
+          isExtended ? 'sm:w-[640px]' : 'sm:w-[420px]'
+        )}
+        collisionPadding={16}
+        side="top"
+        sideOffset={4}
+      >
+        {/* Fixed Search Header */}
+        <ModelSelectorSearchHeader
+          onChange={setSearchQuery}
+          value={searchQuery}
+        />
 
-          {/* Fixed Footer */}
-          <ModelSelectorFooter
-            isExtended={isExtended}
-            onToggleMode={handleToggleMode}
-          />
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </TooltipProvider>
+        {/* Scrollable Content */}
+        <div className="px-1.5 py-3">
+          {/* Premium Upgrade Section */}
+          {!hasPremium && products?.premium?.id && (
+            <>
+              <div className="p-3">
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="mb-2 font-semibold text-lg">
+                    Unlock all models + higher limits
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-2xl">
+                      $10
+                      <span className="font-normal text-muted-foreground text-sm">
+                        /month
+                      </span>
+                    </div>
+                    <Button
+                      className="cursor-pointer"
+                      onClick={handleUpgrade}
+                      size="sm"
+                    >
+                      Upgrade now
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="mx-2 my-1 border-border border-t" />
+            </>
+          )}
+
+          {isExtended ? (
+            <div className="flex w-full flex-wrap justify-start gap-3.5 pt-2.5 pr-0 pb-4 pl-3">
+              {/* Favorites Section */}
+              {favoritesModels.length > 0 && (
+                <>
+                  <div className="-mb-2 ml-0 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
+                    <Pin className="mt-px size-4" />
+                    Favorites
+                  </div>
+                  {favoritesModels.map((modelOption) => (
+                    <ModelCard
+                      isDisabled={!modelOption.available}
+                      isFavorite={true}
+                      isLastFavorite={favoritesModels.length === 1}
+                      isSelected={selectedModelId === modelOption.id}
+                      key={modelOption.id}
+                      model={modelOption}
+                      onSelect={handleSelect}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Others Section */}
+              {othersModels.length > 0 && (
+                <>
+                  <div className="-mb-2 mt-1 ml-2 w-full select-none text-color-heading">
+                    Others
+                  </div>
+                  {othersModels.map((modelOption) => (
+                    <ModelCard
+                      isDisabled={!modelOption.available}
+                      isFavorite={false}
+                      isLastFavorite={false}
+                      isSelected={selectedModelId === modelOption.id}
+                      key={modelOption.id}
+                      model={modelOption}
+                      onSelect={handleSelect}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Disabled Section */}
+              {disabledModels.length > 0 && (
+                <>
+                  <div className="-mb-2 mt-1 ml-2 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
+                    <EyeOff className="mt-px size-4" />
+                    Disabled
+                  </div>
+                  {disabledModels.map((modelOption) => (
+                    <ModelCard
+                      isDisabled={true}
+                      isFavorite={false}
+                      isLastFavorite={false}
+                      isSelected={selectedModelId === modelOption.id}
+                      key={modelOption.id}
+                      model={modelOption}
+                      onSelect={handleSelect}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+          ) : (
+            normalModeModels.map((modelOption) =>
+              renderModelOption(modelOption)
+            )
+          )}
+        </div>
+
+        {/* Fixed Footer */}
+        <ModelSelectorFooter
+          isExtended={isExtended}
+          onToggleMode={handleToggleMode}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
