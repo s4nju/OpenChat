@@ -30,19 +30,21 @@ function SettingsNavComponent() {
 
   return (
     <Tabs className="mb-8" value={activeTab}>
-      <div className="overflow-x-auto">
-        <TabsList className="h-auto p-1 md:w-full">
-          {NAV_ITEMS.map((item) => (
-            <TabsTrigger
-              asChild
-              className="flex-1 md:flex-auto"
-              key={item.href}
-              value={item.href}
-            >
-              <Link href={item.href}>{item.name}</Link>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <div className="overflow-hidden rounded-lg bg-muted p-1">
+        <div className="overflow-x-auto">
+          <TabsList className="h-auto w-max min-w-full bg-transparent p-0">
+            {NAV_ITEMS.map((item) => (
+              <TabsTrigger
+                asChild
+                className="whitespace-nowrap"
+                key={item.href}
+                value={item.href}
+              >
+                <Link href={item.href}>{item.name}</Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </div>
     </Tabs>
   );

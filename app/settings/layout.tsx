@@ -45,10 +45,10 @@ export default function SettingsLayout({
         <HeaderGoBack href="/" />
       </div>
       <main className="flex w-full max-w-6xl flex-1 gap-4 p-4 md:flex-row md:p-8">
-        <div className="hidden w-full space-y-8 md:block md:w-1/4">
+        <div className="hidden w-full space-y-8 md:block md:w-[28%]">
           <SettingsSidebar />
         </div>
-        <div className="w-full md:w-3/4 md:pl-12">
+        <div className="w-full md:w-[72%] md:pl-12">
           <SettingsNav />
           {children}
         </div>

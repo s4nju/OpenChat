@@ -1,6 +1,10 @@
 'use client';
 
 import { Info } from '@phosphor-icons/react';
+import dayjs from 'dayjs';
+import calendar from 'dayjs/plugin/calendar';
+import isToday from 'dayjs/plugin/isToday';
+import isTomorrow from 'dayjs/plugin/isTomorrow';
 import React, { useCallback } from 'react';
 import { useUser } from '@/app/providers/user-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +16,10 @@ import {
 } from '@/components/ui/tooltip';
 import { PREMIUM_CREDITS } from '@/lib/config';
 
+dayjs.extend(calendar);
+dayjs.extend(isToday);
+dayjs.extend(isTomorrow);
+
 function MessageUsageCardComponent() {
   const { user, rateLimitStatus, hasPremium } = useUser();
 
@@ -22,11 +30,22 @@ function MessageUsageCardComponent() {
         return 'Not available';
       }
       try {
-        const date = new Date(timestamp);
-        return date.toLocaleDateString('en-US', {
-          month: 'numeric',
-          day: 'numeric',
-          year: 'numeric',
+        const resetDate = dayjs(timestamp);
+
+        // Use dayjs calendar plugin with custom formats
+        return resetDate.calendar(null, {
+          sameDay: '[today at] h:mm A',
+          nextDay: '[tomorrow at] h:mm A',
+          nextWeek: 'MMM D [at] h:mm A',
+          lastDay: '[yesterday at] h:mm A',
+          lastWeek: 'MMM D [at] h:mm A',
+          sameElse(_now: dayjs.Dayjs) {
+            // Check if same year
+            if (resetDate.year() === dayjs().year()) {
+              return 'MMM D [at] h:mm A';
+            }
+            return 'MMM D, YYYY [at] h:mm A';
+          },
         });
       } catch {
         return 'Error calculating reset time';
@@ -64,10 +83,21 @@ function MessageUsageCardComponent() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-0.5 space-y-0">
-        <CardTitle>Message Usage</CardTitle>
-        <p className="text-muted-foreground text-xs">
-          Resets {nextResetDateStr}
-        </p>
+        <CardTitle className="font-semibold text-sm">Message Usage</CardTitle>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="text-muted-foreground text-xs">
+              Resets {nextResetDateStr}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {resetTimestamp
+                ? dayjs(resetTimestamp).format('M/D/YYYY, h:mm:ss A')
+                : 'Not available'}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>

@@ -61,10 +61,10 @@ function SettingsSidebarComponent() {
       {/* User Info */}
       <div className="flex flex-col items-center text-center">
         <div className="relative mb-4">
-          <Avatar className="h-24 w-24">
+          <Avatar className="h-40 w-40">
             <AvatarImage alt="Profile" src={user?.image} />
             <AvatarFallback>
-              <User className="size-12 text-muted-foreground" />
+              <User className="size-20 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
         </div>
@@ -92,7 +92,9 @@ function SettingsSidebarComponent() {
       {/* Keyboard Shortcuts */}
       <Card>
         <CardHeader>
-          <CardTitle>Keyboard Shortcuts</CardTitle>
+          <CardTitle className="font-semibold text-sm">
+            Keyboard Shortcuts
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">

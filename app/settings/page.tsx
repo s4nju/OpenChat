@@ -110,7 +110,7 @@ export default function AccountSettingsPage() {
           className="w-full cursor-pointer md:w-64"
           onClick={handleUpgrade}
         >
-          Upgrade to Premium - $10/month
+          Upgrade Now
         </Button>
       );
     }
@@ -133,7 +133,15 @@ export default function AccountSettingsPage() {
         {/* Pro Plan Benefits */}
         <section className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <h2 className="text-left font-bold text-2xl">Pro Plan Benefits</h2>
+            <h2 className="text-left font-bold text-2xl">
+              {hasPremium ? 'Pro Plan Benefits' : 'Upgrade to Pro'}
+            </h2>
+            {!hasPremium && (
+              <div className="mt-2 flex items-baseline gap-1 md:mt-0">
+                <span className="font-bold text-3xl">$10</span>
+                <span className="text-base text-muted-foreground">/month</span>
+              </div>
+            )}
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="flex flex-col items-start rounded-lg border border-secondary/40 bg-card/30 px-6 py-4">
@@ -183,8 +191,9 @@ export default function AccountSettingsPage() {
           </div>
           <p className="text-muted-foreground/60 text-sm">
             <span className="mx-0.5 font-medium text-base">*</span>Premium
-            credits are used for GPT Image Gen, Claude Sonnet, Gemini 2.5 Pro
-            and Grok 3. Additional Premium credits can be purchased separately.
+            credits are used for GPT Image Gen, Claude Sonnet, Gemini 2.5 Pro,
+            GPT-5, o3, and Grok 3/4. Additional Premium credits can be purchased
+            separately.
           </p>
           <div className="mt-6 md:hidden">
             <MessageUsageCard />
