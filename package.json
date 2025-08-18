@@ -112,18 +112,11 @@
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitest/ui": "^3.2.4",
-    "lefthook": "^1.12.3",
-    "lint-staged": "^16.1.5",
+    "husky": "^9.1.7",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
-    "ultracite": "5.1.5",
+    "ultracite": "5.2.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "bun@1.2.19",
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
-      "bunx ultracite format",
-      "bunx ultracite format"
-    ]
-  }
+  "packageManager": "bun@1.2.19"
 }
