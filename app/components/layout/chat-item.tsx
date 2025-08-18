@@ -34,7 +34,7 @@ type ChatItemProps = {
   handleConfirmDelete: (id: Id<'chats'>) => void;
   handleTogglePin: (id: Id<'chats'>) => void;
   isPinned: boolean;
-  activeChatId?: string | null;
+  isActive?: boolean;
 };
 
 const ChatItemComponent = function ChatItemComponent({
@@ -46,12 +46,13 @@ const ChatItemComponent = function ChatItemComponent({
   handleConfirmDelete,
   handleTogglePin,
   isPinned,
-  activeChatId,
+  isActive,
 }: ChatItemProps): React.ReactElement {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title || '');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showActions, setShowActions] = useState(false);
 
   const onSave = () => {
     handleSaveEdit(id, editedTitle);
@@ -148,15 +149,17 @@ const ChatItemComponent = function ChatItemComponent({
           'group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none',
           'hover:bg-accent hover:text-accent-foreground focus-visible:text-accent-foreground',
           'focus-visible:ring-2 focus-visible:ring-primary',
-          activeChatId === id && 'bg-accent text-accent-foreground'
+          isActive && 'bg-accent text-accent-foreground'
         )}
         href={`/c/${id}`}
         key={id}
         onClick={(e) => {
-          if (activeChatId === id) {
+          if (isActive) {
             e.preventDefault();
           }
         }}
+        onMouseEnter={() => setShowActions(true)}
+        onMouseLeave={() => setShowActions(false)}
         prefetch
         replace
         scroll={false}
@@ -187,73 +190,75 @@ const ChatItemComponent = function ChatItemComponent({
             </span>
           </div>
         </div>
-        <div className="-right-0.25 pointer-events-auto absolute top-0 bottom-0 z-10 flex translate-x-full items-center justify-end text-muted-foreground transition-transform duration-200 group-hover/link:translate-x-0 group-hover/link:bg-accent dark:group-hover/link:bg-muted">
-          <div className="pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l from-accent to-transparent opacity-0 transition-opacity duration-200 group-hover/link:opacity-100 dark:from-muted" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleTogglePin(id);
-                }}
-                size="icon"
-                tabIndex={-1}
-                type="button"
-                variant="ghost"
-              >
-                {isPinned ? (
-                  <PushPinSimpleSlash className="size-4" />
-                ) : (
-                  <PushPinSimple className="size-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="z-[9999]" side="bottom">
-              {isPinned ? 'Unpin' : 'Pin Chat'}
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsEditing(true);
-                }}
-                size="icon"
-                tabIndex={-1}
-                type="button"
-                variant="ghost"
-              >
-                <PencilSimple className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="z-[9999]" side="bottom">
-              Edit
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/50 hover:text-destructive-foreground"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsDeleting(true);
-                }}
-                size="icon"
-                tabIndex={-1}
-                type="button"
-                variant="ghost"
-              >
-                <TrashSimple className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="z-[9999]" side="bottom">
-              Delete
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {(showActions || isActive) && (
+          <div className="-right-0.25 pointer-events-auto absolute top-0 bottom-0 z-10 flex translate-x-full items-center justify-end text-muted-foreground transition-transform duration-200 group-hover/link:translate-x-0 group-hover/link:bg-accent dark:group-hover/link:bg-muted">
+            <div className="pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l from-accent to-transparent opacity-0 transition-opacity duration-200 group-hover/link:opacity-100 dark:from-muted" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-orange-500/20 hover:text-orange-600 dark:hover:text-orange-400"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleTogglePin(id);
+                  }}
+                  size="icon"
+                  tabIndex={-1}
+                  type="button"
+                  variant="ghost"
+                >
+                  {isPinned ? (
+                    <PushPinSimpleSlash className="size-4" />
+                  ) : (
+                    <PushPinSimple className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="z-[9999]" side="bottom">
+                {isPinned ? 'Unpin' : 'Pin Chat'}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsEditing(true);
+                  }}
+                  size="icon"
+                  tabIndex={-1}
+                  type="button"
+                  variant="ghost"
+                >
+                  <PencilSimple className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="z-[9999]" side="bottom">
+                Edit
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/50 hover:text-destructive-foreground"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsDeleting(true);
+                  }}
+                  size="icon"
+                  tabIndex={-1}
+                  type="button"
+                  variant="ghost"
+                >
+                  <TrashSimple className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="z-[9999]" side="bottom">
+                Delete
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
       </Link>
     );
   };
@@ -276,7 +281,7 @@ export const ChatItem = React.memo(
       prevProps.originalChatId === nextProps.originalChatId &&
       prevProps.parentChatTitle === nextProps.parentChatTitle &&
       prevProps.isPinned === nextProps.isPinned &&
-      prevProps.activeChatId === nextProps.activeChatId
+      prevProps.isActive === nextProps.isActive
       // Note: We intentionally don't compare handler functions as they're
       // memoized in the parent and should be stable across renders
     );

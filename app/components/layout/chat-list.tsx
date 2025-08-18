@@ -80,11 +80,11 @@ export const ChatList = memo(function ChatListComponent({
           <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
             {pinnedChats.map((chat) => (
               <ChatItem
-                activeChatId={activeChatId}
                 handleConfirmDelete={handleConfirmDelete}
                 handleSaveEdit={handleSaveEdit}
                 handleTogglePin={handleTogglePin}
                 id={chat._id}
+                isActive={chat._id === activeChatId}
                 isPinned={true}
                 key={chat._id}
                 originalChatId={chat.originalChatId}
@@ -108,11 +108,11 @@ export const ChatList = memo(function ChatListComponent({
               <ul className="flex w-full min-w-0 flex-col gap-1 text-sm">
                 {groupedChats[groupKey].map((chat) => (
                   <ChatItem
-                    activeChatId={activeChatId}
                     handleConfirmDelete={handleConfirmDelete}
                     handleSaveEdit={handleSaveEdit}
                     handleTogglePin={handleTogglePin}
                     id={chat._id}
+                    isActive={chat._id === activeChatId}
                     isPinned={false}
                     key={chat._id}
                     originalChatId={chat.originalChatId}

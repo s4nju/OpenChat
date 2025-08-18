@@ -6,7 +6,7 @@ import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useSidebar } from '@/app/providers/sidebar-provider';
 import { useUser } from '@/app/providers/user-provider';
@@ -43,6 +43,11 @@ const ChatSidebar = memo(function SidebarComponent() {
   const pinChatToggle = useMutation(api.chats.pinChatToggle);
   const { setIsDeleting: setChatIsDeleting, chatId: activeChatId } =
     useChatSession();
+  // Keep a stable ref to the latest activeChatId so callbacks don't change on chat switch
+  const activeChatIdRef = useRef<string | null>(activeChatId);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
   const { user } = useUser();
 
   const router = useRouter();
@@ -98,8 +103,8 @@ const ChatSidebar = memo(function SidebarComponent() {
 
   const handleConfirmDelete = useCallback(
     async (id: Id<'chats'>) => {
-      // Get current chatId at execution time instead of capturing in dependency
-      const isCurrentChat = activeChatId === id;
+      // Determine current chat at execution time to avoid dependency churn
+      const isCurrentChat = activeChatIdRef.current === id;
       if (isCurrentChat) {
         // Signal to the active Chat component that we are deleting it so it can
         // suppress the "Chat not found" toast during the brief race condition
@@ -126,7 +131,7 @@ const ChatSidebar = memo(function SidebarComponent() {
         throw err;
       }
     },
-    [activeChatId, deleteChat, router, setChatIsDeleting]
+    [deleteChat, router, setChatIsDeleting]
   );
 
   const handleTogglePin = useCallback(
