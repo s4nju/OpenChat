@@ -1,6 +1,6 @@
 'use client';
 
-import { ListMagnifyingGlass } from '@phosphor-icons/react';
+import { ListMagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { CommandHistory } from '@/app/components/history/command-history';
 import { DrawerHistory } from '@/app/components/history/drawer-history';
@@ -16,7 +16,7 @@ export function HistoryTrigger() {
       onClick={() => setIsOpen(true)}
       type="button"
     >
-      <ListMagnifyingGlass size={24} />
+      <ListMagnifyingGlassIcon size={24} />
     </button>
   );
 

@@ -4,11 +4,14 @@ import {
   BrainIcon,
   CaretDownIcon,
   EyeIcon,
+  EyeSlashIcon,
   FilePdfIcon,
+  ImagesIcon,
+  KeyIcon,
+  PushPinSimpleIcon,
   SketchLogoIcon,
 } from '@phosphor-icons/react';
 import { useAction } from 'convex/react';
-import { EyeOff, ImagePlus, Key, Pin } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
@@ -73,12 +76,9 @@ export function ModelSelector({
   const isExtended = searchQuery.length > 0 || isExtendedMode;
 
   // Helper function to format display name with subName
-  const getDisplayName = useCallback(
-    (modelName: string, subName?: string) => {
-      return subName ? `${modelName} (${subName})` : modelName;
-    },
-    []
-  );
+  const getDisplayName = useCallback((modelName: string, subName?: string) => {
+    return subName ? `${modelName} (${subName})` : modelName;
+  }, []);
 
   // Optimized model filtering using pre-computed enriched models
   const { normalModeModels, favoritesModels, othersModels, disabledModels } =
@@ -233,7 +233,7 @@ export function ModelSelector({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center">
-                      <Key className="size-3 text-muted-foreground" />
+                      <KeyIcon className="size-3 text-muted-foreground" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -324,7 +324,7 @@ export function ModelSelector({
                     )}
                   >
                     <div className={iconOverlayClasses} />
-                    <ImagePlus
+                    <ImagesIcon
                       className={cn(
                         iconSizeClasses,
                         'relative',
@@ -431,7 +431,7 @@ export function ModelSelector({
               {favoritesModels.length > 0 && (
                 <>
                   <div className="-mb-2 ml-0 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
-                    <Pin className="mt-px size-4" />
+                    <PushPinSimpleIcon className="mt-px size-4" />
                     Favorites
                   </div>
                   {favoritesModels.map((modelOption) => (
@@ -474,7 +474,7 @@ export function ModelSelector({
               {disabledModels.length > 0 && (
                 <>
                   <div className="-mb-2 mt-1 ml-2 flex w-full select-none items-center justify-start gap-1.5 text-color-heading">
-                    <EyeOff className="mt-px size-4" />
+                    <EyeSlashIcon className="mt-px size-4" />
                     Disabled
                   </div>
                   {disabledModels.map((modelOption) => (

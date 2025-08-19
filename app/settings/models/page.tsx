@@ -2,11 +2,15 @@
 
 import {
   BrainIcon,
+  CheckIcon,
   EyeIcon,
   FilePdfIcon,
+  ImagesIcon,
+  KeyIcon,
+  LinkIcon,
   SketchLogoIcon,
+  WrenchIcon,
 } from '@phosphor-icons/react';
-import { Check, ImagePlus, Key, Link as LinkIcon, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
@@ -68,11 +72,11 @@ const FEATURE_INFO: Record<string, FeatureInfo> = {
   },
   'tool-calling': {
     label: 'Tool Calling',
-    icon: Wrench,
+    icon: WrenchIcon,
   },
   'image-generation': {
     label: 'Image Generation',
-    icon: ImagePlus,
+    icon: ImagesIcon,
   },
 };
 
@@ -302,7 +306,7 @@ export default function ModelsPage() {
                         <span>{info.label}</span>
                       </div>
                       <span className="flex h-3.5 w-3.5 items-center justify-center">
-                        {checked && <Check className="h-4 w-4" />}
+                        {checked && <CheckIcon className="h-4 w-4" />}
                       </span>
                     </DropdownMenuItem>
                   );
@@ -320,7 +324,7 @@ export default function ModelsPage() {
                 >
                   <span>Only show free plan models</span>
                   <span className="flex h-3.5 w-3.5 items-center justify-center">
-                    {freeOnly && <Check className="h-4 w-4" />}
+                    {freeOnly && <CheckIcon className="h-4 w-4" />}
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -453,7 +457,7 @@ export default function ModelsPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex items-center">
-                                <Key className="h-3 w-3 text-muted-foreground" />
+                                <KeyIcon className="h-3 w-3 text-muted-foreground" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top">
@@ -533,7 +537,7 @@ export default function ModelsPage() {
                         <span className="flex w-full items-center justify-center">
                           {copied === model.id ? (
                             <>
-                              <Check className="mr-1.5 h-2 w-2" />
+                              <CheckIcon className="mr-1.5 h-2 w-2" />
                               <span>Copied</span>
                             </>
                           ) : (

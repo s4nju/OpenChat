@@ -1,10 +1,10 @@
 'use client';
 
 import { convexQuery } from '@convex-dev/react-query';
+import { InfoIcon } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import dayjs from 'dayjs';
-import { Info } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { formatWeeklyTime, parseWeeklyTime } from '@/app/utils/time-utils';
@@ -297,7 +297,7 @@ export function TaskFormContent({
             <Label htmlFor="timezone">Timezone</Label>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
+                <InfoIcon className="h-4 w-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Tasks will run based on this timezone</p>

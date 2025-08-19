@@ -1,7 +1,12 @@
 'use client';
 
+import {
+  CheckIcon,
+  KeyIcon,
+  TrashSimpleIcon,
+  WarningCircleIcon,
+} from '@phosphor-icons/react';
 import { useMutation } from 'convex/react';
-import { AlertCircle, Check, Key, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
 import { Badge } from '@/components/ui/badge';
@@ -30,17 +35,17 @@ const PROVIDERS = getApiKeyProviders();
 
 // Helper component for delete icon
 function DeleteIcon() {
-  return <Trash2 className="size-4" />;
+  return <TrashSimpleIcon size={18} />;
 }
 
 // Helper component for success checkmark
-function CheckIcon() {
-  return <Check className="size-4 text-green-500" />;
+function CorrectIcon() {
+  return <CheckIcon size={18} />;
 }
 
 // Helper component for error icon
 function ErrorIcon() {
-  return <AlertCircle className="size-3" />;
+  return <WarningCircleIcon size={18} />;
 }
 
 // Helper component for toggle switch
@@ -172,7 +177,7 @@ function ProviderCard({
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold">
-            <Key className="size-4" />
+            <KeyIcon size={18} />
             {providerConfig.title}
           </h3>
           {hasKey && (
@@ -205,7 +210,7 @@ function ProviderCard({
       </div>
       {hasKey ? (
         <div className="flex items-center gap-2 text-sm">
-          <CheckIcon />
+          <CorrectIcon />
           <span>API key configured</span>
         </div>
       ) : (

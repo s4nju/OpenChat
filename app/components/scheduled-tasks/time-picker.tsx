@@ -1,7 +1,7 @@
 'use client';
 
+import { CalendarIcon } from '@phosphor-icons/react';
 import dayjs from 'dayjs';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import {
   convertTo24Hour,
@@ -242,7 +242,10 @@ function TimePickerComponent({
                   ) : (
                     <span>Pick date</span>
                   )}
-                  <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
+                  <CalendarIcon
+                    className="ml-auto h-3 w-3 opacity-50"
+                    weight="duotone"
+                  />
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="z-[101] w-auto p-0">

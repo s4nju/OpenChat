@@ -21,7 +21,6 @@ const nextConfig: NextConfig = {
     useCache: true,
     optimizePackageImports: [
       '@phosphor-icons/react',
-      'lucide-react',
       '@ridemountainpig/svgl-react',
       '@lobehub/icons',
     ],

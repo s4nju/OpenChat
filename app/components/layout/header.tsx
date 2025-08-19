@@ -1,7 +1,6 @@
 'use client';
 
-import { Info, Plus } from '@phosphor-icons/react';
-import { CircleCheckBig } from 'lucide-react';
+import { CheckCircleIcon, InfoIcon, PlusIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -54,7 +53,7 @@ export function Header() {
                     onClick={() => router.push('/')}
                     type="button"
                   >
-                    <Plus size={24} />
+                    <PlusIcon size={24} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>New Chat</TooltipContent>
@@ -70,7 +69,7 @@ export function Header() {
                     onClick={() => router.push('/tasks')}
                     type="button"
                   >
-                    <CircleCheckBig size={20} />
+                    <CheckCircleIcon size={24} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>Tasks</TooltipContent>
@@ -91,7 +90,7 @@ export function Header() {
                   tabIndex={0}
                   type="button"
                 >
-                  <Info
+                  <InfoIcon
                     className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
                     weight="bold"
                   />

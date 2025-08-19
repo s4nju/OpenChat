@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronUpIcon, MinusIcon } from 'lucide-react';
+import { CaretDownIcon, CaretUpIcon, MinusIcon } from '@phosphor-icons/react';
 import type { ComponentProps, ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -118,16 +118,14 @@ export const PillDelta = ({ className, delta }: PillDeltaProps) => {
   }
 
   if (delta > 0) {
-    return (
-      <ChevronUpIcon className={cn('size-3 text-emerald-500', className)} />
-    );
+    return <CaretUpIcon className={cn('size-3 text-emerald-500', className)} />;
   }
 
-  return <ChevronDownIcon className={cn('size-3 text-rose-500', className)} />;
+  return <CaretDownIcon className={cn('size-3 text-rose-500', className)} />;
 };
 
 export type PillIconProps = {
-  icon: typeof ChevronUpIcon;
+  icon: typeof CaretUpIcon;
   className?: string;
 };
 
