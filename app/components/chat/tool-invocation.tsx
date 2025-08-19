@@ -3,7 +3,7 @@
 import { CaretDown, Code, Link, Nut, Spinner } from '@phosphor-icons/react';
 // Note: AI SDK v5 uses ToolUIPart instead of ToolInvocationUIPart
 // We'll use custom types that work with the existing component structure
-import { AnimatePresence, motion, type Transition } from 'framer-motion';
+import { AnimatePresence, motion, type Transition } from 'motion/react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';

@@ -5,7 +5,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { DefaultChatTransport, type FileUIPart } from 'ai';
 import { useConvex } from 'convex/react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

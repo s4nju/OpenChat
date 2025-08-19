@@ -1,7 +1,7 @@
 'use client';
 
 import { CaretDown } from '@phosphor-icons/react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { createContext, useContext, useState } from 'react';
 import { cn } from '@/lib/utils';
 

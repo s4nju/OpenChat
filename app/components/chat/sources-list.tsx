@@ -2,7 +2,7 @@
 
 import { CaretDown, Globe, Link } from '@phosphor-icons/react';
 import type { SourceUrlUIPart } from 'ai';
-import { AnimatePresence, motion, type Transition } from 'framer-motion';
+import { AnimatePresence, motion, type Transition } from 'motion/react';
 import Image from 'next/image';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
