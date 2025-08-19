@@ -5,10 +5,38 @@ import React, { useCallback } from 'react';
 import { MessageUsageCard } from '@/app/components/layout/settings/message-usage-card';
 import { useUser } from '@/app/providers/user-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Kbd } from '@/components/ui/kbd';
+import { Pill } from '@/components/ui/pill';
 import type { Doc } from '@/convex/_generated/dataModel';
+
+// Regex patterns for Google OAuth image URL parameters
+const SIZE_PARAM_REGEX = /sz=\d+/;
+const S96_PARAM_REGEX = /s96-c/;
+
+// Utility function to get high-resolution Google avatar images
+const getHighResolutionAvatarUrl = (imageUrl?: string, size = 192) => {
+  if (!imageUrl) {
+    return;
+  }
+
+  // Handle Google OAuth profile pictures
+  if (imageUrl.includes('googleusercontent.com')) {
+    // Replace common size parameters with higher resolution
+    if (imageUrl.includes('sz=')) {
+      return imageUrl.replace(SIZE_PARAM_REGEX, `sz=${size}`);
+    }
+    if (imageUrl.includes('s96-c')) {
+      return imageUrl.replace(S96_PARAM_REGEX, `s${size}-c`);
+    }
+    // If no size parameter, add one
+    const separator = imageUrl.includes('?') ? '&' : '?';
+    return `${imageUrl}${separator}sz=${size}`;
+  }
+
+  // For other providers, return original URL
+  return imageUrl;
+};
 
 // Get the display name - prefer preferredName over full name
 const getDisplayName = (user: Doc<'users'> | null): string => {
@@ -32,6 +60,12 @@ function SettingsSidebarComponent() {
     }
     return localStorage.getItem('showEmail') === 'true';
   });
+
+  // Memoize the high-resolution avatar URL
+  const highResAvatarUrl = React.useMemo(
+    () => getHighResolutionAvatarUrl(user?.image, 384),
+    [user?.image]
+  );
 
   // Memoize the email masking function
   const maskEmail = useCallback((email?: string) => {
@@ -62,13 +96,17 @@ function SettingsSidebarComponent() {
       <div className="flex flex-col items-center text-center">
         <div className="relative mb-4">
           <Avatar className="h-40 w-40">
-            <AvatarImage alt="Profile" src={user?.image} />
+            <AvatarImage
+              alt="Profile"
+              className="object-cover"
+              src={highResAvatarUrl}
+            />
             <AvatarFallback>
               <User className="size-20 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
         </div>
-        <h2 className="font-semibold text-xl">{getDisplayName(user)}</h2>
+        <h2 className="font-bold text-2xl">{getDisplayName(user)}</h2>
         <button
           className="flex items-center gap-1 text-muted-foreground text-sm"
           onClick={toggleEmailVisibility}
@@ -77,13 +115,11 @@ function SettingsSidebarComponent() {
           <span>{showEmail ? user.email : maskEmail(user.email)}</span>
           {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
         </button>
-        {hasPremium && (
-          <div className="mt-2">
-            <Badge className="font-bold" variant="secondary">
-              Pro Plan
-            </Badge>
-          </div>
-        )}
+        <div className="mt-2">
+          <Pill className="px-2 py-0.5 font-medium text-xs" variant="secondary">
+            {hasPremium ? 'Pro Plan' : 'Free Plan'}
+          </Pill>
+        </div>
       </div>
 
       {/* Message Usage */}
