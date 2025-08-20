@@ -56,6 +56,8 @@ const FILE_UPLOAD_MODELS = [
   'gpt-5-mini',
   'gpt-5-nano',
 
+  'glm-4.5v',
+
   // Google models
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
