@@ -73,6 +73,9 @@ export const PromptSystem = memo(function PromptSystemComponent({
           transform: isSidebarOpen ? 'translateX(128px)' : 'translateX(0px)',
         }}
         className="md:-translate-x-1/2 relative right-0 bottom-0 left-0 mx-auto mb-4 flex h-8 w-auto items-center justify-center rounded-lg p-1 md:fixed md:bottom-0 md:left-1/2"
+        initial={{
+          transform: isSidebarOpen ? 'translateX(128px)' : 'translateX(0px)',
+        }}
         transition={TRANSITION_LAYOUT}
       >
         <div className="relative flex h-full flex-row gap-3">

@@ -211,6 +211,11 @@ const ChatSidebar = memo(function SidebarComponent() {
               }}
               aria-label="Search"
               className="group pointer-events-auto ml-1 flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              initial={{
+                x: isOpen ? -8 : 0,
+                scale: isOpen ? 0.5 : 1,
+                opacity: isOpen ? 0 : 1,
+              }}
               onClick={handleSearchButtonClick}
               style={{ pointerEvents: isOpen ? 'none' : 'auto' }}
               tabIndex={isOpen ? -1 : 0}
@@ -239,6 +244,11 @@ const ChatSidebar = memo(function SidebarComponent() {
                 }}
                 aria-label="New chat"
                 className="group pointer-events-auto ml-1 flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                initial={{
+                  x: isOpen ? -8 : 0,
+                  scale: isOpen ? 0.5 : 1,
+                  opacity: isOpen ? 0 : 1,
+                }}
                 onClick={handleNewChatClick}
                 style={{ pointerEvents: isOpen ? 'none' : 'auto' }}
                 tabIndex={isOpen ? -1 : 0}
@@ -265,11 +275,17 @@ const ChatSidebar = memo(function SidebarComponent() {
           width: isOpen ? 256 : 0,
         }}
         className="flex h-dvh flex-col overflow-hidden border-muted-foreground/10 border-r bg-background shadow-lg"
+        initial={{
+          width: isOpen ? 256 : 0,
+        }}
         transition={TRANSITION_LAYOUT}
       >
         <div className="flex h-[60px] shrink-0 items-center justify-center pt-1">
           <motion.div
             animate={{
+              opacity: isOpen ? 1 : 0,
+            }}
+            initial={{
               opacity: isOpen ? 1 : 0,
             }}
             transition={{
@@ -294,6 +310,9 @@ const ChatSidebar = memo(function SidebarComponent() {
             opacity: isOpen ? 1 : 0,
           }}
           className="flex shrink-0 flex-col gap-3 px-4 pt-4 pb-0"
+          initial={{
+            opacity: isOpen ? 1 : 0,
+          }}
           transition={{
             ...TRANSITION_LAYOUT,
             delay: isOpen ? 0.15 : 0,
@@ -337,6 +356,9 @@ const ChatSidebar = memo(function SidebarComponent() {
             opacity: isOpen ? 1 : 0,
           }}
           className="flex flex-grow flex-col overflow-y-auto px-4 pt-4 pb-4"
+          initial={{
+            opacity: isOpen ? 1 : 0,
+          }}
           transition={{
             ...TRANSITION_LAYOUT,
             delay: isOpen ? 0.15 : 0,
