@@ -4,6 +4,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -25,11 +26,8 @@ import {
   hasChatsInGroup,
 } from '@/lib/chat-utils/time-grouping';
 import { APP_NAME } from '@/lib/config';
+import { TRANSITION_LAYOUT } from '@/lib/motion';
 import { ChatList } from './chat-list';
-
-// Helper function for conditional classes
-const cn = (...classes: (string | boolean | undefined)[]) =>
-  classes.filter(Boolean).join(' ');
 
 const ChatSidebar = memo(function SidebarComponent() {
   const { isSidebarOpen: isOpen, toggleSidebar } = useSidebar();
@@ -205,38 +203,56 @@ const ChatSidebar = memo(function SidebarComponent() {
         {/* Animated search and new chat buttons in collapsed state only */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <motion.button
+              animate={{
+                x: isOpen ? -8 : 0,
+                scale: isOpen ? 0.5 : 1,
+                opacity: isOpen ? 0 : 1,
+              }}
               aria-label="Search"
-              className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-[transform,opacity] duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
+              className="group pointer-events-auto ml-1 flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               onClick={handleSearchButtonClick}
-              style={{ transitionDelay: isOpen ? '0ms' : '100ms' }}
+              style={{ pointerEvents: isOpen ? 'none' : 'auto' }}
               tabIndex={isOpen ? -1 : 0}
+              transition={{
+                ...TRANSITION_LAYOUT,
+                delay: isOpen ? 0 : 0.1,
+              }}
               type="button"
             >
               <MagnifyingGlass
                 className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
                 weight="bold"
               />
-            </button>
+            </motion.button>
           </TooltipTrigger>
           <TooltipContent>Search</TooltipContent>
         </Tooltip>
-        {!(pathname === '/' && !isOpen) && (
+        {pathname !== '/' && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <motion.button
+                animate={{
+                  x: isOpen ? -8 : 0,
+                  scale: isOpen ? 0.5 : 1,
+                  opacity: isOpen ? 0 : 1,
+                }}
                 aria-label="New chat"
-                className={`group ml-1 flex items-center justify-center rounded-full p-2 outline-none transition-[transform,opacity] duration-300 ease-in-out hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${isOpen ? '-translate-x-2 pointer-events-none scale-50 opacity-0' : 'translate-x-0 scale-100 opacity-100'}`}
+                className="group pointer-events-auto ml-1 flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 onClick={handleNewChatClick}
-                style={{ transitionDelay: isOpen ? '0ms' : '200ms' }}
+                style={{ pointerEvents: isOpen ? 'none' : 'auto' }}
                 tabIndex={isOpen ? -1 : 0}
+                transition={{
+                  ...TRANSITION_LAYOUT,
+                  delay: isOpen ? 0 : 0.1,
+                }}
                 type="button"
               >
                 <Plus
                   className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
                   weight="bold"
                 />
-              </button>
+              </motion.button>
             </TooltipTrigger>
             <TooltipContent>New Chat</TooltipContent>
           </Tooltip>
@@ -244,30 +260,44 @@ const ChatSidebar = memo(function SidebarComponent() {
       </div>
 
       {/* The actual sidebar panel - NO LONGER FIXED or TRANSLATING */}
-      <aside
-        className={cn(
-          'flex h-dvh flex-col overflow-hidden border-muted-foreground/10 border-r bg-background shadow-lg',
-          isOpen ? 'w-64' : 'w-0',
-          'transition-[width] duration-300 ease-in-out'
-        )}
+      <motion.aside
+        animate={{
+          width: isOpen ? 256 : 0,
+        }}
+        className="flex h-dvh flex-col overflow-hidden border-muted-foreground/10 border-r bg-background shadow-lg"
+        transition={TRANSITION_LAYOUT}
       >
         <div className="flex h-[60px] shrink-0 items-center justify-center pt-1">
-          <Link
-            className="font-medium text-lg lowercase tracking-tight"
-            href="/"
-            prefetch
+          <motion.div
+            animate={{
+              opacity: isOpen ? 1 : 0,
+            }}
+            transition={{
+              duration: 0.15,
+              ease: 'easeInOut',
+              delay: isOpen ? 0.1 : 0,
+            }}
           >
-            {APP_NAME}
-          </Link>
+            <Link
+              className="font-medium text-lg lowercase tracking-tight"
+              href="/"
+              prefetch
+            >
+              {APP_NAME}
+            </Link>
+          </motion.div>
         </div>
 
         {/* Fixed Action Buttons Section - New Chat, Tasks, Search */}
-        <div
-          className={cn(
-            'flex shrink-0 flex-col gap-3 px-4 pt-4 pb-0',
-            'transition-opacity duration-300 ease-in-out',
-            isOpen ? 'opacity-100 delay-150' : 'opacity-0'
-          )}
+        <motion.div
+          animate={{
+            opacity: isOpen ? 1 : 0,
+          }}
+          className="flex shrink-0 flex-col gap-3 px-4 pt-4 pb-0"
+          transition={{
+            ...TRANSITION_LAYOUT,
+            delay: isOpen ? 0.15 : 0,
+          }}
         >
           <Button
             className="h-9 w-full justify-center font-bold text-sm"
@@ -299,15 +329,18 @@ const ChatSidebar = memo(function SidebarComponent() {
               value={searchQuery}
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* Scrollable Chat List Section */}
-        <div
-          className={cn(
-            'flex flex-grow flex-col overflow-y-auto px-4 pt-4 pb-4',
-            'transition-opacity duration-300 ease-in-out',
-            isOpen ? 'opacity-100 delay-150' : 'opacity-0'
-          )}
+        <motion.div
+          animate={{
+            opacity: isOpen ? 1 : 0,
+          }}
+          className="flex flex-grow flex-col overflow-y-auto px-4 pt-4 pb-4"
+          transition={{
+            ...TRANSITION_LAYOUT,
+            delay: isOpen ? 0.15 : 0,
+          }}
         >
           {chatsLoading && chats.length === 0 ? (
             <div className="space-y-2">
@@ -331,8 +364,8 @@ const ChatSidebar = memo(function SidebarComponent() {
               pinnedChats={pinnedChats}
             />
           )}
-        </div>
-      </aside>
+        </motion.div>
+      </motion.aside>
     </div>
   );
 });

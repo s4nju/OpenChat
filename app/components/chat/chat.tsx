@@ -35,6 +35,7 @@ import {
   createModelValidator,
   supportsReasoningEffort,
 } from '@/lib/model-utils';
+import { TRANSITION_LAYOUT } from '@/lib/motion';
 import { API_ROUTE_CHAT } from '@/lib/routes';
 import {
   getDisplayName,
@@ -652,7 +653,12 @@ export default function Chat() {
         )}
         layout="position"
         layoutId="chat-input-container"
-        transition={{ layout: { duration: messages.length === 1 ? 0.3 : 0 } }}
+        transition={{
+          layout: {
+            ...TRANSITION_LAYOUT,
+            duration: messages.length === 1 ? 0.2 : 0,
+          },
+        }}
       >
         <ChatInput
           files={files}

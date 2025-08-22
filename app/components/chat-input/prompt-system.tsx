@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useMemo, useState } from 'react';
 import { useSidebar } from '@/app/providers/sidebar-provider';
+import { TRANSITION_LAYOUT } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { Personas } from './personas';
 import { Suggestions } from './suggestions';
@@ -67,13 +68,12 @@ export const PromptSystem = memo(function PromptSystemComponent({
           )}
         </AnimatePresence>
       </div>
-      <div
-        className={cn(
-          'relative right-0 bottom-0 left-0 mx-auto mb-4 flex h-8 w-auto items-center justify-center rounded-lg p-1 md:fixed md:bottom-0',
-          isSidebarOpen
-            ? 'md:-translate-x-1/2 md:left-[calc(50%+128px)]'
-            : 'md:-translate-x-1/2 md:left-1/2'
-        )}
+      <motion.div
+        animate={{
+          transform: isSidebarOpen ? 'translateX(128px)' : 'translateX(0px)',
+        }}
+        className="md:-translate-x-1/2 relative right-0 bottom-0 left-0 mx-auto mb-4 flex h-8 w-auto items-center justify-center rounded-lg p-1 md:fixed md:bottom-0 md:left-1/2"
+        transition={TRANSITION_LAYOUT}
       >
         <div className="relative flex h-full flex-row gap-3">
           {tabs.map((tab) => (
@@ -113,7 +113,7 @@ export const PromptSystem = memo(function PromptSystemComponent({
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 });
