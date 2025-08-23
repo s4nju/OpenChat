@@ -2,8 +2,10 @@
 
 import { CaretDown, Globe, SpinnerGap } from '@phosphor-icons/react';
 import type { SourceUrlUIPart } from 'ai';
+import { motion } from 'motion/react';
 import Image from 'next/image';
 import { memo, useCallback, useMemo, useState } from 'react';
+import { TRANSITION_LAYOUT } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 // Regex constants moved to top level for performance
@@ -129,11 +131,8 @@ export const UnifiedSearch = memo<UnifiedSearchProps>(
     }, [isExpanded]);
 
     const resultsClassName = useMemo(() => {
-      return cn(
-        'shrink-0 overflow-hidden transition-all duration-300 ease-out',
-        isExpanded ? 'opacity-100' : 'h-0 opacity-0'
-      );
-    }, [isExpanded]);
+      return 'shrink-0 overflow-hidden';
+    }, []);
 
     // Memoized event handlers to prevent child rerenders
     const handleToggleExpanded = useCallback(() => {
@@ -187,12 +186,18 @@ export const UnifiedSearch = memo<UnifiedSearchProps>(
 
           {/* Collapsible Results - Only show when not loading and has sources */}
           {!isLoading && sources.length > 0 && (
-            <div
-              className={resultsClassName}
-              style={{
+            <motion.div
+              animate={{
                 height: isExpanded ? 'auto' : 0,
+                opacity: isExpanded ? 1 : 0,
+              }}
+              className={resultsClassName}
+              initial={{
+                height: isExpanded ? 'auto' : 0,
+                opacity: isExpanded ? 1 : 0,
               }}
               tabIndex={-1}
+              transition={TRANSITION_LAYOUT}
             >
               <div className="bg-gradient-to-b from-transparent via-transparent to-transparent">
                 <div
@@ -209,7 +214,7 @@ export const UnifiedSearch = memo<UnifiedSearchProps>(
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

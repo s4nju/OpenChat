@@ -1,4 +1,4 @@
-import { groq } from '@ai-sdk/groq';
+import { gateway } from '@ai-sdk/gateway';
 import { FILE_UPLOAD_FEATURE, TOOL_CALLING_FEATURE } from '../features';
 
 export const META_MODELS = [
@@ -11,7 +11,7 @@ export const META_MODELS = [
     description: `Meta's first natively multimodal model with 400B parameters.\nOffers industry-leading 10M token context window.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [FILE_UPLOAD_FEATURE, TOOL_CALLING_FEATURE],
-    api_sdk: groq('meta-llama/llama-4-maverick-17b-128e-instruct'),
+    api_sdk: gateway('meta/llama-4-maverick'),
   },
   {
     id: 'meta-llama/llama-4-scout',
@@ -23,6 +23,6 @@ export const META_MODELS = [
       'Efficient multimodal model fitting on single H100 GPU.\nBest-in-class performance with 17B active parameters.',
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
     features: [FILE_UPLOAD_FEATURE, TOOL_CALLING_FEATURE],
-    api_sdk: groq('meta-llama/llama-4-scout-17b-16e-instruct'),
+    api_sdk: gateway('meta/llama-4-scout'),
   },
 ];

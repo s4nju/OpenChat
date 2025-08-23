@@ -1,5 +1,3 @@
-// import { groq } from '@ai-sdk/groq';
-
 import { REASONING_FEATURE, TOOL_CALLING_FEATURE } from '../features';
 import { openrouter } from '../openrouter';
 

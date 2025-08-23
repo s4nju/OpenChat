@@ -1,9 +1,11 @@
 'use client';
 
 import { CaretDown, Copy, SpinnerGap } from '@phosphor-icons/react';
+import { motion } from 'motion/react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectorIcon } from '@/app/components/common/connector-icon';
 import { getConnectorConfig } from '@/lib/config/tools';
+import { TRANSITION_LAYOUT } from '@/lib/motion';
 import type { ConnectorType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -179,18 +181,12 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
     }, [isLoading]);
 
     const caretClassName = useMemo(() => {
-      return cn(
-        'flex transform items-center justify-center text-muted-foreground transition-transform duration-400 ease-out',
-        isExpanded ? '-rotate-180' : 'rotate-0'
-      );
-    }, [isExpanded]);
+      return 'flex items-center justify-center text-muted-foreground';
+    }, []);
 
     const resultsClassName = useMemo(() => {
-      return cn(
-        'shrink-0 overflow-hidden transition-all duration-400 ease-out',
-        isExpanded ? 'opacity-100' : 'opacity-0'
-      );
-    }, [isExpanded]);
+      return 'shrink-0 overflow-hidden';
+    }, []);
 
     const handleToggleExpanded = useCallback(() => {
       if (!isLoading) {
@@ -237,9 +233,18 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
                   <div className="shrink-0 whitespace-nowrap text-muted-foreground text-sm leading-tight">
                     {connectorConfig.displayName}
                   </div>
-                  <div className={cn(caretClassName, 'h-4 w-4')}>
+                  <motion.div
+                    animate={{
+                      rotate: isExpanded ? -180 : 0,
+                    }}
+                    className={cn(caretClassName, 'h-4 w-4')}
+                    initial={{
+                      rotate: isExpanded ? -180 : 0,
+                    }}
+                    transition={TRANSITION_LAYOUT}
+                  >
                     <CaretDown size={20} />
-                  </div>
+                  </motion.div>
                 </>
               )}
             </div>
@@ -247,21 +252,20 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
 
           {/* Collapsible Results */}
           {!isLoading && (
-            <div
-              className={resultsClassName}
-              style={{
+            <motion.div
+              animate={{
                 height: isExpanded ? 'auto' : 0,
+                opacity: isExpanded ? 1 : 0,
+              }}
+              className={resultsClassName}
+              initial={{
+                height: isExpanded ? 'auto' : 0,
+                opacity: isExpanded ? 1 : 0,
               }}
               tabIndex={-1}
+              transition={TRANSITION_LAYOUT}
             >
-              <div
-                style={{
-                  WebkitMaskImage:
-                    'linear-gradient(transparent 0%, black 16px, black calc(100% - 16px), transparent 100%)',
-                  maskImage:
-                    'linear-gradient(transparent 0%, black 16px, black calc(100% - 16px), transparent 100%)',
-                }}
-              >
+              <div>
                 <div
                   className="h-full max-h-[238px] overflow-y-auto overflow-x-hidden"
                   style={{ scrollbarGutter: 'stable' }}
@@ -359,7 +363,7 @@ export const ConnectorToolCall = memo<ConnectorToolCallProps>(
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
