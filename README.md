@@ -4,7 +4,7 @@
 
 **OpenChat** is a free, open-source AI chat application that provides a seamless interface for multiple language models in one place.
 
-![OpenChat screenshot](./public/cover_openchat.jpg)
+![OpenChat — Open-source AI chat app (oschat.ai)](./app/opengraph-image.png)
 
 ## ✨ Features
 

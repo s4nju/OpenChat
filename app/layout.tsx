@@ -109,7 +109,7 @@ export const metadata: Metadata = {
     siteName: APP_NAME,
     images: [
       {
-        url: '/opengraph-image.jpg',
+        url: '/opengraph-image.png',
         width: 1200,
         height: 630,
         alt: APP_DESCRIPTION,
@@ -122,7 +122,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: META_TITLE,
     description: APP_DESCRIPTION,
-    images: ['/opengraph-image.jpg'],
+    images: ['/opengraph-image.png'],
   },
 };
 
