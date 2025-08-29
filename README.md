@@ -9,7 +9,8 @@
 ## ✨ Features
 
 ### 🤖 AI & Models
-- **30+ AI Models** - Access OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek, xAI, and Moonshot models
+
+- **40+ AI Models** - Access OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek, xAI, Moonshot, zAI, and Qwen models
 - **Multi-modal Support** - Text, images, and reasoning across all supported models
 - **Image Generation** - Create high-quality images with GPT Image 1, Imagen 4, and Flux Schnell
 - **Reasoning Models** - View AI thinking process with o3, Claude 4, Gemini Thinking, and DeepSeek R1
@@ -17,6 +18,7 @@
 - **Web Search Integration** - Real-time internet search using Exa, Tavily, and Brave APIs
 
 ### 💬 Chat Management
+
 - **Smart Organization** - Automatic grouping by Today, Yesterday, Last 7 Days, etc.
 - **Pinned Chats** - Keep important conversations at the top
 - **Chat Branching** - Create alternative conversation paths from any assistant message
@@ -25,6 +27,7 @@
 - **Data Portability** - Export/import chat history with full data control
 
 ### 🎨 Interface & Experience
+
 - **Responsive Design** - Beautiful interface that works on desktop and mobile
 - **Advanced Sidebar** - Collapsible chat sidebar with search, pinning, and organization
 - **Theme System** - Beautiful light and dark modes with smooth transitions
@@ -33,6 +36,7 @@
 - **Mobile Optimized** - Drawer-based navigation for seamless mobile experience
 
 ### ⚙️ Customization & Settings
+
 - **User Personalization** - Set name, occupation, and personality traits for AI interactions
 - **Comprehensive Settings** - Dedicated pages for account, customization, history, and attachments
 - **Message Usage Tracking** - Clear visibility into daily/monthly limits and premium credits
@@ -40,24 +44,29 @@
 - **Prompt Suggestions** - Contextual prompt ideas to inspire conversations
 
 ### 💳 Premium Features
+
 - **Payments & Subscriptions** - Integrated billing with Polar for premium model access
-- **Premium Credits** - Access to advanced models like Claude 4 Sonnet, o3 and more
+- **Premium Credits** - Access to advanced models like GPT-5, Claude 4 Sonnet, o3 and more
 
 ## 🤖 Available Models
 
-OpenChat supports 30+ AI models across multiple providers:
+OpenChat supports 40+ AI models across multiple providers:
 
 ### 💬 Text & Chat Models
-- **OpenAI**: GPT-4o, GPT-4o Mini, o4 Mini, o3, o3 Pro, GPT-4.1, GPT-4.1 Mini, GPT-4.1 Nano, GPT-4.5
-- **Anthropic**: Claude 4 Sonnet, Claude 4 Opus, Claude 3.7 Sonnet, Claude 3.5 Sonnet (with reasoning variants)
-- **Google**: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.0 Flash series (with thinking variants)
+
+- **OpenAI**: GPT-5, GPT-5 Mini, GPT-5 Nano, GPT OSS 20B, GPT OSS 120B, GPT-4o, GPT-4o Mini, o4 Mini, o3, o3 Pro, GPT-4.1, GPT-4.1 Mini, GPT-4.1 Nano, GPT-4.5
+- **Anthropic**: Claude 4 Opus, Claude 4 Sonnet (with reasoning), Claude 3.7 Sonnet (with reasoning), Claude 3.5 Sonnet
+- **Google**: Gemini 2.5 Pro, Gemini 2.5 Flash (with thinking), Gemini 2.5 Flash Lite (with thinking), Gemini 2.0 Flash, Gemini 2.0 Flash Lite
 - **Meta**: Llama 4 Maverick, Llama 4 Scout
 - **Mistral**: Pixtral Large, Mistral Large
-- **DeepSeek**: DeepSeek V3, DeepSeek R1
-- **xAI**: Grok 3, Grok 3 Mini
+- **DeepSeek**: DeepSeek V3.1 (with reasoning), DeepSeek V3 0324, DeepSeek R1 (0528), DeepSeek R1 Distill Llama 70B
+- **xAI**: Grok 4, Grok 3, Grok 3 Mini
 - **Moonshot**: Kimi K2
+- **zAI**: GLM 4.5, GLM 4.5 Air, GLM 4.5V
+- **Qwen**: Qwen3 Coder, Qwen3 235B (with thinking), Qwen3 235B
 
 ### 🎨 Image Generation
+
 - **OpenAI**: GPT Image 1
 - **Google**: Imagen 4, Imagen 4 Ultra
 - **Fal**: Flux Schnell
@@ -70,10 +79,10 @@ OpenChat supports 30+ AI models across multiple providers:
 - [motion-primitives](https://motion-primitives.com) - Smooth animations and transitions
 - [Vercel AI SDK](https://vercel.com/blog/introducing-the-vercel-ai-sdk) - Model integration and streaming
 - [Convex](https://convex.dev) - Real-time backend, authentication, and database
+- [Cloudflare R2](https://developers.cloudflare.com/r2/) - Object storage for file attachments
 - [Polar](https://polar.sh/) - Payments and subscriptions
 - [Phosphor Icons](https://phosphoricons.com) - Beautiful icon system
 - [Tailwind CSS](https://tailwindcss.com) - Utility-first CSS framework
-
 
 ## 🗺️ Roadmap
 
@@ -94,6 +103,7 @@ OpenChat supports 30+ AI models across multiple providers:
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+ or Bun (recommended)
 - Git
 - A Convex account (free tier available)
@@ -115,9 +125,6 @@ bun install
 OpenChat uses [Convex](https://convex.dev) for real-time backend, authentication, and database management.
 
 ```bash
-# Install Convex CLI globally
-bun add -g convex
-
 # Login to Convex (creates account if needed)
 bunx convex login
 
@@ -126,6 +133,7 @@ bunx convex dev --once
 ```
 
 This will:
+
 - Create a new Convex project in your dashboard
 - Generate a `convex/` directory with your schema
 - Create a `.env.local` file with your Convex deployment URLs
@@ -145,24 +153,32 @@ cat .env.example
 ```
 
 Manually add these to your existing `.env.local` file:
+
 - AI model API keys (OpenAI, Google, Anthropic, xAI, etc.)
-- Analytics keys (PostHog, Umami) 
+- Analytics keys (PostHog, Umami)
 - Search provider keys (Exa)
 - Other configuration from `.env.example`
 
-### 4. Set up Authentication
+### 4. Set up Convex Configuration
+
+Configure the required and optional Convex environment variables for your application.
+
+#### A. Authentication (Required)
 
 OpenChat uses Convex Auth for authentication with Google OAuth.
 
 1. **Initialize Convex Auth:**
+
    ```bash
    # Initialize Convex Auth setup
    bunx @convex-dev/auth
    ```
 
 2. **Set up Google OAuth:**
+
    - Follow the [Google OAuth Setup Guide](https://labs.convex.dev/auth/config/oauth/google)
    - Set your Google OAuth credentials in Convex:
+
    ```bash
    # Set Google OAuth credentials
    bunx convex env set AUTH_GOOGLE_ID your-google-client-id
@@ -170,26 +186,68 @@ OpenChat uses Convex Auth for authentication with Google OAuth.
    ```
 
 3. **Set Required Environment Variables:**
+
    ```bash
    # Generate and set API key encryption secret in Convex (REQUIRED)
    bunx convex env set API_KEY_SECRET $(openssl rand -hex 64)
-   
+
    # Set site URL for development
    bunx convex env set SITE_URL http://localhost:3000
    ```
 
-4. **Optional: Set up Polar Payments:**
+#### B. Cloudflare R2 Storage (Required for file uploads)
+
+OpenChat uses Cloudflare R2 for file attachments and image storage.
+
+1. **Create a Public Cloudflare R2 Bucket:**
+
+   - Sign up for a [Cloudflare account](https://dash.cloudflare.com/sign-up)
+   - Navigate to R2 Object Storage in your dashboard
+   - Create a new bucket (e.g., `openchat-files`)
+   - **Important**: Configure the bucket for public access:
+     - Go to Settings > Public Access
+     - Enable "Allow public access"
+     - Set up a custom domain or use the R2.dev subdomain
+   - Configure CORS to allow GET and PUT requests from your domain
+
+2. **Generate R2 API Credentials:**
+
+   - Go to R2 > Manage R2 API tokens
+   - Create a new API token with Object Read & Write permissions
+   - Save the Access Key ID and Secret Access Key
+
+3. **Set R2 Environment Variables in Convex:**
+
    ```bash
-   # Set Polar environment variables (optional)
-   bunx convex env set POLAR_ORGANIZATION_TOKEN your-polar-organization-token
-   bunx convex env set POLAR_PREMIUM_PRODUCT_ID your-product-id
-   bunx convex env set POLAR_WEBHOOK_SECRET your-polar-webhook-secret
+   # Required R2 configuration
+   bunx convex env set R2_BUCKET your-bucket-name
+   bunx convex env set R2_TOKEN your-r2-api-token
+   bunx convex env set R2_ACCESS_KEY_ID your-access-key-id
+   bunx convex env set R2_SECRET_ACCESS_KEY your-secret-access-key
+   bunx convex env set R2_ENDPOINT https://your-account-id.r2.cloudflarestorage.com
+
+   # Required: Public URL for serving files
+   # Use your custom domain or R2.dev subdomain
+   bunx convex env set R2_PUBLIC_URL_BASE https://your-bucket.your-domain.com/
+   # or
+   # bunx convex env set R2_PUBLIC_URL_BASE https://pub-xxxxx.r2.dev/
    ```
 
-5. **Reference**: For detailed setup instructions, see:
-   - [Convex Auth Setup Guide](https://labs.convex.dev/auth/setup)
-   - [Google OAuth Configuration](https://labs.convex.dev/auth/config/oauth/google)
-   - [Polar Component Documentation](https://www.convex.dev/components/polar)
+#### C. Polar Payments (Optional)
+
+```bash
+# Set Polar environment variables (optional)
+bunx convex env set POLAR_ORGANIZATION_TOKEN your-polar-organization-token
+bunx convex env set POLAR_PREMIUM_PRODUCT_ID your-product-id
+bunx convex env set POLAR_WEBHOOK_SECRET your-polar-webhook-secret
+```
+
+**Reference Documentation:**
+
+- [Convex Auth Setup Guide](https://labs.convex.dev/auth/setup)
+- [Google OAuth Configuration](https://labs.convex.dev/auth/config/oauth/google)
+- [Cloudflare R2 Component](https://www.convex.dev/components/cloudflare-r2)
+- [Polar Component Documentation](https://www.convex.dev/components/polar)
 
 ### 5. Deploy Convex Functions
 
@@ -217,15 +275,17 @@ Visit [http://localhost:3000](http://localhost:3000) to see OpenChat running loc
 For production deployment:
 
 1. **Deploy Convex**:
+
    ```bash
    bunx convex deploy --prod
    ```
 
 2. **Deploy Frontend** (Vercel recommended):
+
    ```bash
    # Install Vercel CLI
    bun add -g vercel
-   
+
    # Deploy to Vercel
    vercel --prod
    ```
@@ -237,23 +297,35 @@ For production deployment:
 ### Troubleshooting
 
 **Convex Connection Issues**:
+
 - Ensure you're logged into Convex: `bunx convex login`
 - Check your deployment URL in `.env.local`
 - Run `bunx convex dev` to sync functions
 
 **Authentication Issues**:
+
 - Verify OAuth credentials in Convex dashboard
 - Check `SITE_URL` matches your development/production URL
 - Ensure Convex Auth is properly configured
 
 **API Key Issues**:
+
 - Verify API keys are correctly set in `.env.local`
 - Check API key permissions and quotas
 
+**File Upload Issues**:
+
+- Ensure R2 bucket is configured for public access
+- Verify R2_PUBLIC_URL_BASE is set correctly with trailing slash
+- Check CORS settings allow your domain
+- Confirm all R2 environment variables are set in Convex
+
 **Need Help?**
+
 - Check the [Convex Documentation](https://docs.convex.dev)
 - Review the [Convex Auth Setup Guide](https://labs.convex.dev/auth/setup)
 - See [Google OAuth Configuration](https://labs.convex.dev/auth/config/oauth/google) for authentication
+- Configure [Cloudflare R2](https://www.convex.dev/components/cloudflare-r2) for file storage
 - Get an [Exa API key](https://exa.ai/) for web search functionality
 - Set up [Polar payments](https://www.convex.dev/components/polar) for premium features
 - Open an issue in this repository
@@ -263,11 +335,13 @@ For production deployment:
 We welcome contributions! OpenChat is built with modern web technologies and follows best practices for maintainability and performance.
 
 ### Setup for Contributors
+
 1. Fork the repository
 2. Follow the [Getting Started](#🚀-getting-started) guide above to set up your development environment
 3. Create your feature branch (`git checkout -b feature/amazing-feature`)
 
 ### Development Guidelines
+
 - Follow the existing code style and patterns
 - Add tests for new features when applicable
 - Update documentation for user-facing changes
@@ -275,11 +349,13 @@ We welcome contributions! OpenChat is built with modern web technologies and fol
 - Test keyboard shortcuts and accessibility features
 
 ### Submitting Changes
+
 1. Commit your changes (`git commit -m 'Add some amazing feature'`)
 2. Push to the branch (`git push origin feature/amazing-feature`)
 3. Open a Pull Request with a clear description of changes
 
 ### Areas I'd Love Help With
+
 - Stream resuming using Redis
 - Performance optimizations
 
