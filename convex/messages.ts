@@ -1,5 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { R2 } from '@convex-dev/r2';
 import { v } from 'convex/values';
+import { components } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import {
   internalMutation,
@@ -58,20 +60,21 @@ async function cleanupMessageAttachments(
 async function cleanupSingleAttachment(
   ctx: MutationCtx,
   chatId: Id<'chats'>,
-  fileName: string,
+  keyString: string,
   userId: Id<'users'>
 ) {
+  const r2 = new R2(components.r2);
   try {
     // This uses .filter() correctly - first narrows by index (by_chatId), then filters by fileName
     // See: https://docs.convex.dev/database/indexes/ - "For all other filtering you can use the .filter method"
     const attachment = await ctx.db
       .query('chat_attachments')
       .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
-      .filter((q) => q.eq(q.field('fileName'), fileName))
+      .filter((q) => q.eq(q.field('key'), keyString))
       .first();
 
     if (attachment && attachment.userId === userId) {
-      await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
+      await r2.deleteObject(ctx, attachment.key);
       await ctx.db.delete(attachment._id);
     }
   } catch (_error) {
@@ -112,6 +115,7 @@ async function cleanupOrphanedAttachments(
   ctx: MutationCtx,
   chatId: Id<'chats'>
 ) {
+  const r2 = new R2(components.r2);
   const orphanedAttachments = await ctx.db
     .query('chat_attachments')
     .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
@@ -120,7 +124,7 @@ async function cleanupOrphanedAttachments(
   const cleanupPromises = orphanedAttachments.map(
     async (attachment: Doc<'chat_attachments'>) => {
       try {
-        await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
+        await r2.deleteObject(ctx, attachment.key);
         await ctx.db.delete(attachment._id);
       } catch (_error) {
         // Silently continue with other cleanup

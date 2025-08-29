@@ -1,22 +1,22 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { R2 } from '@convex-dev/r2';
 import { ConvexError, v } from 'convex/values';
 import { ERROR_CODES } from '../lib/error-codes';
-import { api } from './_generated/api';
+import { api, components } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import { action, mutation, query } from './_generated/server';
 
-/**
- * Generates a secure URL for uploading a file to Convex storage.
- */
-export const generateUploadUrl = action({
-  args: {},
-  returns: v.string(),
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+// R2 client and client API exports (used by React upload hook and server routes)
+const r2 = new R2(components.r2);
+
+const TRAILING_SLASH_RE = /\/$/;
+
+export const { generateUploadUrl, syncMetadata } = r2.clientApi({
+  checkUpload: async (ctx) => {
+    const userId = await getAuthUserId(ctx as never);
     if (!userId) {
       throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
-    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -87,9 +87,11 @@ type SavedAttachment = {
   _creationTime: number;
   userId: Id<'users'>;
   chatId: Id<'chats'>;
-  fileName: Id<'_storage'>; // Storage ID for the file
+  key: string; // R2 object key
+  fileName: string; // display name
   fileType: string;
   fileSize: number;
+  url?: string;
 };
 
 /**
@@ -99,20 +101,36 @@ type SavedAttachment = {
 export const saveFileAttachment = action({
   args: {
     chatId: v.id('chats'),
-    fileName: v.id('_storage'),
+    key: v.string(),
+    fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
   },
   handler: async (ctx, args): Promise<SavedAttachment> => {
-    const attachmentId = await ctx.runMutation(api.files.internalSave, args);
+    // Keep it simple: trust client-provided metadata and validate in internalSave
+    const derivedType = args.fileType || 'application/octet-stream';
+    const derivedSize = args.fileSize;
+
+    const publicBase = process.env.R2_PUBLIC_URL_BASE;
+    const publicUrl = publicBase
+      ? `${publicBase.replace(TRAILING_SLASH_RE, '')}/${args.key}`
+      : undefined;
+
+    const attachmentId = await ctx.runMutation(api.files.internalSave, {
+      chatId: args.chatId,
+      key: args.key,
+      fileName: args.fileName,
+      fileType: derivedType,
+      fileSize: derivedSize,
+      url: publicUrl,
+    });
     const attachment = await ctx.runQuery(api.files.getAttachment, {
       attachmentId,
     });
     if (!attachment) {
       throw new ConvexError(ERROR_CODES.FILE_NOT_FOUND);
     }
-    // Return storage ID instead of temporary URL - URLs will be generated on-demand
-    return { ...attachment, fileName: attachment.fileName };
+    return { ...attachment } as SavedAttachment;
   },
 });
 
@@ -122,15 +140,34 @@ export const saveFileAttachment = action({
 export const saveGeneratedImage = action({
   args: {
     chatId: v.id('chats'),
-    fileName: v.id('_storage'),
+    key: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
     url: v.optional(v.string()),
+    fileName: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<SavedAttachment> => {
+    // Compute default filename using epoch milliseconds if not provided
+    const epochMs = Date.now();
+    const subtype = args.fileType.split('/')[1] ?? '';
+    const defaultExt = (subtype.split('+')[0] || 'bin').toLowerCase();
+    const fileName = args.fileName ?? `gen-${epochMs}.${defaultExt}`;
+
+    const publicUrl =
+      args.url ??
+      (process.env.R2_PUBLIC_URL_BASE
+        ? `${process.env.R2_PUBLIC_URL_BASE.replace(TRAILING_SLASH_RE, '')}/${args.key}`
+        : undefined);
     const attachmentId = await ctx.runMutation(
       api.files.internalSaveGenerated,
-      args
+      {
+        chatId: args.chatId,
+        key: args.key,
+        fileName,
+        fileType: args.fileType,
+        fileSize: args.fileSize,
+        url: publicUrl,
+      }
     );
     const attachment = await ctx.runQuery(api.files.getAttachment, {
       attachmentId,
@@ -138,17 +175,18 @@ export const saveGeneratedImage = action({
     if (!attachment) {
       throw new ConvexError(ERROR_CODES.FILE_NOT_FOUND);
     }
-    // Return storage ID instead of temporary URL - URLs will be generated on-demand
-    return { ...attachment, fileName: attachment.fileName };
+    return { ...attachment } as SavedAttachment;
   },
 });
 
 export const internalSave = mutation({
   args: {
     chatId: v.id('chats'),
-    fileName: v.id('_storage'),
+    key: v.string(),
+    fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -160,7 +198,7 @@ export const internalSave = mutation({
     const chat = await ctx.db.get(args.chatId);
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
-      await ctx.storage.delete(args.fileName);
+      await r2.deleteObject(ctx, args.key);
       throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
 
@@ -169,28 +207,30 @@ export const internalSave = mutation({
     if (
       !(modelName && FILE_UPLOAD_MODELS.includes(modelName as FileUploadModel))
     ) {
-      await ctx.storage.delete(args.fileName);
+      await r2.deleteObject(ctx, args.key);
       throw new ConvexError(ERROR_CODES.UNSUPPORTED_MODEL);
     }
 
     // Enforce MIME type allow-list
     if (!ALLOWED_FILE_MIME_TYPES.includes(args.fileType as AllowedMimeType)) {
-      await ctx.storage.delete(args.fileName);
+      await r2.deleteObject(ctx, args.key);
       throw new ConvexError(ERROR_CODES.UNSUPPORTED_FILE_TYPE);
     }
 
     // Enforce maximum size
     if (args.fileSize > MAX_FILE_SIZE) {
-      await ctx.storage.delete(args.fileName);
+      await r2.deleteObject(ctx, args.key);
       throw new ConvexError(ERROR_CODES.FILE_TOO_LARGE);
     }
 
     return await ctx.db.insert('chat_attachments', {
       userId,
       chatId: args.chatId,
+      key: args.key,
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
+      url: args.url,
     });
   },
 });
@@ -198,7 +238,8 @@ export const internalSave = mutation({
 export const internalSaveGenerated = mutation({
   args: {
     chatId: v.id('chats'),
-    fileName: v.id('_storage'),
+    key: v.string(),
+    fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
     url: v.optional(v.string()),
@@ -213,7 +254,7 @@ export const internalSaveGenerated = mutation({
     const chat = await ctx.db.get(args.chatId);
     if (!chat || chat.userId !== userId) {
       // Clean up orphaned file if chat not found
-      await ctx.storage.delete(args.fileName);
+      await r2.deleteObject(ctx, args.key);
       throw new ConvexError(ERROR_CODES.UNAUTHORIZED);
     }
 
@@ -223,6 +264,7 @@ export const internalSaveGenerated = mutation({
     return await ctx.db.insert('chat_attachments', {
       userId,
       chatId: args.chatId,
+      key: args.key,
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
@@ -252,7 +294,7 @@ export const getAttachment = query({
  * Generates a fresh URL for a storage ID
  */
 export const getStorageUrl = query({
-  args: { storageId: v.string() },
+  args: { key: v.string() },
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -261,8 +303,11 @@ export const getStorageUrl = query({
     }
 
     try {
-      // Generate URL from storage ID
-      return await ctx.storage.getUrl(args.storageId as Id<'_storage'>);
+      const base = process.env.R2_PUBLIC_URL_BASE;
+      if (!base) {
+        return null;
+      }
+      return `${base.replace(TRAILING_SLASH_RE, '')}/${args.key}`;
     } catch {
       // Silently handle URL generation errors
       return null;
@@ -290,7 +335,7 @@ export const getAttachmentsForUser = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
+        url: attachment.url,
       }))
     );
   },
@@ -319,13 +364,11 @@ export const deleteAttachments = mutation({
     );
 
     // Delete files from storage and database records in parallel
-    const fileNamesToDelete = validAttachments.map(
-      (a) => a.fileName as Id<'_storage'>
-    );
+    const keysToDelete = validAttachments.map((a) => a.key);
     const docIdsToDelete = validAttachments.map((a) => a._id);
 
     await Promise.all([
-      ...fileNamesToDelete.map((id) => ctx.storage.delete(id)),
+      ...keysToDelete.map((key) => r2.deleteObject(ctx, key)),
       ...docIdsToDelete.map((id) => ctx.db.delete(id)),
     ]);
   },
@@ -353,7 +396,7 @@ export const getAttachmentsForChat = query({
     return Promise.all(
       attachments.map(async (attachment) => ({
         ...attachment,
-        url: attachment.url || (await ctx.storage.getUrl(attachment.fileName)),
+        url: attachment.url,
       }))
     );
   },

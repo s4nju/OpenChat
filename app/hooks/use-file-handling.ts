@@ -3,8 +3,9 @@
  * Manages file uploads and attachment processing for chat
  */
 
+import { useUploadFile } from '@convex-dev/r2/react';
 import type { FileUIPart } from 'ai';
-import { useAction, useConvex } from 'convex/react';
+import { useAction } from 'convex/react';
 import { useCallback, useState } from 'react';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -15,9 +16,9 @@ import {
 
 export function useFileHandling() {
   const [files, setFiles] = useState<File[]>([]);
-  const generateUploadUrl = useAction(api.files.generateUploadUrl);
+  // R2: useUploadFile requires an API object that includes generateUploadUrl and syncMetadata
+  const uploadFile = useUploadFile(api.files);
   const saveFileAttachment = useAction(api.files.saveFileAttachment);
-  const convex = useConvex();
 
   const addFiles = useCallback((newFiles: File[]) => {
     setFiles((prev) => [...prev, ...newFiles]);
@@ -37,21 +38,14 @@ export function useFileHandling() {
         return [];
       }
 
-      const getStorageUrl = async (storageId: string) => {
-        return await convex.query(api.files.getStorageUrl, {
-          storageId: storageId as Id<'_storage'>,
-        });
-      };
-
       return await uploadFilesInParallel(
         files,
         chatId,
-        generateUploadUrl,
-        saveFileAttachment,
-        getStorageUrl
+        uploadFile,
+        saveFileAttachment
       );
     },
-    [files, generateUploadUrl, saveFileAttachment, convex]
+    [files, uploadFile, saveFileAttachment]
   );
 
   const createOptimisticFiles = useCallback(() => {

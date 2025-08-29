@@ -386,14 +386,14 @@ async function handleImageGeneration({
       type: 'image/png',
     });
 
-    const uploadUrl = await fetchAction(
+    const { url: uploadUrl, key } = await fetchMutation(
       api.files.generateUploadUrl,
       {},
       { token }
     );
 
     const uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
+      method: 'PUT',
       body: imageBlob,
       headers: {
         'Content-Type': 'image/png',
@@ -404,40 +404,31 @@ async function handleImageGeneration({
       throw new Error('Failed to upload generated image');
     }
 
-    const { storageId } = await uploadResponse.json();
-
-    // Generate the proper public storage URL
-    const properStorageUrl = await fetchQuery(
-      api.files.getStorageUrl,
-      { storageId },
-      { token }
-    );
-
-    if (!properStorageUrl) {
-      throw new Error('Failed to generate storage URL for uploaded image');
-    }
-
-    // Save generated image to attachments table
+    // Save generated image to attachments table; server computes public URL
+    let savedGenerated: { url?: string; fileName: string } | undefined;
     if (token) {
-      await fetchAction(
+      savedGenerated = await fetchAction(
         api.files.saveGeneratedImage,
         {
-          fileName: storageId,
+          key,
           chatId,
           fileType: 'image/png',
           fileSize: imageBuffer.length,
-          url: properStorageUrl,
         },
         { token }
       );
     }
 
+    if (!savedGenerated?.url) {
+      throw new Error('Failed to generate storage URL for uploaded image');
+    }
+
     // Create file part for the generated image
     const filePart: FileUIPart = {
       type: 'file',
-      filename: storageId,
+      filename: savedGenerated?.fileName ?? 'generated-image.png',
       mediaType: 'image/png',
-      url: properStorageUrl,
+      url: savedGenerated.url,
     };
 
     // Save assistant message with image
