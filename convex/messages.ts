@@ -13,23 +13,6 @@ import {
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
 
 /**
- * Regex to detect Convex storage IDs (32-character hex strings)
- */
-const CONVEX_STORAGE_ID_REGEX = /^[a-z0-9]{32}$/;
-
-/**
- * Helper to detect if a string is a Convex storage ID
- */
-function isConvexStorageId(value: string): boolean {
-  return (
-    CONVEX_STORAGE_ID_REGEX.test(value) &&
-    !value.startsWith('http') &&
-    !value.startsWith('data:') &&
-    !value.startsWith('blob:')
-  );
-}
-
-/**
  * Helper function to clean up attachments for messages
  */
 async function cleanupMessageAttachments(
@@ -42,9 +25,14 @@ async function cleanupMessageAttachments(
   for (const msgToDelete of messagesToDelete) {
     if (msgToDelete.parts) {
       for (const part of msgToDelete.parts) {
-        if (part.type === 'file' && part.data && isConvexStorageId(part.data)) {
+        if (
+          part &&
+          part.type === 'file' &&
+          typeof part.url === 'string' &&
+          part.url
+        ) {
           attachmentCleanupPromises.push(
-            cleanupSingleAttachment(ctx, msgToDelete.chatId, part.data, userId)
+            cleanupSingleAttachment(ctx, msgToDelete.chatId, part.url, userId)
           );
         }
       }
@@ -60,17 +48,17 @@ async function cleanupMessageAttachments(
 async function cleanupSingleAttachment(
   ctx: MutationCtx,
   chatId: Id<'chats'>,
-  keyString: string,
+  fileUrl: string,
   userId: Id<'users'>
 ) {
   const r2 = new R2(components.r2);
   try {
-    // This uses .filter() correctly - first narrows by index (by_chatId), then filters by fileName
+    // First narrow by index (by_chatId), then filter by exact URL match
     // See: https://docs.convex.dev/database/indexes/ - "For all other filtering you can use the .filter method"
     const attachment = await ctx.db
       .query('chat_attachments')
       .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
-      .filter((q) => q.eq(q.field('key'), keyString))
+      .filter((q) => q.eq(q.field('url'), fileUrl))
       .first();
 
     if (attachment && attachment.userId === userId) {
@@ -293,19 +281,7 @@ export const getMessagesForChat = query({
   },
 });
 
-export const deleteMessage = mutation({
-  args: { messageId: v.id('messages') },
-  returns: v.null(),
-  handler: async (ctx, { messageId }) => {
-    try {
-      await ensureMessageAccess(ctx, messageId);
-      await ctx.db.delete(messageId);
-      return null;
-    } catch {
-      return null;
-    }
-  },
-});
+// Note: Single-message deletion is handled via deleteMessageAndDescendants
 
 export const getMessageDetails = query({
   args: { messageId: v.id('messages') },
