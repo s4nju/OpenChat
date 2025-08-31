@@ -13,7 +13,7 @@ export type ApiKeyProvider =
 
 // API key validation patterns
 export const API_KEY_PATTERNS = {
-  openai: /^sk-[a-zA-Z0-9]{20,}$/,
+  openai: /^sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}(?:T3BlbkFJ[A-Za-z0-9_-]{20,})?$/,
   anthropic: /^sk-ant-[a-zA-Z0-9_-]{8,}$/,
   gemini: /^AIza[a-zA-Z0-9_-]{35,}$/,
 } as const;
