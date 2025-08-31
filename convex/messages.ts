@@ -12,6 +12,9 @@ import {
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
 
+// Keep reusable regex at top-level per lint rule
+const TRAILING_SLASH_RE = /\/$/;
+
 /**
  * Helper function to clean up attachments for messages
  */
@@ -53,17 +56,29 @@ async function cleanupSingleAttachment(
 ) {
   const r2 = new R2(components.r2);
   try {
-    // First narrow by index (by_chatId), then filter by exact URL match
-    // See: https://docs.convex.dev/database/indexes/ - "For all other filtering you can use the .filter method"
-    const attachment = await ctx.db
-      .query('chat_attachments')
-      .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
-      .filter((q) => q.eq(q.field('url'), fileUrl))
-      .first();
+    // Derive R2 object key from the URL and use by_key index
+    const configuredBase = process.env.R2_PUBLIC_URL_BASE;
+    const base = configuredBase
+      ? configuredBase.replace(TRAILING_SLASH_RE, '')
+      : undefined;
+    const canonicalUrl = fileUrl.split('?')[0];
 
-    if (attachment && attachment.userId === userId) {
-      await r2.deleteObject(ctx, attachment.key);
-      await ctx.db.delete(attachment._id);
+    if (!(base && canonicalUrl.startsWith(`${base}/`))) {
+      return; // URL doesn't match configured base; nothing to clean up
+    }
+
+    const key = canonicalUrl.slice(base.length + 1);
+    if (!key) {
+      return;
+    }
+
+    const attByKey = await ctx.db
+      .query('chat_attachments')
+      .withIndex('by_key', (q) => q.eq('key', key))
+      .first();
+    if (attByKey && attByKey.userId === userId && attByKey.chatId === chatId) {
+      await r2.deleteObject(ctx, attByKey.key);
+      await ctx.db.delete(attByKey._id);
     }
   } catch (_error) {
     // Silently continue with other cleanup if one attachment fails

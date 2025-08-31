@@ -42,7 +42,8 @@ export function useFileHandling() {
         files,
         chatId,
         uploadFile,
-        saveFileAttachment
+        ({ chatId: cid, key, fileName }) =>
+          saveFileAttachment({ chatId: cid, key, fileName })
       );
     },
     [files, uploadFile, saveFileAttachment]

@@ -15,7 +15,7 @@ import {
   streamText,
   type UIMessage,
 } from 'ai';
-import { fetchAction, fetchMutation, fetchQuery } from 'convex/nextjs';
+import { fetchMutation, fetchQuery } from 'convex/nextjs';
 import { ConvexError, type Infer } from 'convex/values';
 import { searchTool } from '@/app/api/tools/search';
 import { api } from '@/convex/_generated/api';
@@ -34,9 +34,10 @@ import {
 } from '@/lib/error-utils';
 import { buildSystemPrompt, PERSONAS_MAP } from '@/lib/prompt_config';
 import { sanitizeUserInput } from '@/lib/sanitize';
+import { uploadBlobToR2 } from '@/lib/server-upload-helpers';
 
 // Maximum allowed duration for streaming (in seconds)
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 /**
  * Helper function to save an error message as an assistant message
@@ -379,45 +380,22 @@ async function handleImageGeneration({
 
     // console.log(image);
 
-    // Upload image to Convex storage
+    // Upload image to R2 using standard upload helper (includes syncMetadata)
     const imageBuffer = image.uint8Array;
-    // Create a new Uint8Array to ensure proper type compatibility
     const imageBlob = new Blob([new Uint8Array(imageBuffer)], {
       type: 'image/png',
     });
 
-    const { url: uploadUrl, key } = await fetchMutation(
-      api.files.generateUploadUrl,
-      {},
-      { token }
-    );
+    if (!token) {
+      throw new Error('Authentication token required for image upload');
+    }
 
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: imageBlob,
-      headers: {
-        'Content-Type': 'image/png',
-      },
+    const savedGenerated = await uploadBlobToR2(imageBlob, {
+      chatId,
+      fileName: `generated-${Date.now()}.png`,
+      token,
+      isGenerated: true,
     });
-
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload generated image');
-    }
-
-    // Save generated image to attachments table; server computes public URL
-    let savedGenerated: { url?: string; fileName: string } | undefined;
-    if (token) {
-      savedGenerated = await fetchAction(
-        api.files.saveGeneratedImage,
-        {
-          key,
-          chatId,
-          fileType: 'image/png',
-          fileSize: imageBuffer.length,
-        },
-        { token }
-      );
-    }
 
     if (!savedGenerated?.url) {
       throw new Error('Failed to generate storage URL for uploaded image');

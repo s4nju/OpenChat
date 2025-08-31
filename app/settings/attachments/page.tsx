@@ -196,10 +196,11 @@ export default function AttachmentsPage() {
                         toggleSelect(att._id as Id<'chat_attachments'>)
                       }
                     />
-                    {att.fileType.startsWith('image/') && att.url ? (
+                    {(att.fileType?.startsWith('image/') ?? false) &&
+                    att.url ? (
                       <div className="h-10 w-10 overflow-hidden rounded border">
                         <Image
-                          alt={att.fileName}
+                          alt={att.fileName ?? 'attachment'}
                           className="h-full w-full object-cover"
                           height={40}
                           src={att.url}
@@ -218,11 +219,14 @@ export default function AttachmentsPage() {
                         rel="noopener noreferrer"
                         target="_blank"
                       >
-                        <span className="truncate">{att.fileName}</span>
+                        <span className="truncate">
+                          {att.fileName ?? att.key}
+                        </span>
                         <ArrowSquareOut className="size-4 shrink-0" />
                       </a>
                       <span className="text-muted-foreground text-sm">
-                        {att.fileType} • {formatBytes(att.fileSize)}
+                        {att.fileType ?? 'file'} •{' '}
+                        {formatBytes(att.fileSize ?? 0)}
                       </span>
                     </div>
                     <Button

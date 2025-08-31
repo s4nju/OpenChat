@@ -29,8 +29,6 @@ export async function uploadAndSaveFile(
     chatId: Id<'chats'>;
     key: string;
     fileName: string;
-    fileType: string;
-    fileSize: number;
   }) => Promise<FileAttachment>
 ): Promise<FileAttachment | null> {
   try {
@@ -39,8 +37,6 @@ export async function uploadAndSaveFile(
       chatId,
       key,
       fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
     });
   } catch (uploadError) {
     const friendly = humaniseUploadError(uploadError);
@@ -60,8 +56,6 @@ export async function uploadFilesInParallel(
     chatId: Id<'chats'>;
     key: string;
     fileName: string;
-    fileType: string;
-    fileSize: number;
   }) => Promise<FileAttachment>
 ): Promise<FileUIPart[]> {
   const fileAttachments: FileUIPart[] = [];
