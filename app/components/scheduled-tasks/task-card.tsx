@@ -178,6 +178,18 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
     }
   }, [task.status]);
 
+  // Memoized trigger tooltip content
+  const triggerTooltipContent = useMemo(() => {
+    switch (task.status) {
+      case 'running':
+        return 'Cannot trigger - task is running';
+      case 'paused':
+        return 'Cannot trigger - task is paused';
+      default:
+        return 'Run task once now';
+    }
+  }, [task.status]);
+
   // Memoized archive handler
   const handleArchive = useCallback(async () => {
     try {
@@ -309,7 +321,11 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  disabled={task.status === 'archived'}
+                  disabled={
+                    task.status === 'archived' ||
+                    task.status === 'running' ||
+                    task.status === 'paused'
+                  }
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTriggerNow();
@@ -332,12 +348,16 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                   }
                 />
                 <TaskTrigger
-                  disabled={task.status === 'archived'}
+                  disabled={
+                    task.status === 'archived' || task.status === 'running'
+                  }
                   initialData={taskDialogInitialData}
                   mode="edit"
                   trigger={
                     <DropdownMenuItem
-                      disabled={task.status === 'archived'}
+                      disabled={
+                        task.status === 'archived' || task.status === 'running'
+                      }
                       onClick={(e) => e.stopPropagation()}
                       onSelect={(e) => e.preventDefault()}
                     >
@@ -347,7 +367,9 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                   }
                 />
                 <DropdownMenuItem
-                  disabled={task.status === 'archived'}
+                  disabled={
+                    task.status === 'archived' || task.status === 'running'
+                  }
                   onClick={(e) => {
                     e.stopPropagation();
                     handleArchive();
@@ -358,6 +380,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive"
+                  disabled={task.status === 'running'}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowDeleteDialog(true);
@@ -503,13 +526,21 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
               <TooltipTrigger
                 asChild
                 className={
-                  task.status === 'archived' ? 'cursor-not-allowed' : ''
+                  task.status === 'archived' ||
+                  task.status === 'running' ||
+                  task.status === 'paused'
+                    ? 'cursor-not-allowed'
+                    : ''
                 }
               >
                 <Button
                   aria-label="Run task once now"
                   className="h-8 w-8"
-                  disabled={task.status === 'archived'}
+                  disabled={
+                    task.status === 'archived' ||
+                    task.status === 'running' ||
+                    task.status === 'paused'
+                  }
                   onClick={handleTriggerNow}
                   size="icon"
                   variant="ghost"
@@ -518,7 +549,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Run task once now</p>
+                <p>{triggerTooltipContent}</p>
               </TooltipContent>
             </Tooltip>
 
@@ -547,13 +578,15 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
             />
 
             <TaskTrigger
-              disabled={task.status === 'archived'}
+              disabled={task.status === 'archived' || task.status === 'running'}
               initialData={taskDialogInitialData}
               mode="edit"
               trigger={
                 <span
                   className={
-                    task.status === 'archived' ? 'cursor-not-allowed' : ''
+                    task.status === 'archived' || task.status === 'running'
+                      ? 'cursor-not-allowed'
+                      : ''
                   }
                 >
                   <Tooltip>
@@ -561,7 +594,10 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                       <Button
                         aria-label="Edit task"
                         className="h-8 w-8"
-                        disabled={task.status === 'archived'}
+                        disabled={
+                          task.status === 'archived' ||
+                          task.status === 'running'
+                        }
                         size="icon"
                         variant="ghost"
                       >
@@ -569,7 +605,11 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Edit task</p>
+                      <p>
+                        {task.status === 'running'
+                          ? 'Cannot edit - task is running'
+                          : 'Edit task'}
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </span>
@@ -580,13 +620,17 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
               <TooltipTrigger
                 asChild
                 className={
-                  task.status === 'archived' ? 'cursor-not-allowed' : ''
+                  task.status === 'archived' || task.status === 'running'
+                    ? 'cursor-not-allowed'
+                    : ''
                 }
               >
                 <Button
                   aria-label="Archive task"
                   className="h-8 w-8"
-                  disabled={task.status === 'archived'}
+                  disabled={
+                    task.status === 'archived' || task.status === 'running'
+                  }
                   onClick={handleArchive}
                   size="icon"
                   variant="ghost"
@@ -595,7 +639,11 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Archive task</p>
+                <p>
+                  {task.status === 'running'
+                    ? 'Cannot archive - task is running'
+                    : 'Archive task'}
+                </p>
               </TooltipContent>
             </Tooltip>
 
@@ -604,6 +652,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                 <Button
                   aria-label="Delete task"
                   className="h-8 w-8"
+                  disabled={task.status === 'running'}
                   onClick={() => setShowDeleteDialog(true)}
                   size="icon"
                   variant="ghost"
@@ -612,7 +661,11 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Delete task</p>
+                <p>
+                  {task.status === 'running'
+                    ? 'Cannot delete - task is running'
+                    : 'Delete task'}
+                </p>
               </TooltipContent>
             </Tooltip>
           </div>
