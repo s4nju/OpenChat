@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "bunx ultracite@latest lint",
+    "lint": "bunx ultracite@latest check",
     "format": "bunx ultracite@latest fix",
     "typecheck": "bunx tsc --noEmit",
     "test": "vitest",

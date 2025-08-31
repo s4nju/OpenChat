@@ -62,17 +62,19 @@ export function sanitizeAndValidateFileName(input: string): string {
   const base = (hasExt ? candidate.slice(0, lastDot) : candidate).trim();
   const ext = hasExt ? candidate.slice(lastDot + 1).trim() : '';
 
-  // Avoid reserved base names (case-insensitive)
-  const baseLower = base.toLowerCase();
-  const adjustedBase = RESERVED_BASENAMES.has(baseLower)
-    ? `${base}-file`
-    : base;
-
-  // Trim trailing dots/spaces from base and ext
-  let safeBase = adjustedBase.replace(TRAILING_SPACES_DOTS_RE, '');
+  // Trim trailing dots/spaces from base and ext FIRST
+  let safeBase = base.replace(TRAILING_SPACES_DOTS_RE, '');
   const safeExt = ext.replace(TRAILING_SPACES_DOTS_RE, '');
+
+  // If trimming yields empty string, set to 'file' before reserved-name check
   if (safeBase.length === 0) {
     safeBase = 'file';
+  }
+
+  // Now check reserved names on the TRIMMED base (case-insensitive)
+  const baseLower = safeBase.toLowerCase();
+  if (RESERVED_BASENAMES.has(baseLower)) {
+    safeBase = `${safeBase}-file`;
   }
 
   // Enforce max length while keeping extension if possible

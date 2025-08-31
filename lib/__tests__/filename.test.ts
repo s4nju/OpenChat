@@ -37,9 +37,31 @@ describe('sanitizeAndValidateFileName', () => {
   });
 
   it('avoids reserved basenames by appending -file', () => {
+    // Basic reserved names
     expect(sanitizeAndValidateFileName('con')).toBe('con-file');
     expect(sanitizeAndValidateFileName('PRN')).toBe('PRN-file');
     expect(sanitizeAndValidateFileName('Com1')).toBe('Com1-file');
+
+    // Reserved names with trailing dots (should append -file and strip dots)
+    expect(sanitizeAndValidateFileName('con.')).toBe('con-file');
+    expect(sanitizeAndValidateFileName('con...')).toBe('con-file');
+    expect(sanitizeAndValidateFileName('PRN.')).toBe('PRN-file');
+    expect(sanitizeAndValidateFileName('aux.')).toBe('aux-file');
+    expect(sanitizeAndValidateFileName('nul.')).toBe('nul-file');
+    expect(sanitizeAndValidateFileName('lpt1.')).toBe('lpt1-file');
+
+    // Reserved names with trailing spaces (should append -file and strip spaces)
+    expect(sanitizeAndValidateFileName('con ')).toBe('con-file');
+    expect(sanitizeAndValidateFileName('PRN   ')).toBe('PRN-file');
+    expect(sanitizeAndValidateFileName('aux ')).toBe('aux-file');
+    expect(sanitizeAndValidateFileName('com2 ')).toBe('com2-file');
+
+    // Reserved names with trailing dots/spaces and extensions
+    expect(sanitizeAndValidateFileName('PRN .txt')).toBe('PRN-file.txt');
+    expect(sanitizeAndValidateFileName('con..txt')).toBe('con-file.txt');
+    expect(sanitizeAndValidateFileName('aux .pdf')).toBe('aux-file.pdf');
+    expect(sanitizeAndValidateFileName('nul. .doc')).toBe('nul-file.doc');
+    expect(sanitizeAndValidateFileName('lpt2 .  .log')).toBe('lpt2-file.log');
   });
 
   it('preserves extension and enforces max length', () => {
