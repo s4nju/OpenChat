@@ -26,7 +26,9 @@ export default defineSchema({
   feedback: defineTable(Feedback).index('by_user', ['userId']),
   chat_attachments: defineTable(ChatAttachment)
     .index('by_chatId', ['chatId'])
-    .index('by_userId', ['userId']),
+    .index('by_userId', ['userId'])
+    // Dedicated index for direct lookups/deletes by R2 object key
+    .index('by_key', ['key']),
   usage_history: defineTable(UsageHistory).index('by_user', ['userId']),
   user_api_keys: defineTable(UserApiKey).index('by_user_provider', [
     'userId',

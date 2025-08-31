@@ -1,5 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { R2 } from '@convex-dev/r2';
 import { v } from 'convex/values';
+import { components } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import {
   internalMutation,
@@ -10,22 +12,8 @@ import {
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
 
-/**
- * Regex to detect Convex storage IDs (32-character hex strings)
- */
-const CONVEX_STORAGE_ID_REGEX = /^[a-z0-9]{32}$/;
-
-/**
- * Helper to detect if a string is a Convex storage ID
- */
-function isConvexStorageId(value: string): boolean {
-  return (
-    CONVEX_STORAGE_ID_REGEX.test(value) &&
-    !value.startsWith('http') &&
-    !value.startsWith('data:') &&
-    !value.startsWith('blob:')
-  );
-}
+// Keep reusable regex at top-level per lint rule
+const TRAILING_SLASH_RE = /\/$/;
 
 /**
  * Helper function to clean up attachments for messages
@@ -40,9 +28,14 @@ async function cleanupMessageAttachments(
   for (const msgToDelete of messagesToDelete) {
     if (msgToDelete.parts) {
       for (const part of msgToDelete.parts) {
-        if (part.type === 'file' && part.data && isConvexStorageId(part.data)) {
+        if (
+          part &&
+          part.type === 'file' &&
+          typeof part.url === 'string' &&
+          part.url
+        ) {
           attachmentCleanupPromises.push(
-            cleanupSingleAttachment(ctx, msgToDelete.chatId, part.data, userId)
+            cleanupSingleAttachment(ctx, msgToDelete.chatId, part.url, userId)
           );
         }
       }
@@ -58,21 +51,34 @@ async function cleanupMessageAttachments(
 async function cleanupSingleAttachment(
   ctx: MutationCtx,
   chatId: Id<'chats'>,
-  fileName: string,
+  fileUrl: string,
   userId: Id<'users'>
 ) {
+  const r2 = new R2(components.r2);
   try {
-    // This uses .filter() correctly - first narrows by index (by_chatId), then filters by fileName
-    // See: https://docs.convex.dev/database/indexes/ - "For all other filtering you can use the .filter method"
-    const attachment = await ctx.db
-      .query('chat_attachments')
-      .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
-      .filter((q) => q.eq(q.field('fileName'), fileName))
-      .first();
+    // Derive R2 object key from the URL and use by_key index
+    const configuredBase = process.env.R2_PUBLIC_URL_BASE;
+    const base = configuredBase
+      ? configuredBase.replace(TRAILING_SLASH_RE, '')
+      : undefined;
+    const canonicalUrl = fileUrl.split('?')[0];
 
-    if (attachment && attachment.userId === userId) {
-      await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
-      await ctx.db.delete(attachment._id);
+    if (!(base && canonicalUrl.startsWith(`${base}/`))) {
+      return; // URL doesn't match configured base; nothing to clean up
+    }
+
+    const key = canonicalUrl.slice(base.length + 1);
+    if (!key) {
+      return;
+    }
+
+    const attByKey = await ctx.db
+      .query('chat_attachments')
+      .withIndex('by_key', (q) => q.eq('key', key))
+      .first();
+    if (attByKey && attByKey.userId === userId && attByKey.chatId === chatId) {
+      await r2.deleteObject(ctx, attByKey.key);
+      await ctx.db.delete(attByKey._id);
     }
   } catch (_error) {
     // Silently continue with other cleanup if one attachment fails
@@ -112,6 +118,7 @@ async function cleanupOrphanedAttachments(
   ctx: MutationCtx,
   chatId: Id<'chats'>
 ) {
+  const r2 = new R2(components.r2);
   const orphanedAttachments = await ctx.db
     .query('chat_attachments')
     .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
@@ -120,7 +127,7 @@ async function cleanupOrphanedAttachments(
   const cleanupPromises = orphanedAttachments.map(
     async (attachment: Doc<'chat_attachments'>) => {
       try {
-        await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
+        await r2.deleteObject(ctx, attachment.key);
         await ctx.db.delete(attachment._id);
       } catch (_error) {
         // Silently continue with other cleanup
@@ -289,19 +296,7 @@ export const getMessagesForChat = query({
   },
 });
 
-export const deleteMessage = mutation({
-  args: { messageId: v.id('messages') },
-  returns: v.null(),
-  handler: async (ctx, { messageId }) => {
-    try {
-      await ensureMessageAccess(ctx, messageId);
-      await ctx.db.delete(messageId);
-      return null;
-    } catch {
-      return null;
-    }
-  },
-});
+// Note: Single-message deletion is handled via deleteMessageAndDescendants
 
 export const getMessageDetails = query({
   args: { messageId: v.id('messages') },

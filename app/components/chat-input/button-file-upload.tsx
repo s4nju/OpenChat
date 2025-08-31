@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { MODELS_OPTIONS } from '@/lib/config';
+import { UPLOAD_ACCEPT } from '@/lib/config/upload';
 import { cn } from '@/lib/utils';
 import { PopoverContentAuth } from './popover-content-auth';
 
@@ -90,7 +91,7 @@ export function ButtonFileUpload({
 
   return (
     <FileUpload
-      accept="image/jpeg,image/png,image/webp,image/svg,image/heic,image/heif,application/pdf"
+      accept={UPLOAD_ACCEPT}
       disabled={!isUserAuthenticated}
       multiple
       onFilesAdded={onFileUpload}

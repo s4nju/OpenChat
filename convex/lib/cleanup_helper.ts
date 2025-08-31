@@ -1,3 +1,5 @@
+import { R2 } from '@convex-dev/r2';
+import { components } from '../_generated/api';
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
 
@@ -36,6 +38,7 @@ export async function deleteAttachmentsForChat(
   ctx: MutationCtx,
   chatId: Id<'chats'>
 ): Promise<void> {
+  const r2 = new R2(components.r2);
   const attachments = await ctx.db
     .query('chat_attachments')
     .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
@@ -45,8 +48,8 @@ export async function deleteAttachmentsForChat(
   await Promise.all(
     attachments.map(async (attachment) => {
       try {
-        // Delete the actual file from storage first
-        await ctx.storage.delete(attachment.fileName as Id<'_storage'>);
+        // Delete the actual file from R2 first
+        await r2.deleteObject(ctx, attachment.key);
       } catch {
         // Silently handle storage deletion errors
         // Continue with DB cleanup even if storage deletion fails

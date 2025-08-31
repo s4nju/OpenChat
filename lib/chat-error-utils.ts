@@ -4,6 +4,11 @@
  */
 
 import { toast } from '@/components/ui/toast';
+import {
+  getAllowedLabel,
+  UPLOAD_ALLOWED_MIME,
+  UPLOAD_MAX_LABEL,
+} from '@/lib/config/upload';
 import { classifyError, shouldShowAsToast } from '@/lib/error-utils';
 
 /**
@@ -18,10 +23,10 @@ export function humaniseUploadError(err: unknown): string {
     return 'File uploads are not supported for the selected model.';
   }
   if (msg.includes('ERR_BAD_MIME')) {
-    return 'Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.';
+    return `File not supported. Allowed: ${getAllowedLabel(UPLOAD_ALLOWED_MIME)}`;
   }
   if (msg.includes('ERR_FILE_TOO_LARGE')) {
-    return 'Files can be at most 10 MB.';
+    return `File too large. Max ${UPLOAD_MAX_LABEL} per file`;
   }
   return 'Error uploading file';
 }

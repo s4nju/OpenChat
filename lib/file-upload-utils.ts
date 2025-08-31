@@ -9,9 +9,11 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { humaniseUploadError } from './chat-error-utils';
 
 export type FileAttachment = {
-  fileName: string; // This is the storage ID
+  key: string; // R2 object key
+  fileName: string; // display name
   fileType: string;
   fileSize: number;
+  url?: string;
 };
 
 // Use FileUIPart from AI SDK instead of custom interface
@@ -22,35 +24,19 @@ export type FileAttachment = {
 export async function uploadAndSaveFile(
   file: File,
   chatId: Id<'chats'>,
-  generateUploadUrl: () => Promise<string>,
+  uploadToR2: (f: File) => Promise<string>,
   saveFileAttachment: (attachment: {
     chatId: Id<'chats'>;
-    fileName: Id<'_storage'>;
-    fileType: string;
-    fileSize: number;
+    key: string;
+    fileName: string;
   }) => Promise<FileAttachment>
 ): Promise<FileAttachment | null> {
   try {
-    const uploadUrl = await generateUploadUrl();
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': file.type },
-      body: file,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Upload failed with status ${response.status}`);
-    }
-
-    const { storageId } = (await response.json()) as {
-      storageId: Id<'_storage'>;
-    };
-
+    const key = await uploadToR2(file);
     return await saveFileAttachment({
       chatId,
-      fileName: storageId,
-      fileType: file.type,
-      fileSize: file.size,
+      key,
+      fileName: file.name,
     });
   } catch (uploadError) {
     const friendly = humaniseUploadError(uploadError);
@@ -65,53 +51,34 @@ export async function uploadAndSaveFile(
 export async function uploadFilesInParallel(
   files: File[],
   chatId: Id<'chats'>,
-  generateUploadUrl: () => Promise<string>,
+  uploadToR2: (file: File) => Promise<string>,
   saveFileAttachment: (attachment: {
     chatId: Id<'chats'>;
-    fileName: Id<'_storage'>;
-    fileType: string;
-    fileSize: number;
-  }) => Promise<FileAttachment>,
-  getStorageUrl: (storageId: string) => Promise<string | null>
+    key: string;
+    fileName: string;
+  }) => Promise<FileAttachment>
 ): Promise<FileUIPart[]> {
   const fileAttachments: FileUIPart[] = [];
 
   // Upload all files in parallel
   const uploadPromises = files.map((file) =>
-    uploadAndSaveFile(file, chatId, generateUploadUrl, saveFileAttachment)
+    uploadAndSaveFile(file, chatId, uploadToR2, saveFileAttachment)
   );
   const uploadResults = await Promise.all(uploadPromises);
 
-  // Generate URLs for successful uploads
-  const urlPromises = uploadResults.map(async (attachment) => {
-    if (!attachment) {
-      return null;
-    }
-
-    try {
-      const url = await getStorageUrl(attachment.fileName);
-      if (url) {
-        return {
-          type: 'file',
-          filename: attachment.fileName, // This is the storage ID
-          mediaType: attachment.fileType,
-          url,
-        } satisfies FileUIPart;
-      }
-    } catch {
-      // Failed to generate URL for this attachment
-      return null;
-    }
-
-    return null;
-  });
-
-  const urlResults = await Promise.all(urlPromises);
-
   // Collect successful attachments
-  for (const attachment of urlResults) {
-    if (attachment) {
-      fileAttachments.push(attachment);
+  for (const attachment of uploadResults) {
+    if (!attachment) {
+      continue;
+    }
+    // Use stored permanent URL from server
+    if (attachment.url) {
+      fileAttachments.push({
+        type: 'file',
+        filename: attachment.fileName,
+        mediaType: attachment.fileType,
+        url: attachment.url,
+      });
     }
   }
 

@@ -9,7 +9,14 @@ import {
   PromptInputTextarea,
 } from '@/components/prompt-kit/prompt-input';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { APP_NAME } from '@/lib/config';
+import {
+  getAllowedLabel,
+  PASTE_ALLOWED_MIME,
+  UPLOAD_MAX_BYTES,
+  UPLOAD_MAX_LABEL,
+} from '@/lib/config/upload';
 import { ButtonFileUpload } from './button-file-upload';
 import { ButtonSearch } from './button-search';
 import { FileList } from './file-list';
@@ -142,11 +149,18 @@ export function ChatInput({
 
       // Handle image pasting for authenticated users
       const imageFiles: File[] = [];
+      const allowed = new Set<string>(PASTE_ALLOWED_MIME as readonly string[]);
+      let hadInvalidType = false;
+      let hadTooLarge: { size: number } | null = null;
 
       for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
+        if (item.type && allowed.has(item.type)) {
           const file = item.getAsFile();
           if (file) {
+            if (file.size > UPLOAD_MAX_BYTES) {
+              hadTooLarge = { size: file.size };
+              continue;
+            }
             const newFile = new File(
               [file],
               `pasted-image-${Date.now()}.${file.type.split('/')[1]}`,
@@ -154,11 +168,34 @@ export function ChatInput({
             );
             imageFiles.push(newFile);
           }
+        } else if (item.type.startsWith('image/')) {
+          hadInvalidType = true;
         }
       }
 
       if (imageFiles.length > 0) {
         onFileUploadAction(imageFiles);
+      } else {
+        // If there were image items but none matched allowed types, show feedback
+        const hadAnyImages = Array.from(items).some((it) =>
+          it.type.startsWith('image/')
+        );
+        if (hadAnyImages) {
+          e.preventDefault();
+          if (hadTooLarge) {
+            toast({
+              title: 'File too large',
+              description: `Max ${UPLOAD_MAX_LABEL} per file`,
+              status: 'error',
+            });
+          } else if (hadInvalidType) {
+            toast({
+              title: 'File not supported',
+              description: `Allowed: ${getAllowedLabel(Array.from(allowed))}`,
+              status: 'error',
+            });
+          }
+        }
       }
     },
     [isUserAuthenticated, onFileUploadAction]

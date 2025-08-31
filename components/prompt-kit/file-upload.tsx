@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
+import { getAllowedLabel, UPLOAD_MAX_BYTES, UPLOAD_MAX_LABEL } from "@/lib/config/upload"
 import {
   Children,
   cloneElement,
@@ -42,6 +43,8 @@ function FileUpload({
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = useRef(0)
 
+  // derive allowed label from config at runtime
+
   useEffect(() => {
     const handleDrag = (e: DragEvent) => {
       e.preventDefault()
@@ -65,17 +68,34 @@ function FileUpload({
       setIsDragging(false)
       dragCounter.current = 0
       if (e.dataTransfer?.files.length) {
-        let filesArray = Array.from(e.dataTransfer.files)
-        if (accept) {
-          const allowed = accept.split(",").map(s => s.trim())
-          filesArray = filesArray.filter(f => allowed.includes(f.type))
+        const allFiles = Array.from(e.dataTransfer.files)
+        const selectedByType = (() => {
+          if (!accept) return allFiles
+          const allowedTypes = accept.split(",").map(s => s.trim())
+          return allFiles.filter(f => allowedTypes.includes(f.type))
+        })()
+
+        const invalidType = allFiles.filter(f => !selectedByType.includes(f))
+        if (invalidType.length) {
+          toast({
+            title: 'File not supported',
+            description: `Allowed: ${getAllowedLabel(accept?.split(',').map(s => s.trim()) || undefined)}`,
+            status: 'error',
+          })
         }
-        const invalid = Array.from(e.dataTransfer.files).filter(f => !filesArray.includes(f))
-        if (invalid.length) {
-          toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
+
+        const tooLarge = selectedByType.filter(f => f.size > UPLOAD_MAX_BYTES)
+        if (tooLarge.length) {
+          toast({
+            title: 'File too large',
+            description: `Max ${UPLOAD_MAX_LABEL} per file`,
+            status: 'error',
+          })
         }
-        if (filesArray.length) {
-          const toAdd = multiple ? filesArray : filesArray.slice(0, 1)
+
+        const selected = selectedByType.filter(f => f.size <= UPLOAD_MAX_BYTES)
+        if (selected.length) {
+          const toAdd = multiple ? selected : selected.slice(0, 1)
           onFilesAdded(toAdd)
         }
       }
@@ -97,15 +117,31 @@ function FileUpload({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const allFiles = Array.from(e.target.files)
-      let selected = allFiles
-      if (accept) {
-        const allowed = accept.split(",").map(s => s.trim())
-        selected = allFiles.filter(f => allowed.includes(f.type))
+      const selectedByType = (() => {
+        if (!accept) return allFiles
+        const allowedTypes = accept.split(",").map(s => s.trim())
+        return allFiles.filter(f => allowedTypes.includes(f.type))
+      })()
+
+      const invalidType = allFiles.filter(f => !selectedByType.includes(f))
+      if (invalidType.length) {
+        toast({
+          title: 'File not supported',
+          description: `Allowed: ${getAllowedLabel(accept?.split(',').map(s => s.trim()) || undefined)}`,
+          status: 'error',
+        })
       }
-      const invalid = allFiles.filter(f => !selected.includes(f))
-      if (invalid.length) {
-        toast({ title: 'Unsupported file type', description: 'Only images and PDF are supported', status: 'error' })
+
+      const tooLarge = selectedByType.filter(f => f.size > UPLOAD_MAX_BYTES)
+      if (tooLarge.length) {
+        toast({
+          title: 'File too large',
+          description: `Max ${UPLOAD_MAX_LABEL} per file`,
+          status: 'error',
+        })
       }
+
+      const selected = selectedByType.filter(f => f.size <= UPLOAD_MAX_BYTES)
       if (selected.length) {
         const toAdd = multiple ? selected : selected.slice(0, 1)
         onFilesAdded(toAdd)

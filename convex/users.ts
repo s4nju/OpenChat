@@ -642,9 +642,12 @@ export const deleteAccount = mutation({
     const deletionPromises: Promise<unknown>[] = [];
 
     // Delete attachments and their files
+    const { R2 } = await import('@convex-dev/r2');
+    const { components } = await import('./_generated/api');
+    const r2 = new R2(components.r2);
     for (const att of attachments) {
       deletionPromises.push(
-        ctx.storage.delete(att.fileName as Id<'_storage'>).catch(() => {
+        r2.deleteObject(ctx, att.key).catch(() => {
           // Silently handle storage deletion errors
         })
       );
