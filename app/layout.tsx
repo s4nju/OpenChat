@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { AuthGuard } from './components/auth/auth-guard';
 import LayoutApp from './components/layout/layout-app';
+import { StructuredData } from './components/structured-data';
 import { LayoutClient } from './layout-client';
 import { ConvexClientProvider } from './providers/convex-client-provider';
 import { SidebarProvider } from './providers/sidebar-provider';
@@ -102,6 +103,72 @@ export const metadata: Metadata = {
   title: META_TITLE,
   description: APP_DESCRIPTION,
   metadataBase: new URL(APP_BASE_URL),
+  keywords: [
+    'OpenChat',
+    'Open Chat',
+    'oschat',
+    'oschat.ai',
+    'oschat ai',
+    'T3 Chat alternative',
+    'T3 Chat',
+    'ChatGPT alternative',
+    'uncovr.app alternative',
+    'uncovr alternative',
+    'Grok alternative',
+    'GitHub Copilot alternative',
+    'Copilot alternative',
+    'Perplexity alternative',
+    'Character.ai alternative',
+    'Poe alternative',
+    'You.com alternative',
+    'AI chat',
+    'AI personal assistant',
+    'AI chat platform',
+    'multi-AI platform',
+    'AI model aggregator',
+    'unified AI interface',
+    'AI assistant dashboard',
+    'AI model comparison tool',
+    'open source AI chat',
+    'free AI chat',
+    'multi-model AI',
+    'AI chat with multiple models',
+    'switch between AI models',
+    'compare AI responses',
+    'AI assistant with scheduling',
+    'AI chat with integrations',
+    'self-hosted AI chat',
+    'privacy-focused AI chat',
+    'Claude alternative',
+    'Anthropic models',
+    'OpenAI models',
+    'Google Gemini',
+    'task scheduling AI',
+    'AI automation',
+    'Gmail integration',
+    'Notion AI',
+    'GitHub AI assistant',
+    'web search AI',
+    'image generation',
+    'reasoning models',
+    'o1 models',
+    'DeepSeek',
+    'Mistral AI',
+    'Meta Llama',
+    'AI assistant',
+    'productivity AI',
+    'open source ChatGPT',
+    'free ChatGPT alternative',
+    'AI personal assistant with task scheduling',
+    'multi-model AI chat application',
+    'AI chat with Gmail integration',
+    'open source T3 Chat alternative',
+    'free AI personal assistant',
+  ],
+  creator: 'OpenChat Team',
+  publisher: 'OpenChat',
+  applicationName: APP_NAME,
+  category: 'Productivity Software',
   openGraph: {
     title: META_TITLE,
     description: APP_DESCRIPTION,
@@ -124,6 +191,11 @@ export const metadata: Metadata = {
     description: APP_DESCRIPTION,
     images: ['https://assets.oschat.ai/oc-opengraph-image.png'],
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
 };
 
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
@@ -137,7 +209,9 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head />
+      <head>
+        <StructuredData type="homepage" />
+      </head>
       <body
         className={cn(
           'font-sans antialiased',

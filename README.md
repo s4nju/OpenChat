@@ -2,11 +2,41 @@
 
 [![Visit OpenChat](https://img.shields.io/badge/Visit-OpenChat-blue)](https://oschat.ai)
 
-**OpenChat** is a free, open-source AI chat application that provides a seamless interface for multiple language models in one place.
+**OpenChat** is a free, open-source AI personal assistant that combines 40+ language models with powerful automation capabilities. Schedule tasks, connect your favorite services (Gmail, Calendar, Notion, GitHub), and get things done through natural conversation.
 
 ![OpenChat — Open-source AI chat app (oschat.ai)](./app/opengraph-image.png)
 
+## 🚀 Why OpenChat?
+
+- **🔓 Open Source T3 Chat Alternative** - Get all the speed and multi-model access of T3 Chat, but open source, self-hostable, and enhanced with task scheduling and service integrations
+- **🤖 Your AI Personal Assistant** - More than chat - schedule tasks, automate workflows, and manage your digital life
+- **🔗 Connect Everything** - Direct integration with Gmail, Calendar, Notion, GitHub, Slack, and 10+ more services
+- **⏰ Smart Automation** - Schedule AI tasks with email notifications - let your assistant work while you sleep
+- **🧠 40+ AI Models** - Access the latest from OpenAI, Anthropic, Google, Meta, and more in one interface
+- **🎯 Truly Personal** - Customize personality traits, personal context, and preferences for tailored interactions
+- **🔒 Privacy-First** - Open source, self-hostable, with encrypted API key storage
+
 ## ✨ Features
+
+### ⏰ Task Scheduling & Automation
+
+- **Smart Task Scheduling** - Schedule AI tasks to run one-time, daily, or weekly with timezone awareness
+- **Email Notifications** - Get notified when your scheduled tasks complete successfully
+- **Automated Workflows** - Let your AI assistant handle routine tasks while you focus on what matters
+- **Execution History** - Track and monitor all your scheduled task runs with detailed logs
+- **Flexible Scheduling** - Pause, resume, or archive tasks as your needs change
+
+### 🔗 Service Connectors & Integrations
+
+- **Gmail Integration** - Access, read, and manage your email messages directly through chat
+- **Google Calendar** - View, create, and schedule calendar events seamlessly
+- **Google Drive & Docs** - Access files, create documents, and collaborate on projects
+- **Notion Workspace** - Read and write to your Notion pages and databases
+- **GitHub Management** - Manage repositories, issues, and pull requests
+- **Slack Communication** - Send messages and interact with your workspace
+- **Linear Project Management** - Track and manage issues and projects
+- **X (Twitter)** - Post tweets and manage your social media presence
+- **10+ More Services** - Expanding ecosystem of productivity integrations
 
 ### 🤖 AI & Models
 

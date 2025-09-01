@@ -6,7 +6,7 @@ export const APP_NAME = 'OpenChat';
 export const META_TITLE = `${APP_NAME} - Open Source T3 Chat & ChatGPT Alternative`;
 export const APP_DOMAIN = 'https://oschat.ai';
 export const APP_DESCRIPTION =
-  'OpenChat is a AI chat app with multi-model support.';
+  'OpenChat is a free, open-source AI personal assistant with 40+ language models from OpenAI, Anthropic, Google, Meta, and more. Features task scheduling, service connectors (Gmail, Calendar, Notion, GitHub, Slack), multi-modal support, image generation, reasoning models, and web search in one powerful interface.';
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
