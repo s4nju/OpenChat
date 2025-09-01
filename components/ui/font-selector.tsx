@@ -60,7 +60,7 @@ export function FontSelector({
           </span>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="z-[80]">
         {fontOptions.map((font) => (
           <SelectItem key={font.label} value={font.value}>
             <span className="truncate" style={{ fontFamily: font.value }}>

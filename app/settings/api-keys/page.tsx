@@ -7,7 +7,7 @@ import {
   WarningCircleIcon,
 } from '@phosphor-icons/react';
 import { useMutation } from 'convex/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -82,7 +82,7 @@ function ApiKeyInputForm({
   isValidating,
   onSave,
   onInputChange,
-  inputRef,
+  value,
 }: {
   placeholder: string;
   docs: string;
@@ -90,8 +90,8 @@ function ApiKeyInputForm({
   validationError?: string;
   isValidating: boolean;
   onSave: () => void;
-  onInputChange: () => void;
-  inputRef: (el: HTMLInputElement | null) => void;
+  onInputChange: (value: string) => void;
+  value: string;
 }) {
   // Handle Enter key press to save
   const handleKeyDown = useCallback(
@@ -110,11 +110,11 @@ function ApiKeyInputForm({
         <div className="relative">
           <Input
             className={validationError ? 'border-red-500' : ''}
-            onChange={onInputChange}
+            onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            ref={inputRef}
             type="password"
+            value={value}
           />
         </div>
         {validationError && (
@@ -154,17 +154,17 @@ function ProviderCard({
   onInputChange,
   onDelete,
   onToggle,
-  inputRefs,
+  inputValue,
 }: {
   providerConfig: (typeof PROVIDERS)[0];
   savedApiKeys: Array<{ provider: string; mode?: string }>;
   validationErrors: Record<string, string>;
   isValidating: Record<string, boolean>;
   onSave: (provider: Provider) => void;
-  onInputChange: (provider: Provider) => void;
+  onInputChange: (provider: Provider, value: string) => void;
   onDelete: (provider: Provider) => void;
   onToggle: (provider: Provider, checked: boolean) => void;
-  inputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
+  inputValue: string;
 }) {
   const hasKey = savedApiKeys.some((k) => k.provider === providerConfig.id);
   const getMode = () => {
@@ -216,15 +216,13 @@ function ProviderCard({
       ) : (
         <ApiKeyInputForm
           docs={providerConfig.docs}
-          inputRef={(el) => {
-            inputRefs.current[providerConfig.id] = el;
-          }}
           isValidating={isValidating[providerConfig.id]}
-          onInputChange={() => onInputChange(providerConfig.id)}
+          onInputChange={(value) => onInputChange(providerConfig.id, value)}
           onSave={() => onSave(providerConfig.id)}
           placeholder={providerConfig.placeholder}
           title={providerConfig.title}
           validationError={validationErrors[providerConfig.id]}
+          value={inputValue}
         />
       )}
     </div>
@@ -237,9 +235,8 @@ export default function ApiKeysPage() {
   const deleteApiKey = useMutation(api.api_keys.deleteApiKey);
   const updateMode = useMutation(api.api_keys.updateApiKeyMode);
 
-  // Use refs to store API key inputs securely - not exposed in React DevTools
-  // This prevents sensitive API keys from being visible in component state
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Use controlled inputs with state for better mobile drawer compatibility
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
@@ -252,20 +249,14 @@ export default function ApiKeysPage() {
 
   // Clear all input values on component unmount for security
   useEffect(() => {
-    const currentInputs = inputRefs.current;
     return () => {
-      for (const input of Object.values(currentInputs)) {
-        if (input) {
-          input.value = '';
-        }
-      }
+      setInputValues({});
     };
   }, []);
 
   const handleSave = useCallback(
     async (provider: Provider) => {
-      const inputElement = inputRefs.current[provider];
-      const key = inputElement?.value || '';
+      const key = inputValues[provider] || '';
 
       if (!key.trim()) {
         return;
@@ -290,9 +281,7 @@ export default function ApiKeysPage() {
         toast({ title: 'API key saved', status: 'success' });
 
         // Immediately clear the input value for security
-        if (inputElement) {
-          inputElement.value = '';
-        }
+        setInputValues((prev) => ({ ...prev, [provider]: '' }));
       } catch {
         // Error handling without console
         toast({ title: 'Failed to save key', status: 'error' });
@@ -300,11 +289,13 @@ export default function ApiKeysPage() {
         setIsValidating((prev) => ({ ...prev, [provider]: false }));
       }
     },
-    [saveApiKey]
+    [saveApiKey, inputValues]
   );
 
   const handleInputChange = useCallback(
-    (provider: Provider) => {
+    (provider: Provider, value: string) => {
+      // Update input value
+      setInputValues((prev) => ({ ...prev, [provider]: value }));
       // Clear validation error when user starts typing
       if (validationErrors[provider]) {
         setValidationErrors((prev) => ({ ...prev, [provider]: '' }));
@@ -385,7 +376,7 @@ export default function ApiKeysPage() {
         </div>
         {PROVIDERS.map((providerConfig) => (
           <ProviderCard
-            inputRefs={inputRefs}
+            inputValue={inputValues[providerConfig.id] || ''}
             isValidating={isValidating}
             key={providerConfig.id}
             onDelete={handleDelete}
