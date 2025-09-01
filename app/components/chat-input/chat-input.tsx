@@ -237,7 +237,7 @@ export function ChatInput({
       const isPrintableChar =
         e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
 
-      if (isPrintableChar) {
+      if (isPrintableChar && textareaRef.current) {
         // Focus the textarea and let the character be typed normally
         textareaRef.current.focus();
       }
