@@ -66,7 +66,12 @@ export function DrawerSettings({
   setIsOpenAction,
 }: DrawerSettingsProps) {
   return (
-    <Drawer onOpenChange={setIsOpenAction} open={isOpen}>
+    <Drawer
+      dismissible={true}
+      onOpenChange={setIsOpenAction}
+      open={isOpen}
+      shouldScaleBackground={false}
+    >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
         <div className="flex h-dvh max-h-[80vh] flex-col">

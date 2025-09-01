@@ -27,6 +27,8 @@ import { SettingsTrigger } from './settings/settings-trigger';
 export function UserMenu({ user }: { user: Doc<'users'> }) {
   const { signOut } = useUser();
   const router = useRouter();
+  const [isMenuOpen, setMenuOpen] = React.useState(false);
+  const [isSettingsOpen, setSettingsOpen] = React.useState(false);
 
   const [showEmail, setShowEmail] = React.useState<boolean>(() => {
     if (typeof window === 'undefined') {
@@ -45,6 +47,13 @@ export function UserMenu({ user }: { user: Doc<'users'> }) {
     return `${prefix}*****${tld}`;
   };
 
+  const handleSettingsOpenChange = (isOpen: boolean) => {
+    setSettingsOpen(isOpen);
+    if (!isOpen) {
+      setMenuOpen(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -56,7 +65,7 @@ export function UserMenu({ user }: { user: Doc<'users'> }) {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false} onOpenChange={setMenuOpen} open={isMenuOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger>
@@ -76,6 +85,19 @@ export function UserMenu({ user }: { user: Doc<'users'> }) {
         className="w-56"
         forceMount
         onCloseAutoFocus={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (isSettingsOpen) {
+            e.preventDefault();
+            return;
+          }
+        }}
+        onInteractOutside={(e) => {
+          if (isSettingsOpen) {
+            e.preventDefault();
+            return;
+          }
+          setMenuOpen(false);
+        }}
       >
         <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
           <span>{user?.name}</span>
@@ -91,16 +113,19 @@ export function UserMenu({ user }: { user: Doc<'users'> }) {
             type="button"
           >
             <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>
-            {showEmail ? <EyeSlash size={14} /> : <Eye size={14} />}
+            {showEmail ? (
+              <EyeSlash className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
           </button>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
-          <SettingsTrigger isMenuItem={true} />
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
-          <AppInfoTrigger />
-        </DropdownMenuItem>
+        <SettingsTrigger
+          isMenuItem={true}
+          onOpenChange={handleSettingsOpenChange}
+        />
+        <AppInfoTrigger />
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(e) => {

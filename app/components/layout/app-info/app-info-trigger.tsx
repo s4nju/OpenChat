@@ -19,7 +19,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
-// import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { APP_NAME } from '@/lib/config';
 import { AppInfoContent } from './app-info-content';
 
@@ -31,13 +31,10 @@ export function AppInfoTrigger({ trigger }: AppInfoTriggerProps) {
   const isMobile = useBreakpoint(768);
 
   const defaultTrigger = (
-    <button
-      className="flex w-full cursor-pointer select-none items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
-      type="button"
-    >
+    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
       <Info className="size-4" />
-      <span className="flex-1 text-left">About {APP_NAME}</span>
-    </button>
+      About {APP_NAME}
+    </DropdownMenuItem>
   );
 
   if (isMobile) {

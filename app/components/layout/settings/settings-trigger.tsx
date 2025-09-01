@@ -10,9 +10,13 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 type SettingsTriggerProps = {
   isMenuItem?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 };
 
-export function SettingsTrigger({ isMenuItem = false }: SettingsTriggerProps) {
+export function SettingsTrigger({
+  isMenuItem = false,
+  onOpenChange,
+}: SettingsTriggerProps) {
   const { user } = useUser();
   const isMobileOrTablet = useBreakpoint(896);
   const [isOpen, setIsOpen] = useState(false);
@@ -37,18 +41,23 @@ export function SettingsTrigger({ isMenuItem = false }: SettingsTriggerProps) {
 
   if (isMenuItem && isMobileOrTablet) {
     const trigger = (
-      <button
-        className="flex w-full cursor-pointer select-none items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
-        type="button"
+      <DropdownMenuItem
+        onSelect={(e) => {
+          e.preventDefault();
+          setIsOpen(true);
+        }}
       >
         <User className="size-4" />
-        <span className="flex-1 text-left">Settings</span>
-      </button>
+        Settings
+      </DropdownMenuItem>
     );
     return (
       <DrawerSettings
         isOpen={isOpen}
-        setIsOpenAction={setIsOpen}
+        setIsOpenAction={(open) => {
+          setIsOpen(open);
+          onOpenChange?.(open);
+        }}
         trigger={trigger}
       />
     );
