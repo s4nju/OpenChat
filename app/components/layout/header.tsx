@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircleIcon, InfoIcon, PlusIcon } from '@phosphor-icons/react';
+import { CheckCircleIcon, GithubLogoIcon, InfoIcon, PlusIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -98,6 +98,23 @@ export function Header() {
               }
             />
             <ThemeSwitchIcon />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="https://github.com/ajanraj/OpenChat#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  aria-label="View on GitHub"
+                >
+                  <GithubLogoIcon
+                    className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
+                    weight="bold"
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>View on GitHub</TooltipContent>
+            </Tooltip>
             <Link
               className="font-base text-base text-muted-foreground transition-colors hover:text-foreground"
               href="/auth"
