@@ -1,6 +1,11 @@
 'use client';
 
-import { CheckCircleIcon, InfoIcon, PlusIcon } from '@phosphor-icons/react';
+import {
+  CheckCircleIcon,
+  GithubLogoIcon,
+  InfoIcon,
+  PlusIcon,
+} from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -13,7 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { APP_NAME } from '@/lib/config';
+import { APP_NAME, GITHUB_REPO_URL } from '@/lib/config';
 import ThemeSwitchIcon from './theme-switch-icon';
 
 export function Header() {
@@ -82,6 +87,24 @@ export function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  aria-label="View on GitHub"
+                  className="group flex items-center justify-center rounded-full p-2 outline-none hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  href={GITHUB_REPO_URL}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <GithubLogoIcon
+                    aria-hidden="true"
+                    className="size-5 text-muted-foreground transition-colors group-hover:text-foreground"
+                    weight="bold"
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>View on GitHub</TooltipContent>
+            </Tooltip>
             <AppInfoTrigger
               trigger={
                 <button
