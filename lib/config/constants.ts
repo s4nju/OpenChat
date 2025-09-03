@@ -27,3 +27,5 @@ export const RECOMMENDED_MODELS = [
 ];
 
 export const MESSAGE_MAX_LENGTH = 4000;
+
+export const GITHUB_REPO_URL = 'https://github.com/ajanraj/OpenChat';
