@@ -187,7 +187,30 @@ export default function Chat() {
       return;
     }
 
-    const mappedDb = messagesFromDB.map(mapMessage);
+    const mappedDb = messagesFromDB.map((msg, index) => {
+      const mappedMessage = mapMessage(msg) as MessageWithExtras;
+
+      if (msg.role === 'user') {
+        // Next message is always the assistant response
+        const nextMsg = messagesFromDB[index + 1];
+        if (nextMsg?.role === 'assistant') {
+          if (nextMsg.metadata?.modelId) {
+            mappedMessage.model = nextMsg.metadata.modelId;
+          }
+          // Copy search setting from assistant's metadata to the user message metadata
+          if (nextMsg.metadata?.includeSearch !== undefined) {
+            mappedMessage.metadata = {
+              ...mappedMessage.metadata,
+              includeSearch: nextMsg.metadata.includeSearch,
+            };
+          }
+        }
+      } else if (msg.role === 'assistant' && msg.metadata?.modelId) {
+        mappedMessage.model = msg.metadata.modelId;
+      }
+
+      return mappedMessage;
+    });
 
     // Use functional update to access current messages without creating a dependency
     setMessages((currentMessages) => {
@@ -554,7 +577,16 @@ export default function Chat() {
   );
 
   const handleEdit = useCallback(
-    (id: string, newText: string) => {
+    (
+      id: string,
+      newText: string,
+      editOptions: {
+        model: string;
+        enableSearch: boolean;
+        files: File[];
+        reasoningEffort: 'low' | 'medium' | 'high';
+      }
+    ) => {
       if (!chatId) {
         return;
       }
@@ -570,10 +602,11 @@ export default function Chat() {
       // Create the edited message parts
       const editedParts = [
         { type: 'text' as const, text: newText },
-        // Keep any file parts from the original message
+        // Keep any existing file parts from the original message
         ...(originalMessages[targetIdx].parts?.filter(
           (part) => part.type === 'file'
         ) || []),
+        // TODO: Add new file parts from editOptions.files if needed
       ];
 
       try {
@@ -590,17 +623,20 @@ export default function Chat() {
             .filter((_, idx) => idx <= targetIdx); // Remove subsequent messages that need regeneration
         });
 
-        // 2. Trigger AI regeneration - backend will detect edit via existing message ID
-        const isReasoningModel = supportsReasoningEffort(selectedModel);
+        // 2. Trigger AI regeneration using the edit-specific model and settings
+        const isEditReasoningModel = supportsReasoningEffort(editOptions.model);
         const timezone = getUserTimezone();
 
         const options = {
           body: {
             chatId,
-            model: selectedModel,
+            model: editOptions.model, // Use the model selected in edit mode
             personaId,
             editMessageId: id,
-            ...(isReasoningModel ? { reasoningEffort } : {}),
+            enableSearch: editOptions.enableSearch, // Use edit-specific search setting
+            ...(isEditReasoningModel
+              ? { reasoningEffort: editOptions.reasoningEffort }
+              : {}),
             ...(timezone ? { userInfo: { timezone } } : {}),
             ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
           },
@@ -616,15 +652,7 @@ export default function Chat() {
         });
       }
     },
-    [
-      chatId,
-      selectedModel,
-      personaId,
-      reasoningEffort,
-      setMessages,
-      regenerate,
-      enabledToolSlugs,
-    ]
+    [chatId, personaId, setMessages, regenerate, enabledToolSlugs]
   );
 
   // Chat redirect effect
@@ -695,6 +723,8 @@ export default function Chat() {
         ) : (
           <Conversation
             autoScroll={!targetMessageId}
+            isReasoningModel={supportsReasoningEffort(selectedModel)}
+            isUserAuthenticated={isAuthenticated}
             key="conversation"
             messages={messages as MessageWithExtras[]}
             onBranch={(messageId) =>
@@ -703,6 +733,7 @@ export default function Chat() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            reasoningEffort={reasoningEffort}
             selectedModel={selectedModel}
             status={status}
           />

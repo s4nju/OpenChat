@@ -1,0 +1,172 @@
+'use client';
+
+import { ArrowUp } from '@phosphor-icons/react';
+import type React from 'react';
+import { useCallback, useRef, useState } from 'react';
+import useEditClickOutside from '@/app/hooks/use-edit-click-outside';
+import {
+  PromptInput,
+  PromptInputAction,
+  PromptInputActions,
+  PromptInputTextarea,
+} from '@/components/prompt-kit/prompt-input';
+import { Button } from '@/components/ui/button';
+import { MODEL_DEFAULT, MODELS_MAP } from '@/lib/config';
+import { ButtonFileUpload } from './button-file-upload';
+import { ButtonSearch } from './button-search';
+import { FileList } from './file-list';
+import { SelectModel } from './select-model';
+import { SelectReasoningEffort } from './select-reasoning-effort';
+
+type ReasoningEffort = 'low' | 'medium' | 'high';
+
+type EditInputProps = {
+  initialValue: string;
+  onSend: (
+    message: string,
+    options: {
+      enableSearch: boolean;
+      model: string;
+      files: File[];
+      reasoningEffort: ReasoningEffort;
+    }
+  ) => void;
+  onCancel: () => void;
+  // Initial values for edit mode
+  initialFiles?: File[];
+  selectedModel: string;
+  isSearchEnabled?: boolean;
+  isUserAuthenticated: boolean;
+  status?: 'submitted' | 'streaming' | 'ready' | 'error';
+  isReasoningModel?: boolean;
+  reasoningEffort?: ReasoningEffort;
+};
+
+export function EditInput({
+  initialValue,
+  onSend,
+  onCancel,
+  initialFiles = [],
+  selectedModel,
+  isSearchEnabled = false,
+  isUserAuthenticated,
+  status,
+  isReasoningModel = false,
+  reasoningEffort = 'medium',
+}: EditInputProps) {
+  // Local state for edit mode (isolated from global chat state)
+  const [value, setValue] = useState(initialValue);
+  const [editSearchEnabled, setEditSearchEnabled] = useState(isSearchEnabled);
+  const [editModel, setEditModel] = useState(() => {
+    // Validate if the selected model exists in available models
+    if (selectedModel && MODELS_MAP[selectedModel]) {
+      return selectedModel; // Use the message-specific model if it exists
+    }
+    // Fall back to default model if the inferred model doesn't exist
+    return MODEL_DEFAULT;
+  });
+  const [editFiles, setEditFiles] = useState<File[]>(initialFiles);
+  const [editReasoningEffort, setEditReasoningEffort] =
+    useState<ReasoningEffort>(reasoningEffort);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Click outside to cancel (ignores portal elements like dropdowns)
+  useEditClickOutside(editContainerRef, onCancel);
+
+  const handleSend = useCallback(() => {
+    if (!value.trim() && editFiles.length === 0) {
+      return;
+    }
+    onSend(value, {
+      enableSearch: editSearchEnabled,
+      model: editModel,
+      files: editFiles,
+      reasoningEffort: editReasoningEffort,
+    });
+  }, [
+    value,
+    editFiles,
+    onSend,
+    editSearchEnabled,
+    editModel,
+    editReasoningEffort,
+  ]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    },
+    [handleSend, onCancel]
+  );
+
+  return (
+    <div className="w-full" ref={editContainerRef}>
+      <PromptInput
+        className="relative z-10 p-0 pb-2 backdrop-blur-xl"
+        maxHeight={200}
+        onValueChange={setValue}
+        value={value}
+      >
+        <FileList
+          files={editFiles}
+          onFileRemoveAction={(file) =>
+            setEditFiles(editFiles.filter((f) => f !== file))
+          }
+        />
+        <PromptInputTextarea
+          className="mt-2 ml-2 text-foreground leading-[1.3]"
+          disabled={status === 'streaming'}
+          onKeyDown={handleKeyDown}
+          placeholder="Edit message..."
+          ref={textareaRef}
+        />
+        <PromptInputActions className="mt-5 w-full justify-between px-2 sm:px-2">
+          <div className="flex origin-left scale-90 transform gap-1 sm:scale-100 sm:gap-2">
+            <ButtonFileUpload
+              isUserAuthenticated={isUserAuthenticated}
+              model={editModel}
+              onFileUpload={(files) => setEditFiles([...editFiles, ...files])}
+            />
+            <ButtonSearch
+              isUserAuthenticated={isUserAuthenticated}
+              model={editModel}
+              onSearch={() => setEditSearchEnabled(!editSearchEnabled)}
+              searchEnabled={editSearchEnabled}
+            />
+            <SelectModel
+              isUserAuthenticated={isUserAuthenticated}
+              onSelectModel={setEditModel}
+              selectedModel={editModel}
+            />
+            {isReasoningModel && (
+              <SelectReasoningEffort
+                isUserAuthenticated={isUserAuthenticated}
+                onSelectReasoningEffortAction={setEditReasoningEffort}
+                reasoningEffort={editReasoningEffort}
+              />
+            )}
+          </div>
+          <PromptInputAction tooltip="Send">
+            <Button
+              aria-label="Save edit"
+              className="origin-right scale-90 transform rounded-full transition-all duration-300 ease-out sm:scale-100"
+              disabled={!value.trim() && editFiles.length === 0}
+              onClick={handleSend}
+              size="sm"
+              type="button"
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          </PromptInputAction>
+        </PromptInputActions>
+      </PromptInput>
+    </div>
+  );
+}
