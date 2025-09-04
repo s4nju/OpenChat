@@ -27,6 +27,10 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
 import {
+  createOptimisticAttachments,
+  uploadFilesInParallel,
+} from '@/lib/file-upload-utils';
+import {
   createPlaceholderId,
   mapMessage,
   validateInput,
@@ -114,6 +118,8 @@ export default function Chat() {
     processFiles,
     createOptimisticFiles,
     hasFiles,
+    uploadFile,
+    saveFileAttachment,
   } = useFileHandling();
 
   // Local state
@@ -577,7 +583,7 @@ export default function Chat() {
   );
 
   const handleEdit = useCallback(
-    (
+    async (
       id: string,
       newText: string,
       editOptions: {
@@ -599,14 +605,61 @@ export default function Chat() {
         return;
       }
 
-      // Create the edited message parts
+      // Process new files if any were added
+      let newFileParts: FileUIPart[] = [];
+      if (editOptions.files.length > 0) {
+        try {
+          // Create optimistic attachments for immediate UI feedback
+          const optimisticFileParts = createOptimisticAttachments(
+            editOptions.files
+          );
+
+          // Update UI immediately with optimistic files
+          setMessages((currentMsgs) => {
+            return currentMsgs
+              .map((msg, idx) => {
+                if (idx === targetIdx) {
+                  return {
+                    ...msg,
+                    parts: [
+                      { type: 'text' as const, text: newText },
+                      // Keep existing file parts
+                      ...(originalMessages[targetIdx].parts?.filter(
+                        (part) => part.type === 'file'
+                      ) || []),
+                      // Add optimistic file parts
+                      ...optimisticFileParts,
+                    ],
+                  };
+                }
+                return msg;
+              })
+              .filter((_, idx) => idx <= targetIdx);
+          });
+
+          // Upload files and get real file parts
+          newFileParts = await uploadFilesInParallel(
+            editOptions.files,
+            chatId as Id<'chats'>,
+            uploadFile,
+            ({ chatId: cid, key, fileName }) =>
+              saveFileAttachment({ chatId: cid, key, fileName })
+          );
+        } catch (_error) {
+          toast({ title: 'Failed to upload files', status: 'error' });
+          return; // Abort edit on file upload failure
+        }
+      }
+
+      // Create the edited message parts with processed files
       const editedParts = [
         { type: 'text' as const, text: newText },
         // Keep any existing file parts from the original message
         ...(originalMessages[targetIdx].parts?.filter(
           (part) => part.type === 'file'
         ) || []),
-        // TODO: Add new file parts from editOptions.files if needed
+        // Add new uploaded file parts
+        ...newFileParts,
       ];
 
       try {
@@ -652,7 +705,15 @@ export default function Chat() {
         });
       }
     },
-    [chatId, personaId, setMessages, regenerate, enabledToolSlugs]
+    [
+      chatId,
+      personaId,
+      setMessages,
+      regenerate,
+      enabledToolSlugs,
+      uploadFile,
+      saveFileAttachment,
+    ]
   );
 
   // Chat redirect effect

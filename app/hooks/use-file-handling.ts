@@ -61,5 +61,7 @@ export function useFileHandling() {
     processFiles,
     createOptimisticFiles,
     hasFiles: files.length > 0,
+    uploadFile,
+    saveFileAttachment,
   };
 }
