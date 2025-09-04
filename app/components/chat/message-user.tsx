@@ -1,6 +1,12 @@
 'use client';
 
-import { Check, Copy, FilePdf, Trash } from '@phosphor-icons/react';
+import {
+  CheckIcon,
+  CopyIcon,
+  FilePdfIcon,
+  PencilSimpleIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
 import type { FileUIPart, UIMessage as MessageType } from 'ai';
 import Image from 'next/image';
 import type React from 'react';
@@ -99,7 +105,7 @@ const renderFilePart = (filePart: FileUIPart) => {
         </div>
         {/* Footer with icon and filename */}
         <div className="flex items-center gap-2">
-          <FilePdf
+          <FilePdfIcon
             aria-hidden="true"
             className="shrink-0 text-gray-500 dark:text-gray-300"
             size={20}
@@ -126,7 +132,6 @@ export type MessageUserProps = {
   copied: boolean;
   copyToClipboard: () => void;
   onEdit: (id: string, newText: string) => void;
-  onReload: () => void;
   onDelete: (id: string) => void;
   id: string;
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
@@ -138,7 +143,6 @@ function MessageUserInner({
   copied,
   copyToClipboard,
   onEdit,
-  onReload,
   onDelete,
   id,
   status,
@@ -178,7 +182,6 @@ function MessageUserInner({
     if (onEdit) {
       onEdit(id, editInput);
     }
-    onReload();
     setIsEditing(false);
   };
 
@@ -205,12 +208,7 @@ function MessageUserInner({
           </div>
         ))}
       {isEditing ? (
-        <div
-          className="relative flex min-w-[180px] flex-col gap-2 rounded-3xl bg-accent px-5 py-2.5"
-          style={{
-            width: contentRef.current?.offsetWidth,
-          }}
-        >
+        <div className="relative flex w-full min-w-[180px] flex-col gap-2 rounded-3xl bg-accent px-5 py-2.5">
           <textarea
             autoFocus
             className="w-full resize-none bg-transparent outline-none"
@@ -265,27 +263,27 @@ function MessageUserInner({
             type="button"
           >
             {copied ? (
-              <Check className="size-4" />
+              <CheckIcon className="size-4" />
             ) : (
-              <Copy className="size-4" />
+              <CopyIcon className="size-4" />
             )}
           </button>
         </MessageAction>
-        {/* @todo: add when ready */}
-        {/* <MessageAction
-          tooltip={isEditing ? "Save" : "Edit"}
-          side="bottom"
+        <MessageAction
           delayDuration={0}
+          side="bottom"
+          tooltip={isEditing ? 'Save' : 'Edit'}
         >
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
             aria-label="Edit"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={status === 'streaming'}
             onClick={() => setIsEditing(!isEditing)}
             type="button"
           >
-            <PencilSimple className="size-4" />
+            <PencilSimpleIcon className="size-4" />
           </button>
-        </MessageAction> */}
+        </MessageAction>
         <MessageAction delayDuration={0} side="bottom" tooltip="Delete">
           <button
             aria-label="Delete"
@@ -294,7 +292,7 @@ function MessageUserInner({
             onClick={handleDelete}
             type="button"
           >
-            <Trash className="size-4" />
+            <TrashIcon className="size-4" />
           </button>
         </MessageAction>
       </MessageActions>

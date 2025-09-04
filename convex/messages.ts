@@ -325,9 +325,12 @@ export const getMessageDetails = query({
 });
 
 export const deleteMessageAndDescendants = mutation({
-  args: { messageId: v.id('messages') },
+  args: {
+    messageId: v.id('messages'),
+    deleteOnlyDescendants: v.optional(v.boolean()),
+  },
   returns: v.object({ chatDeleted: v.boolean() }),
-  handler: async (ctx, { messageId }) => {
+  handler: async (ctx, { messageId, deleteOnlyDescendants = false }) => {
     // Try to get message access
     const userId = await getAuthUserId(ctx);
     if (!userId) {
@@ -354,10 +357,9 @@ export const deleteMessageAndDescendants = mutation({
         // This uses .filter() correctly - filters by time after using index for chatId
         // Range queries can't be combined with .eq(), so .filter() is necessary here
         // See: https://docs.convex.dev/database/indexes/
-        return q.gte(
-          q.field('createdAt') ?? q.field('_creationTime'),
-          threshold
-        );
+        return deleteOnlyDescendants
+          ? q.gt(q.field('createdAt') ?? q.field('_creationTime'), threshold)
+          : q.gte(q.field('createdAt') ?? q.field('_creationTime'), threshold);
       })
       .collect();
 
@@ -389,6 +391,28 @@ export const deleteMessageAndDescendants = mutation({
       return { chatDeleted: true };
     }
     return { chatDeleted: false };
+  },
+});
+
+export const patchMessageContent = mutation({
+  args: {
+    messageId: v.id('messages'),
+    newContent: v.string(),
+    newParts: v.optional(v.any()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { messageId, newContent, newParts }) => {
+    // Verify that the authenticated user owns the message
+    const { message } = await ensureMessageAccess(ctx, messageId);
+
+    // Patch existing message with new content/parts
+    await ctx.db.patch(messageId, {
+      content: newContent,
+      parts: newParts,
+    });
+
+    // Update chat timestamp
+    await ctx.db.patch(message.chatId, { updatedAt: Date.now() });
   },
 });
 

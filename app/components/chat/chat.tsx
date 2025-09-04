@@ -487,18 +487,6 @@ export default function Chat() {
     [handleDeleteMessage, router, setIsDeleting, setMessages]
   );
 
-  const handleEdit = useCallback(
-    (id: string, newText: string) => {
-      const currentMessages = messagesRef.current;
-      setMessages(
-        currentMessages.map((message) =>
-          message.id === id ? { ...message, content: newText } : message
-        )
-      );
-    },
-    [setMessages]
-  );
-
   const handleReload = useCallback(
     async (messageId: string, opts?: { enableSearch?: boolean }) => {
       if (!(user?._id && chatId)) {
@@ -560,6 +548,80 @@ export default function Chat() {
       setMessages,
       handleDeleteMessage,
       setIsDeleting,
+      regenerate,
+      enabledToolSlugs,
+    ]
+  );
+
+  const handleEdit = useCallback(
+    (id: string, newText: string) => {
+      if (!chatId) {
+        return;
+      }
+
+      const currentMessages = messagesRef.current;
+      const originalMessages = [...currentMessages];
+      const targetIdx = originalMessages.findIndex((m) => m.id === id);
+
+      if (targetIdx === -1) {
+        return;
+      }
+
+      // Create the edited message parts
+      const editedParts = [
+        { type: 'text' as const, text: newText },
+        // Keep any file parts from the original message
+        ...(originalMessages[targetIdx].parts?.filter(
+          (part) => part.type === 'file'
+        ) || []),
+      ];
+
+      try {
+        // 1. Update message content immediately using setMessages (no gap!)
+        setMessages((currentMsgs) => {
+          return currentMsgs
+            .map((msg, idx) => {
+              if (idx === targetIdx) {
+                // Update content, KEEP same ID for seamless editing
+                return { ...msg, parts: editedParts };
+              }
+              return msg;
+            })
+            .filter((_, idx) => idx <= targetIdx); // Remove subsequent messages that need regeneration
+        });
+
+        // 2. Trigger AI regeneration - backend will detect edit via existing message ID
+        const isReasoningModel = supportsReasoningEffort(selectedModel);
+        const timezone = getUserTimezone();
+
+        const options = {
+          body: {
+            chatId,
+            model: selectedModel,
+            personaId,
+            editMessageId: id,
+            ...(isReasoningModel ? { reasoningEffort } : {}),
+            ...(timezone ? { userInfo: { timezone } } : {}),
+            ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
+          },
+        };
+
+        regenerate(options);
+      } catch {
+        // Rollback on failure
+        setMessages(originalMessages);
+        toast({
+          title: 'Failed to update message',
+          status: 'error',
+        });
+      }
+    },
+    [
+      chatId,
+      selectedModel,
+      personaId,
+      reasoningEffort,
+      setMessages,
       regenerate,
       enabledToolSlugs,
     ]

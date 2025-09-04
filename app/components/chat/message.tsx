@@ -57,7 +57,6 @@ function MessageComponent({
         id={id}
         onDelete={onDelete}
         onEdit={onEdit}
-        onReload={onReload}
         parts={parts}
         status={status}
       />
