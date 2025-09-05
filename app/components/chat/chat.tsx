@@ -605,6 +605,19 @@ export default function Chat() {
         return;
       }
 
+      // No-op guard: Check if edit has no substantive changes
+      const originalMessage = originalMessages[targetIdx];
+      const originalText =
+        originalMessage.parts?.find((p) => p.type === 'text')?.text || '';
+
+      // Return early if text unchanged and no new files
+      if (
+        originalText.trim() === newText.trim() &&
+        editOptions.files.length === 0
+      ) {
+        return;
+      }
+
       // Process new files if any were added
       let newFileParts: FileUIPart[] = [];
       if (editOptions.files.length > 0) {
@@ -616,25 +629,22 @@ export default function Chat() {
 
           // Update UI immediately with optimistic files
           setMessages((currentMsgs) => {
-            return currentMsgs
-              .map((msg, idx) => {
-                if (idx === targetIdx) {
-                  return {
-                    ...msg,
-                    parts: [
-                      { type: 'text' as const, text: newText },
-                      // Keep existing file parts
-                      ...(originalMessages[targetIdx].parts?.filter(
-                        (part) => part.type === 'file'
-                      ) || []),
-                      // Add optimistic file parts
-                      ...optimisticFileParts,
-                    ],
-                  };
-                }
+            return currentMsgs.map((msg) => {
+              if (msg.id !== id) {
                 return msg;
-              })
-              .filter((_, idx) => idx <= targetIdx);
+              }
+              const existingFileParts = (msg.parts || []).filter(
+                (part): part is FileUIPart => part.type === 'file'
+              );
+              return {
+                ...msg,
+                parts: [
+                  { type: 'text' as const, text: newText },
+                  ...existingFileParts,
+                  ...optimisticFileParts,
+                ],
+              };
+            });
           });
 
           // Upload files and get real file parts
@@ -646,34 +656,42 @@ export default function Chat() {
               saveFileAttachment({ chatId: cid, key, fileName })
           );
         } catch (_error) {
+          const originalTarget = originalMessages[targetIdx];
+          setMessages((cur) =>
+            cur.map((m) => (m.id === id ? originalTarget : m))
+          );
           toast({ title: 'Failed to upload files', status: 'error' });
           return; // Abort edit on file upload failure
         }
       }
 
-      // Create the edited message parts with processed files
-      const editedParts = [
-        { type: 'text' as const, text: newText },
-        // Keep any existing file parts from the original message
-        ...(originalMessages[targetIdx].parts?.filter(
-          (part) => part.type === 'file'
-        ) || []),
-        // Add new uploaded file parts
-        ...newFileParts,
-      ];
-
       try {
         // 1. Update message content immediately using setMessages (no gap!)
         setMessages((currentMsgs) => {
-          return currentMsgs
-            .map((msg, idx) => {
-              if (idx === targetIdx) {
-                // Update content, KEEP same ID for seamless editing
-                return { ...msg, parts: editedParts };
-              }
+          return currentMsgs.map((msg) => {
+            if (msg.id !== id) {
               return msg;
-            })
-            .filter((_, idx) => idx <= targetIdx); // Remove subsequent messages that need regeneration
+            }
+
+            // Keep text + existing non-optimistic file parts, then append new uploaded file parts.
+            const existingNonOptimisticFiles = (msg.parts || [])
+              .filter((part): part is FileUIPart => part.type === 'file')
+              .filter(
+                (file) =>
+                  !(
+                    typeof file.url === 'string' && file.url.startsWith('blob:')
+                  )
+              );
+
+            return {
+              ...msg,
+              parts: [
+                { type: 'text' as const, text: newText },
+                ...existingNonOptimisticFiles,
+                ...newFileParts,
+              ],
+            };
+          });
         });
 
         // 2. Trigger AI regeneration using the edit-specific model and settings
@@ -695,10 +713,13 @@ export default function Chat() {
           },
         };
 
-        regenerate(options);
+        await regenerate(options);
       } catch {
-        // Rollback on failure
-        setMessages(originalMessages);
+        // Rollback on failure - revert only the edited message
+        const originalTarget = originalMessages[targetIdx];
+        setMessages((cur) =>
+          cur.map((m) => (m.id === id ? originalTarget : m))
+        );
         toast({
           title: 'Failed to update message',
           status: 'error',

@@ -351,16 +351,12 @@ export const deleteMessageAndDescendants = mutation({
     // See: https://docs.convex.dev/database/reading-data
     const messagesToDelete = await ctx.db
       .query('messages')
-      .withIndex('by_chat_and_created', (q) => q.eq('chatId', message.chatId))
+      .withIndex('by_chat_and_created', (q) =>
+        deleteOnlyDescendants
+          ? q.eq('chatId', message.chatId).gt('createdAt', threshold)
+          : q.eq('chatId', message.chatId).gte('createdAt', threshold)
+      )
       .order('asc')
-      .filter((q) => {
-        // This uses .filter() correctly - filters by time after using index for chatId
-        // Range queries can't be combined with .eq(), so .filter() is necessary here
-        // See: https://docs.convex.dev/database/indexes/
-        return deleteOnlyDescendants
-          ? q.gt(q.field('createdAt') ?? q.field('_creationTime'), threshold)
-          : q.gte(q.field('createdAt') ?? q.field('_creationTime'), threshold);
-      })
       .collect();
 
     const ids = messagesToDelete.map((m) => m._id);
@@ -406,11 +402,13 @@ export const patchMessageContent = mutation({
     const { message } = await ensureMessageAccess(ctx, messageId);
 
     // Patch existing message with new content/parts
-    await ctx.db.patch(messageId, {
-      content: newContent,
-      parts: newParts,
-    });
-
+    // Build the patch object, always updating content…
+    const patch: Partial<Doc<'messages'>> = { content: newContent };
+    // …and only include parts if newParts was passed in
+    if (typeof newParts !== 'undefined') {
+      patch.parts = newParts;
+    }
+    await ctx.db.patch(messageId, patch);
     // Update chat timestamp
     await ctx.db.patch(message.chatId, { updatedAt: Date.now() });
   },

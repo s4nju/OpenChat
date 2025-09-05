@@ -269,7 +269,8 @@ function MessageUserInner({
           tooltip={isEditing ? 'Cancel Edit' : 'Edit'}
         >
           <button
-            aria-label="Edit"
+            aria-label={isEditing ? 'Cancel edit' : 'Edit'}
+            aria-pressed={isEditing}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
             disabled={status === 'streaming'}
             onClick={() => setIsEditing(!isEditing)}

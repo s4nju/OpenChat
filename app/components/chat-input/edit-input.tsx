@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUp } from '@phosphor-icons/react';
+import { ArrowUpIcon } from '@phosphor-icons/react';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
 import useEditClickOutside from '@/app/hooks/use-edit-click-outside';
@@ -153,7 +153,7 @@ export function EditInput({
               />
             )}
           </div>
-          <PromptInputAction tooltip="Send">
+          <PromptInputAction tooltip="Save edit">
             <Button
               aria-label="Save edit"
               className="origin-right scale-90 transform rounded-full transition-all duration-300 ease-out sm:scale-100"
@@ -162,7 +162,7 @@ export function EditInput({
               size="sm"
               type="button"
             >
-              <ArrowUp className="size-4" />
+              <ArrowUpIcon className="size-4" />
             </Button>
           </PromptInputAction>
         </PromptInputActions>
