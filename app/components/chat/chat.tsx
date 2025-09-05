@@ -28,6 +28,7 @@ import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
 import {
   createOptimisticAttachments,
+  revokeOptimisticAttachments,
   uploadFilesInParallel,
 } from '@/lib/file-upload-utils';
 import {
@@ -321,11 +322,13 @@ export default function Chat() {
 
         try {
           attachments = await processFiles(chatIdToUse as Id<'chats'>);
-          // Remove placeholder
+          // Remove placeholder and cleanup blob URLs
           setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
+          revokeOptimisticAttachments(optimisticAttachments);
         } catch {
+          // Remove placeholder and cleanup blob URLs; rely on upload utils to toast errors
           setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
-          toast({ title: 'Failed to upload files', status: 'error' });
+          revokeOptimisticAttachments(optimisticAttachments);
           return;
         }
       }
@@ -597,13 +600,21 @@ export default function Chat() {
         return;
       }
 
-      const currentMessages = messagesRef.current;
-      const originalMessages = [...currentMessages];
+      const originalMessages = [...messagesRef.current];
       const targetIdx = originalMessages.findIndex((m) => m.id === id);
 
       if (targetIdx === -1) {
         return;
       }
+
+      // Helper function to filter out optimistic (blob URL) files
+      const getNonOptimisticFiles = (parts: UIMessage['parts']) =>
+        (parts || [])
+          .filter((part): part is FileUIPart => part.type === 'file')
+          .filter(
+            (file) =>
+              !(typeof file.url === 'string' && file.url.startsWith('blob:'))
+          );
 
       // No-op guard: Check if edit has no substantive changes
       const originalMessage = originalMessages[targetIdx] as MessageWithExtras;
@@ -628,82 +639,91 @@ export default function Chat() {
       }
 
       // Process new files if any were added
-      let newFileParts: FileUIPart[] = [];
-      if (editOptions.files.length > 0) {
-        try {
-          // Create optimistic attachments for immediate UI feedback
-          const optimisticFileParts = createOptimisticAttachments(
-            editOptions.files
-          );
+      const hasNewFiles = editOptions.files.length > 0;
+      let optimisticFileParts: FileUIPart[] = [];
 
-          // Update UI immediately with optimistic files
-          setMessages((currentMsgs) => {
-            return currentMsgs.map((msg) => {
-              if (msg.id !== id) {
-                return msg;
-              }
-              const existingFileParts = (msg.parts || []).filter(
-                (part): part is FileUIPart => part.type === 'file'
-              );
-              return {
-                ...msg,
-                parts: [
-                  { type: 'text' as const, text: newText },
-                  ...existingFileParts,
-                  ...optimisticFileParts,
-                ],
-              };
-            });
-          });
-
-          // Upload files and get real file parts
-          newFileParts = await uploadFilesInParallel(
-            editOptions.files,
-            chatId as Id<'chats'>,
-            uploadFile,
-            ({ chatId: cid, key, fileName }) =>
-              saveFileAttachment({ chatId: cid, key, fileName })
-          );
-        } catch (_error) {
-          const originalTarget = originalMessages[targetIdx];
-          setMessages((cur) =>
-            cur.map((m) => (m.id === id ? originalTarget : m))
-          );
-          toast({ title: 'Failed to upload files', status: 'error' });
-          return; // Abort edit on file upload failure
-        }
+      if (hasNewFiles) {
+        // Create optimistic attachments for immediate UI feedback
+        optimisticFileParts = createOptimisticAttachments(editOptions.files);
       }
 
       try {
-        // 1. Update message content immediately using setMessages (no gap!)
+        // 1. Update message content and remove subsequent messages immediately
         setMessages((currentMsgs) => {
-          return currentMsgs.map((msg) => {
-            if (msg.id !== id) {
-              return msg;
+          const editTargetIdx = currentMsgs.findIndex((m) => m.id === id);
+          if (editTargetIdx === -1) {
+            return currentMsgs;
+          }
+
+          // Single pass: slice and update in one operation
+          return currentMsgs.slice(0, editTargetIdx + 1).map((msg, idx) => {
+            // Only create new object for the edited message
+            if (idx !== editTargetIdx) {
+              return msg; // Return unchanged reference
             }
 
-            // Keep text + existing non-optimistic file parts, then append new uploaded file parts.
-            const existingNonOptimisticFiles = (msg.parts || [])
-              .filter((part): part is FileUIPart => part.type === 'file')
-              .filter(
-                (file) =>
-                  !(
-                    typeof file.url === 'string' && file.url.startsWith('blob:')
-                  )
-              );
+            // Update only the edited message
+            const existingNonOptimisticFiles = getNonOptimisticFiles(msg.parts);
 
             return {
               ...msg,
               parts: [
                 { type: 'text' as const, text: newText },
                 ...existingNonOptimisticFiles,
-                ...newFileParts,
+                ...optimisticFileParts, // Include optimistic files for immediate feedback
               ],
             };
           });
         });
 
-        // 2. Trigger AI regeneration using the edit-specific model and settings
+        // 2. Upload files if any (replace optimistic with real files after upload)
+        if (hasNewFiles) {
+          try {
+            const newFileParts = await uploadFilesInParallel(
+              editOptions.files,
+              chatId as Id<'chats'>,
+              uploadFile,
+              ({ chatId: cid, key, fileName }) =>
+                saveFileAttachment({ chatId: cid, key, fileName })
+            );
+
+            // Update again to replace optimistic files with uploaded files
+            setMessages((currentMsgs) => {
+              const editIdx = currentMsgs.findIndex((m) => m.id === id);
+              if (editIdx === -1) {
+                return currentMsgs;
+              }
+
+              const next = currentMsgs.map((msg, idx) => {
+                if (idx !== editIdx) {
+                  return msg;
+                }
+
+                // Remove blob URLs and add real uploaded files
+                const nonBlobFiles = getNonOptimisticFiles(msg.parts);
+
+                return {
+                  ...msg,
+                  parts: [
+                    { type: 'text' as const, text: newText },
+                    ...nonBlobFiles,
+                    ...newFileParts, // Real uploaded files
+                  ],
+                };
+              });
+              // Cleanup any previously created blob URLs now that we've replaced them
+              revokeOptimisticAttachments(optimisticFileParts);
+              return next;
+            });
+          } catch (_error) {
+            // Rollback on file upload failure
+            revokeOptimisticAttachments(optimisticFileParts);
+            setMessages(originalMessages);
+            return; // Abort edit on file upload failure
+          }
+        }
+
+        // 3. Trigger AI regeneration using the edit-specific model and settings
         const isEditReasoningModel = supportsReasoningEffort(editOptions.model);
         const timezone = getUserTimezone();
 
@@ -724,11 +744,8 @@ export default function Chat() {
 
         await regenerate(options);
       } catch {
-        // Rollback on failure - revert only the edited message
-        const originalTarget = originalMessages[targetIdx];
-        setMessages((cur) =>
-          cur.map((m) => (m.id === id ? originalTarget : m))
-        );
+        // Rollback on failure - restore all original messages
+        setMessages(originalMessages);
         toast({
           title: 'Failed to update message',
           status: 'error',
