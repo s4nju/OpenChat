@@ -606,14 +606,23 @@ export default function Chat() {
       }
 
       // No-op guard: Check if edit has no substantive changes
-      const originalMessage = originalMessages[targetIdx];
+      const originalMessage = originalMessages[targetIdx] as MessageWithExtras;
       const originalText =
         originalMessage.parts?.find((p) => p.type === 'text')?.text || '';
 
-      // Return early if text unchanged and no new files
+      // Get current settings for comparison
+      const originalModel = originalMessage.model || selectedModel;
+      const originalSearch = originalMessage.metadata?.includeSearch ?? false;
+      const originalEffort =
+        originalMessage.metadata?.reasoningEffort || reasoningEffort;
+
+      // Return early if nothing has changed
       if (
         originalText.trim() === newText.trim() &&
-        editOptions.files.length === 0
+        editOptions.files.length === 0 &&
+        originalModel === editOptions.model &&
+        originalSearch === editOptions.enableSearch &&
+        originalEffort === editOptions.reasoningEffort
       ) {
         return;
       }
@@ -734,6 +743,8 @@ export default function Chat() {
       enabledToolSlugs,
       uploadFile,
       saveFileAttachment,
+      selectedModel,
+      reasoningEffort,
     ]
   );
 

@@ -740,12 +740,17 @@ export async function POST(req: Request) {
           api.messages.patchMessageContent,
           {
             messageId: editMessageId,
-            newContent:
+            newContent: sanitizeUserInput(
               lastMessage.parts
                 ?.filter((part) => part.type === 'text')
                 .map((part) => part.text)
-                .join('') || '',
-            newParts: lastMessage.parts,
+                .join('') || ''
+            ),
+            newParts: lastMessage.parts?.map((part) =>
+              part.type === 'text'
+                ? { ...part, text: sanitizeUserInput(part.text) }
+                : part
+            ),
           },
           { token }
         );
