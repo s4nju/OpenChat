@@ -239,7 +239,7 @@ function MessageUserInner({
       <MessageActions
         className={cn(
           'flex gap-0 transition-opacity',
-          isTouch
+          isTouch || isEditing
             ? 'opacity-100'
             : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
         )}
