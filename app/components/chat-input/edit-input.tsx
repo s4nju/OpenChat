@@ -74,8 +74,54 @@ export function EditInput({
   // Click outside to cancel (ignores portal elements like dropdowns)
   useEditClickOutside(editContainerRef, onCancel);
 
+  // Check if there are any actual changes from the initial state
+  const hasChanges = useCallback(() => {
+    // Quick text comparison first (most common change)
+    if (value.trim() !== initialValue.trim()) {
+      return true;
+    }
+
+    // Model/settings changes
+    if (editModel !== selectedModel) {
+      return true;
+    }
+    if (editSearchEnabled !== isSearchEnabled) {
+      return true;
+    }
+    if (editReasoningEffort !== reasoningEffort) {
+      return true;
+    }
+
+    // File changes (more expensive, check last)
+    if (editFiles.length !== initialFiles.length) {
+      return true;
+    }
+
+    // Only do deep file comparison if lengths match but we need to check content
+    return editFiles.some(
+      (file) =>
+        !initialFiles.some(
+          (initial) => initial.name === file.name && initial.size === file.size
+        )
+    );
+  }, [
+    value,
+    initialValue,
+    editModel,
+    selectedModel,
+    editSearchEnabled,
+    isSearchEnabled,
+    editReasoningEffort,
+    reasoningEffort,
+    editFiles,
+    initialFiles,
+  ]);
+
   const handleSend = useCallback(() => {
     if (!value.trim() && editFiles.length === 0) {
+      return;
+    }
+    if (!hasChanges()) {
       return;
     }
     onSend(value, {
@@ -91,6 +137,7 @@ export function EditInput({
     editSearchEnabled,
     editModel,
     editReasoningEffort,
+    hasChanges,
   ]);
 
   const handleKeyDown = useCallback(
@@ -157,7 +204,9 @@ export function EditInput({
             <Button
               aria-label="Save edit"
               className="origin-right scale-90 transform rounded-full transition-all duration-300 ease-out sm:scale-100"
-              disabled={!value.trim() && editFiles.length === 0}
+              disabled={
+                (!value.trim() && editFiles.length === 0) || !hasChanges()
+              }
               onClick={handleSend}
               size="sm"
               type="button"
