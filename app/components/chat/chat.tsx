@@ -472,15 +472,14 @@ export default function Chat() {
   // Model change handler
   const handleModelChange = useCallback(
     async (model: string) => {
-      if (!user || user.isAnonymous) {
-        return;
-      }
-
+      // Allow anonymous and logged-in users to change the model selection in UI.
+      // For new chats (no chatId yet), store temporarily.
       if (!chatId) {
         setTempSelectedModel(model);
         return;
       }
 
+      // For existing chats, persist via mutation. Server validates access.
       await handleModelUpdate(chatId, model, user);
     },
     [chatId, user, handleModelUpdate]

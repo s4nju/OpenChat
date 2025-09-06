@@ -25,7 +25,7 @@ export const DEEPSEEK_MODELS = [
     subName: 'Reasoning',
     provider: 'openrouter',
     displayProvider: 'deepseek',
-    premium: false,
+    premium: true,
     usesPremiumCredits: false,
     description: `DeepSeek V3.1's thinking mode with deep chain-of-thought reasoning.\nOptimized for complex tasks, multi-step problem solving, and advanced agent capabilities.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },
