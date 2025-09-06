@@ -1,10 +1,18 @@
 'use client';
 
-import { Check, Copy, FilePdf, Trash } from '@phosphor-icons/react';
+import {
+  CheckIcon,
+  CopyIcon,
+  FilePdfIcon,
+  PencilSimpleIcon,
+  PencilSimpleSlashIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
 import type { FileUIPart, UIMessage as MessageType } from 'ai';
 import Image from 'next/image';
 import type React from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
+import { EditInput } from '@/app/components/chat-input/edit-input';
 import {
   MorphingDialog,
   MorphingDialogClose,
@@ -19,7 +27,6 @@ import {
   Message as MessageContainer,
   MessageContent,
 } from '@/components/prompt-kit/message';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const getTextFromDataUrl = (dataUrl: string) => {
@@ -99,7 +106,7 @@ const renderFilePart = (filePart: FileUIPart) => {
         </div>
         {/* Footer with icon and filename */}
         <div className="flex items-center gap-2">
-          <FilePdf
+          <FilePdfIcon
             aria-hidden="true"
             className="shrink-0 text-gray-500 dark:text-gray-300"
             size={20}
@@ -125,11 +132,26 @@ export type MessageUserProps = {
   parts?: MessageType['parts'];
   copied: boolean;
   copyToClipboard: () => void;
-  onEdit: (id: string, newText: string) => void;
-  onReload: () => void;
+  onEdit: (
+    id: string,
+    newText: string,
+    options: {
+      model: string;
+      enableSearch: boolean;
+      files: File[];
+      reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
+    }
+  ) => void;
   onDelete: (id: string) => void;
   id: string;
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
+  selectedModel: string;
+  isUserAuthenticated: boolean;
+  editFiles?: File[];
+  isReasoningModel?: boolean;
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  isSearchEnabled?: boolean;
 };
 
 function MessageUserInner({
@@ -138,10 +160,15 @@ function MessageUserInner({
   copied,
   copyToClipboard,
   onEdit,
-  onReload,
   onDelete,
   id,
   status,
+  selectedModel,
+  isUserAuthenticated,
+  editFiles = [],
+  isReasoningModel = false,
+  reasoningEffort = 'medium',
+  isSearchEnabled = false,
 }: MessageUserProps): React.ReactElement {
   // Extract text content from parts
   const textContent =
@@ -150,7 +177,6 @@ function MessageUserInner({
       .map((part) => ('text' in part ? part.text : ''))
       .join('') || '';
 
-  const [editInput, setEditInput] = useState(textContent);
   const [isEditing, setIsEditing] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -161,26 +187,6 @@ function MessageUserInner({
       setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     }
   }, []);
-
-  // Update editInput when textContent changes
-  useEffect(() => {
-    if (!isEditing) {
-      setEditInput(textContent);
-    }
-  }, [textContent, isEditing]);
-
-  const handleEditCancel = () => {
-    setIsEditing(false);
-    setEditInput(textContent);
-  };
-
-  const handleSave = () => {
-    if (onEdit) {
-      onEdit(id, editInput);
-    }
-    onReload();
-    setIsEditing(false);
-  };
 
   const handleDelete = () => {
     onDelete(id);
@@ -205,36 +211,32 @@ function MessageUserInner({
           </div>
         ))}
       {isEditing ? (
-        <div
-          className="relative flex min-w-[180px] flex-col gap-2 rounded-3xl bg-accent px-5 py-2.5"
-          style={{
-            width: contentRef.current?.offsetWidth,
+        <EditInput
+          existingFiles={
+            parts
+              ?.filter((part): part is FileUIPart => part.type === 'file')
+              .map((f) => ({
+                url: f.url,
+                filename: f.filename,
+                mediaType: f.mediaType,
+              })) ?? []
+          }
+          initialFiles={editFiles}
+          initialValue={textContent}
+          isReasoningModel={isReasoningModel}
+          isSearchEnabled={isSearchEnabled}
+          isUserAuthenticated={isUserAuthenticated}
+          onCancel={() => {
+            setIsEditing(false);
           }}
-        >
-          <textarea
-            autoFocus
-            className="w-full resize-none bg-transparent outline-none"
-            onChange={(e) => setEditInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSave();
-              }
-              if (e.key === 'Escape') {
-                handleEditCancel();
-              }
-            }}
-            value={editInput}
-          />
-          <div className="flex justify-end gap-2">
-            <Button onClick={handleEditCancel} size="sm" variant="ghost">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} size="sm">
-              Save
-            </Button>
-          </div>
-        </div>
+          onSend={(newValue, options) => {
+            onEdit(id, newValue, options);
+            setIsEditing(false);
+          }}
+          reasoningEffort={reasoningEffort}
+          selectedModel={selectedModel}
+          status={status}
+        />
       ) : (
         <MessageContent
           className="relative max-w-[70%] whitespace-pre-line rounded-3xl bg-accent px-5 py-2.5"
@@ -247,7 +249,7 @@ function MessageUserInner({
       <MessageActions
         className={cn(
           'flex gap-0 transition-opacity',
-          isTouch
+          isTouch || isEditing
             ? 'opacity-100'
             : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
         )}
@@ -265,27 +267,32 @@ function MessageUserInner({
             type="button"
           >
             {copied ? (
-              <Check className="size-4" />
+              <CheckIcon className="size-4" />
             ) : (
-              <Copy className="size-4" />
+              <CopyIcon className="size-4" />
             )}
           </button>
         </MessageAction>
-        {/* @todo: add when ready */}
-        {/* <MessageAction
-          tooltip={isEditing ? "Save" : "Edit"}
-          side="bottom"
+        <MessageAction
           delayDuration={0}
+          side="bottom"
+          tooltip={isEditing ? 'Cancel Edit' : 'Edit'}
         >
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition"
-            aria-label="Edit"
+            aria-label={isEditing ? 'Cancel edit' : 'Edit'}
+            aria-pressed={isEditing}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={status === 'streaming'}
             onClick={() => setIsEditing(!isEditing)}
             type="button"
           >
-            <PencilSimple className="size-4" />
+            {isEditing ? (
+              <PencilSimpleSlashIcon className="size-4" />
+            ) : (
+              <PencilSimpleIcon className="size-4" />
+            )}
           </button>
-        </MessageAction> */}
+        </MessageAction>
         <MessageAction delayDuration={0} side="bottom" tooltip="Delete">
           <button
             aria-label="Delete"
@@ -294,7 +301,7 @@ function MessageUserInner({
             onClick={handleDelete}
             type="button"
           >
-            <Trash className="size-4" />
+            <TrashIcon className="size-4" />
           </button>
         </MessageAction>
       </MessageActions>

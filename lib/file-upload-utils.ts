@@ -96,3 +96,23 @@ export function createOptimisticAttachments(files: File[]): FileUIPart[] {
     url: URL.createObjectURL(file),
   }));
 }
+
+/**
+ * Revokes blob: URLs created for optimistic attachments to avoid memory leaks.
+ * Safe to call multiple times; non-blob URLs are ignored.
+ */
+export function revokeOptimisticAttachments(parts: FileUIPart[]): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  for (const part of parts) {
+    const url = part?.url;
+    if (typeof url === 'string' && url.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // no-op: best-effort cleanup
+      }
+    }
+  }
+}

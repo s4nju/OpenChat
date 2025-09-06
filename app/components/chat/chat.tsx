@@ -27,6 +27,11 @@ import type { Id } from '@/convex/_generated/dataModel';
 import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
 import {
+  createOptimisticAttachments,
+  revokeOptimisticAttachments,
+  uploadFilesInParallel,
+} from '@/lib/file-upload-utils';
+import {
   createPlaceholderId,
   mapMessage,
   validateInput,
@@ -114,6 +119,8 @@ export default function Chat() {
     processFiles,
     createOptimisticFiles,
     hasFiles,
+    uploadFile,
+    saveFileAttachment,
   } = useFileHandling();
 
   // Local state
@@ -187,7 +194,30 @@ export default function Chat() {
       return;
     }
 
-    const mappedDb = messagesFromDB.map(mapMessage);
+    const mappedDb = messagesFromDB.map((msg, index) => {
+      const mappedMessage = mapMessage(msg) as MessageWithExtras;
+
+      if (msg.role === 'user') {
+        // Next message is always the assistant response
+        const nextMsg = messagesFromDB[index + 1];
+        if (nextMsg?.role === 'assistant') {
+          if (nextMsg.metadata?.modelId) {
+            mappedMessage.model = nextMsg.metadata.modelId;
+          }
+          // Copy search setting from assistant's metadata to the user message metadata
+          if (nextMsg.metadata?.includeSearch !== undefined) {
+            mappedMessage.metadata = {
+              ...mappedMessage.metadata,
+              includeSearch: nextMsg.metadata.includeSearch,
+            };
+          }
+        }
+      } else if (msg.role === 'assistant' && msg.metadata?.modelId) {
+        mappedMessage.model = msg.metadata.modelId;
+      }
+
+      return mappedMessage;
+    });
 
     // Use functional update to access current messages without creating a dependency
     setMessages((currentMessages) => {
@@ -292,11 +322,13 @@ export default function Chat() {
 
         try {
           attachments = await processFiles(chatIdToUse as Id<'chats'>);
-          // Remove placeholder
+          // Remove placeholder and cleanup blob URLs
           setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
+          revokeOptimisticAttachments(optimisticAttachments);
         } catch {
+          // Remove placeholder and cleanup blob URLs; rely on upload utils to toast errors
           setMessages((cur) => cur.filter((m) => m.id !== placeholderId));
-          toast({ title: 'Failed to upload files', status: 'error' });
+          revokeOptimisticAttachments(optimisticAttachments);
           return;
         }
       }
@@ -487,18 +519,6 @@ export default function Chat() {
     [handleDeleteMessage, router, setIsDeleting, setMessages]
   );
 
-  const handleEdit = useCallback(
-    (id: string, newText: string) => {
-      const currentMessages = messagesRef.current;
-      setMessages(
-        currentMessages.map((message) =>
-          message.id === id ? { ...message, content: newText } : message
-        )
-      );
-    },
-    [setMessages]
-  );
-
   const handleReload = useCallback(
     async (messageId: string, opts?: { enableSearch?: boolean }) => {
       if (!(user?._id && chatId)) {
@@ -562,6 +582,201 @@ export default function Chat() {
       setIsDeleting,
       regenerate,
       enabledToolSlugs,
+    ]
+  );
+
+  const handleEdit = useCallback(
+    async (
+      id: string,
+      newText: string,
+      editOptions: {
+        model: string;
+        enableSearch: boolean;
+        files: File[];
+        reasoningEffort: 'low' | 'medium' | 'high';
+        removedFileUrls?: string[];
+      }
+    ) => {
+      if (!chatId) {
+        return;
+      }
+
+      const originalMessages = [...messagesRef.current];
+      const targetIdx = originalMessages.findIndex((m) => m.id === id);
+
+      if (targetIdx === -1) {
+        return;
+      }
+
+      // Helper function to filter out optimistic (blob URL) files
+      const getNonOptimisticFiles = (parts: UIMessage['parts']) =>
+        (parts || [])
+          .filter((part): part is FileUIPart => part.type === 'file')
+          .filter(
+            (file) =>
+              !(typeof file.url === 'string' && file.url.startsWith('blob:'))
+          );
+
+      // No-op guard: Check if edit has no substantive changes
+      const originalMessage = originalMessages[targetIdx] as MessageWithExtras;
+      const originalText =
+        originalMessage.parts?.find((p) => p.type === 'text')?.text || '';
+
+      // Get current settings for comparison
+      const originalModel = originalMessage.model || selectedModel;
+      const originalSearch = originalMessage.metadata?.includeSearch ?? false;
+      const originalEffort =
+        originalMessage.metadata?.reasoningEffort || reasoningEffort;
+
+      // Return early if nothing has changed
+      if (
+        originalText.trim() === newText.trim() &&
+        editOptions.files.length === 0 &&
+        originalModel === editOptions.model &&
+        originalSearch === editOptions.enableSearch &&
+        originalEffort === editOptions.reasoningEffort &&
+        (editOptions.removedFileUrls?.length ?? 0) === 0
+      ) {
+        return;
+      }
+
+      // Process new files if any were added
+      const hasNewFiles = editOptions.files.length > 0;
+      let optimisticFileParts: FileUIPart[] = [];
+
+      if (hasNewFiles) {
+        // Create optimistic attachments for immediate UI feedback
+        optimisticFileParts = createOptimisticAttachments(editOptions.files);
+      }
+
+      try {
+        const removedSet = new Set(
+          (editOptions.removedFileUrls || []).map((u) => u.split('?')[0])
+        );
+        // 1. Update message content and remove subsequent messages immediately
+        setMessages((currentMsgs) => {
+          const editTargetIdx = currentMsgs.findIndex((m) => m.id === id);
+          if (editTargetIdx === -1) {
+            return currentMsgs;
+          }
+
+          // Single pass: slice and update in one operation
+          return currentMsgs.slice(0, editTargetIdx + 1).map((msg, idx) => {
+            // Only create new object for the edited message
+            if (idx !== editTargetIdx) {
+              return msg; // Return unchanged reference
+            }
+
+            // Update only the edited message
+            const existingNonOptimisticFiles = getNonOptimisticFiles(msg.parts);
+            const filteredExisting = existingNonOptimisticFiles.filter((f) => {
+              const url = typeof f.url === 'string' ? f.url.split('?')[0] : '';
+              return !removedSet.has(url);
+            });
+
+            return {
+              ...msg,
+              parts: [
+                { type: 'text' as const, text: newText },
+                ...filteredExisting,
+                ...optimisticFileParts, // Include optimistic files for immediate feedback
+              ],
+            };
+          });
+        });
+
+        // 2. Upload files if any (replace optimistic with real files after upload)
+        if (hasNewFiles) {
+          try {
+            const newFileParts = await uploadFilesInParallel(
+              editOptions.files,
+              chatId as Id<'chats'>,
+              uploadFile,
+              ({ chatId: cid, key, fileName }) =>
+                saveFileAttachment({ chatId: cid, key, fileName })
+            );
+
+            // Update again to replace optimistic files with uploaded files
+            setMessages((currentMsgs) => {
+              const editIdx = currentMsgs.findIndex((m) => m.id === id);
+              if (editIdx === -1) {
+                return currentMsgs;
+              }
+
+              const next = currentMsgs.map((msg, idx) => {
+                if (idx !== editIdx) {
+                  return msg;
+                }
+
+                // Remove blob URLs and add real uploaded files
+                const nonBlobFiles = getNonOptimisticFiles(msg.parts).filter(
+                  (f) => {
+                    const url =
+                      typeof f.url === 'string' ? f.url.split('?')[0] : '';
+                    return !removedSet.has(url);
+                  }
+                );
+
+                return {
+                  ...msg,
+                  parts: [
+                    { type: 'text' as const, text: newText },
+                    ...nonBlobFiles,
+                    ...newFileParts, // Real uploaded files
+                  ],
+                };
+              });
+              // Cleanup any previously created blob URLs now that we've replaced them
+              revokeOptimisticAttachments(optimisticFileParts);
+              return next;
+            });
+          } catch (_error) {
+            // Rollback on file upload failure
+            revokeOptimisticAttachments(optimisticFileParts);
+            setMessages(originalMessages);
+            return; // Abort edit on file upload failure
+          }
+        }
+
+        // 3. Trigger AI regeneration using the edit-specific model and settings
+        const isEditReasoningModel = supportsReasoningEffort(editOptions.model);
+        const timezone = getUserTimezone();
+
+        const options = {
+          body: {
+            chatId,
+            model: editOptions.model, // Use the model selected in edit mode
+            personaId,
+            editMessageId: id,
+            enableSearch: editOptions.enableSearch, // Use edit-specific search setting
+            ...(isEditReasoningModel
+              ? { reasoningEffort: editOptions.reasoningEffort }
+              : {}),
+            ...(timezone ? { userInfo: { timezone } } : {}),
+            ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
+          },
+        };
+
+        await regenerate(options);
+      } catch {
+        // Rollback on failure - restore all original messages
+        setMessages(originalMessages);
+        toast({
+          title: 'Failed to update message',
+          status: 'error',
+        });
+      }
+    },
+    [
+      chatId,
+      personaId,
+      setMessages,
+      regenerate,
+      enabledToolSlugs,
+      uploadFile,
+      saveFileAttachment,
+      selectedModel,
+      reasoningEffort,
     ]
   );
 
@@ -633,6 +848,8 @@ export default function Chat() {
         ) : (
           <Conversation
             autoScroll={!targetMessageId}
+            isReasoningModel={supportsReasoningEffort(selectedModel)}
+            isUserAuthenticated={isAuthenticated}
             key="conversation"
             messages={messages as MessageWithExtras[]}
             onBranch={(messageId) =>
@@ -641,6 +858,7 @@ export default function Chat() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onReload={handleReload}
+            reasoningEffort={reasoningEffort}
             selectedModel={selectedModel}
             status={status}
           />

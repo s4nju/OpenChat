@@ -208,6 +208,7 @@ type ChatRequest = {
   model: string;
   personaId?: string;
   reloadAssistantMessageId?: Id<'messages'>;
+  editMessageId?: Id<'messages'>;
   enableSearch?: boolean;
   reasoningEffort?: ReasoningEffort;
   userInfo?: { timezone?: string };
@@ -471,6 +472,7 @@ export async function POST(req: Request) {
       model,
       personaId,
       reloadAssistantMessageId,
+      editMessageId,
       enableSearch,
       reasoningEffort,
       userInfo,
@@ -712,9 +714,11 @@ export async function POST(req: Request) {
 
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
 
-    // --- Reload Logic (Delete and Recreate) ---
+    // --- Dedicated Flow Structure ---
     let userMsgId: Id<'messages'> | null = null;
+
     if (reloadAssistantMessageId) {
+      // --- Reload Flow ---
       const details = await fetchQuery(
         api.messages.getMessageDetails,
         { messageId: reloadAssistantMessageId },
@@ -726,10 +730,45 @@ export async function POST(req: Request) {
         { messageId: reloadAssistantMessageId },
         { token }
       );
-    }
+    } else if (editMessageId) {
+      // --- Edit Flow ---
+      const lastMessage = messages.at(-1);
 
-    // --- Insert User Message (if not a reload) ---
-    if (!userMsgId) {
+      if (lastMessage) {
+        // Patch the message content with new text and parts
+        await fetchMutation(
+          api.messages.patchMessageContent,
+          {
+            messageId: editMessageId,
+            newContent: sanitizeUserInput(
+              lastMessage.parts
+                ?.filter((part) => part.type === 'text')
+                .map((part) => part.text)
+                .join('') || ''
+            ),
+            newParts: lastMessage.parts?.map((part) =>
+              part.type === 'text'
+                ? { ...part, text: sanitizeUserInput(part.text) }
+                : part
+            ),
+          },
+          { token }
+        );
+
+        // Delete only subsequent messages (descendants) using enhanced mutation
+        await fetchMutation(
+          api.messages.deleteMessageAndDescendants,
+          {
+            messageId: editMessageId,
+            deleteOnlyDescendants: true,
+          },
+          { token }
+        );
+
+        userMsgId = editMessageId;
+      }
+    } else {
+      // --- Normal Flow ---
       userMsgId = await saveUserMessage(
         messages,
         chatId,

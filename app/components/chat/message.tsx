@@ -11,13 +11,27 @@ export type MessageProps = {
   id: string;
   isLast?: boolean;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string) => void;
+  onEdit: (
+    id: string,
+    newText: string,
+    options: {
+      model: string;
+      enableSearch: boolean;
+      files: File[];
+      reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
+    }
+  ) => void;
   onReload: () => void;
   onBranch: () => void;
   hasScrollAnchor?: boolean;
   parts?: MessageType['parts'];
   status?: 'streaming' | 'ready' | 'submitted' | 'error'; // Add status prop
   metadata?: Infer<typeof MessageSchema>['metadata'];
+  selectedModel?: string;
+  isUserAuthenticated?: boolean;
+  isReasoningModel?: boolean;
+  reasoningEffort?: 'low' | 'medium' | 'high';
 };
 
 function MessageComponent({
@@ -33,6 +47,10 @@ function MessageComponent({
   parts,
   status, // Receive status prop
   metadata,
+  selectedModel,
+  isUserAuthenticated = false,
+  isReasoningModel = false,
+  reasoningEffort = 'medium',
 }: MessageProps) {
   const [copied, setCopied] = useState(false);
 
@@ -53,12 +71,17 @@ function MessageComponent({
       <MessageUser
         copied={copied}
         copyToClipboard={copyToClipboard}
+        editFiles={[]}
         hasScrollAnchor={hasScrollAnchor}
         id={id}
+        isReasoningModel={isReasoningModel}
+        isSearchEnabled={metadata?.includeSearch ?? false}
+        isUserAuthenticated={isUserAuthenticated}
         onDelete={onDelete}
         onEdit={onEdit}
-        onReload={onReload}
         parts={parts}
+        reasoningEffort={reasoningEffort}
+        selectedModel={model || selectedModel || ''}
         status={status}
       />
     );

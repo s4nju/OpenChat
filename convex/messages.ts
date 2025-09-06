@@ -325,9 +325,12 @@ export const getMessageDetails = query({
 });
 
 export const deleteMessageAndDescendants = mutation({
-  args: { messageId: v.id('messages') },
+  args: {
+    messageId: v.id('messages'),
+    deleteOnlyDescendants: v.optional(v.boolean()),
+  },
   returns: v.object({ chatDeleted: v.boolean() }),
-  handler: async (ctx, { messageId }) => {
+  handler: async (ctx, { messageId, deleteOnlyDescendants = false }) => {
     // Try to get message access
     const userId = await getAuthUserId(ctx);
     if (!userId) {
@@ -348,17 +351,12 @@ export const deleteMessageAndDescendants = mutation({
     // See: https://docs.convex.dev/database/reading-data
     const messagesToDelete = await ctx.db
       .query('messages')
-      .withIndex('by_chat_and_created', (q) => q.eq('chatId', message.chatId))
+      .withIndex('by_chat_and_created', (q) =>
+        deleteOnlyDescendants
+          ? q.eq('chatId', message.chatId).gt('createdAt', threshold)
+          : q.eq('chatId', message.chatId).gte('createdAt', threshold)
+      )
       .order('asc')
-      .filter((q) => {
-        // This uses .filter() correctly - filters by time after using index for chatId
-        // Range queries can't be combined with .eq(), so .filter() is necessary here
-        // See: https://docs.convex.dev/database/indexes/
-        return q.gte(
-          q.field('createdAt') ?? q.field('_creationTime'),
-          threshold
-        );
-      })
       .collect();
 
     const ids = messagesToDelete.map((m) => m._id);
@@ -389,6 +387,73 @@ export const deleteMessageAndDescendants = mutation({
       return { chatDeleted: true };
     }
     return { chatDeleted: false };
+  },
+});
+
+export const patchMessageContent = mutation({
+  args: {
+    messageId: v.id('messages'),
+    newContent: v.string(),
+    newParts: v.optional(v.any()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { messageId, newContent, newParts }) => {
+    // Verify that the authenticated user owns the message and get context
+    const { message, chat, userId } = await ensureMessageAccess(ctx, messageId);
+
+    // If parts were provided, compute removed file URLs and clean up attachments
+    if (typeof newParts !== 'undefined') {
+      // Collect previous and next file URLs (ignore blob:)
+      const prevUrls: string[] = [];
+      const nextUrls: string[] = [];
+
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      for (const part of (message.parts as any[]) ?? []) {
+        const type = (part as { type?: string }).type;
+        const url = (part as { url?: string }).url;
+        if (
+          type === 'file' &&
+          typeof url === 'string' &&
+          !url.startsWith('blob:')
+        ) {
+          prevUrls.push(url.split('?')[0]);
+        }
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      for (const part of (newParts as any[]) ?? []) {
+        const type = (part as { type?: string }).type;
+        const url = (part as { url?: string }).url;
+        if (
+          type === 'file' &&
+          typeof url === 'string' &&
+          !url.startsWith('blob:')
+        ) {
+          nextUrls.push(url.split('?')[0]);
+        }
+      }
+
+      // Compute removed URLs
+      const nextSet = new Set(nextUrls);
+      const removed = prevUrls.filter((u) => !nextSet.has(u));
+
+      if (removed.length > 0) {
+        // Best-effort cleanup; continue even if some deletions fail
+        await Promise.allSettled(
+          removed.map((url) =>
+            cleanupSingleAttachment(ctx, chat._id, url, userId)
+          )
+        );
+      }
+    }
+
+    // Patch existing message with new content/parts
+    const patch: Partial<Doc<'messages'>> = { content: newContent };
+    if (typeof newParts !== 'undefined') {
+      patch.parts = newParts;
+    }
+    await ctx.db.patch(messageId, patch);
+    // Update chat timestamp
+    await ctx.db.patch(message.chatId, { updatedAt: Date.now() });
   },
 });
 

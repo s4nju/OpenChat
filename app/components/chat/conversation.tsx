@@ -18,11 +18,24 @@ type ConversationProps = {
   messages: MessageWithExtras[];
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string) => void;
+  onEdit: (
+    id: string,
+    newText: string,
+    options: {
+      model: string;
+      enableSearch: boolean;
+      files: File[];
+      reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
+    }
+  ) => void;
   onReload: (id: string) => void;
   onBranch: (messageId: string) => void;
   autoScroll?: boolean;
   selectedModel?: string;
+  isUserAuthenticated?: boolean;
+  isReasoningModel?: boolean;
+  reasoningEffort?: 'low' | 'medium' | 'high';
 };
 
 const Conversation = React.memo(
@@ -35,6 +48,9 @@ const Conversation = React.memo(
     onBranch,
     autoScroll = true,
     selectedModel,
+    isUserAuthenticated = false,
+    isReasoningModel = false,
+    reasoningEffort = 'medium',
   }: ConversationProps) => {
     const initialMessageCount = useRef(messages.length);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +89,8 @@ const Conversation = React.memo(
                 hasScrollAnchor={hasScrollAnchor}
                 id={message.id}
                 isLast={isLast}
+                isReasoningModel={isReasoningModel}
+                isUserAuthenticated={isUserAuthenticated}
                 key={message.id}
                 metadata={message.metadata}
                 model={message.model}
@@ -81,6 +99,8 @@ const Conversation = React.memo(
                 onEdit={onEdit}
                 onReload={() => onReload(message.id)}
                 parts={message.parts}
+                reasoningEffort={reasoningEffort}
+                selectedModel={selectedModel}
                 status={status}
                 variant={message.role}
               />
