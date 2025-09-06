@@ -4,13 +4,18 @@ import { type RefObject, useEffect } from 'react';
  * Custom click-outside hook for edit components that ignores clicks on portal elements
  * like dropdown menus, popovers, and dialogs
  */
-function useEditClickOutside<T extends HTMLElement>(
+export function useEditClickOutside<T extends HTMLElement>(
   ref: RefObject<T | null>,
   handler: (event: MouseEvent | TouchEvent) => void
 ): void {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+
+      // Early return if target is not an Element (could be Text or Document node)
+      if (!(target instanceof Element)) {
+        return;
+      }
 
       // Don't trigger if clicking inside the ref element
       if (!ref?.current || ref.current.contains(target)) {
@@ -51,5 +56,3 @@ function useEditClickOutside<T extends HTMLElement>(
     };
   }, [ref, handler]);
 }
-
-export default useEditClickOutside;

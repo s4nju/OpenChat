@@ -3,7 +3,7 @@
 import { ArrowUpIcon } from '@phosphor-icons/react';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
-import useEditClickOutside from '@/app/hooks/use-edit-click-outside';
+import { useEditClickOutside } from '@/app/hooks/use-edit-click-outside';
 import {
   PromptInput,
   PromptInputAction,
