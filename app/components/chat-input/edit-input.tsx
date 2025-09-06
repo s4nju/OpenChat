@@ -202,7 +202,7 @@ export function EditInput({
           files={editFiles}
           keptUrls={keptExistingUrls}
           onFileRemoveAction={(file) =>
-            setEditFiles(editFiles.filter((f) => f !== file))
+            setEditFiles((prev) => prev.filter((f) => f !== file))
           }
           onToggleExisting={(url) =>
             setKeptExistingUrls((prev) => {
@@ -229,7 +229,9 @@ export function EditInput({
             <ButtonFileUpload
               isUserAuthenticated={isUserAuthenticated}
               model={editModel}
-              onFileUpload={(files) => setEditFiles([...editFiles, ...files])}
+              onFileUpload={(files) =>
+                setEditFiles((prev) => [...prev, ...files])
+              }
             />
             <ButtonSearch
               isUserAuthenticated={isUserAuthenticated}
