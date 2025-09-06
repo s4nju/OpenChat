@@ -594,6 +594,7 @@ export default function Chat() {
         enableSearch: boolean;
         files: File[];
         reasoningEffort: 'low' | 'medium' | 'high';
+        removedFileUrls?: string[];
       }
     ) => {
       if (!chatId) {
@@ -633,7 +634,8 @@ export default function Chat() {
         editOptions.files.length === 0 &&
         originalModel === editOptions.model &&
         originalSearch === editOptions.enableSearch &&
-        originalEffort === editOptions.reasoningEffort
+        originalEffort === editOptions.reasoningEffort &&
+        (editOptions.removedFileUrls?.length ?? 0) === 0
       ) {
         return;
       }
@@ -648,6 +650,9 @@ export default function Chat() {
       }
 
       try {
+        const removedSet = new Set(
+          (editOptions.removedFileUrls || []).map((u) => u.split('?')[0])
+        );
         // 1. Update message content and remove subsequent messages immediately
         setMessages((currentMsgs) => {
           const editTargetIdx = currentMsgs.findIndex((m) => m.id === id);
@@ -664,12 +669,16 @@ export default function Chat() {
 
             // Update only the edited message
             const existingNonOptimisticFiles = getNonOptimisticFiles(msg.parts);
+            const filteredExisting = existingNonOptimisticFiles.filter((f) => {
+              const url = typeof f.url === 'string' ? f.url.split('?')[0] : '';
+              return !removedSet.has(url);
+            });
 
             return {
               ...msg,
               parts: [
                 { type: 'text' as const, text: newText },
-                ...existingNonOptimisticFiles,
+                ...filteredExisting,
                 ...optimisticFileParts, // Include optimistic files for immediate feedback
               ],
             };
@@ -700,7 +709,13 @@ export default function Chat() {
                 }
 
                 // Remove blob URLs and add real uploaded files
-                const nonBlobFiles = getNonOptimisticFiles(msg.parts);
+                const nonBlobFiles = getNonOptimisticFiles(msg.parts).filter(
+                  (f) => {
+                    const url =
+                      typeof f.url === 'string' ? f.url.split('?')[0] : '';
+                    return !removedSet.has(url);
+                  }
+                );
 
                 return {
                   ...msg,

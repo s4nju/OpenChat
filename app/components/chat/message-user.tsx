@@ -140,6 +140,7 @@ export type MessageUserProps = {
       enableSearch: boolean;
       files: File[];
       reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
     }
   ) => void;
   onDelete: (id: string) => void;
@@ -211,6 +212,15 @@ function MessageUserInner({
         ))}
       {isEditing ? (
         <EditInput
+          existingFiles={
+            parts
+              ?.filter((part): part is FileUIPart => part.type === 'file')
+              .map((f) => ({
+                url: f.url,
+                filename: f.filename,
+                mediaType: f.mediaType,
+              })) ?? []
+          }
           initialFiles={editFiles}
           initialValue={textContent}
           isReasoningModel={isReasoningModel}

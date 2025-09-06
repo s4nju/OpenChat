@@ -398,13 +398,56 @@ export const patchMessageContent = mutation({
   },
   returns: v.null(),
   handler: async (ctx, { messageId, newContent, newParts }) => {
-    // Verify that the authenticated user owns the message
-    const { message } = await ensureMessageAccess(ctx, messageId);
+    // Verify that the authenticated user owns the message and get context
+    const { message, chat, userId } = await ensureMessageAccess(ctx, messageId);
+
+    // If parts were provided, compute removed file URLs and clean up attachments
+    if (typeof newParts !== 'undefined') {
+      // Collect previous and next file URLs (ignore blob:)
+      const prevUrls: string[] = [];
+      const nextUrls: string[] = [];
+
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      for (const part of (message.parts as any[]) ?? []) {
+        const type = (part as { type?: string }).type;
+        const url = (part as { url?: string }).url;
+        if (
+          type === 'file' &&
+          typeof url === 'string' &&
+          !url.startsWith('blob:')
+        ) {
+          prevUrls.push(url.split('?')[0]);
+        }
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      for (const part of (newParts as any[]) ?? []) {
+        const type = (part as { type?: string }).type;
+        const url = (part as { url?: string }).url;
+        if (
+          type === 'file' &&
+          typeof url === 'string' &&
+          !url.startsWith('blob:')
+        ) {
+          nextUrls.push(url.split('?')[0]);
+        }
+      }
+
+      // Compute removed URLs
+      const nextSet = new Set(nextUrls);
+      const removed = prevUrls.filter((u) => !nextSet.has(u));
+
+      if (removed.length > 0) {
+        // Best-effort cleanup; continue even if some deletions fail
+        await Promise.allSettled(
+          removed.map((url) =>
+            cleanupSingleAttachment(ctx, chat._id, url, userId)
+          )
+        );
+      }
+    }
 
     // Patch existing message with new content/parts
-    // Build the patch object, always updating content…
     const patch: Partial<Doc<'messages'>> = { content: newContent };
-    // …and only include parts if newParts was passed in
     if (typeof newParts !== 'undefined') {
       patch.parts = newParts;
     }

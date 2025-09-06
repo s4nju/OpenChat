@@ -29,11 +29,17 @@ type EditInputProps = {
       model: string;
       files: File[];
       reasoningEffort: ReasoningEffort;
+      removedFileUrls?: string[];
     }
   ) => void;
   onCancel: () => void;
   // Initial values for edit mode
   initialFiles?: File[];
+  existingFiles?: Array<{
+    url: string;
+    filename?: string;
+    mediaType?: string;
+  }>;
   selectedModel: string;
   isSearchEnabled?: boolean;
   isUserAuthenticated: boolean;
@@ -47,6 +53,7 @@ export function EditInput({
   onSend,
   onCancel,
   initialFiles = [],
+  existingFiles = [],
   selectedModel,
   isSearchEnabled = false,
   isUserAuthenticated,
@@ -66,6 +73,10 @@ export function EditInput({
     return MODEL_DEFAULT;
   });
   const [editFiles, setEditFiles] = useState<File[]>(initialFiles);
+  // Track which existing files are kept; default to all existing files
+  const [keptExistingUrls, setKeptExistingUrls] = useState<Set<string>>(
+    () => new Set(existingFiles.map((f) => f.url.split('?')[0]))
+  );
   const [editReasoningEffort, setEditReasoningEffort] =
     useState<ReasoningEffort>(reasoningEffort);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -98,6 +109,23 @@ export function EditInput({
     }
 
     // Only do deep file comparison if lengths match but we need to check content
+    if (
+      existingFiles.length > 0 &&
+      keptExistingUrls.size !== existingFiles.length
+    ) {
+      return true;
+    }
+
+    const existingCanonical = new Set(
+      existingFiles.map((f) => f.url.split('?')[0])
+    );
+    if (
+      existingFiles.length > 0 &&
+      Array.from(keptExistingUrls).some((u) => !existingCanonical.has(u))
+    ) {
+      return true;
+    }
+
     return editFiles.some(
       (file) =>
         !initialFiles.some(
@@ -115,6 +143,8 @@ export function EditInput({
     reasoningEffort,
     editFiles,
     initialFiles,
+    existingFiles,
+    keptExistingUrls,
   ]);
 
   const handleSend = useCallback(() => {
@@ -124,11 +154,15 @@ export function EditInput({
     if (!hasChanges()) {
       return;
     }
+    const removedFileUrls = existingFiles
+      .map((f) => f.url.split('?')[0])
+      .filter((u) => !keptExistingUrls.has(u));
     onSend(value, {
       enableSearch: editSearchEnabled,
       model: editModel,
       files: editFiles,
       reasoningEffort: editReasoningEffort,
+      removedFileUrls,
     });
   }, [
     value,
@@ -138,6 +172,8 @@ export function EditInput({
     editModel,
     editReasoningEffort,
     hasChanges,
+    existingFiles,
+    keptExistingUrls,
   ]);
 
   const handleKeyDown = useCallback(
@@ -162,9 +198,23 @@ export function EditInput({
         value={value}
       >
         <FileList
+          existingAttachments={existingFiles}
           files={editFiles}
+          keptUrls={keptExistingUrls}
           onFileRemoveAction={(file) =>
             setEditFiles(editFiles.filter((f) => f !== file))
+          }
+          onToggleExisting={(url) =>
+            setKeptExistingUrls((prev) => {
+              const next = new Set(prev);
+              const canonical = url.split('?')[0];
+              if (next.has(canonical)) {
+                next.delete(canonical);
+              } else {
+                next.add(canonical);
+              }
+              return next;
+            })
           }
         />
         <PromptInputTextarea

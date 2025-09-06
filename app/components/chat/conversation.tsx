@@ -26,6 +26,7 @@ type ConversationProps = {
       enableSearch: boolean;
       files: File[];
       reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
     }
   ) => void;
   onReload: (id: string) => void;

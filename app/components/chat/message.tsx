@@ -19,6 +19,7 @@ export type MessageProps = {
       enableSearch: boolean;
       files: File[];
       reasoningEffort: 'low' | 'medium' | 'high';
+      removedFileUrls?: string[];
     }
   ) => void;
   onReload: () => void;
