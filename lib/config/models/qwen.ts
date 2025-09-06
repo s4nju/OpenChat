@@ -20,7 +20,7 @@ export const QWEN_MODELS = [
     subName: 'Thinking',
     provider: 'openrouter',
     displayProvider: 'qwen',
-    premium: false,
+    premium: true,
     usesPremiumCredits: false,
     description: `Qwen's Best Thinking model.\nOffers agentic tools capabilities for various thinking tasks.`,
     apiKeyUsage: { allowUserKey: false, userKeyOnly: false },

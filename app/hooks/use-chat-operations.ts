@@ -38,11 +38,11 @@ export function useChatOperations() {
   );
 
   const handleModelChange = useCallback(
-    async (chatId: string | null, model: string, user: Doc<'users'> | null) => {
-      if (!user || user.isAnonymous) {
-        return false;
-      }
-
+    async (
+      chatId: string | null,
+      model: string,
+      _user: Doc<'users'> | null
+    ) => {
       if (!chatId) {
         // For new chats, this will be handled by temporary state
         return true;

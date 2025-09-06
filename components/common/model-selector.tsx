@@ -12,6 +12,7 @@ import {
   SketchLogoIcon,
 } from '@phosphor-icons/react';
 import { useAction } from 'convex/react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/app/components/common/provider-icon';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
@@ -52,12 +53,13 @@ export function ModelSelector({
   setSelectedModelId,
   className,
 }: ModelSelectorProps) {
-  const { hasPremium, products } = useUser();
+  const { user, hasPremium, products } = useUser();
   const { favoriteModelsSet, toggleFavoriteModel } = useModelPreferences();
   const { categorizedModels } = useEnrichedModels();
   const { disabledModelsSet } = useModelSettings();
   const isMobile = useBreakpoint(768); // Use 768px as the breakpoint
   const generateCheckoutLink = useAction(api.polar.generateCheckoutLink);
+  const router = useRouter();
 
   // State for dropdown, search, and extended mode
   const [isOpen, setIsOpen] = useState(false);
@@ -143,6 +145,12 @@ export function ModelSelector({
 
   // Handle upgrade button click
   const handleUpgrade = useCallback(async () => {
+    // Anonymous users: send to auth page
+    if (user?.isAnonymous) {
+      router.push('/auth');
+      return;
+    }
+
     if (!products?.premium?.id) return;
 
     try {
@@ -156,7 +164,7 @@ export function ModelSelector({
     } catch (error) {
       console.error('Checkout failed:', error);
     }
-  }, [products?.premium?.id, generateCheckoutLink]);
+  }, [user?.isAnonymous, products?.premium?.id, generateCheckoutLink, router]);
 
   const model = useMemo(() => {
     // Always look in the full MODELS_OPTIONS list, not just filtered results
@@ -397,7 +405,7 @@ export function ModelSelector({
         {/* Scrollable Content */}
         <div className="px-1.5 py-3">
           {/* Premium Upgrade Section */}
-          {!hasPremium && products?.premium?.id && (
+          {!hasPremium && (user?.isAnonymous || products?.premium?.id) && (
             <>
               <div className="p-3">
                 <div className="rounded-lg border bg-card p-4">
