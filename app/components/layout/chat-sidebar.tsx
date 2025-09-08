@@ -5,12 +5,14 @@ import { MagnifyingGlass, Plus, SidebarSimple } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatSession } from '@/app/providers/chat-session-provider';
 import { useSidebar } from '@/app/providers/sidebar-provider';
 import { useUser } from '@/app/providers/user-provider';
+import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,12 +27,12 @@ import {
   groupChatsByTime,
   hasChatsInGroup,
 } from '@/lib/chat-utils/time-grouping';
-import { APP_NAME } from '@/lib/config';
 import { TRANSITION_LAYOUT } from '@/lib/motion';
 import { ChatList } from './chat-list';
 
 const ChatSidebar = memo(function SidebarComponent() {
   const { isSidebarOpen: isOpen, toggleSidebar } = useSidebar();
+  const { theme } = useTheme();
   const { data: chatsQuery = [], isLoading: chatsLoading } = useTanStackQuery({
     ...convexQuery(api.chats.listChatsForUser, {}),
     // Extended cache for chat list to prevent flickering
@@ -189,7 +191,7 @@ const ChatSidebar = memo(function SidebarComponent() {
         <button
           aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           className={
-            'group flex items-center justify-center rounded-full border border-transparent bg-background/80 p-2 shadow-lg outline-none backdrop-blur transition-all duration-300 hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-muted-foreground/20 dark:bg-muted/80'
+            'group flex items-center justify-center rounded-full p-2 outline-none transition-all duration-300 hover:bg-accent focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
           }
           onClick={toggleSidebar}
           tabIndex={0}
@@ -280,7 +282,7 @@ const ChatSidebar = memo(function SidebarComponent() {
         }}
         transition={TRANSITION_LAYOUT}
       >
-        <div className="flex h-[60px] shrink-0 items-center justify-center pt-1">
+        <div className="flex h-[60px] shrink-0 items-center justify-center pt-2">
           <motion.div
             animate={{
               opacity: isOpen ? 1 : 0,
@@ -295,11 +297,27 @@ const ChatSidebar = memo(function SidebarComponent() {
             }}
           >
             <Link
-              className="font-medium text-lg lowercase tracking-tight"
+              className="flex items-center justify-center"
               href="/"
               prefetch
             >
-              {APP_NAME}
+              <Image
+                alt="oschat Logo"
+                className="antialiased"
+                height={32}
+                priority
+                src={
+                  theme === 'dark'
+                    ? '/oschat_logo_dark.svg'
+                    : '/oschat_logo_light.svg'
+                }
+                style={{
+                  filter: 'none',
+                  imageRendering: 'auto',
+                }}
+                unoptimized
+                width={128}
+              />
             </Link>
           </motion.div>
         </div>

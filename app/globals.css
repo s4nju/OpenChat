@@ -3,199 +3,205 @@
 @plugin "tailwindcss-animate";
 @plugin "@tailwindcss/typography";
 
+@source "../node_modules/streamdown/dist/index.js";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --spacing-app-header: 56px;
-    --spacing-input-area: 134px;
+  --spacing-app-header: 56px;
+  --spacing-input-area: 134px;
 
-    @keyframes loading-dots {
-
-        0%,
-        100% {
-            opacity: 0;
-        }
-
-        50% {
-            opacity: 1;
-        }
+  @keyframes loading-dots {
+    0%,
+    100% {
+      opacity: 0;
     }
 
-    @keyframes shimmer {
-        0% {
-            transform: translateX(-100%);
-        }
-
-        100% {
-            transform: translateX(100%);
-        }
+    50% {
+      opacity: 1;
     }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-destructive-foreground: var(--destructive-foreground);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-    /* Computed Shadow Variants */
-    --shadow-2xs: var(--shadow-2xs);
-    --shadow-xs: var(--shadow-xs);
-    --shadow-sm: var(--shadow-sm);
-    --shadow: var(--shadow);
-    --shadow-md: var(--shadow-md);
-    --shadow-lg: var(--shadow-lg);
-    --shadow-xl: var(--shadow-xl);
-    --shadow-2xl: var(--shadow-2xl);
+  /* Computed Shadow Variants */
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 
-    --tracking-tighter: calc(var(--letter-spacing) - 0.05em);
-    --tracking-tight: calc(var(--letter-spacing) - 0.025em);
-    --tracking-normal: var(--letter-spacing);
-    --tracking-wide: calc(var(--letter-spacing) + 0.025em);
-    --tracking-wider: calc(var(--letter-spacing) + 0.05em);
-    --tracking-widest: calc(var(--letter-spacing) + 0.1em);
+  --tracking-tighter: calc(var(--letter-spacing) - 0.05em);
+  --tracking-tight: calc(var(--letter-spacing) - 0.025em);
+  --tracking-normal: var(--letter-spacing);
+  --tracking-wide: calc(var(--letter-spacing) + 0.025em);
+  --tracking-wider: calc(var(--letter-spacing) + 0.05em);
+  --tracking-widest: calc(var(--letter-spacing) + 0.1em);
 
-    --spacing-scroll-area: calc(-1 * (var(--spacing-input-area) + var(--spacing-app-header)));
-    --spacing-scroll-anchor-offset: 140px;
-    --spacing-scroll-anchor: calc(var(--spacing-scroll-area) - var(--spacing-scroll-anchor-offset) + 100dvh);
+  --spacing-scroll-area: calc(
+    -1 * (var(--spacing-input-area) + var(--spacing-app-header))
+  );
+  --spacing-scroll-anchor-offset: 140px;
+  --spacing-scroll-anchor: calc(
+    var(--spacing-scroll-area) - var(--spacing-scroll-anchor-offset) + 100dvh
+  );
 }
 
 * {
-    color-scheme: light dark;
-    border-color: var(--color-border);
+  color-scheme: light dark;
+  border-color: var(--color-border);
 }
 
 body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    -webkit-font-smoothing: antialiased;
-    letter-spacing: var(--letter-spacing);
-    overscroll-behavior: none;
-    /* iOS Safari improvements */
-    -webkit-touch-callout: none;
-    -webkit-text-size-adjust: 100%;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: var(--letter-spacing);
+  overscroll-behavior: none;
+  /* iOS Safari improvements */
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 @layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 
-    button:not(:disabled),
-    [role="button"]:not(:disabled) {
-        cursor: pointer;
+  /* iOS Safari specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      /* Additional iOS Safari optimizations */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-
-
-    /* iOS Safari specific fixes */
-    @supports (-webkit-touch-callout: none) {
-        body {
-            /* Additional iOS Safari optimizations */
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-
-        /* Prevent iOS Safari zoom on input focus by ensuring minimum 16px font-size */
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
-        input[type="search"],
-        input[type="number"],
-        input[type="tel"],
-        input[type="url"],
-        textarea,
-        select {
-            font-size: max(16px, 1rem) !important;
-        }
+    /* Prevent iOS Safari zoom on input focus by ensuring minimum 16px font-size */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    textarea,
+    select {
+      font-size: max(16px, 1rem) !important;
     }
+  }
 }
 
 code,
 pre,
 kbd,
 samp {
-    font-family: var(--font-mono);
-    font-feature-settings: var(--default-mono-font-feature-settings);
-    font-variation-settings: var(--default-mono-font-variation-settings);
+  font-family: var(--font-mono);
+  font-feature-settings: var(--default-mono-font-feature-settings);
+  font-variation-settings: var(--default-mono-font-variation-settings);
 }
 
 /* sonner toast */
-[data-sonner-toaster]>li {
-    width: 100%;
+[data-sonner-toaster] > li {
+  width: 100%;
 }
 
 @utility scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 
-    &::-webkit-scrollbar {
-        width: 8px;
-    }
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
 }
 
 @utility scrollbar-gutter-stable {
-    scrollbar-gutter: stable;
+  scrollbar-gutter: stable;
 }
 
 @utility scrollbar-gutter-both {
-    scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable both-edges;
 }
 
 @layer utilities {
-    .markdown-body .katex {
-        font-size: 1.1em;
-    }
+  .markdown-body .katex {
+    font-size: 1.1em;
+  }
 
-    .markdown-body .katex-display {
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-top: 0.5em;
-        padding-bottom: 0.5em;
-        margin-top: 1em;
-        margin-bottom: 1em;
-    }
+  .markdown-body .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
 
-    .markdown-body .katex-display > .katex {
-        font-size: 1.21em;
-    }
+  .markdown-body .katex-display > .katex {
+    font-size: 1.21em;
+  }
 
-    .markdown-body .katex-display > .katex > .katex-html {
-        display: block;
-        position: relative;
-    }
+  .markdown-body .katex-display > .katex > .katex-html {
+    display: block;
+    position: relative;
+  }
 
-    .markdown-body .katex-display > .katex > .katex-html > .tag {
-        position: absolute;
-        right: 0;
-    }
+  .markdown-body .katex-display > .katex > .katex-html > .tag {
+    position: absolute;
+    right: 0;
+  }
+  /* Fix inline code background for better theme compatibility */
+  .markdown-body .rounded-sm.bg-primary-foreground.px-1.font-mono.text-sm {
+    background-color: hsl(var(--muted)) !important;
+  }
 }

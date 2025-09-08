@@ -2,11 +2,11 @@ export const PREMIUM_CREDITS = 100;
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2;
 export const DAILY_FILE_UPLOAD_LIMIT = 5;
 
-export const APP_NAME = 'OpenChat';
+export const APP_NAME = 'OS Chat';
 export const META_TITLE = `${APP_NAME} - Open Source T3 Chat & ChatGPT Alternative`;
 export const APP_DOMAIN = 'https://oschat.ai';
 export const APP_DESCRIPTION =
-  'OpenChat is a free, open-source AI personal assistant with 40+ language models from OpenAI, Anthropic, Google, Meta, and more. Features task scheduling, service connectors (Gmail, Calendar, Notion, GitHub, Slack), multi-modal support, image generation, reasoning models, and web search in one powerful interface.';
+  'OS Chat is a free, open-source AI personal assistant with 40+ language models from OpenAI, Anthropic, Google, Meta, and more. Features task scheduling, service connectors (Gmail, Calendar, Notion, GitHub, Slack), multi-modal support, image generation, reasoning models, and web search in one powerful interface.';
 export const APP_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 

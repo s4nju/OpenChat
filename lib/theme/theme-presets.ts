@@ -14,8 +14,8 @@ import type { ThemePreset } from '../types/theme';
  * Font values must match theme-fonts.ts exactly for dropdowns to work correctly.
  */
 export const defaultPresets: Record<string, ThemePreset> = {
-  openchat: {
-    label: 'OpenChat',
+  oschat: {
+    label: 'OS Chat',
     styles: {
       light: {
         background: 'oklch(1 0 0)',

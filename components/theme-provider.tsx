@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect } from "react";
-import { useEditorStore } from "../lib/store/editor-store";
-import { applyThemeToElement } from "../lib/theme/apply-theme";
+import { createContext, useContext, useEffect } from 'react';
+import { useEditorStore } from '../lib/store/editor-store';
+import { applyThemeToElement } from '../lib/theme/apply-theme';
 
-type Theme = "dark" | "light";
+type Theme = 'dark' | 'light';
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -22,10 +22,10 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-  theme: "light",
+  theme: 'light',
   setTheme: () => null,
   toggleTheme: () => null,
-  currentPreset: "openchat",
+  currentPreset: 'oschat',
   applyPreset: () => null,
 };
 
@@ -49,7 +49,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   const handleThemeToggle = (coords?: Coords) => {
-    const newMode = themeState.currentMode === "light" ? "dark" : "light";
+    const newMode = themeState.currentMode === 'light' ? 'dark' : 'light';
     handleThemeChange(newMode);
   };
 
@@ -61,7 +61,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     theme: themeState.currentMode,
     setTheme: handleThemeChange,
     toggleTheme: handleThemeToggle,
-    currentPreset: themeState.preset || "openchat",
+    currentPreset: themeState.preset || 'oschat',
     applyPreset: handlePresetChange,
   };
 
@@ -76,7 +76,7 @@ export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
 
   if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
 
   return context;

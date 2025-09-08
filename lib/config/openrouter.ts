@@ -4,6 +4,6 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 export const openrouter = createOpenRouter({
   headers: {
     'HTTP-Referer': process.env.NEXT_PUBLIC_BASE_URL || 'https://oschat.ai',
-    'X-Title': process.env.NEXT_PUBLIC_BASE_TITLE || 'OpenChat',
+    'X-Title': process.env.NEXT_PUBLIC_BASE_TITLE || 'oschat.ai',
   },
 });

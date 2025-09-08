@@ -224,7 +224,7 @@ export default function HistoryPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `openchat-history-${Date.now()}.json`;
+      a.download = `oschat-history-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast({ title: 'Export complete', status: 'success' });

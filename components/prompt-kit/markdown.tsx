@@ -1,13 +1,15 @@
 import { marked } from 'marked';
 import 'katex/dist/katex.css';
 import { Children, memo, useId, useMemo } from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import type { Components } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import { Streamdown } from 'streamdown';
 import { cn } from '@/lib/utils';
 import { ButtonCopy } from '../common/button-copy';
+import { ButtonDownload } from '../common/button-download';
 import { CodeBlock, CodeBlockCode, CodeBlockGroup } from './code-block';
 import { Source, SourceContent, SourceTrigger } from './source';
 
@@ -25,6 +27,7 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
 
 const LANGUAGE_REGEX = /language-(\w+)/;
 const HTTP_REGEX = /^https?:\/\//i;
+const TRAILING_NEWLINE_REGEX = /\n$/;
 
 function extractLanguage(className?: string): string {
   if (!className) {
@@ -33,6 +36,44 @@ function extractLanguage(className?: string): string {
   const match = className.match(LANGUAGE_REGEX);
   return match ? match[1] : 'plaintext';
 }
+
+const MemoizedCodeBlock = memo(
+  ({
+    className,
+    children,
+    language,
+  }: {
+    className?: string;
+    children: React.ReactNode;
+    language: string;
+  }) => {
+    const codeString = children as string;
+    const lineCount = useMemo(() => {
+      const trimmed = codeString.replace(TRAILING_NEWLINE_REGEX, '');
+      return trimmed ? trimmed.split('\n').length : 0;
+    }, [codeString]);
+
+    return (
+      <CodeBlock className={className}>
+        <CodeBlockGroup className="flex h-9 items-center justify-between border-border border-b px-4">
+          <div className="py-1 pr-2 font-mono text-muted-foreground text-xs">
+            {language}{' '}
+            <span className="text-muted-foreground/50">
+              {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+            </span>
+          </div>
+        </CodeBlockGroup>
+        <div className="sticky top-16 lg:top-0">
+          <div className="absolute right-0 bottom-0 flex h-9 items-center gap-1 pr-1.5">
+            <ButtonDownload code={codeString} language={language} />
+            <ButtonCopy code={codeString} />
+          </div>
+        </div>
+        <CodeBlockCode code={codeString} language={language} />
+      </CodeBlock>
+    );
+  }
+);
 
 const INITIAL_COMPONENTS: Partial<Components> = {
   code({ className, children, ...props }) {
@@ -57,19 +98,9 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     const language = extractLanguage(className);
 
     return (
-      <CodeBlock className={className}>
-        <CodeBlockGroup className="flex h-9 items-center justify-between px-4">
-          <div className="py-1 pr-2 font-mono text-muted-foreground text-xs">
-            {language}
-          </div>
-        </CodeBlockGroup>
-        <div className="sticky top-16 lg:top-0">
-          <div className="absolute right-0 bottom-0 flex h-9 items-center pr-1.5">
-            <ButtonCopy code={children as string} />
-          </div>
-        </div>
-        <CodeBlockCode code={children as string} language={language} />
-      </CodeBlock>
+      <MemoizedCodeBlock className={className} language={language}>
+        {children as string}
+      </MemoizedCodeBlock>
     );
   },
   pre({ children }) {
@@ -115,14 +146,28 @@ const MemoizedMarkdownBlock = memo(
     content: string;
     components?: Partial<Components>;
   }) {
+    // Check if content contains Mermaid diagrams
+    const hasMermaid = content.includes('```mermaid') || content.includes('language-mermaid');
+    
+    // For Mermaid content, use components without the code override
+    const componentsToUse = hasMermaid ? {
+      pre({ children }: { children?: React.ReactNode }) {
+        return <>{children}</>;
+      },
+      a: components.a, // Keep the link component
+    } as Partial<Components> : components;
+
     return (
-      <ReactMarkdown
-        components={components}
+      <Streamdown
+        allowedImagePrefixes={['*']}
+        allowedLinkPrefixes={['*']}
+        components={componentsToUse}
+        parseIncompleteMarkdown={true}
         rehypePlugins={[rehypeKatex]}
         remarkPlugins={[remarkBreaks, remarkGfm, remarkMath]}
       >
         {content}
-      </ReactMarkdown>
+      </Streamdown>
     );
   },
   function propsAreEqual(prevProps, nextProps) {
@@ -143,7 +188,12 @@ function MarkdownComponent({
   const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children]);
 
   return (
-    <div className={cn('markdown-body', className)}>
+    <div
+      className={cn(
+        'markdown-body [&>*:first-child>*:first-child]:mt-0 [&>*:last-child>*:last-child]:mb-0',
+        className
+      )}
+    >
       {blocks.map((block, index) => (
         <MemoizedMarkdownBlock
           components={components}

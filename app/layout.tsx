@@ -106,6 +106,7 @@ export const metadata: Metadata = {
   keywords: [
     'OpenChat',
     'Open Chat',
+    'OS Chat',
     'oschat',
     'oschat.ai',
     'oschat ai',
@@ -165,8 +166,8 @@ export const metadata: Metadata = {
     'open source T3 Chat alternative',
     'free AI personal assistant',
   ],
-  creator: 'OpenChat Team',
-  publisher: 'OpenChat',
+  creator: 'OS Chat Team',
+  publisher: 'OS Chat',
   applicationName: APP_NAME,
   category: 'Productivity Software',
   openGraph: {
@@ -195,6 +196,7 @@ export const metadata: Metadata = {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-title': 'Os Chat',
   },
 };
 

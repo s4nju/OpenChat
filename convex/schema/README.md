@@ -1,15 +1,17 @@
 # Convex Schema Structure
 
-This folder contains the modularized schema definitions for the OpenChat application.
+This folder contains the modularized schema definitions for the oschat application.
 
 ## Structure
 
 ### Core Entities
+
 - `user.ts` - User profile and preferences
-- `chat.ts` - Chat sessions/conversations 
+- `chat.ts` - Chat sessions/conversations
 - `message.ts` - Individual messages within chats
 
 ### Message Parts System
+
 - `parts.ts` - Defines different types of message content:
   - `TextPart` - Plain text content
   - `ImagePart` - Image attachments
@@ -19,6 +21,7 @@ This folder contains the modularized schema definitions for the OpenChat applica
   - `ToolInvocationUIPart` - Tool/function calling UI
 
 ### Supporting Entities
+
 - `chat_attachment.ts` - File attachments for chats
 - `feedback.ts` - User feedback
 - `user_api_key.ts` - User's custom API keys
@@ -35,4 +38,4 @@ This folder contains the modularized schema definitions for the OpenChat applica
 
 3. **Preserved threading**: The `parentMessageId` field is retained to support message threading.
 
-4. **Chat-based (not thread-based)**: We're keeping the chat paradigm instead of switching to threads, maintaining consistency with the existing application structure. 
+4. **Chat-based (not thread-based)**: We're keeping the chat paradigm instead of switching to threads, maintaining consistency with the existing application structure.

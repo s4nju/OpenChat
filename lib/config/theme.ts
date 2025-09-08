@@ -25,7 +25,7 @@ export const DEFAULT_FONT_SERIF =
 export const DEFAULT_FONT_MONO =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
-// Default light theme styles (OpenChat current theme)
+// Default light theme styles (oschat current theme)
 export const defaultLightThemeStyles = {
   background: 'oklch(1 0 0)',
   foreground: 'oklch(0.141 0.005 285.823)',
@@ -76,7 +76,7 @@ export const defaultLightThemeStyles = {
   spacing: '0.25rem',
 };
 
-// Default dark theme styles (OpenChat current dark theme)
+// Default dark theme styles (oschat current dark theme)
 export const defaultDarkThemeStyles = {
   ...defaultLightThemeStyles,
   background: 'oklch(21.34% 0 0)',
@@ -125,7 +125,7 @@ export const defaultThemeState: ThemeEditorState = {
     dark: defaultDarkThemeStyles,
   },
   currentMode: 'light', // Always default to light for SSR compatibility
-  preset: 'openchat',
+  preset: 'oschat',
   hslAdjustments: {
     hueShift: 0,
     saturationScale: 1,

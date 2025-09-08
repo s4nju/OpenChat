@@ -139,7 +139,7 @@ export const sendTaskSummaryEmail = internalMutation({
 
       // Send email using Resend
       await resend.sendEmail(ctx, {
-        from: 'OpenChat <noreply@oschat.ai>',
+        from: 'OS Chat <noreply@oschat.ai>',
         to: user.email,
         subject: `Task Complete: ${args.taskTitle}`,
         html: htmlContent,

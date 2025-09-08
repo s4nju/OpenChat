@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { LegalHeader } from '@/app/components/layout/legal/legal-header';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service - OpenChat',
+  title: 'Terms of Service - OS Chat',
   description:
-    'OpenChat Terms of Service - Legal terms and conditions for using our AI application',
+    'OS Chat Terms of Service - Legal terms and conditions for using our AI application',
 };
 
 export default function TermsPage() {
@@ -16,13 +16,13 @@ export default function TermsPage() {
           <h1>Terms of Service</h1>
 
           <p>
-            <strong>Last Updated:</strong> August 9, 2025
+            <strong>Last Updated:</strong> September 9, 2025
           </p>
 
           <h3>1. Introduction</h3>
           <p>
-            Welcome to OpenChat! These Terms of Service govern your use of our
-            AI application and related services. By using OpenChat, you agree to
+            Welcome to OS Chat! These Terms of Service govern your use of our AI
+            application and related services. By using OS Chat, you agree to
             these terms. If you don't agree, please don't use our services.
           </p>
           <p>
@@ -34,7 +34,7 @@ export default function TermsPage() {
 
           <h3>2. Eligibility</h3>
           <p>
-            You must be at least 13 years old to use OpenChat. If you're between
+            You must be at least 13 years old to use OS Chat. If you're between
             13-18, you need parental consent. We don't knowingly collect
             information from children under 13.
           </p>
@@ -42,7 +42,7 @@ export default function TermsPage() {
           <h3>3. Your Account</h3>
           <ul>
             <li>
-              You can use OpenChat anonymously or create an account through
+              You can use OS Chat anonymously or create an account through
               Google OAuth
             </li>
             <li>
@@ -54,7 +54,7 @@ export default function TermsPage() {
 
           <h3>4. Acceptable Use</h3>
           <p>
-            <strong>You may use OpenChat for:</strong>
+            <strong>You may use OS Chat for:</strong>
           </p>
           <ul>
             <li>
@@ -66,7 +66,7 @@ export default function TermsPage() {
           </ul>
 
           <p>
-            <strong>You may NOT use OpenChat for:</strong>
+            <strong>You may NOT use OS Chat for:</strong>
           </p>
           <ul>
             <li>Illegal activities or violating laws</li>
@@ -87,9 +87,6 @@ export default function TermsPage() {
               <strong>Registered users:</strong> 20 messages per day
             </li>
             <li>
-              <strong>File uploads:</strong> 5 files per day
-            </li>
-            <li>
               <strong>Premium users:</strong> Enhanced limits based on
               subscription
             </li>
@@ -97,7 +94,7 @@ export default function TermsPage() {
 
           <h3>6. Your Content</h3>
           <ul>
-            <li>You own the content you submit to OpenChat</li>
+            <li>You own the content you submit to OS Chat</li>
             <li>
               You grant us permission to process your content to provide our
               services
@@ -121,7 +118,7 @@ export default function TermsPage() {
               Don't rely on AI for medical, legal, financial, or other
               professional advice
             </li>
-            <li>AI outputs don't reflect OpenChat's views or opinions</li>
+            <li>AI outputs don't reflect OS Chat's views or opinions</li>
             <li>We don't guarantee accuracy of AI-generated content</li>
           </ul>
 
@@ -153,13 +150,13 @@ export default function TermsPage() {
           <h3>10. Privacy</h3>
           <p>
             Your privacy is important to us. Our Privacy Policy explains how we
-            collect, use, and protect your information. By using OpenChat, you
+            collect, use, and protect your information. By using OS Chat, you
             agree to our data practices described in the Privacy Policy.
           </p>
 
           <h3>11. Termination</h3>
           <p>
-            You can stop using OpenChat at any time. We may suspend or terminate
+            You can stop using OS Chat at any time. We may suspend or terminate
             your access for violating these terms, illegal activity, or extended
             inactivity. Upon termination, your right to use our services ends
             immediately.
@@ -167,7 +164,7 @@ export default function TermsPage() {
 
           <h3>12. Limitation of Liability</h3>
           <p>
-            To the maximum extent permitted by law, OpenChat is not liable for
+            To the maximum extent permitted by law, OS Chat is not liable for
             indirect, incidental, or consequential damages. Our total liability
             for any claims will not exceed the amount you paid us in the twelve
             months before the claim.
@@ -177,7 +174,7 @@ export default function TermsPage() {
           <p>
             Before pursuing legal action, please contact us at support@oschat.ai
             to resolve disputes informally. These terms are governed by
-            applicable law where OpenChat operates.
+            applicable law where OS Chat operates.
           </p>
 
           <h3>14. Changes to Terms</h3>

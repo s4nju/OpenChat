@@ -6,6 +6,7 @@ import {
   InfoIcon,
   PlusIcon,
 } from '@phosphor-icons/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
@@ -13,16 +14,18 @@ import { AppInfoTrigger } from '@/app/components/layout/app-info/app-info-trigge
 import { UserMenu } from '@/app/components/layout/user-menu';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { useUser } from '@/app/providers/user-provider';
+import { useTheme } from '@/components/theme-provider';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { APP_NAME, GITHUB_REPO_URL } from '@/lib/config';
+import { GITHUB_REPO_URL } from '@/lib/config';
 import ThemeSwitchIcon from './theme-switch-icon';
 
 export function Header() {
   const { user } = useUser();
+  const { theme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const isLoggedIn = Boolean(user) && !user?.isAnonymous;
@@ -34,12 +37,19 @@ export function Header() {
       <div className="relative mx-auto flex h-full items-center justify-between bg-background px-4 sm:px-6 lg:bg-transparent lg:px-8">
         {/* Logo on mobile */}
         <div className="flex items-center md:hidden">
-          <Link
-            className="font-medium text-lg lowercase tracking-tight"
-            href="/"
-            prefetch
-          >
-            {APP_NAME}
+          <Link className="flex items-center" href="/" prefetch>
+            <Image
+              alt="oschat Logo"
+              height={28}
+              priority
+              src={
+                theme === 'dark'
+                  ? '/oschat_logo_dark.svg'
+                  : '/oschat_logo_light.svg'
+              }
+              unoptimized
+              width={100}
+            />
           </Link>
         </div>
 

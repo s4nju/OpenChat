@@ -1,12 +1,12 @@
-# OpenChat
+# OS Chat
 
-[![Visit OpenChat](https://img.shields.io/badge/Visit-OpenChat-blue)](https://oschat.ai)
+[![Visit OS Chat](https://img.shields.io/badge/Visit-oschat-blue)](https://oschat.ai)
 
-**OpenChat** is a free, open-source AI personal assistant that combines 40+ language models with powerful automation capabilities. Schedule tasks, connect your favorite services (Gmail, Calendar, Notion, GitHub), and get things done through natural conversation.
+**OS Chat** is a free, open-source AI personal assistant that combines 40+ language models with powerful automation capabilities. Schedule tasks, connect your favorite services (Gmail, Calendar, Notion, GitHub), and get things done through natural conversation.
 
-![OpenChat — Open-source AI chat app (oschat.ai)](./app/opengraph-image.png)
+![OS Chat — Open-source AI chat app (oschat.ai)](./app/opengraph-image.png)
 
-## 🚀 Why OpenChat?
+## 🚀 Why OS Chat?
 
 - **🔓 Open Source T3 Chat Alternative** - Get all the speed and multi-model access of T3 Chat, but open source, self-hostable, and enhanced with task scheduling and service integrations
 - **🤖 Your AI Personal Assistant** - More than chat - schedule tasks, automate workflows, and manage your digital life
@@ -80,7 +80,7 @@
 
 ## 🤖 Available Models
 
-OpenChat supports 40+ AI models across multiple providers:
+OS Chat supports 40+ AI models across multiple providers:
 
 ### 💬 Text & Chat Models
 
@@ -152,7 +152,7 @@ bun install
 
 ### 2. Set up Convex Backend
 
-OpenChat uses [Convex](https://convex.dev) for real-time backend, authentication, and database management.
+OS Chat uses [Convex](https://convex.dev) for real-time backend, authentication, and database management.
 
 ```bash
 # Login to Convex (creates account if needed)
@@ -195,7 +195,7 @@ Configure the required and optional Convex environment variables for your applic
 
 #### A. Authentication (Required)
 
-OpenChat uses Convex Auth for authentication with Google OAuth.
+OS Chat uses Convex Auth for authentication with Google OAuth.
 
 1. **Initialize Convex Auth:**
 
@@ -227,13 +227,13 @@ OpenChat uses Convex Auth for authentication with Google OAuth.
 
 #### B. Cloudflare R2 Storage (Required for file uploads)
 
-OpenChat uses Cloudflare R2 for file attachments and image storage.
+OS Chat uses Cloudflare R2 for file attachments and image storage.
 
 1. **Create a Public Cloudflare R2 Bucket:**
 
    - Sign up for a [Cloudflare account](https://dash.cloudflare.com/sign-up)
    - Navigate to R2 Object Storage in your dashboard
-   - Create a new bucket (e.g., `openchat-files`)
+   - Create a new bucket (e.g., `oschat-files`)
    - **Important**: Configure the bucket for public access:
      - Go to Settings > Public Access
      - Enable "Allow public access"
@@ -298,7 +298,7 @@ bunx convex dev
 bun dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to see OpenChat running locally!
+Visit [http://localhost:3000](http://localhost:3000) to see oschat running locally!
 
 ### 7. Production Deployment
 
@@ -362,7 +362,7 @@ For production deployment:
 
 ## 🤝 Contributing
 
-We welcome contributions! OpenChat is built with modern web technologies and follows best practices for maintainability and performance.
+We welcome contributions! OS Chat is built with modern web technologies and follows best practices for maintainability and performance.
 
 ### Setup for Contributors
 
@@ -391,7 +391,7 @@ We welcome contributions! OpenChat is built with modern web technologies and fol
 
 ## ⚠️ Notes
 
-**Current Status**: Beta Release - OpenChat is actively developed with regular feature updates and improvements.
+**Current Status**: Beta Release - OS Chat is actively developed with regular feature updates and improvements.
 
 **Compatibility**: This codebase represents a significant evolution from earlier versions, with substantial architectural improvements and new features added throughout 2025.
 

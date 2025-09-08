@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { LegalHeader } from '@/app/components/layout/legal/legal-header';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - OpenChat',
+  title: 'Privacy Policy - OS Chat',
   description:
-    'OpenChat Privacy Policy - How we collect, use, and protect your personal information',
+    'OS Chat Privacy Policy - How we collect, use, and protect your personal information',
 };
 
 export default function PrivacyPage() {
@@ -16,13 +16,13 @@ export default function PrivacyPage() {
           <h1>Privacy Policy</h1>
 
           <p>
-            <strong>Last Updated:</strong> August 9, 2025
+            <strong>Last Updated:</strong> September 9, 2025
             <br />
-            <strong>Effective Date:</strong> August 9, 2025
+            <strong>Effective Date:</strong> September 9, 2025
           </p>
 
           <p>
-            At OpenChat, we're committed to protecting your privacy. This policy
+            At OS Chat, we're committed to protecting your privacy. This policy
             explains how we collect, use, and protect your information when you
             use our AI application.
           </p>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
           </ul>
 
           <p>
-            <strong>When you use OpenChat:</strong>
+            <strong>When you use OS Chat:</strong>
           </p>
           <ul>
             <li>Your chat messages and any files you upload</li>
@@ -252,7 +252,7 @@ export default function PrivacyPage() {
           <p>
             Our Site and the Services are not intended for children under 13
             years of age, and you must be at least 13 years old to have our
-            permission to use OpenChat. We do not knowingly collect, use, or
+            permission to use OS Chat. We do not knowingly collect, use, or
             disclose personally identifiable information from children under 13.
             If you believe that we have collected, used, or disclosed personally
             identifiable information of a child under the age of 13, please

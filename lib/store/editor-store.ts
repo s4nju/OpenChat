@@ -218,7 +218,7 @@ export const useEditorStore = create<EditorStore>()(
       hasUnsavedChanges: () => {
         const themeState = get().themeState;
         const presetThemeStyles = getPresetThemeStyles(
-          themeState.preset ?? 'openchat'
+          themeState.preset ?? 'oschat'
         );
         const stylesChanged = !isDeepEqual(
           themeState.styles,
@@ -234,7 +234,7 @@ export const useEditorStore = create<EditorStore>()(
         const currentThemeState = get().themeState;
 
         const presetThemeStyles = getPresetThemeStyles(
-          currentThemeState.preset ?? 'openchat'
+          currentThemeState.preset ?? 'oschat'
         );
         const newThemeState: ThemeEditorState = {
           ...currentThemeState,

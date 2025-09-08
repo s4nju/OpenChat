@@ -103,7 +103,7 @@ export default function LoginPage() {
       {/* Text hover effect overlay */}
       <div className="fixed right-0 bottom-0 left-0 z-50 hidden h-40 items-center justify-center overflow-hidden pt-15 md:flex">
         <div className="h-[250px] w-[1000px]">
-          <TextHoverEffect text="OpenChat" />
+          <TextHoverEffect text="oschat" />
         </div>
       </div>
     </div>

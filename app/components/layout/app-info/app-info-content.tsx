@@ -14,15 +14,15 @@ export function AppInfoContent() {
     <div className="flex w-full flex-col items-center p-4">
       {/*
       <Image
-        src="/openchat-logo.svg"
-        alt="OpenChat logo"
+        src="/oschat-logo.svg"
+        alt="oschat logo"
         width={40}
         height={40}
         className="rounded-lg"
       />
       */}
       <p className="mt-4 text-center font-medium text-foreground text-sm">
-        OpenChat
+        OS Chat
       </p>
       <p className="mb-4 text-center text-muted-foreground text-sm">
         AI application built with Vercel SDK, RSC, Convex, and Shadcn UI

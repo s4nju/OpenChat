@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { LegalHeader } from '@/app/components/layout/legal/legal-header';
 
 export const metadata: Metadata = {
-  title: 'Security Policy - OpenChat',
+  title: 'Security Policy - OS Chat',
   description:
-    'OpenChat Security Policy - Our commitment to protecting your data and ensuring secure AI interactions',
+    'OS Chat Security Policy - Our commitment to protecting your data and ensuring secure AI interactions',
 };
 
 export default function SecurityPage() {
@@ -16,11 +16,11 @@ export default function SecurityPage() {
           <h1>Security Policy</h1>
 
           <p>
-            <strong>Last Updated:</strong> August 9, 2025
+            <strong>Last Updated:</strong> September 9, 2025
           </p>
 
           <p>
-            At OpenChat, we take security seriously. This policy outlines how we
+            At OS Chat, we take security seriously. This policy outlines how we
             protect your data and maintain the security of our AI application.
           </p>
 

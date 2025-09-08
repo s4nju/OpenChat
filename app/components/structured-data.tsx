@@ -20,7 +20,7 @@ export function StructuredData({
     alternateName: ['oschat', 'oschat.ai', 'Open Chat', 'oschat ai'],
     description:
       description ||
-      'OpenChat is a free, open-source AI personal assistant and T3 Chat alternative with 40+ language models, task scheduling, and service integrations.',
+      'OS Chat is a free, open-source AI personal assistant and T3 Chat alternative with 40+ language models, task scheduling, and service integrations.',
     url: url || APP_BASE_URL,
     applicationCategory: 'ProductivityApplication',
     operatingSystem: 'Web',
@@ -83,12 +83,12 @@ export function StructuredData({
     ],
     creator: {
       '@type': 'Organization',
-      name: 'OpenChat Team',
+      name: 'OS Chat Team',
       url: APP_BASE_URL,
     },
     publisher: {
       '@type': 'Organization',
-      name: 'OpenChat',
+      name: 'OS Chat',
       url: APP_BASE_URL,
     },
   };
@@ -96,7 +96,7 @@ export function StructuredData({
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'OpenChat',
+    name: 'OS Chat',
     alternateName: ['oschat', 'oschat.ai'],
     url: APP_BASE_URL,
     description:
@@ -128,7 +128,7 @@ export function StructuredData({
     },
     publisher: {
       '@type': 'Organization',
-      name: 'OpenChat',
+      name: 'OS Chat',
       url: APP_BASE_URL,
     },
   };
