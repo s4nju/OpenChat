@@ -11,7 +11,8 @@
       "!app/globals.css",
       "!*.lock",
       "!ai-chatbot-main",
-      "!tweakcn-main"
+      "!tweakcn-main",
+      "!zola-main"
     ]
   },
   "linter": {
