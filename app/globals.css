@@ -35,9 +35,10 @@
 
 @theme inline {
   /* Tailwind v4 font tokens map to active theme font variables.
-     Default to Geist families if active variables are not set. */
-  --font-sans: var(--active-font-sans, var(--font-geist-sans));
-  --font-mono: var(--active-font-mono, var(--font-geist-mono));
+     Default to Geist families if active variables are not set, 
+     with generic system fallbacks for resilience. */
+  --font-sans: var(--active-font-sans, var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif));
+  --font-mono: var(--active-font-mono, var(--font-geist-mono, ui-monospace, monospace));
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

@@ -15,6 +15,14 @@ function getPrimaryFontName(fontFamily: string | undefined): string | null {
   return first.replace(/^["']|["']$/g, "");
 }
 
+// Normalize font keys for robust lookups: trim, strip quotes, collapse spaces, lowercase
+const normalizeFontKey = (value: string): string =>
+  value
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
 const registry: Record<string, () => Promise<{ fontVar: string }>> = {
   Inter: () => import("./font-registry/inter"),
   "Space Grotesk": () => import("./font-registry/space-grotesk"),
@@ -28,6 +36,11 @@ const registry: Record<string, () => Promise<{ fontVar: string }>> = {
   "IBM Plex Mono": () => import("./font-registry/ibm-plex-mono"),
 };
 
+// Create a normalized registry view for case/spacing-insensitive lookups
+const normalizedRegistry: Record<string, () => Promise<{ fontVar: string }>> = Object.freeze(
+  Object.fromEntries(Object.entries(registry).map(([k, v]) => [normalizeFontKey(k), v]))
+);
+
 export function FontActivator({ themeState }: Props) {
   const [vars, setVars] = useState<string[]>([]);
   const loadedRef = useRef<Set<string>>(new Set());
@@ -35,12 +48,15 @@ export function FontActivator({ themeState }: Props) {
 
   const names = useMemo(() => {
     const s = new Set<string>();
+    const exclude = new Set(["geist", "geist mono"]);
     const lightSans = getPrimaryFontName(themeState.styles.light["font-sans"]);
     const lightMono = getPrimaryFontName(themeState.styles.light["font-mono"]);
     const darkSans = getPrimaryFontName(themeState.styles.dark["font-sans"]);
     const darkMono = getPrimaryFontName(themeState.styles.dark["font-mono"]);
     [lightSans, lightMono, darkSans, darkMono].forEach((n) => {
-      if (n && n !== "Geist" && n !== "Geist Mono") s.add(n);
+      if (!n) return;
+      const normalized = normalizeFontKey(n);
+      if (!exclude.has(normalized)) s.add(normalized);
     });
     return Array.from(s);
   }, [themeState.styles]);
@@ -51,7 +67,7 @@ export function FontActivator({ themeState }: Props) {
       const promises = names
         .filter((n) => !loadedRef.current.has(n))
         .map(async (n) => {
-          const importer = registry[n];
+          const importer = normalizedRegistry[n];
           if (!importer) return null;
           try {
             const mod = await importer();

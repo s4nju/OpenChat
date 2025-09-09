@@ -25,6 +25,21 @@ const FONT_VAR_MAP: Readonly<Record<string, string>> = {
   'IBM Plex Mono': '--font-ibm-plex-mono',
 } as const;
 
+// Normalize font keys for robust lookups: trim, strip quotes, collapse spaces, lowercase
+const normalizeFontKey = (value: string): string =>
+  value
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
+// Build a normalized map to allow case/spacing-insensitive lookups
+const NORMALIZED_FONT_VAR_MAP: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(FONT_VAR_MAP).map(([k, v]) => [normalizeFontKey(k), v])
+  )
+);
+
 const DEFAULT_FALLBACKS: Readonly<Record<'sans' | 'mono', string>> = {
   sans: 'ui-sans-serif, system-ui, sans-serif',
   mono: 'ui-monospace, monospace',
@@ -51,7 +66,7 @@ const buildActiveFontValue = (
   if (!primary) {
     return null;
   }
-  const varName = FONT_VAR_MAP[primary as keyof typeof FONT_VAR_MAP];
+  const varName = NORMALIZED_FONT_VAR_MAP[normalizeFontKey(primary)];
   if (!varName) {
     // Fallback to the original list if we don't have a mapped next/font variable
     return fullFamily ?? null;
@@ -73,9 +88,13 @@ const updateThemeClass = (root: HTMLElement, mode: Theme) => {
 const applyStyleToElement = (
   element: HTMLElement,
   key: string,
-  value: string
+  value: string | null | undefined
 ) => {
-  element.style.setProperty(`--${key}`, value);
+  if (value == null || value === '') {
+    element.style.removeProperty(`--${key}`);
+  } else {
+    element.style.setProperty(`--${key}`, value);
+  }
 };
 
 const applyCommonStyles = (root: HTMLElement, themeStyles: ThemeStyleProps) => {
@@ -138,10 +157,6 @@ export const applyThemeToElement = (
     themeStyles.light['font-mono'],
     'mono'
   );
-  if (activeSans) {
-    rootElement.style.setProperty('--active-font-sans', activeSans);
-  }
-  if (activeMono) {
-    rootElement.style.setProperty('--active-font-mono', activeMono);
-  }
+  applyStyleToElement(rootElement, 'active-font-sans', activeSans);
+  applyStyleToElement(rootElement, 'active-font-mono', activeMono);
 };
