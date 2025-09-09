@@ -34,27 +34,27 @@ export const SANS_FONTS: readonly FontOption[] = [
   },
   {
     label: 'Space Grotesk',
-    value: 'Space Grotesk, ui-sans-serif, system-ui, sans-serif',
+    value: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
     isSystem: false,
   },
   {
     label: 'Open Sans',
-    value: 'Open Sans, ui-sans-serif, system-ui, sans-serif',
+    value: "'Open Sans', ui-sans-serif, system-ui, sans-serif",
     isSystem: false,
   },
   {
     label: 'Atkinson Hyperlegible',
-    value: 'Atkinson Hyperlegible, ui-sans-serif, system-ui, sans-serif',
+    value: "'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif",
     isSystem: false,
   },
   {
     label: 'Architects Daughter',
-    value: 'Architects Daughter, ui-sans-serif, system-ui, sans-serif',
+    value: "'Architects Daughter', ui-sans-serif, system-ui, sans-serif",
     isSystem: false,
   },
   {
     label: 'DM Sans',
-    value: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
+    value: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
     isSystem: false,
   },
 ] as const;
@@ -68,27 +68,27 @@ export const MONO_FONTS: readonly FontOption[] = [
   },
   {
     label: 'Geist Mono',
-    value: 'Geist Mono, ui-monospace, monospace',
+    value: "'Geist Mono', ui-monospace, monospace",
     isSystem: false,
   },
   {
     label: 'Fira Mono',
-    value: 'Fira Mono, ui-monospace, monospace',
+    value: "'Fira Mono', ui-monospace, monospace",
     isSystem: false,
   },
   {
     label: 'JetBrains Mono',
-    value: 'JetBrains Mono, ui-monospace, monospace',
+    value: "'JetBrains Mono', ui-monospace, monospace",
     isSystem: false,
   },
   {
     label: 'Atkinson Hyperlegible Mono',
-    value: 'Atkinson Hyperlegible Mono, ui-monospace, monospace',
+    value: "'Atkinson Hyperlegible Mono', ui-monospace, monospace",
     isSystem: false,
   },
   {
     label: 'IBM Plex Mono',
-    value: 'IBM Plex Mono, ui-monospace, monospace',
+    value: "'IBM Plex Mono', ui-monospace, monospace",
     isSystem: false,
   },
 ] as const;

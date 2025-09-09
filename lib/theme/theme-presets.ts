@@ -1,17 +1,26 @@
 import type { ThemePreset } from '../types/theme';
 
 /**
- * Adding Custom Fonts to Themes:
+ * Adding Custom Fonts to Themes (on-demand workflow):
  *
- * 1. Import font in app/layout.tsx from next/font/google
- * 2. Create font instance with CSS variable (e.g., --font-dm-sans)
- * 3. Add variable to body className in layout.tsx
- * 4. Add font option to SANS_FONTS or MONO_FONTS in lib/theme/theme-fonts.ts
+ * 1. Create a font registry module under components/font-registry/
+ *    Example: components/font-registry/inter.ts
+ *    - Call the next/font loader at module scope with:
+ *        preload: false
+ *        display: 'optional'
+ *      and export the `.variable` (e.g., `export const fontVar = inter.variable`).
+ * 2. Map the font name to its registry module in components/font-activator.tsx `registry`.
+ *    - Key must be the primary font family name used in presets (e.g., 'Inter').
+ * 3. Add the font option to SANS_FONTS or MONO_FONTS in lib/theme/theme-fonts.ts
  *    - Sans format: 'FontName, ui-sans-serif, system-ui, sans-serif'
  *    - Mono format: 'FontName, ui-monospace, monospace'
- * 5. Use EXACT same format in theme presets below (both light & dark modes)
+ * 4. Use the EXACT same font-family string in theme presets below (both light & dark modes)
+ *    so selection and previews match (value comparisons are strict).
  *
- * Font values must match theme-fonts.ts exactly for dropdowns to work correctly.
+ * Notes:
+ * - Only default fonts (Geist, Geist Mono) are imported globally in app/layout.tsx.
+ * - All other fonts load on demand when a theme that uses them is active.
+ * - The customization page may also import preview fonts with preload disabled.
  */
 export const defaultPresets: Record<string, ThemePreset> = {
   oschat: {
@@ -55,7 +64,7 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'Geist Mono, ui-monospace, monospace',
+        'font-mono': "'Geist Mono', ui-monospace, monospace",
         'shadow-color': 'oklch(0 0 0)',
         'shadow-opacity': '0.1',
         'shadow-blur': '3px',
@@ -101,7 +110,7 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'shadow-color': 'oklch(0 0 0)',
         // Ensure dark mode inherits Geist fonts (light spreads only colors & common styles)
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
-        'font-mono': 'Geist Mono, ui-monospace, monospace',
+        'font-mono': "'Geist Mono', ui-monospace, monospace",
         'shadow-opacity': '0.1',
         'shadow-blur': '3px',
         'shadow-spread': '0px',
@@ -254,9 +263,9 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-accent-foreground': '#1e9df1',
         'sidebar-border': '#e1e8ed',
         'sidebar-ring': '#1da1f2',
-        'font-sans': 'Open Sans, ui-sans-serif, system-ui, sans-serif',
+        'font-sans': "'Open Sans', ui-sans-serif, system-ui, sans-serif",
         'font-serif': 'Georgia, serif',
-        'font-mono': 'JetBrains Mono, ui-monospace, monospace',
+        'font-mono': "'JetBrains Mono', ui-monospace, monospace",
         radius: '1.3rem',
         'shadow-color': 'rgba(29,161,242,0.15)',
         'shadow-opacity': '0',
@@ -298,8 +307,8 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-accent-foreground': '#1c9cf0',
         'sidebar-border': '#38444d',
         'sidebar-ring': '#1da1f2',
-        'font-sans': 'Open Sans, ui-sans-serif, system-ui, sans-serif',
-        'font-mono': 'JetBrains Mono, ui-monospace, monospace',
+        'font-sans': "'Open Sans', ui-sans-serif, system-ui, sans-serif",
+        'font-mono': "'JetBrains Mono', ui-monospace, monospace",
         'shadow-color': 'rgba(29,161,242,0.25)',
       },
     },
@@ -343,10 +352,10 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': '#c0c0c0',
         'sidebar-ring': '#a0a0a0',
         'font-sans':
-          'Architects Daughter, ui-sans-serif, system-ui, sans-serif',
+          "'Architects Daughter', ui-sans-serif, system-ui, sans-serif",
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'Fira Mono, ui-monospace, monospace',
+        'font-mono': "'Fira Mono', ui-monospace, monospace",
         radius: '0.625rem',
         'shadow-color': '#000000',
         'shadow-opacity': '0.03',
@@ -391,10 +400,10 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-border': '#4f4f4f',
         'sidebar-ring': '#c0c0c0',
         'font-sans':
-          'Architects Daughter, ui-sans-serif, system-ui, sans-serif',
+          "'Architects Daughter', ui-sans-serif, system-ui, sans-serif",
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'Fira Mono, ui-monospace, monospace',
+        'font-mono': "'Fira Mono', ui-monospace, monospace",
         radius: '0.625rem',
         'shadow-color': '#000000',
         'shadow-opacity': '0.03',
@@ -550,10 +559,10 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-accent-foreground': '#374151',
         'sidebar-border': '#e5e7eb',
         'sidebar-ring': '#22c55e',
-        'font-sans': 'DM Sans, ui-sans-serif, system-ui, sans-serif',
+        'font-sans': "'DM Sans', ui-sans-serif, system-ui, sans-serif",
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'IBM Plex Mono, ui-monospace, monospace',
+        'font-mono': "'IBM Plex Mono', ui-monospace, monospace",
         'shadow-color': 'hsl(0 0% 0%)',
         'shadow-opacity': '0.1',
         'shadow-blur': '8px',
@@ -595,10 +604,10 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'sidebar-accent-foreground': '#a1a1aa',
         'sidebar-border': '#4b5563',
         'sidebar-ring': '#34d399',
-        'font-sans': 'DM Sans, ui-sans-serif, system-ui, sans-serif',
+        'font-sans': "'DM Sans', ui-sans-serif, system-ui, sans-serif",
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'IBM Plex Mono, ui-monospace, monospace',
+        'font-mono': "'IBM Plex Mono', ui-monospace, monospace",
       },
     },
   },
@@ -643,7 +652,7 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'Geist Mono, ui-monospace, monospace',
+        'font-mono': "'Geist Mono', ui-monospace, monospace",
         radius: '0.5rem',
         'shadow-color': 'hsl(0 0% 0%)',
         'shadow-opacity': '0.18',
@@ -689,7 +698,7 @@ export const defaultPresets: Record<string, ThemePreset> = {
         'font-sans': 'Geist, ui-sans-serif, system-ui, sans-serif',
         'font-serif':
           'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-        'font-mono': 'Geist Mono, ui-monospace, monospace',
+        'font-mono': "'Geist Mono', ui-monospace, monospace",
       },
     },
   },

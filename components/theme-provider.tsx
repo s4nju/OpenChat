@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect } from 'react';
 import { useEditorStore } from '../lib/store/editor-store';
 import { applyThemeToElement } from '../lib/theme/apply-theme';
+import { FontActivator } from './font-activator';
 
 type Theme = 'dark' | 'light';
 
@@ -67,6 +68,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   return (
     <ThemeProviderContext.Provider value={value}>
+      {/* Load non-default fonts on demand based on current theme */}
+      <FontActivator themeState={themeState} />
       {children}
     </ThemeProviderContext.Provider>
   );
