@@ -8,11 +8,11 @@
         "@ai-sdk/fal": "^1.0.12",
         "@ai-sdk/google": "^2.0.13",
         "@ai-sdk/mistral": "^2.0.13",
-        "@ai-sdk/openai": "^2.0.27",
+        "@ai-sdk/openai": "^2.0.28",
         "@ai-sdk/openai-compatible": "^1.0.15",
         "@ai-sdk/react": "^2.0.39",
         "@auth/core": "0.37.0",
-        "@composio/core": "^0.1.50",
+        "@composio/core": "^0.1.51",
         "@composio/vercel": "^0.1.44",
         "@convex-dev/auth": "^0.0.86",
         "@convex-dev/polar": "^0.5.0",
@@ -20,7 +20,7 @@
         "@convex-dev/rate-limiter": "^0.2.12",
         "@convex-dev/react-query": "^0.0.0-alpha.11",
         "@convex-dev/resend": "^0.1.12",
-        "@lobehub/icons": "^2.32.0",
+        "@lobehub/icons": "^2.32.1",
         "@openrouter/ai-sdk-provider": "^1.2.0",
         "@phosphor-icons/react": "^2.1.10",
         "@posthog/ai": "^5.2.3",
@@ -41,8 +41,8 @@
         "@radix-ui/react-tabs": "^1.1.13",
         "@radix-ui/react-tooltip": "^1.2.8",
         "@ridemountainpig/svgl-react": "^1.0.12",
-        "@tanstack/react-query": "^5.87.1",
-        "@tanstack/react-query-devtools": "^5.87.3",
+        "@tanstack/react-query": "^5.87.4",
+        "@tanstack/react-query-devtools": "^5.87.4",
         "@upstash/redis": "^1.35.3",
         "@vercel/analytics": "^1.5.0",
         "@vercel/speed-insights": "^1.2.0",
@@ -2025,7 +2025,7 @@
 
     "posthog-js": ["posthog-js@1.262.0", "", { "dependencies": { "@posthog/core": "1.0.2", "core-js": "^3.38.1", "fflate": "^0.4.8", "preact": "^10.19.3", "web-vitals": "^4.2.4" }, "peerDependencies": { "@rrweb/types": "2.0.0-alpha.17", "rrweb-snapshot": "2.0.0-alpha.17" }, "optionalPeers": ["@rrweb/types", "rrweb-snapshot"] }, "sha512-RPbm+0qLVsgKQEN3KjfYAK+0qOwBPT28RHDg4WIstN8/z2m6PczMqSirOIXSqbvDwSCQQQRPTKS6fSurevqJMA=="],
 
-    "posthog-node": ["posthog-node@5.8.2", "", { "dependencies": { "@posthog/core": "1.0.2" } }, "sha512-z3XRvYwnc3T/1999FKzv16YTpxERQqLunULl2vkOPfgbCXUGNyJWLgcbTcED2ZIDE11jjZhrSph4De6OSMLphw=="],
+    "posthog-node": ["posthog-node@5.8.3", "", { "dependencies": { "@posthog/core": "1.0.2" } }, "sha512-eFBUEF8Dn/gZncGDNGlC5FqggwRgf/N4ERkzVZsvhvkjXlM6ncSHb7McJsj1hooWGkxrvn/gABfl2hpDurSb/g=="],
 
     "preact": ["preact@10.11.3", "", {}, "sha512-eY93IVpod/zG3uMF22Unl8h9KkrcKIRs2EGar8hwLZZDU1lkjph303V9HZBwufh2s736U6VXuhD109LYqPoffg=="],
 
