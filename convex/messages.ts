@@ -89,7 +89,8 @@ export const getPublicChatMessages = query({
           }
           return p;
         } catch (_err) {
-          return p;
+          // Fail closed: return safe placeholder instead of potentially sensitive original
+          return { type: 'redacted', error: 'Content sanitization failed' };
         }
       });
 
