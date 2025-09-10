@@ -11,6 +11,7 @@ import {
 } from './_generated/server';
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
+import { sanitizeMessageParts } from './lib/sanitization_helper';
 
 // Keep reusable regex at top-level per lint rule
 const TRAILING_SLASH_RE = /\/$/;
@@ -59,40 +60,7 @@ export const getPublicChatMessages = query({
 
     // Sanitize parts if needed
     return messages.map((m) => {
-      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
-      const sanitizedParts = (m.parts ?? []).map((p: any) => {
-        try {
-          if (!p || typeof p !== 'object') {
-            return p;
-          }
-          // Redact sensitive tool use info
-          if (
-            typeof p.type === 'string' &&
-            p.type.startsWith('tool-') &&
-            p.type !== 'tool-search'
-          ) {
-            const cloned = { ...p } as Record<string, unknown>;
-            if ('input' in cloned) {
-              cloned.input = 'REDACTED';
-            }
-            if ('output' in cloned) {
-              cloned.output = 'REDACTED';
-            }
-            if ('error' in cloned) {
-              cloned.error = 'REDACTED';
-            }
-            return cloned;
-          }
-          // Hide files/images if requested
-          if (hideFiles && p.type === 'file') {
-            return { ...p, url: 'redacted' };
-          }
-          return p;
-        } catch (_err) {
-          // Fail closed: return safe placeholder instead of potentially sensitive original
-          return { type: 'redacted', error: 'Content sanitization failed' };
-        }
-      });
+      const sanitizedParts = sanitizeMessageParts(m.parts, { hideFiles });
 
       return {
         _id: m._id,

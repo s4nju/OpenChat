@@ -14,6 +14,7 @@ import {
   deleteChatCompletely,
   deleteMultipleChats,
 } from './lib/cleanup_helper';
+import { sanitizeMessageParts } from './lib/sanitization_helper';
 import { Chat } from './schema/chat';
 
 // New: Publish a chat and set share policy
@@ -126,38 +127,7 @@ export const forkFromShared = mutation({
 
     // Insert messages sequentially to preserve threading
     for (const m of msgs) {
-      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
-      const sanitizedParts = (m.parts ?? []).map((p: any) => {
-        try {
-          if (!p || typeof p !== 'object') {
-            return p;
-          }
-          if (
-            typeof p.type === 'string' &&
-            p.type.startsWith('tool-') &&
-            p.type !== 'tool-search'
-          ) {
-            const cloned = { ...p } as Record<string, unknown>;
-            if ('input' in cloned) {
-              cloned.input = 'REDACTED';
-            }
-            if ('output' in cloned) {
-              cloned.output = 'REDACTED';
-            }
-            if ('error' in cloned) {
-              cloned.error = 'REDACTED';
-            }
-            return cloned;
-          }
-          if (hideFiles && p.type === 'file') {
-            return { ...p, url: 'redacted' };
-          }
-          return p;
-        } catch (_err) {
-          // Fail closed: return safe placeholder instead of potentially sensitive original
-          return { type: 'redacted', error: 'Content sanitization failed' };
-        }
-      });
+      const sanitizedParts = sanitizeMessageParts(m.parts, { hideFiles });
 
       // Map parentMessageId to new chat's message IDs
       const parentMessageId = m.parentMessageId
