@@ -86,7 +86,7 @@ export default async function ShareChatPage({
         {chat.title || 'Chat'}
       </h1>
       <p className="mb-8 text-center text-lg text-muted-foreground">
-        A conversation shared from OS Chat
+        A conversation from oschat.ai
       </p>
       <ShareView messages={messages} sourceChatId={chatId} />
     </div>
