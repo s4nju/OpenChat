@@ -11,9 +11,66 @@ import {
 } from './_generated/server';
 // Import helper functions
 import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
+import { sanitizeMessageParts } from './lib/sanitization_helper';
 
 // Keep reusable regex at top-level per lint rule
 const TRAILING_SLASH_RE = /\/$/;
+
+// New: Get messages for public shared chat with optional redaction
+export const getPublicChatMessages = query({
+  args: {
+    chatId: v.id('chats'),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('messages'),
+      role: v.union(
+        v.literal('user'),
+        v.literal('assistant'),
+        v.literal('system')
+      ),
+      parts: v.optional(v.any()),
+      metadata: v.object({
+        modelId: v.optional(v.string()),
+        modelName: v.optional(v.string()),
+        inputTokens: v.optional(v.number()),
+        outputTokens: v.optional(v.number()),
+        reasoningTokens: v.optional(v.number()),
+        totalTokens: v.optional(v.number()),
+        cachedInputTokens: v.optional(v.number()),
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string()),
+      }),
+    })
+  ),
+  handler: async (ctx, { chatId }) => {
+    const chat = await ctx.db.get(chatId);
+    if (!(chat && (chat.public ?? false))) {
+      return [];
+    }
+
+    const hideFiles = !(chat.shareAttachments ?? false);
+
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_chat_and_created', (q) => q.eq('chatId', chatId))
+      .order('asc')
+      .collect();
+
+    // Sanitize parts if needed
+    return messages.map((m) => {
+      const sanitizedParts = sanitizeMessageParts(m.parts, { hideFiles });
+
+      return {
+        _id: m._id,
+        role: m.role,
+        parts: sanitizedParts,
+        metadata: m.metadata,
+      };
+    });
+  },
+});
 
 /**
  * Helper function to clean up attachments for messages

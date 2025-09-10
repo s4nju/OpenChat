@@ -3,6 +3,7 @@ Disallow: /api/
 Disallow: /auth/callback
 Disallow: /auth/error
 Disallow: /c/
+Disallow: /share/
 Disallow: /tasks
 Disallow: /settings/
 Allow: /

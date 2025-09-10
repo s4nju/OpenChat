@@ -162,6 +162,35 @@ const renderFilePart = (filePart: FileUIPart, index: number) => {
   const mediaType = filePart.mediaType || 'application/octet-stream';
 
   if (mediaType.startsWith('image')) {
+    // If image was redacted on the server, render a fixed-size placeholder with overlay text
+    if (displayUrl === 'redacted') {
+      return (
+        <div className="mb-1" key={`file-${index}`}>
+          <div
+            aria-label="Image redacted"
+            className="relative overflow-hidden rounded-md bg-muted"
+            role="img"
+            style={{ width: 300, height: 300 }}
+          >
+            {/* Subtle pattern background */}
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-40"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0px, rgba(0,0,0,0.06) 10px, transparent 10px, transparent 20px)',
+              }}
+            />
+            {/* Centered label */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="rounded-full border border-border bg-background/80 px-3 py-1 text-muted-foreground text-xs">
+                Image redacted
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <MorphingDialog
         key={`file-${index}`}
@@ -196,6 +225,13 @@ const renderFilePart = (filePart: FileUIPart, index: number) => {
   }
 
   if (mediaType.startsWith('text')) {
+    if (displayUrl === 'redacted') {
+      return (
+        <div className="mb-2 w-[300px] rounded-md border bg-muted p-3 text-center text-muted-foreground text-xs">
+          Attachment redacted
+        </div>
+      );
+    }
     return (
       <a
         aria-label={`Download text file: ${filename}`}
@@ -227,6 +263,13 @@ const renderFilePart = (filePart: FileUIPart, index: number) => {
   }
 
   if (mediaType === 'application/pdf') {
+    if (displayUrl === 'redacted') {
+      return (
+        <div className="mb-2 w-[120px] rounded-md border bg-muted px-4 py-2 text-center text-muted-foreground text-xs">
+          Attachment redacted
+        </div>
+      );
+    }
     return (
       <a
         aria-label={`Download PDF: ${filename}`}
@@ -288,6 +331,7 @@ type MessageAssistantProps = {
   status?: 'streaming' | 'ready' | 'submitted' | 'error';
   id: string;
   metadata?: Infer<typeof MessageSchema>['metadata'];
+  readOnly?: boolean;
 };
 
 const Markdown = dynamic(
@@ -527,6 +571,7 @@ function MessageAssistantInner({
   status,
   id,
   metadata,
+  readOnly = false,
 }: MessageAssistantProps) {
   // Prefer `parts` prop, but fall back to `attachments` if `parts` is undefined.
   const combinedParts = parts || [];
@@ -755,32 +800,36 @@ function MessageAssistantInner({
               )}
             </button>
           </MessageAction>
-          <MessageAction
-            delayDuration={0}
-            side="bottom"
-            tooltip="Create a new chat starting from here"
-          >
-            <button
-              aria-label="Branch chat"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={status === 'streaming'}
-              onClick={onBranch}
-              type="button"
+          {!readOnly && (
+            <MessageAction
+              delayDuration={0}
+              side="bottom"
+              tooltip="Create a new chat starting from here"
             >
-              <GitBranch className="size-4 rotate-180" />
-            </button>
-          </MessageAction>
-          <MessageAction delayDuration={0} side="bottom" tooltip="Regenerate">
-            <button
-              aria-label="Regenerate"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={status === 'streaming'}
-              onClick={onReload}
-              type="button"
-            >
-              <ArrowClockwise className="size-4" />
-            </button>
-          </MessageAction>
+              <button
+                aria-label="Branch chat"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={status === 'streaming'}
+                onClick={onBranch}
+                type="button"
+              >
+                <GitBranch className="size-4 rotate-180" />
+              </button>
+            </MessageAction>
+          )}
+          {!readOnly && (
+            <MessageAction delayDuration={0} side="bottom" tooltip="Regenerate">
+              <button
+                aria-label="Regenerate"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={status === 'streaming'}
+                onClick={onReload}
+                type="button"
+              >
+                <ArrowClockwise className="size-4" />
+              </button>
+            </MessageAction>
+          )}
           {displayModel && (
             <span className="ml-2 inline-block text-muted-foreground text-xs">
               {formatModelDisplayText(displayModel, reasoningEffort)}

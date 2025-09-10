@@ -80,6 +80,8 @@ const atkinsonHyperlegibleMono = Atkinson_Hyperlegible_Mono({
   weight: ['400', '700'],
   preload: false,
   display: 'swap',
+  adjustFontFallback: false,
+  fallback: ['ui-monospace'],
 });
 const firaMono = Fira_Mono({
   variable: '--font-fira-mono',

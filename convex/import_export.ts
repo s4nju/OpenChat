@@ -58,6 +58,9 @@ export const bulkImportChat = mutation({
       personaId: args.chat.personaId,
       createdAt: now,
       updatedAt: now,
+      // Always set explicit boolean defaults (never undefined)
+      public: false,
+      shareAttachments: false,
     });
 
     // Create ID mapping for threading

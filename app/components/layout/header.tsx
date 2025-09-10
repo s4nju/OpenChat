@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { HistoryTrigger } from '@/app/components/history/history-trigger';
 import { AppInfoTrigger } from '@/app/components/layout/app-info/app-info-trigger';
+import { DialogShare } from '@/app/components/layout/dialog-share';
 import { UserMenu } from '@/app/components/layout/user-menu';
 import { useBreakpoint } from '@/app/hooks/use-breakpoint';
 import { useUser } from '@/app/providers/user-provider';
@@ -74,8 +75,8 @@ export function Header() {
                 <TooltipContent>New Chat</TooltipContent>
               </Tooltip>
             )}
-            {/* Tasks button - mobile only */}
-            {isMobile && (
+            {/* Tasks button - mobile only, home page only */}
+            {isMobile && pathname === '/' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -90,8 +91,20 @@ export function Header() {
                 <TooltipContent>Tasks</TooltipContent>
               </Tooltip>
             )}
-            {/* History trigger - always rendered for Cmd+K functionality */}
-            <HistoryTrigger />
+            {/* Mobile: Share first, then History for better UX */}
+            {isMobile && (
+              <>
+                <DialogShare />
+                <HistoryTrigger />
+              </>
+            )}
+            {/* Desktop: History first (hidden), then Share to avoid gap */}
+            {!isMobile && (
+              <>
+                <HistoryTrigger />
+                <DialogShare />
+              </>
+            )}
             <ThemeSwitchIcon />
             {user && <UserMenu user={user} />}
           </div>

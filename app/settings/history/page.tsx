@@ -3,9 +3,11 @@
 import { convexQuery } from '@convex-dev/react-query';
 import {
   ClockCounterClockwise,
+  Copy,
   DownloadSimple,
   Trash,
   UploadSimple,
+  XCircle,
 } from '@phosphor-icons/react';
 import { useQuery as useTanStackQuery } from '@tanstack/react-query';
 import { useConvex, useMutation } from 'convex/react';
@@ -24,9 +26,15 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { api } from '@/convex/_generated/api';
 import type { Doc, Id } from '@/convex/_generated/dataModel';
-import { MESSAGE_MAX_LENGTH } from '@/lib/config';
+import { APP_BASE_URL, MESSAGE_MAX_LENGTH } from '@/lib/config';
 
 // Schema to validate imported history files (supports both old and new formats)
 const ImportSchema = z
@@ -101,6 +109,7 @@ export default function HistoryPage() {
   });
   const deleteChat = useMutation(api.chats.deleteChat);
   const deleteBulkChats = useMutation(api.chats.deleteBulkChats);
+  const unpublishChat = useMutation(api.chats.unpublishChat);
   const deleteAllChats = useMutation(api.chats.deleteAllChatsForUser);
   const convex = useConvex();
 
@@ -111,6 +120,8 @@ export default function HistoryPage() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [revokeChatId, setRevokeChatId] = useState<Id<'chats'> | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
   const [importChatCount, setImportChatCount] = useState(0);
   const [importData, setImportData] = useState<
     Array<{
@@ -466,7 +477,7 @@ export default function HistoryPage() {
             chats.length === 0 ? (
               <p className="text-muted-foreground">No chats found.</p>
             ) : (
-              <div className="max-h-[21.4vh] divide-y overflow-y-auto rounded-lg border">
+              <div className="max-h-[21vh] divide-y overflow-y-auto rounded-lg border">
                 {chats.map((chat) => (
                   <div
                     className={`flex items-center gap-4 px-4 py-1 text-sm ${isSelected(chat._id as Id<'chats'>) ? 'bg-muted/50' : ''}`}
@@ -481,25 +492,88 @@ export default function HistoryPage() {
                     <span className="flex-1 truncate font-medium">
                       {chat.title || 'Untitled Chat'}
                     </span>
-                    {(() => {
-                      const { dateTime, ampm } = formatDateLines(
-                        chat.updatedAt ?? chat.createdAt
-                      );
-                      return (
-                        <div className="ml-auto flex w-24 shrink-0 flex-col items-end px-1">
-                          <span className="text-xs">{dateTime}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {ampm}
-                          </span>
+                    <div className="ml-auto flex items-center gap-1">
+                      {chat.public ? (
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  aria-label="Copy share link"
+                                  className="rounded-md transition-[border-radius] duration-200 hover:rounded-full"
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(
+                                        `${APP_BASE_URL}/share/${chat._id}`
+                                      );
+                                      toast({
+                                        title: 'Link copied',
+                                        status: 'success',
+                                      });
+                                    } catch {
+                                      toast({
+                                        title: 'Failed to copy link',
+                                        status: 'error',
+                                      });
+                                    }
+                                  }}
+                                  size="icon"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Copy aria-hidden className="size-4" />
+                                  <span className="sr-only">
+                                    Copy share link
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copy link</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  aria-label="Unshare conversation"
+                                  className="rounded-md transition-[border-radius] duration-200 hover:rounded-full"
+                                  onClick={() =>
+                                    setRevokeChatId(chat._id as Id<'chats'>)
+                                  }
+                                  size="icon"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <XCircle aria-hidden className="size-4" />
+                                  <span className="sr-only">
+                                    Unshare conversation
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Unshare</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                      );
-                    })()}
+                      ) : null}
+                      {(() => {
+                        const { dateTime, ampm } = formatDateLines(
+                          chat.updatedAt ?? chat.createdAt
+                        );
+                        return (
+                          <div className="flex w-24 shrink-0 flex-col items-end px-1">
+                            <span className="text-xs">{dateTime}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {ampm}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
             )
           ) : (
-            <div className="max-h-21.4vh] divide-y overflow-y-auto rounded-lg border">
+            <div className="max-h-[21vh] divide-y overflow-y-auto rounded-lg border">
               {Array.from({ length: 6 }).map((_, i) => {
                 const key = `skeleton-${i}`;
                 return (
@@ -636,6 +710,52 @@ export default function HistoryPage() {
               variant="destructive"
             >
               {isDeletingAll ? 'Deleting...' : 'Delete All'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke shared link dialog */}
+      <Dialog
+        onOpenChange={(open) => {
+          if (!(isRevoking || open)) {
+            setRevokeChatId(null);
+          }
+        }}
+        open={Boolean(revokeChatId)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unshare this conversation?</DialogTitle>
+            <DialogDescription>
+              This turns off the public link for this conversation. You can
+              share it again later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setRevokeChatId(null)} variant="outline">
+              Cancel
+            </Button>
+            <Button
+              disabled={isRevoking}
+              onClick={async () => {
+                if (!revokeChatId) {
+                  return;
+                }
+                setIsRevoking(true);
+                try {
+                  await unpublishChat({ chatId: revokeChatId });
+                  toast({ title: 'Conversation unshared', status: 'success' });
+                } catch {
+                  toast({ title: 'Failed to unshare', status: 'error' });
+                } finally {
+                  setIsRevoking(false);
+                  setRevokeChatId(null);
+                }
+              }}
+              variant="destructive"
+            >
+              Unshare
             </Button>
           </DialogFooter>
         </DialogContent>
