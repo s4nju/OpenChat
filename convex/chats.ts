@@ -94,12 +94,12 @@ export const forkFromShared = mutation({
   handler: async (ctx, { sourceChatId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new ConvexError('UNAUTHENTICATED');
+      throw new ConvexError(ERROR_CODES.NOT_AUTHENTICATED);
     }
 
     const source = await ctx.db.get(sourceChatId);
     if (!(source && (source.public ?? false))) {
-      throw new ConvexError('NOT_PUBLIC');
+      throw new ConvexError(ERROR_CODES.CHAT_NOT_FOUND);
     }
 
     const now = Date.now();
@@ -133,7 +133,7 @@ export const forkFromShared = mutation({
     const redactedContentInfo = detectRedactedContent(sanitizedMsgs);
     if (redactedContentInfo.hasRedactedContent) {
       throw new ConvexError({
-        code: 'REDACTED_CONTENT',
+        code: ERROR_CODES.REDACTED_CONTENT,
         message: `Cannot fork chat: ${redactedContentInfo.description}. Forking disabled to maintain conversation integrity.`,
         data: {
           redactedFiles: redactedContentInfo.redactedFiles,
