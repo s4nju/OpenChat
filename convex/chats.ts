@@ -123,8 +123,14 @@ export const forkFromShared = mutation({
       .order('asc')
       .collect();
 
-    // Check if any messages contain redacted content
-    const redactedContentInfo = detectRedactedContent(msgs);
+    // Sanitize first so detection operates on the actual shared view
+    const sanitizedMsgs = msgs.map((m) => ({
+      ...m,
+      parts: sanitizeMessageParts(m.parts, { hideFiles }),
+    }));
+
+    // Detect redactions (files or tool calls) that would make fork incomplete
+    const redactedContentInfo = detectRedactedContent(sanitizedMsgs);
     if (redactedContentInfo.hasRedactedContent) {
       throw new ConvexError({
         code: 'REDACTED_CONTENT',
@@ -140,9 +146,9 @@ export const forkFromShared = mutation({
     // Create ID mapping for threading
     const idMap = new Map<Id<'messages'>, Id<'messages'>>();
 
-    // Insert messages sequentially to preserve threading
-    for (const m of msgs) {
-      const sanitizedParts = sanitizeMessageParts(m.parts, { hideFiles });
+    // Insert messages sequentially to preserve threading using sanitized parts
+    for (const m of sanitizedMsgs) {
+      const sanitizedParts = m.parts;
 
       // Map parentMessageId to new chat's message IDs
       const parentMessageId = m.parentMessageId
