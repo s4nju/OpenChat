@@ -93,8 +93,8 @@ export function Header() {
             )}
             {/* Share chat - moved before history for better mobile UX */}
             <DialogShare />
-            {/* History trigger - always rendered for Cmd+K functionality */}
-            <HistoryTrigger />
+            {/* History trigger - only on mobile/tablet for better UX */}
+            {isMobile && <HistoryTrigger />}
             <ThemeSwitchIcon />
             {user && <UserMenu user={user} />}
           </div>

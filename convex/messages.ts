@@ -23,18 +23,12 @@ export const getPublicChatMessages = query({
   returns: v.array(
     v.object({
       _id: v.id('messages'),
-      _creationTime: v.number(),
-      chatId: v.id('chats'),
-      userId: v.optional(v.id('users')),
       role: v.union(
         v.literal('user'),
         v.literal('assistant'),
         v.literal('system')
       ),
-      content: v.string(),
       parts: v.optional(v.any()),
-      createdAt: v.optional(v.number()),
-      parentMessageId: v.optional(v.id('messages')),
       metadata: v.object({
         modelId: v.optional(v.string()),
         modelName: v.optional(v.string()),
@@ -100,8 +94,10 @@ export const getPublicChatMessages = query({
       });
 
       return {
-        ...m,
+        _id: m._id,
+        role: m.role,
         parts: sanitizedParts,
+        metadata: m.metadata,
       };
     });
   },
