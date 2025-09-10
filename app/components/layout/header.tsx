@@ -91,10 +91,20 @@ export function Header() {
                 <TooltipContent>Tasks</TooltipContent>
               </Tooltip>
             )}
-            {/* Share chat - moved before history for better mobile UX */}
-            <DialogShare />
-            {/* History trigger - only on mobile/tablet for better UX */}
-            {isMobile && <HistoryTrigger />}
+            {/* Mobile: Share first, then History for better UX */}
+            {isMobile && (
+              <>
+                <DialogShare />
+                <HistoryTrigger />
+              </>
+            )}
+            {/* Desktop: History first (hidden), then Share to avoid gap */}
+            {!isMobile && (
+              <>
+                <HistoryTrigger />
+                <DialogShare />
+              </>
+            )}
             <ThemeSwitchIcon />
             {user && <UserMenu user={user} />}
           </div>

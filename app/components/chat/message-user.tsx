@@ -114,7 +114,7 @@ const renderFilePart = (filePart: FileUIPart) => {
   if (filePart.mediaType === 'application/pdf') {
     if (filePart.url === 'redacted') {
       return (
-        <div className="mb-2 w-35 rounded-md border bg-muted px-4 py-2 text-center text-muted-foreground text-xs">
+        <div className="mb-2 w-[120px] rounded-md border bg-muted px-4 py-2 text-center text-muted-foreground text-xs">
           Attachment redacted
         </div>
       );
