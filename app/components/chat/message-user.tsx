@@ -326,10 +326,13 @@ function MessageUserInner({
               aria-pressed={isEditing}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
               disabled={status === 'streaming'}
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (readOnly) return;
+                setIsEditing(!isEditing);
+              }}
               type="button"
             >
-              {isEditing ? (
+              {isEditing && !readOnly ? (
                 <PencilSimpleSlashIcon className="size-4" />
               ) : (
                 <PencilSimpleIcon className="size-4" />
