@@ -270,7 +270,8 @@ export function DialogShare() {
                     onClick={() =>
                       window.open(
                         `https://x.com/intent/tweet?url=${encodeURIComponent(publicLink)}&text=${encodeURIComponent(shareTitle)}`,
-                        '_blank'
+                        '_blank',
+                        'noopener,noreferrer'
                       )
                     }
                     variant="outline"
@@ -283,7 +284,8 @@ export function DialogShare() {
                     onClick={() =>
                       window.open(
                         `https://www.reddit.com/submit?url=${encodeURIComponent(publicLink)}&title=${encodeURIComponent(shareTitle)}`,
-                        '_blank'
+                        '_blank',
+                        'noopener,noreferrer'
                       )
                     }
                     variant="outline"
@@ -296,7 +298,8 @@ export function DialogShare() {
                     onClick={() =>
                       window.open(
                         `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicLink)}`,
-                        '_blank'
+                        '_blank',
+                        'noopener,noreferrer'
                       )
                     }
                     variant="outline"
@@ -309,7 +312,8 @@ export function DialogShare() {
                     onClick={() =>
                       window.open(
                         `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicLink)}`,
-                        '_blank'
+                        '_blank',
+                        'noopener,noreferrer'
                       )
                     }
                     variant="outline"

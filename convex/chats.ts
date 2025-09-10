@@ -121,8 +121,11 @@ export const forkFromShared = mutation({
       .order('asc')
       .collect();
 
-    // Insert messages with sanitized parts
-    const insertPromises = msgs.map((m) => {
+    // Create ID mapping for threading
+    const idMap = new Map<Id<'messages'>, Id<'messages'>>();
+
+    // Insert messages sequentially to preserve threading
+    for (const m of msgs) {
       // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
       const sanitizedParts = (m.parts ?? []).map((p: any) => {
         try {
@@ -156,19 +159,25 @@ export const forkFromShared = mutation({
         }
       });
 
-      return ctx.db.insert('messages', {
+      // Map parentMessageId to new chat's message IDs
+      const parentMessageId = m.parentMessageId
+        ? idMap.get(m.parentMessageId)
+        : undefined;
+
+      const newMessageId = await ctx.db.insert('messages', {
         chatId: newChatId,
-        userId: m.userId,
+        userId,
         role: m.role,
         content: m.content,
         createdAt: m.createdAt,
-        parentMessageId: m.parentMessageId,
+        parentMessageId,
         parts: sanitizedParts,
         metadata: m.metadata,
       });
-    });
 
-    await Promise.all(insertPromises);
+      // Track the ID mapping for future parent references
+      idMap.set(m._id, newMessageId);
+    }
 
     return { chatId: newChatId };
   },
