@@ -75,6 +75,10 @@ export default function ShareView({
         friendlyMessage = 'This chat is no longer publicly available.';
       } else if (errorMessage.includes('NOT_FOUND')) {
         friendlyMessage = 'Chat not found or no longer available.';
+      } else if (errorMessage.includes('REDACTED_CONTENT')) {
+        // Open the existing redaction / cannot fork dialog and skip toast
+        setShowCannotForkDialog(true);
+        return;
       }
 
       toast({
