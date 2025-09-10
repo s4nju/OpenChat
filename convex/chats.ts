@@ -132,15 +132,7 @@ export const forkFromShared = mutation({
     // Detect redactions (files or tool calls) that would make fork incomplete
     const redactedContentInfo = detectRedactedContent(sanitizedMsgs);
     if (redactedContentInfo.hasRedactedContent) {
-      throw new ConvexError({
-        code: ERROR_CODES.REDACTED_CONTENT,
-        message: `Cannot fork chat: ${redactedContentInfo.description}. Forking disabled to maintain conversation integrity.`,
-        data: {
-          redactedFiles: redactedContentInfo.redactedFiles,
-          redactedTools: redactedContentInfo.redactedTools,
-          redactedParts: redactedContentInfo.redactedParts,
-        },
-      });
+      throw new ConvexError(ERROR_CODES.REDACTED_CONTENT);
     }
 
     // Create ID mapping for threading
