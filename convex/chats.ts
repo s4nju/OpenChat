@@ -1,6 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { ConvexError, v } from 'convex/values';
 import { ERROR_CODES } from '../lib/error-codes';
+import { detectRedactedContent } from '../lib/redacted-content-detector';
 import type { Id } from './_generated/dataModel';
 import { internalMutation, mutation, query } from './_generated/server';
 // Import helper functions
@@ -29,7 +30,7 @@ export const publishChat = mutation({
 
     await ctx.db.patch(chatId, {
       public: true,
-      shareAttachments: !(hideImages ?? false),
+      shareAttachments: hideImages === false,
       updatedAt: Date.now(),
     });
     return null;
@@ -121,6 +122,20 @@ export const forkFromShared = mutation({
       .withIndex('by_chat_and_created', (q) => q.eq('chatId', sourceChatId))
       .order('asc')
       .collect();
+
+    // Check if any messages contain redacted content
+    const redactedContentInfo = detectRedactedContent(msgs);
+    if (redactedContentInfo.hasRedactedContent) {
+      throw new ConvexError({
+        code: 'REDACTED_CONTENT',
+        message: `Cannot fork chat: ${redactedContentInfo.description}. Forking disabled to maintain conversation integrity.`,
+        data: {
+          redactedFiles: redactedContentInfo.redactedFiles,
+          redactedTools: redactedContentInfo.redactedTools,
+          redactedParts: redactedContentInfo.redactedParts,
+        },
+      });
+    }
 
     // Create ID mapping for threading
     const idMap = new Map<Id<'messages'>, Id<'messages'>>();
