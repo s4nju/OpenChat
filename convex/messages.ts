@@ -15,6 +15,98 @@ import { ensureChatAccess, ensureMessageAccess } from './lib/auth_helper';
 // Keep reusable regex at top-level per lint rule
 const TRAILING_SLASH_RE = /\/$/;
 
+// New: Get messages for public shared chat with optional redaction
+export const getPublicChatMessages = query({
+  args: {
+    chatId: v.id('chats'),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('messages'),
+      _creationTime: v.number(),
+      chatId: v.id('chats'),
+      userId: v.optional(v.id('users')),
+      role: v.union(
+        v.literal('user'),
+        v.literal('assistant'),
+        v.literal('system')
+      ),
+      content: v.string(),
+      parts: v.optional(v.any()),
+      createdAt: v.optional(v.number()),
+      parentMessageId: v.optional(v.id('messages')),
+      metadata: v.object({
+        modelId: v.optional(v.string()),
+        modelName: v.optional(v.string()),
+        inputTokens: v.optional(v.number()),
+        outputTokens: v.optional(v.number()),
+        reasoningTokens: v.optional(v.number()),
+        totalTokens: v.optional(v.number()),
+        cachedInputTokens: v.optional(v.number()),
+        serverDurationMs: v.optional(v.number()),
+        includeSearch: v.optional(v.boolean()),
+        reasoningEffort: v.optional(v.string()),
+      }),
+    })
+  ),
+  handler: async (ctx, { chatId }) => {
+    const chat = await ctx.db.get(chatId);
+    if (!(chat && (chat.public ?? false))) {
+      return [];
+    }
+
+    const hideFiles = !(chat.shareAttachments ?? false);
+
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_chat_and_created', (q) => q.eq('chatId', chatId))
+      .order('asc')
+      .collect();
+
+    // Sanitize parts if needed
+    return messages.map((m) => {
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      const sanitizedParts = (m.parts ?? []).map((p: any) => {
+        try {
+          if (!p || typeof p !== 'object') {
+            return p;
+          }
+          // Redact sensitive tool use info
+          if (
+            typeof p.type === 'string' &&
+            p.type.startsWith('tool-') &&
+            p.type !== 'tool-search'
+          ) {
+            const cloned = { ...p } as Record<string, unknown>;
+            if ('input' in cloned) {
+              cloned.input = 'REDACTED';
+            }
+            if ('output' in cloned) {
+              cloned.output = 'REDACTED';
+            }
+            if ('error' in cloned) {
+              cloned.error = 'REDACTED';
+            }
+            return cloned;
+          }
+          // Hide files/images if requested
+          if (hideFiles && p.type === 'file') {
+            return { ...p, url: 'redacted' };
+          }
+          return p;
+        } catch (_err) {
+          return p;
+        }
+      });
+
+      return {
+        ...m,
+        parts: sanitizedParts,
+      };
+    });
+  },
+});
+
 /**
  * Helper function to clean up attachments for messages
  */

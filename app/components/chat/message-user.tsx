@@ -37,6 +37,32 @@ const getTextFromDataUrl = (dataUrl: string) => {
 // Helper function to render different file parts
 const renderFilePart = (filePart: FileUIPart) => {
   if (filePart.mediaType?.startsWith('image')) {
+    if (filePart.url === 'redacted') {
+      return (
+        <div className="mb-1">
+          <div
+            aria-label="Image redacted"
+            className="relative overflow-hidden rounded-md bg-muted"
+            role="img"
+            style={{ width: 160, height: 160 }}
+          >
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-40"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0px, rgba(0,0,0,0.06) 10px, transparent 10px, transparent 20px)',
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="rounded-full border border-border bg-background/80 px-2 py-0.5 text-[10px] text-muted-foreground">
+                Image redacted
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <MorphingDialog
         transition={{
@@ -71,6 +97,13 @@ const renderFilePart = (filePart: FileUIPart) => {
   }
 
   if (filePart.mediaType?.startsWith('text')) {
+    if (filePart.url === 'redacted') {
+      return (
+        <div className="mb-2 w-40 rounded-md border bg-muted p-2 text-center text-muted-foreground text-xs">
+          Attachment redacted
+        </div>
+      );
+    }
     return (
       <div className="mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-primary text-xs">
         {getTextFromDataUrl(filePart.url)}
@@ -79,6 +112,13 @@ const renderFilePart = (filePart: FileUIPart) => {
   }
 
   if (filePart.mediaType === 'application/pdf') {
+    if (filePart.url === 'redacted') {
+      return (
+        <div className="mb-2 w-35 rounded-md border bg-muted px-4 py-2 text-center text-muted-foreground text-xs">
+          Attachment redacted
+        </div>
+      );
+    }
     return (
       <a
         aria-label={`Download PDF: ${filePart.filename}`}
@@ -132,6 +172,7 @@ export type MessageUserProps = {
   parts?: MessageType['parts'];
   copied: boolean;
   copyToClipboard: () => void;
+  readOnly?: boolean;
   onEdit: (
     id: string,
     newText: string,
@@ -159,6 +200,7 @@ function MessageUserInner({
   parts,
   copied,
   copyToClipboard,
+  readOnly = false,
   onEdit,
   onDelete,
   id,
@@ -273,37 +315,41 @@ function MessageUserInner({
             )}
           </button>
         </MessageAction>
-        <MessageAction
-          delayDuration={0}
-          side="bottom"
-          tooltip={isEditing ? 'Cancel Edit' : 'Edit'}
-        >
-          <button
-            aria-label={isEditing ? 'Cancel edit' : 'Edit'}
-            aria-pressed={isEditing}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={status === 'streaming'}
-            onClick={() => setIsEditing(!isEditing)}
-            type="button"
+        {!readOnly && (
+          <MessageAction
+            delayDuration={0}
+            side="bottom"
+            tooltip={isEditing ? 'Cancel Edit' : 'Edit'}
           >
-            {isEditing ? (
-              <PencilSimpleSlashIcon className="size-4" />
-            ) : (
-              <PencilSimpleIcon className="size-4" />
-            )}
-          </button>
-        </MessageAction>
-        <MessageAction delayDuration={0} side="bottom" tooltip="Delete">
-          <button
-            aria-label="Delete"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={status === 'streaming'}
-            onClick={handleDelete}
-            type="button"
-          >
-            <TrashIcon className="size-4" />
-          </button>
-        </MessageAction>
+            <button
+              aria-label={isEditing ? 'Cancel edit' : 'Edit'}
+              aria-pressed={isEditing}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={status === 'streaming'}
+              onClick={() => setIsEditing(!isEditing)}
+              type="button"
+            >
+              {isEditing ? (
+                <PencilSimpleSlashIcon className="size-4" />
+              ) : (
+                <PencilSimpleIcon className="size-4" />
+              )}
+            </button>
+          </MessageAction>
+        )}
+        {!readOnly && (
+          <MessageAction delayDuration={0} side="bottom" tooltip="Delete">
+            <button
+              aria-label="Delete"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-transparent transition disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={status === 'streaming'}
+              onClick={handleDelete}
+              type="button"
+            >
+              <TrashIcon className="size-4" />
+            </button>
+          </MessageAction>
+        )}
       </MessageActions>
     </MessageContainer>
   );

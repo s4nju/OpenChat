@@ -16,6 +16,163 @@ import {
 } from './lib/cleanup_helper';
 import { Chat } from './schema/chat';
 
+// New: Publish a chat and set share policy
+export const publishChat = mutation({
+  args: { chatId: v.id('chats'), hideImages: v.optional(v.boolean()) },
+  returns: v.null(),
+  handler: async (ctx, { chatId, hideImages }) => {
+    const result = await tryEnsureChatAccess(ctx, chatId);
+    if (!result) {
+      return null;
+    }
+
+    await ctx.db.patch(chatId, {
+      public: true,
+      shareAttachments: !(hideImages ?? false),
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+// New: Unpublish a chat
+export const unpublishChat = mutation({
+  args: { chatId: v.id('chats') },
+  returns: v.null(),
+  handler: async (ctx, { chatId }) => {
+    const result = await tryEnsureChatAccess(ctx, chatId);
+    if (!result) {
+      return null;
+    }
+    await ctx.db.patch(chatId, {
+      public: false,
+      shareAttachments: false,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+// New: Get minimal public chat metadata if chat is shared
+export const getPublicChat = query({
+  args: { chatId: v.id('chats') },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id('chats'),
+      _creationTime: v.number(),
+      title: v.optional(v.string()),
+      createdAt: v.optional(v.number()),
+      updatedAt: v.optional(v.number()),
+      public: v.optional(v.boolean()),
+      shareAttachments: v.optional(v.boolean()),
+    })
+  ),
+  handler: async (ctx, { chatId }) => {
+    const chat = await ctx.db.get(chatId);
+    if (!(chat && (chat.public ?? false))) {
+      return null;
+    }
+    return {
+      _id: chat._id,
+      _creationTime: chat._creationTime,
+      title: chat.title,
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+      public: chat.public,
+      shareAttachments: chat.shareAttachments,
+    };
+  },
+});
+
+// New: Fork a shared chat to the current user's account with sanitized content
+export const forkFromShared = mutation({
+  args: { sourceChatId: v.id('chats') },
+  returns: v.object({ chatId: v.id('chats') }),
+  handler: async (ctx, { sourceChatId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError('UNAUTHENTICATED');
+    }
+
+    const source = await ctx.db.get(sourceChatId);
+    if (!(source && (source.public ?? false))) {
+      throw new ConvexError('NOT_PUBLIC');
+    }
+
+    const now = Date.now();
+    const newChatId = await ctx.db.insert('chats', {
+      userId,
+      title: source.title || 'Forked Chat',
+      model: source.model,
+      personaId: source.personaId,
+      createdAt: now,
+      updatedAt: now,
+      // Do not mark fork as public by default
+      public: false,
+      shareAttachments: false,
+    });
+
+    const hideFiles = !(source.shareAttachments ?? false);
+
+    const msgs = await ctx.db
+      .query('messages')
+      .withIndex('by_chat_and_created', (q) => q.eq('chatId', sourceChatId))
+      .order('asc')
+      .collect();
+
+    // Insert messages with sanitized parts
+    const insertPromises = msgs.map((m) => {
+      // biome-ignore lint/suspicious/noExplicitAny: parts can be any; we validate properties at runtime
+      const sanitizedParts = (m.parts ?? []).map((p: any) => {
+        try {
+          if (!p || typeof p !== 'object') {
+            return p;
+          }
+          if (
+            typeof p.type === 'string' &&
+            p.type.startsWith('tool-') &&
+            p.type !== 'tool-search'
+          ) {
+            const cloned = { ...p } as Record<string, unknown>;
+            if ('input' in cloned) {
+              cloned.input = 'REDACTED';
+            }
+            if ('output' in cloned) {
+              cloned.output = 'REDACTED';
+            }
+            if ('error' in cloned) {
+              cloned.error = 'REDACTED';
+            }
+            return cloned;
+          }
+          if (hideFiles && p.type === 'file') {
+            return { ...p, url: 'redacted' };
+          }
+          return p;
+        } catch (_err) {
+          return p;
+        }
+      });
+
+      return ctx.db.insert('messages', {
+        chatId: newChatId,
+        userId: m.userId,
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt,
+        parentMessageId: m.parentMessageId,
+        parts: sanitizedParts,
+        metadata: m.metadata,
+      });
+    });
+
+    await Promise.all(insertPromises);
+
+    return { chatId: newChatId };
+  },
+});
+
 export const createChat = mutation({
   args: {
     title: v.optional(v.string()),
@@ -33,6 +190,9 @@ export const createChat = mutation({
       personaId: args.personaId,
       createdAt: now,
       updatedAt: now,
+      // Always set explicit boolean defaults (never undefined)
+      public: false,
+      shareAttachments: false,
     });
     return { chatId };
   },
@@ -194,6 +354,9 @@ export const branchChat = mutation({
       originalChatId: args.originalChatId,
       createdAt: now,
       updatedAt: now,
+      // Always set explicit boolean defaults (never undefined)
+      public: false,
+      shareAttachments: false,
     });
 
     // Get all messages up to and including the branch point
@@ -279,6 +442,9 @@ export const createChatInternal = internalMutation({
       personaId: args.personaId,
       createdAt: now,
       updatedAt: now,
+      // Always set explicit boolean defaults (never undefined)
+      public: false,
+      shareAttachments: false,
     });
     return { chatId };
   },
