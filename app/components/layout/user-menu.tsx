@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeSlash, SignOut, ChatCircleIcon } from '@phosphor-icons/react';
+import { Eye, EyeSlash, SignOut, ChatCircleIcon, ChatCircleDotsIcon } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useUser } from '@/app/providers/user-provider';
@@ -126,6 +126,14 @@ export function UserMenu({ user }: { user: Doc<'users'> }) {
           onOpenChange={handleSettingsOpenChange}
         />
         <AppInfoTrigger />
+        <DropdownMenuItem
+          onSelect={() => {
+            window.open('https://oschat.userjot.com', '_blank', 'noopener,noreferrer');
+          }}
+        >
+          <ChatCircleDotsIcon className="mr-2 size-4" />
+          Feedback
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(e) => {
