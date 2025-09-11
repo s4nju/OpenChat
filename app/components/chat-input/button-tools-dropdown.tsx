@@ -111,6 +111,8 @@ function BaseButtonToolsDropdown({
     }
   }, []);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
   // Auth gating: mirror existing pattern from ButtonSearch
   if (!isUserAuthenticated) {
     return (
@@ -137,8 +139,8 @@ function BaseButtonToolsDropdown({
   }
 
   return (
-    <DropdownMenu>
-      <Tooltip>
+    <DropdownMenu onOpenChange={setMenuOpen} open={menuOpen}>
+      <Tooltip open={menuOpen ? false : undefined}>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
             <Button
@@ -154,30 +156,12 @@ function BaseButtonToolsDropdown({
         </TooltipTrigger>
         <TooltipContent>Tools & search</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="start" className="min-w-[18rem]">
-        <DropdownMenuItem
-          onSelect={(e) => {
-            e.preventDefault();
-            if (!isToolCallingAvailable) {
-              return;
-            }
-            onToggleSearch();
-          }}
-        >
-          <div className="flex w-full cursor-pointer items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Globe className="size-4" />
-              <span>Search</span>
-            </div>
-            <Switch
-              aria-label="Toggle web search"
-              checked={searchEnabled}
-              className="pointer-events-none"
-              disabled={!isToolCallingAvailable}
-            />
-          </div>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent
+        align="start"
+        className="min-w-[18rem]"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        side="top"
+      >
         {rows.map((row) => {
           const cfg = CONNECTOR_CONFIGS[row.type];
           return (
@@ -220,6 +204,29 @@ function BaseButtonToolsDropdown({
             </DropdownMenuItem>
           );
         })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            if (!isToolCallingAvailable) {
+              return;
+            }
+            onToggleSearch();
+          }}
+        >
+          <div className="flex w-full cursor-pointer items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="size-4" />
+              <span>Search</span>
+            </div>
+            <Switch
+              aria-label="Toggle web search"
+              checked={searchEnabled}
+              className="pointer-events-none"
+              disabled={!isToolCallingAvailable}
+            />
+          </div>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
