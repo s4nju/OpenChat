@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
@@ -158,54 +157,57 @@ function BaseButtonToolsDropdown({
       </Tooltip>
       <DropdownMenuContent
         align="start"
-        className="min-w-[18rem]"
+        className="min-w-[18rem] p-0"
         onCloseAutoFocus={(e) => e.preventDefault()}
         side="top"
       >
-        {rows.map((row) => {
-          const cfg = CONNECTOR_CONFIGS[row.type];
-          return (
-            <DropdownMenuItem
-              className="cursor-pointer"
-              key={row.type}
-              onSelect={(e) => {
-                e.preventDefault();
-                if (row.isConnected) {
-                  handleToggleConnector(row.type, !row.enabled);
-                } else {
-                  handleConnect(row.type);
-                }
-              }}
-            >
-              <div className="flex w-full cursor-pointer items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <ConnectorIcon className="size-4" connector={cfg} />
-                  <span>{cfg.displayName}</span>
+        <div className="px-1.5 py-2">
+          {rows.map((row) => {
+            const cfg = CONNECTOR_CONFIGS[row.type];
+            return (
+              <DropdownMenuItem
+                className="cursor-pointer px-3 py-1.5"
+                key={row.type}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (row.isConnected) {
+                    handleToggleConnector(row.type, !row.enabled);
+                  } else {
+                    handleConnect(row.type);
+                  }
+                }}
+              >
+                <div className="flex w-full cursor-pointer items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ConnectorIcon className="size-4" connector={cfg} />
+                    <span>{cfg.displayName}</span>
+                  </div>
+                  {row.isConnected ? (
+                    <Switch
+                      aria-label={`Enable ${cfg.displayName}`}
+                      checked={row.enabled}
+                      className="pointer-events-none"
+                    />
+                  ) : (
+                    <Button
+                      aria-label={`Connect ${cfg.displayName}`}
+                      className="pointer-events-none h-7 cursor-pointer px-2"
+                      disabled={connectingType === row.type}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {connectingType === row.type ? 'Connecting…' : 'Connect'}
+                    </Button>
+                  )}
                 </div>
-                {row.isConnected ? (
-                  <Switch
-                    aria-label={`Enable ${cfg.displayName}`}
-                    checked={row.enabled}
-                    className="pointer-events-none"
-                  />
-                ) : (
-                  <Button
-                    aria-label={`Connect ${cfg.displayName}`}
-                    className="pointer-events-none h-7 cursor-pointer px-2"
-                    disabled={connectingType === row.type}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    {connectingType === row.type ? 'Connecting…' : 'Connect'}
-                  </Button>
-                )}
-              </div>
-            </DropdownMenuItem>
-          );
-        })}
-        <DropdownMenuSeparator />
+              </DropdownMenuItem>
+            );
+          })}
+        </div>
+        <div className="mx-2 my-1 border-border border-t" />
         <DropdownMenuItem
+          className="m-1.5 rounded-sm px-3 py-2"
           onSelect={(e) => {
             e.preventDefault();
             if (!isToolCallingAvailable) {
