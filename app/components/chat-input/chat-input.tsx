@@ -18,7 +18,7 @@ import {
   UPLOAD_MAX_LABEL,
 } from '@/lib/config/upload';
 import { ButtonFileUpload } from './button-file-upload';
-import { ButtonSearch } from './button-search';
+import { ButtonToolsDropdown } from './button-tools-dropdown';
 import { FileList } from './file-list';
 import { PromptSystem } from './prompt-system';
 import { SelectModel } from './select-model';
@@ -71,6 +71,9 @@ export function ChatInput({
   // Local state for input value to prevent parent re-renders
   const [value, setValue] = useState(initialValue);
   const [searchEnabled, setSearchEnabled] = React.useState(false);
+  const toggleSearch = useCallback(() => {
+    setSearchEnabled((prev) => !prev);
+  }, []);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Track isEmpty state to prevent PromptSystem re-renders on every keystroke
@@ -288,11 +291,11 @@ export function ChatInput({
                 model={selectedModel}
                 onFileUpload={onFileUploadAction}
               />
-              <ButtonSearch
+              <ButtonToolsDropdown
                 isUserAuthenticated={isUserAuthenticated}
-                model={selectedModel}
-                onSearch={() => setSearchEnabled((prev) => !prev)}
+                onToggleSearch={toggleSearch}
                 searchEnabled={searchEnabled}
+                selectedModel={selectedModel}
               />
               <SelectModel
                 isUserAuthenticated={isUserAuthenticated}
