@@ -213,6 +213,11 @@ type ChatRequest = {
   reasoningEffort?: ReasoningEffort;
   userInfo?: { timezone?: string };
   enabledToolSlugs?: string[];
+  connectorsStatus?: {
+    enabled?: string[];
+    disabled?: string[];
+    notConnected?: string[];
+  };
 };
 
 /**
@@ -477,6 +482,7 @@ export async function POST(req: Request) {
       reasoningEffort,
       userInfo,
       enabledToolSlugs,
+      connectorsStatus,
     } = (await req.json()) as ChatRequest;
 
     if (!(messages && chatId)) {
@@ -692,7 +698,10 @@ export async function POST(req: Request) {
       enableSearch,
       enableTools,
       userInfo?.timezone,
-      enabledToolSlugs
+      enabledToolSlugs,
+      undefined,
+      undefined,
+      connectorsStatus
     );
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
     // Check if this is an image generation model

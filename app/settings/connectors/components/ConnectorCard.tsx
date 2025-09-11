@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import type { Id } from '@/convex/_generated/dataModel';
 import { getConnectorConfig } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
@@ -20,6 +21,7 @@ type ConnectorData = {
   _id?: Id<'connectors'>;
   type: ConnectorType;
   isConnected: boolean;
+  enabled?: boolean;
   displayName?: string;
   connectionId?: string;
 };
@@ -28,6 +30,7 @@ type ConnectorCardProps = {
   connector: ConnectorData;
   onConnect: (type: ConnectorType) => void;
   onDisconnect: (type: ConnectorType) => Promise<void>;
+  onToggleEnabled: (type: ConnectorType, enabled: boolean) => Promise<void>;
   isConnecting: boolean;
 };
 
@@ -35,6 +38,7 @@ export function ConnectorCard({
   connector,
   onConnect,
   onDisconnect,
+  onToggleEnabled,
   isConnecting,
 }: ConnectorCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -62,6 +66,20 @@ export function ConnectorCard({
   };
 
   const config = getConnectorConfig(connector.type);
+  const isEnabled = connector.enabled !== false;
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      await onToggleEnabled(connector.type, checked);
+      toast.success(
+        `${config.displayName} ${checked ? 'enabled' : 'disabled'} successfully`
+      );
+    } catch {
+      toast.error(
+        `Failed to ${checked ? 'enable' : 'disable'} ${config.displayName}`
+      );
+    }
+  };
 
   return (
     <div className="flex h-full min-h-[140px] flex-col rounded-lg border p-4">
@@ -71,6 +89,15 @@ export function ConnectorCard({
             <ConnectorIcon className="size-5" connector={config} />
             {config.displayName}
           </h3>
+          {/* Enable/disable switch visible when connected */}
+          <div className="flex items-center">
+            <Switch
+              aria-label={`Toggle ${config.displayName}`}
+              checked={connector.isConnected ? isEnabled : false}
+              disabled={!connector.isConnected || isDisconnecting}
+              onCheckedChange={handleToggle}
+            />
+          </div>
         </div>
         <p className="text-muted-foreground text-sm">{config.description}</p>
         {connector.displayName && (

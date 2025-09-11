@@ -16,5 +16,8 @@ export const Connector = v.object({
   ),
   connectionId: v.string(),
   isConnected: v.boolean(),
+  // Enable/disable connector without removing OAuth connection
+  // Optional for backward-compatibility with existing records
+  enabled: v.optional(v.boolean()),
   displayName: v.optional(v.string()),
 });

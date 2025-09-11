@@ -1,9 +1,11 @@
 'use client';
 
+import { useMutation } from 'convex/react';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useUser } from '@/app/providers/user-provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { api } from '@/convex/_generated/api';
 import { getConnectorConfig, SUPPORTED_CONNECTORS } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
 import { ConnectorGrid } from './components/ConnectorGrid';
@@ -14,6 +16,7 @@ type SimpleConnectionState = {
 
 export default function ConnectorsPage() {
   const { user, connectors, isConnectorsLoading } = useUser();
+  const setConnectorEnabled = useMutation(api.connectors.setConnectorEnabled);
   const [connectionStates, setConnectionStates] = useState<
     Record<ConnectorType, SimpleConnectionState>
   >(() => {
@@ -111,6 +114,21 @@ export default function ConnectorsPage() {
     [user]
   );
 
+  const handleToggleEnabled = useCallback(
+    async (type: ConnectorType, enabled: boolean) => {
+      if (!user) {
+        toast.error('Please log in to update connector settings');
+        return;
+      }
+      try {
+        await setConnectorEnabled({ type, enabled });
+      } catch {
+        throw new Error('Failed to update connector state');
+      }
+    },
+    [user, setConnectorEnabled]
+  );
+
   const connectingStates = Object.fromEntries(
     Object.entries(connectionStates).map(([key, { status }]) => [
       key,
@@ -146,6 +164,7 @@ export default function ConnectorsPage() {
           connectors={connectors}
           onConnect={handleConnect}
           onDisconnect={handleDisconnect}
+          onToggleEnabled={handleToggleEnabled}
         />
       )}
     </div>

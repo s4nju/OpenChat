@@ -15,6 +15,12 @@ import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
 import type { ConnectorType } from '@/lib/types';
 
+export type ConnectorStatusLists = {
+  enabled?: string[];
+  disabled?: string[];
+  notConnected?: string[];
+};
+
 // Extend dayjs with plugins
 dayjs.extend(utc);
 dayjs.extend(timezonePlugin);
@@ -155,7 +161,8 @@ const formatDateInTimezone = (
 
 export const getSystemPromptDefault = (
   enabledToolSlugs?: string[],
-  timezone?: string
+  timezone?: string,
+  connectorsStatus?: ConnectorStatusLists
 ) =>
   `
 <identity>
@@ -200,7 +207,23 @@ ${
     ? enabledToolSlugs
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')
-    : '- None connected yet. User needs to connect integrations in settings to use them.'
+    : '- None enabled.'
+}
+
+${
+  connectorsStatus?.disabled && connectorsStatus.disabled.length > 0
+    ? `Connected but disabled:\n${connectorsStatus.disabled
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+${
+  connectorsStatus?.notConnected && connectorsStatus.notConnected.length > 0
+    ? `Not connected:\n${connectorsStatus.notConnected
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
 }
 
 If the user asks about using an integration that is not in the "Currently enabled" list above, direct them to connect it first in settings.
@@ -415,14 +438,15 @@ export function buildSystemPrompt(
   timezone?: string,
   enabledToolSlugs?: string[],
   emailMode?: boolean,
-  taskMode?: boolean
+  taskMode?: boolean,
+  connectorsStatus?: ConnectorStatusLists
 ) {
   // Choose the appropriate base prompt based on mode
   let prompt =
     basePrompt ??
     (taskMode
       ? getTaskPromptDefault(enabledToolSlugs, timezone)
-      : getSystemPromptDefault(enabledToolSlugs, timezone));
+      : getSystemPromptDefault(enabledToolSlugs, timezone, connectorsStatus));
 
   prompt += `\n\n${FORMATTING_RULES}`;
 

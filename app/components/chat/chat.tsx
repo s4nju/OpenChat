@@ -26,6 +26,7 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
+import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
 import {
   createOptimisticAttachments,
   revokeOptimisticAttachments,
@@ -62,6 +63,13 @@ const ChatBodySchema = z.object({
     })
     .optional(),
   enabledToolSlugs: z.array(z.string()).optional(),
+  connectorsStatus: z
+    .object({
+      enabled: z.array(z.string()).optional(),
+      disabled: z.array(z.string()).optional(),
+      notConnected: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 type ChatBody = z.infer<typeof ChatBodySchema>;
@@ -96,8 +104,32 @@ export default function Chat() {
     }
 
     return connectors
-      .filter((connector) => connector.isConnected && connector.type)
+      .filter(
+        (connector) =>
+          connector.isConnected && connector.type && connector.enabled !== false
+      )
       .map((connector) => connector.type.toUpperCase());
+  }, [connectors]);
+
+  const disabledToolSlugs = useMemo(() => {
+    if (!connectors || connectors.length === 0) {
+      return [];
+    }
+    return connectors
+      .filter(
+        (connector) => connector.isConnected && connector.enabled === false
+      )
+      .map((connector) => connector.type.toUpperCase());
+  }, [connectors]);
+
+  const notConnectedToolSlugs = useMemo(() => {
+    if (!(SUPPORTED_CONNECTORS && connectors)) {
+      return [];
+    }
+    const connectedTypes = new Set(connectors.map((c) => c.type));
+    return SUPPORTED_CONNECTORS.filter((type) => !connectedTypes.has(type)).map(
+      (t) => t.toUpperCase()
+    );
   }, [connectors]);
 
   // Custom hooks
@@ -299,6 +331,16 @@ export default function Chat() {
         ...(isReasoningModel ? { reasoningEffort } : {}),
         ...(timezone ? { userInfo: { timezone } } : {}),
         ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
+        connectorsStatus:
+          enabledToolSlugs.length > 0 ||
+          disabledToolSlugs.length > 0 ||
+          notConnectedToolSlugs.length > 0
+            ? {
+                enabled: enabledToolSlugs,
+                disabled: disabledToolSlugs,
+                notConnected: notConnectedToolSlugs,
+              }
+            : undefined,
       };
 
       // Handle files if present
@@ -356,6 +398,8 @@ export default function Chat() {
       sendMessage,
       setMessages,
       enabledToolSlugs,
+      disabledToolSlugs,
+      notConnectedToolSlugs,
     ]
   );
 
