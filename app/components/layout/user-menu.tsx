@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeSlash, SignOut } from '@phosphor-icons/react';
+import { Eye, EyeSlash, SignOut, ChatCircleIcon } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useUser } from '@/app/providers/user-provider';
