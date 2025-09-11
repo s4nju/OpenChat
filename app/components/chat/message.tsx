@@ -10,6 +10,7 @@ export type MessageProps = {
   model?: string;
   id: string;
   isLast?: boolean;
+  readOnly?: boolean;
   onDelete: (id: string) => void;
   onEdit: (
     id: string,
@@ -39,6 +40,7 @@ function MessageComponent({
   model,
   id,
   isLast,
+  readOnly,
   onDelete,
   onEdit,
   onReload,
@@ -80,6 +82,7 @@ function MessageComponent({
         onDelete={onDelete}
         onEdit={onEdit}
         parts={parts}
+        readOnly={readOnly}
         reasoningEffort={reasoningEffort}
         selectedModel={model || selectedModel || ''}
         status={status}
@@ -100,6 +103,7 @@ function MessageComponent({
         onBranch={onBranch}
         onReload={onReload}
         parts={parts}
+        readOnly={readOnly}
         status={status}
       />
     );

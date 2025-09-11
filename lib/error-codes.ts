@@ -32,6 +32,7 @@ export const BUSINESS_ERRORS = {
   USER_KEY_REQUIRED: 'USER_KEY_REQUIRED',
   UNSUPPORTED_MODEL: 'UNSUPPORTED_MODEL',
   UNSUPPORTED_OPERATION: 'UNSUPPORTED_OPERATION',
+  REDACTED_CONTENT: 'REDACTED_CONTENT',
 } as const;
 
 // File operation errors
@@ -95,6 +96,8 @@ export function getErrorMessage(code: ErrorCode): string {
       return 'The selected model is not supported for this operation.';
     case ERROR_CODES.UNSUPPORTED_OPERATION:
       return 'This operation is not supported.';
+    case ERROR_CODES.REDACTED_CONTENT:
+      return 'Cannot fork chat with redacted content. Forking disabled to maintain conversation integrity.';
 
     // File errors
     case ERROR_CODES.UNSUPPORTED_FILE_TYPE:

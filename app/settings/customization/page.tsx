@@ -1,5 +1,17 @@
 'use client';
 
+import {
+  Architects_Daughter,
+  Atkinson_Hyperlegible,
+  Atkinson_Hyperlegible_Mono,
+  DM_Sans,
+  Fira_Mono,
+  IBM_Plex_Mono,
+  Inter,
+  JetBrains_Mono,
+  Open_Sans,
+  Space_Grotesk,
+} from 'next/font/google';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useUser } from '@/app/providers/user-provider';
@@ -21,6 +33,77 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ThemeFontControls } from '@/components/ui/theme-font-controls';
 import { ThemeSelector } from '@/components/ui/theme-selector';
+import { cn } from '@/lib/utils';
+
+// Load non-default fonts only on the customization page, without preloading
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+const openSans = Open_Sans({
+  variable: '--font-open-sans',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+const architectsDaughter = Architects_Daughter({
+  variable: '--font-architects-daughter',
+  subsets: ['latin'],
+  weight: '400',
+  preload: false,
+  display: 'swap',
+});
+const atkinsonHyperlegible = Atkinson_Hyperlegible({
+  variable: '--font-atkinson-hyperlegible',
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  preload: false,
+  display: 'swap',
+});
+const atkinsonHyperlegibleMono = Atkinson_Hyperlegible_Mono({
+  variable: '--font-atkinson-hyperlegible-mono',
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  preload: false,
+  display: 'swap',
+  adjustFontFallback: false,
+  fallback: ['ui-monospace'],
+});
+const firaMono = Fira_Mono({
+  variable: '--font-fira-mono',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  preload: false,
+  display: 'swap',
+});
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: '--font-ibm-plex-mono',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  preload: false,
+  display: 'swap',
+});
+
 import { toast } from '@/components/ui/toast';
 import { APP_NAME } from '@/lib/config';
 import { useEditorStore } from '@/lib/store/editor-store';
@@ -194,8 +277,24 @@ export default function CustomizationPage() {
     'patient',
   ];
 
+  // Ensure the non-default font CSS variables are present on this route only
+  const pageFontVars = cn(
+    inter.variable,
+    spaceGrotesk.variable,
+    openSans.variable,
+    dmSans.variable,
+    architectsDaughter.variable,
+    atkinsonHyperlegible.variable,
+    atkinsonHyperlegibleMono.variable,
+    firaMono.variable,
+    jetbrainsMono.variable,
+    ibmPlexMono.variable
+  );
+
   return (
     <div className="w-full">
+      {/* Hidden span carries route-scoped font variable classes without preloading */}
+      <span aria-hidden className={pageFontVars} />
       <div className="space-y-8">
         <div>
           <h1 className="font-bold text-2xl">Customize {APP_NAME}</h1>

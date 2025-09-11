@@ -20,6 +20,7 @@ import type * as import_export from "../import_export.js";
 import type * as lib_auth_helper from "../lib/auth_helper.js";
 import type * as lib_cleanup_helper from "../lib/cleanup_helper.js";
 import type * as lib_rateLimitConstants from "../lib/rateLimitConstants.js";
+import type * as lib_sanitization_helper from "../lib/sanitization_helper.js";
 import type * as messages from "../messages.js";
 import type * as polar from "../polar.js";
 import type * as rateLimiter from "../rateLimiter.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth_helper": typeof lib_auth_helper;
   "lib/cleanup_helper": typeof lib_cleanup_helper;
   "lib/rateLimitConstants": typeof lib_rateLimitConstants;
+  "lib/sanitization_helper": typeof lib_sanitization_helper;
   messages: typeof messages;
   polar: typeof polar;
   rateLimiter: typeof rateLimiter;
