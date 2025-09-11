@@ -20,7 +20,7 @@ export function StructuredData({
     alternateName: ['oschat', 'oschat.ai', 'Open Chat', 'oschat ai'],
     description:
       description ||
-      'OS Chat is a free, open-source AI personal assistant and T3 Chat alternative with 40+ language models, task scheduling, and service integrations.',
+      'OS Chat is a free, open-source AI personal assistant and T3 Chat alternative with 40+ language models, background agents, and service integrations.',
     url: url || APP_BASE_URL,
     applicationCategory: 'ProductivityApplication',
     operatingSystem: 'Web',
@@ -44,7 +44,7 @@ export function StructuredData({
         '@type': 'Offer',
         name: 'Pro Plan',
         description:
-          'Access to all AI models, advanced features, task scheduling, and service integrations',
+          'Access to all AI models, advanced features, background agents, and service integrations',
         price: '10',
         priceCurrency: 'USD',
         billingIncrement: 'MONTHLY',
@@ -61,7 +61,7 @@ export function StructuredData({
     },
     featureList: [
       '40+ AI Models (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek)',
-      'Task Scheduling & Automation',
+      'Background Agent Scheduling & Automation',
       'Gmail & Calendar Integration',
       'Notion & GitHub Integration',
       'Web Search Capabilities',
@@ -78,7 +78,7 @@ export function StructuredData({
       'T3 Chat alternative',
       'open source AI',
       'AI personal assistant',
-      'task scheduling',
+      'background agents',
       'multi-model AI',
     ],
     creator: {
@@ -100,7 +100,7 @@ export function StructuredData({
     alternateName: ['oschat', 'oschat.ai'],
     url: APP_BASE_URL,
     description:
-      'Open-source AI personal assistant platform providing access to multiple AI models with task scheduling and service integrations.',
+      'Open-source AI personal assistant platform providing access to multiple AI models with background agents and service integrations.',
     foundingDate: '2024',
     sameAs: ['https://github.com/ajanraj/OpenChat'],
     contactPoint: {

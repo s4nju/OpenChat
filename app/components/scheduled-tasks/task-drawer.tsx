@@ -44,13 +44,13 @@ function SharedDrawerContent({
         <DrawerHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
           <DrawerTitle className="font-semibold text-base">
             {mode === 'edit'
-              ? 'Edit Scheduled Task'
-              : 'Create New Scheduled Task'}
+              ? 'Edit Scheduled Background Agent'
+              : 'Create New Scheduled Background Agent'}
           </DrawerTitle>
           <DrawerDescription className="sr-only">
             {mode === 'edit'
-              ? 'Edit the settings and configuration for this scheduled task.'
-              : 'Create a new automated task that will run on a schedule.'}
+              ? 'Edit the settings and configuration for this scheduled background agent.'
+              : 'Create a new automated background agent that will run on a schedule.'}
           </DrawerDescription>
           <DrawerClose asChild>
             <button

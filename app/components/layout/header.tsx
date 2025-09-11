@@ -80,7 +80,7 @@ export function Header() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    aria-label="Tasks"
+                    aria-label="Background Agents"
                     className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     onClick={() => router.push('/tasks')}
                     type="button"
@@ -88,7 +88,7 @@ export function Header() {
                     <CheckCircleIcon size={24} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Tasks</TooltipContent>
+                <TooltipContent>Background Agents</TooltipContent>
               </Tooltip>
             )}
             {/* Mobile: Share first, then History for better UX */}

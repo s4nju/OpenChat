@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Os Chat',
     short_name: 'Os Chat',
     description:
-      'Your AI Personal Assistant: Chat with multiple AI models, switch between them instantly, and get the best responses for any task',
+      'Your AI Personal Assistant: Chat with multiple AI models, switch between them instantly, and get the best responses with background agents automation',
     start_url: '.',
     scope: '/',
     display: 'standalone',

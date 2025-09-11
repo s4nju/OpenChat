@@ -73,7 +73,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
   const handleDelete = async () => {
     try {
       await deleteTask({ taskId: task._id });
-      toast.success('Task deleted successfully');
+      toast.success('Background Agent deleted successfully');
     } catch (_error) {
       toast.error('Failed to delete task');
     }
@@ -87,7 +87,11 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
         taskId: task._id,
         status: newStatus,
       });
-      toast.success(task.status === 'active' ? 'Task paused' : 'Task resumed');
+      toast.success(
+        task.status === 'active'
+          ? 'Background Agent paused'
+          : 'Background Agent resumed'
+      );
     } catch (_error) {
       toast.error(
         `Failed to ${task.status === 'active' ? 'pause' : 'resume'} task`
@@ -103,7 +107,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
   const handleTriggerNow = async () => {
     try {
       await triggerTask({ taskId: task._id });
-      toast.success('Task triggered successfully');
+      toast.success('Background Agent triggered successfully');
     } catch (_error) {
       toast.error('Failed to trigger task');
     }
@@ -170,9 +174,9 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
       case 'paused':
         return 'Resume task';
       case 'running':
-        return 'Task is running';
+        return 'Background Agent is running';
       case 'archived':
-        return 'Task is archived';
+        return 'Background Agent is archived';
       default:
         return 'Unknown status';
     }
@@ -197,7 +201,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
         taskId: task._id,
         status: 'archived',
       });
-      toast.success('Task archived successfully');
+      toast.success('Background Agent archived successfully');
     } catch (_error) {
       toast.error('Failed to archive task');
     }
@@ -235,7 +239,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
     <div
       aria-expanded={isExpanded}
       aria-label={`${task.title} task card${isExpanded ? ', expanded' : ', collapsed'}`}
-      className="w-full cursor-pointer rounded-xl border border-border bg-card text-left transition-all hover:shadow-sm"
+      className="w-full cursor-pointer rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-sm"
       onClick={() => setIsExpanded(!isExpanded)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -439,7 +443,7 @@ function TaskCardComponent({ task, isMobile = false }: TaskCardProps) {
 
   // Desktop layout (original)
   const desktopLayout = (
-    <div className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-sm">
+    <div className="group rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">

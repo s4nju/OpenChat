@@ -85,10 +85,15 @@ const ChatSidebar = memo(function SidebarComponent() {
 
   // Memoize conditional tasks button handler
   const handleConditionalTasksClick = useCallback(() => {
+    if (!user || user.isAnonymous) {
+      router.push('/auth');
+      return;
+    }
+
     if (pathname !== '/tasks') {
       router.push('/tasks');
     }
-  }, [pathname, router]);
+  }, [pathname, router, user]);
 
   // Use chats directly from query (already memoized by TanStack Query)
   const chats = chatsQuery;
@@ -344,16 +349,13 @@ const ChatSidebar = memo(function SidebarComponent() {
             New Chat
           </Button>
 
-          {/* Only show Tasks button for logged-in users */}
-          {user && !user.isAnonymous && (
-            <Button
-              className="h-9 w-full justify-center font-bold text-sm"
-              onClick={handleConditionalTasksClick}
-              variant="outline"
-            >
-              Tasks
-            </Button>
-          )}
+          <Button
+            className="h-9 w-full justify-center font-bold text-sm"
+            onClick={handleConditionalTasksClick}
+            variant="outline"
+          >
+            Background Agents
+          </Button>
 
           <div className="relative">
             <MagnifyingGlass className="-translate-y-1/2 absolute top-1/2 left-2.5 h-4 w-4 text-muted-foreground" />

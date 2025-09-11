@@ -56,13 +56,13 @@ export function TaskDialog({
             <DialogHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
               <DialogTitle className="font-semibold text-base">
                 {mode === 'edit'
-                  ? 'Edit Scheduled Task'
-                  : 'Create New Scheduled Task'}
+                  ? 'Edit Scheduled Background Agent'
+                  : 'Create New Scheduled Background Agent'}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 {mode === 'edit'
-                  ? 'Edit the settings and configuration for this scheduled task.'
-                  : 'Create a new automated task that will run on a schedule.'}
+                  ? 'Edit the settings and configuration for this scheduled background agent.'
+                  : 'Create a new automated background agent that will run on a schedule.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -108,13 +108,13 @@ export function TaskDialog({
           <DialogHeader className="flex-row items-center justify-between border-border border-b px-6 py-4">
             <DialogTitle className="font-semibold text-base">
               {mode === 'edit'
-                ? 'Edit Scheduled Task'
-                : 'Create New Scheduled Task'}
+                ? 'Edit Scheduled Background Agent'
+                : 'Create New Scheduled Background Agent'}
             </DialogTitle>
             <DialogDescription className="sr-only">
               {mode === 'edit'
-                ? 'Edit the settings and configuration for this scheduled task.'
-                : 'Create a new automated task that will run on a schedule.'}
+                ? 'Edit the settings and configuration for this scheduled background agent.'
+                : 'Create a new automated background agent that will run on a schedule.'}
             </DialogDescription>
           </DialogHeader>
 

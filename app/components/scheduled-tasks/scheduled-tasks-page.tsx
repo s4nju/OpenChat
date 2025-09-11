@@ -62,7 +62,7 @@ export function ScheduledTasksPage() {
         {isMobile ? (
           <div className="mb-8 space-y-4">
             {/* Mobile: Title centered at top */}
-            <h1 className="text-center font-semibold text-3xl">Tasks</h1>
+            <h1 className="text-center font-semibold text-3xl">Agents</h1>
 
             {/* Mobile: Full-width tabs */}
             <Tabs
@@ -77,7 +77,7 @@ export function ScheduledTasksPage() {
             </Tabs>
           </div>
         ) : (
-          /* Desktop: Original 3-column layout */
+          /* Desktop: Three-column layout */
           <div className="mb-12 grid grid-cols-3 items-center pr-4">
             {/* Tabs on the left */}
             <div className="justify-self-start">
@@ -95,7 +95,7 @@ export function ScheduledTasksPage() {
 
             {/* Centered Title */}
             <h1 className="justify-self-center font-semibold text-4xl">
-              Tasks
+              Agents
             </h1>
 
             {/* Add button on the right */}
@@ -139,7 +139,7 @@ export function ScheduledTasksPage() {
                 <TaskTrigger
                   trigger={
                     <Button size="sm" variant="outline">
-                      Create your first task
+                      Create your first background agent
                     </Button>
                   }
                 />
@@ -166,7 +166,7 @@ export function ScheduledTasksPage() {
           <TaskTrigger
             trigger={
               <Button
-                aria-label="Add new task"
+                aria-label="Add new background agent"
                 className="h-14 w-14 rounded-full shadow-lg"
                 size="icon"
               >

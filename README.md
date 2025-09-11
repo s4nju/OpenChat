@@ -2,29 +2,29 @@
 
 [![Visit OS Chat](https://img.shields.io/badge/Visit-oschat-blue)](https://oschat.ai)
 
-**OS Chat** is a free, open-source AI personal assistant that combines 40+ language models with powerful automation capabilities. Schedule tasks, connect your favorite services (Gmail, Calendar, Notion, GitHub), and get things done through natural conversation.
+**OS Chat** is a free, open-source AI personal assistant that combines 40+ language models with powerful automation capabilities. Deploy background agents, connect your favorite services (Gmail, Calendar, Notion, GitHub), and get things done through natural conversation.
 
 ![OS Chat — Open-source AI chat app (oschat.ai)](./app/opengraph-image.png)
 
 ## 🚀 Why OS Chat?
 
-- **🔓 Open Source T3 Chat Alternative** - Get all the speed and multi-model access of T3 Chat, but open source, self-hostable, and enhanced with task scheduling and service integrations
-- **🤖 Your AI Personal Assistant** - More than chat - schedule tasks, automate workflows, and manage your digital life
+- **🔓 Open Source T3 Chat Alternative** - Get all the speed and multi-model access of T3 Chat, but open source, self-hostable, and enhanced with background agents and service integrations
+- **🤖 Your AI Personal Assistant** - More than chat - deploy background agents, automate workflows, and manage your digital life
 - **🔗 Connect Everything** - Direct integration with Gmail, Calendar, Notion, GitHub, Slack, and 10+ more services
-- **⏰ Smart Automation** - Schedule AI tasks with email notifications - let your assistant work while you sleep
+- **⏰ Smart Automation** - Deploy background agents with email notifications - let your assistant work while you sleep
 - **🧠 40+ AI Models** - Access the latest from OpenAI, Anthropic, Google, Meta, and more in one interface
 - **🎯 Truly Personal** - Customize personality traits, personal context, and preferences for tailored interactions
 - **🔒 Privacy-First** - Open source, self-hostable, with encrypted API key storage
 
 ## ✨ Features
 
-### ⏰ Task Scheduling & Automation
+### ⏰ Background Agents & Automation
 
-- **Smart Task Scheduling** - Schedule AI tasks to run one-time, daily, or weekly with timezone awareness
-- **Email Notifications** - Get notified when your scheduled tasks complete successfully
-- **Automated Workflows** - Let your AI assistant handle routine tasks while you focus on what matters
-- **Execution History** - Track and monitor all your scheduled task runs with detailed logs
-- **Flexible Scheduling** - Pause, resume, or archive tasks as your needs change
+- **Smart Background Agents** - Deploy AI agents to run one-time, daily, or weekly with timezone awareness
+- **Email Notifications** - Get notified when your background agents complete successfully
+- **Automated Workflows** - Let your AI assistant handle routine work while you focus on what matters
+- **Execution History** - Track and monitor all your background agent runs with detailed logs
+- **Flexible Scheduling** - Pause, resume, or archive agents as your needs change
 
 ### 🔗 Service Connectors & Integrations
 
@@ -118,7 +118,7 @@ OS Chat supports 40+ AI models across multiple providers:
 
 - **Projects & Workspaces** - Organize your chats into projects and workspaces
 - **MCP integration** - Model Context Protocol support for enhanced AI capabilities
-- **Tasks** - Tasks using agents and deliver via email.
+- **Background Agents** - Deploy agents that work autonomously and deliver results via email.
 
 ## 🚀 Recent Updates
 

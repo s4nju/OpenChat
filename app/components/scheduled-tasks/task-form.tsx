@@ -244,7 +244,7 @@ export function TaskFormContent({
       <div className="flex-1 space-y-5 overflow-auto p-6">
         {/* Task Name */}
         <div className="space-y-2">
-          <Label htmlFor="title">Task Name</Label>
+          <Label htmlFor="title">Background Agent Name</Label>
           <Input
             id="title"
             onChange={(e) => updateForm('title', e.target.value)}
@@ -300,7 +300,7 @@ export function TaskFormContent({
                 <InfoIcon className="h-4 w-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Tasks will run based on this timezone</p>
+                <p>Background Agents will run based on this timezone</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -351,7 +351,7 @@ export function TaskFormContent({
       {/* Footer */}
       <div className="border-border border-t p-6">
         <div className="flex items-center justify-between">
-          {/* Task Limits Display with Progress Ring */}
+          {/* Background Agent Limits Display with Progress Ring */}
           <div className="flex items-center gap-3">
             {taskLimits && (
               <>
