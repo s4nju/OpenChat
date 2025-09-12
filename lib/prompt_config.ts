@@ -225,8 +225,8 @@ If the user asks about using an integration that is not in the "Currently enable
 </tools>`.trim();
 
 export const getTaskPromptDefault = (
-  connectorsStatus?: ConnectorStatusLists,
-  timezone?: string
+  timezone?: string,
+  connectorsStatus?: ConnectorStatusLists
 ) =>
   `
 <identity>
@@ -468,7 +468,7 @@ export function buildSystemPrompt(
   let prompt =
     basePrompt ??
     (taskMode
-      ? getTaskPromptDefault(connectorsStatus, timezone)
+      ? getTaskPromptDefault(timezone, connectorsStatus)
       : getSystemPromptDefault(timezone, connectorsStatus));
 
   prompt += `\n\n${FORMATTING_RULES}`;

@@ -126,7 +126,7 @@ export function ConnectorCard({
       <div className="flex justify-end pt-4">
         {connector.isConnected ? (
           <Button
-            disabled={isDisconnecting}
+            disabled={isDisconnecting || isToggling}
             onClick={handleDisconnect}
             size="sm"
             type="button"
