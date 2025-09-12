@@ -1,18 +1,8 @@
+import { SUPPORTED_CONNECTORS as TOOLS_SUPPORTED_CONNECTORS } from './config/tools';
 import type { ConnectorType } from './types';
 
-// Supported connector types - keep in sync with lib/config/tools.ts
-export const SUPPORTED_CONNECTORS: ConnectorType[] = [
-  'gmail',
-  'googlecalendar',
-  'googledrive',
-  'notion',
-  'googledocs',
-  'googlesheets',
-  'slack',
-  'linear',
-  'github',
-  'twitter',
-];
+// Re-export the authoritative SUPPORTED_CONNECTORS from tools.ts
+export const SUPPORTED_CONNECTORS = TOOLS_SUPPORTED_CONNECTORS;
 
 export type ConnectorStatusLists = {
   enabled: string[];
