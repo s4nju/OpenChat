@@ -16,7 +16,23 @@ type SimpleConnectionState = {
 
 export default function ConnectorsPage() {
   const { user, connectors, isConnectorsLoading } = useUser();
-  const setConnectorEnabled = useMutation(api.connectors.setConnectorEnabled);
+  const setConnectorEnabled = useMutation(
+    api.connectors.setConnectorEnabled
+  ).withOptimisticUpdate((localStore, { type, enabled }) => {
+    const currentConnectors = localStore.getQuery(
+      api.connectors.listUserConnectors
+    );
+    if (currentConnectors) {
+      const updatedConnectors = currentConnectors.map((connector) =>
+        connector.type === type ? { ...connector, enabled } : connector
+      );
+      localStore.setQuery(
+        api.connectors.listUserConnectors,
+        {},
+        updatedConnectors
+      );
+    }
+  });
   const [connectionStates, setConnectionStates] = useState<
     Record<ConnectorType, SimpleConnectionState>
   >(() => {

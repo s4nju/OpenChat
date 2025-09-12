@@ -47,10 +47,27 @@ function BaseButtonToolsDropdown({
   onToggleSearch,
 }: ButtonToolsDropdownProps) {
   const { connectors } = useUser();
-  const setConnectorEnabled = useMutation(api.connectors.setConnectorEnabled);
+  const setConnectorEnabled = useMutation(
+    api.connectors.setConnectorEnabled
+  ).withOptimisticUpdate((localStore, { type, enabled }) => {
+    const currentConnectors = localStore.getQuery(
+      api.connectors.listUserConnectors
+    );
+    if (currentConnectors) {
+      const updatedConnectors = currentConnectors.map((connector) =>
+        connector.type === type ? { ...connector, enabled } : connector
+      );
+      localStore.setQuery(
+        api.connectors.listUserConnectors,
+        {},
+        updatedConnectors
+      );
+    }
+  });
   const [connectingType, setConnectingType] = useState<ConnectorType | null>(
     null
   );
+  const [togglingType, setTogglingType] = useState<ConnectorType | null>(null);
 
   const isToolCallingAvailable = useMemo(
     () =>
@@ -82,9 +99,18 @@ function BaseButtonToolsDropdown({
 
   const handleToggleConnector = useCallback(
     async (type: ConnectorType, enabled: boolean) => {
-      await setConnectorEnabled({ type, enabled });
+      if (togglingType === type) {
+        return; // Race condition protection
+      }
+
+      setTogglingType(type);
+      try {
+        await setConnectorEnabled({ type, enabled });
+      } finally {
+        setTogglingType(null);
+      }
     },
-    [setConnectorEnabled]
+    [setConnectorEnabled, togglingType]
   );
 
   const handleConnect = useCallback(async (type: ConnectorType) => {
@@ -199,6 +225,7 @@ function BaseButtonToolsDropdown({
                       aria-label={`Enable ${cfg.displayName}`}
                       checked={row.enabled}
                       className="pointer-events-none"
+                      disabled={togglingType === row.type}
                     />
                   ) : (
                     <Button

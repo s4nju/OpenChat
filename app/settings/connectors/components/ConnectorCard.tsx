@@ -43,6 +43,7 @@ export function ConnectorCard({
 }: ConnectorCardProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
 
   const handleConnect = () => {
     onConnect(connector.type);
@@ -69,6 +70,11 @@ export function ConnectorCard({
   const isEnabled = connector.enabled !== false;
 
   const handleToggle = async (checked: boolean) => {
+    if (isToggling) {
+      return; // Race condition protection
+    }
+
+    setIsToggling(true);
     try {
       await onToggleEnabled(connector.type, checked);
       toast.success(
@@ -78,6 +84,8 @@ export function ConnectorCard({
       toast.error(
         `Failed to ${checked ? 'enable' : 'disable'} ${config.displayName}`
       );
+    } finally {
+      setIsToggling(false);
     }
   };
 
@@ -89,15 +97,18 @@ export function ConnectorCard({
             <ConnectorIcon className="size-5" connector={config} />
             {config.displayName}
           </h3>
-          {/* Enable/disable switch visible when connected */}
-          <div className="flex items-center">
-            <Switch
-              aria-label={`Toggle ${config.displayName}`}
-              checked={connector.isConnected ? isEnabled : false}
-              disabled={!connector.isConnected || isDisconnecting}
-              onCheckedChange={handleToggle}
-            />
-          </div>
+          {/* Enable/disable switch visible only when connected */}
+          {connector.isConnected && (
+            <div className="flex items-center">
+              <Switch
+                aria-busy={isToggling || isDisconnecting}
+                aria-label={`Toggle ${config.displayName}`}
+                checked={isEnabled}
+                disabled={isDisconnecting || isToggling}
+                onCheckedChange={handleToggle}
+              />
+            </div>
+          )}
         </div>
         <p className="text-muted-foreground text-sm">{config.description}</p>
         {connector.displayName && (
