@@ -100,6 +100,18 @@ function BaseButtonToolsDropdown({
         return;
       }
       const { redirectUrl, connectionRequestId } = await response.json();
+
+      // Validate URL is HTTPS
+      try {
+        const url = new URL(redirectUrl);
+        if (url.protocol !== 'https:') {
+          throw new Error('Invalid URL protocol');
+        }
+      } catch {
+        setConnectingType(null);
+        return;
+      }
+
       sessionStorage.setItem(
         `composio_connection_${type}`,
         connectionRequestId

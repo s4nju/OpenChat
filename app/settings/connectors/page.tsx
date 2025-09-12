@@ -62,6 +62,21 @@ export default function ConnectorsPage() {
 
         const { redirectUrl, connectionRequestId } = await response.json();
 
+        // Validate URL is HTTPS
+        try {
+          const url = new URL(redirectUrl);
+          if (url.protocol !== 'https:') {
+            throw new Error('Invalid URL protocol');
+          }
+        } catch {
+          toast.error('Invalid redirect URL');
+          setConnectionStates((prev) => ({
+            ...prev,
+            [type]: { status: 'idle' },
+          }));
+          return;
+        }
+
         // Store connectionRequestId in sessionStorage for the callback page
         sessionStorage.setItem(
           `composio_connection_${type}`,
