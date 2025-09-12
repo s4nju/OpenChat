@@ -49,7 +49,7 @@ import {
 } from '@/lib/user-utils';
 import { cn } from '@/lib/utils';
 
-// Schema for chat body (connector status now handled server-side)
+// Schema for chat body
 const ChatBodySchema = z.object({
   chatId: z.string(),
   model: z.string(),
@@ -87,7 +87,7 @@ export default function Chat() {
   const getValidModel = useMemo(() => createModelValidator(), []);
   const _convex = useConvex();
 
-  // Connector status calculations removed - backend now handles this for security
+  // Connector status is calculated server-side for security
 
   // Custom hooks
   const {
@@ -287,7 +287,6 @@ export default function Chat() {
           : {}),
         ...(isReasoningModel ? { reasoningEffort } : {}),
         ...(timezone ? { userInfo: { timezone } } : {}),
-        // Note: connector status now calculated server-side for security
       };
 
       // Handle files if present
@@ -553,7 +552,6 @@ export default function Chat() {
             : {}),
           ...(isReasoningModel ? { reasoningEffort } : {}),
           ...(timezone ? { userInfo: { timezone } } : {}),
-          // Note: connector status now calculated server-side for security
         },
       };
       regenerate(options);
@@ -739,7 +737,6 @@ export default function Chat() {
               ? { reasoningEffort: editOptions.reasoningEffort }
               : {}),
             ...(timezone ? { userInfo: { timezone } } : {}),
-            // Note: connector status now calculated server-side for security
           },
         };
 
