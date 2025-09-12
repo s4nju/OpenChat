@@ -78,6 +78,22 @@ export const PERSONAS = [
 export const PERSONAS_MAP: Record<string, (typeof PERSONAS)[0]> =
   Object.fromEntries(PERSONAS.map((persona) => [persona.id, persona]));
 
+// Cache the integration list since CONNECTOR_CONFIGS is static at runtime
+let cachedIntegrationsList: string | null = null;
+
+/**
+ * Generate all possible integrations list from CONNECTOR_CONFIGS
+ * Cached for performance since this is called on every message
+ */
+const generateAllPossibleIntegrations = (): string => {
+  if (cachedIntegrationsList === null) {
+    cachedIntegrationsList = Object.values(CONNECTOR_CONFIGS)
+      .map((config) => `- ${config.displayName}: ${config.description}`)
+      .join('\n');
+  }
+  return cachedIntegrationsList;
+};
+
 /**
  * Map toolkit slugs to display names using CONNECTOR_CONFIGS
  */
@@ -185,16 +201,7 @@ You have access to a list of tools / integrations, not all of which may be enabl
 To work with a tool/integration, but it's not available, you can ask the user to connect the integration first in settings.
 
 All possible integrations are:
-- Gmail: for reading, sending, managing emails and drafts
-- Google Calendar: for creating, managing, and finding events (including video meetings via conference_data)
-- Google Sheets: for reading, writing, and managing spreadsheet data
-- Google Docs: for creating and editing documents
-- Google Drive: for creating, sharing files and managing folders
-- Notion: for creating and managing pages, databases, etc.
-- Linear: for managing issues, projects, teams, etc.
-- Slack: for sending messages, managing channels, etc.
-- GitHub: for managing repositories, issues, pull requests, etc.
-- Twitter: for posting tweets, managing accounts, etc.
+${generateAllPossibleIntegrations()}
 
 Currently enabled integrations for this user:
 ${
@@ -250,16 +257,7 @@ Use this timestamp for time-sensitive operations, and context-aware task executi
 You have autonomous access to the following integrations:
 
 All possible integrations are:
-- Gmail: for reading, sending, managing emails and drafts
-- Google Calendar: for creating, managing, and finding events (including video meetings via conference_data)
-- Google Sheets: for reading, writing, and managing spreadsheet data
-- Google Docs: for creating and editing documents
-- Google Drive: for creating, sharing files and managing folders
-- Notion: for creating and managing pages, databases, etc.
-- Linear: for managing issues, projects, teams, etc.
-- Slack: for sending messages, managing channels, etc.
-- GitHub: for managing repositories, issues, pull requests, etc.
-- Twitter: for posting tweets, managing accounts, etc.
+${generateAllPossibleIntegrations()}
 
 Currently enabled integrations:
 ${
