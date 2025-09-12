@@ -13,13 +13,9 @@ import timezonePlugin from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
+// Import the authoritative type from connector-utils
+import type { ConnectorStatusLists } from '@/lib/connector-utils';
 import type { ConnectorType } from '@/lib/types';
-
-export type ConnectorStatusLists = {
-  enabled?: string[];
-  disabled?: string[];
-  notConnected?: string[];
-};
 
 // Extend dayjs with plugins
 dayjs.extend(utc);
@@ -229,7 +225,7 @@ If the user asks about using an integration that is not in the "Currently enable
 </tools>`.trim();
 
 export const getTaskPromptDefault = (
-  enabledToolSlugs?: string[],
+  connectorsStatus?: ConnectorStatusLists,
   timezone?: string
 ) =>
   `
@@ -251,17 +247,46 @@ Use this timestamp for time-sensitive operations, and context-aware task executi
 </context>
 
 <available_integrations>
-You have autonomous access to the following connected integrations:
+You have autonomous access to the following integrations:
 
+All possible integrations are:
+- Gmail: for reading, sending, managing emails and drafts
+- Google Calendar: for creating, managing, and finding events (including video meetings via conference_data)
+- Google Sheets: for reading, writing, and managing spreadsheet data
+- Google Docs: for creating and editing documents
+- Google Drive: for creating, sharing files and managing folders
+- Notion: for creating and managing pages, databases, etc.
+- Linear: for managing issues, projects, teams, etc.
+- Slack: for sending messages, managing channels, etc.
+- GitHub: for managing repositories, issues, pull requests, etc.
+- Twitter: for posting tweets, managing accounts, etc.
+
+Currently enabled integrations:
 ${
-  enabledToolSlugs && enabledToolSlugs.length > 0
-    ? enabledToolSlugs
+  connectorsStatus?.enabled && connectorsStatus.enabled.length > 0
+    ? connectorsStatus.enabled
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')
-    : '- No integrations currently connected.'
+    : '- None enabled.'
 }
 
-If your task requires an integration that is not listed above, inform the user that they need to connect the required integration in settings before this task can be completed successfully.
+${
+  connectorsStatus?.disabled && connectorsStatus.disabled.length > 0
+    ? `Connected but disabled:\n${connectorsStatus.disabled
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+${
+  connectorsStatus?.notConnected && connectorsStatus.notConnected.length > 0
+    ? `Not connected:\n${connectorsStatus.notConnected
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+If your task requires an integration that is not in the "Currently enabled" list above, inform the user that they need to connect or enable the required integration in settings before this task can be completed successfully.
 </available_integrations>`.trim();
 
 export const FORMATTING_RULES = String.raw`
@@ -443,7 +468,7 @@ export function buildSystemPrompt(
   let prompt =
     basePrompt ??
     (taskMode
-      ? getTaskPromptDefault(connectorsStatus?.enabled ?? [], timezone)
+      ? getTaskPromptDefault(connectorsStatus, timezone)
       : getSystemPromptDefault(timezone, connectorsStatus));
 
   prompt += `\n\n${FORMATTING_RULES}`;

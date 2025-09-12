@@ -15,6 +15,7 @@ import utc from 'dayjs/plugin/utc';
 import { searchTool } from '@/app/api/tools/search';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
+import type { ConnectorStatusLists } from '@/lib/connector-utils';
 import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
 import { buildSystemPrompt } from '@/lib/prompt_config';
@@ -116,9 +117,7 @@ export const executeTask = internalAction({
       // 3. This ensures only connected services are available as tools
       let composioTools = {};
       let toolkitSlugs: string[] = [];
-      let connectorsStatus:
-        | { enabled?: string[]; disabled?: string[]; notConnected?: string[] }
-        | undefined;
+      let connectorsStatus: ConnectorStatusLists | undefined;
       try {
         // Get user's connected connectors (Gmail, Google Calendar, Notion, etc.)
         const connectedConnectors = await ctx.runQuery(
