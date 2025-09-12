@@ -151,11 +151,7 @@ export default function ConnectorsPage() {
         toast.error('Please log in to update connector settings');
         return;
       }
-      try {
-        await setConnectorEnabled({ type, enabled });
-      } catch {
-        throw new Error('Failed to update connector state');
-      }
+      await setConnectorEnabled({ type, enabled });
     },
     [user, setConnectorEnabled]
   );

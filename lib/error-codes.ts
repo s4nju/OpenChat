@@ -17,6 +17,7 @@ export const VALIDATION_ERRORS = {
   CHAT_NOT_FOUND: 'CHAT_NOT_FOUND',
   MESSAGE_NOT_FOUND: 'MESSAGE_NOT_FOUND',
   FILE_NOT_FOUND: 'FILE_NOT_FOUND',
+  CONNECTOR_NOT_FOUND: 'CONNECTOR_NOT_FOUND',
 } as const;
 
 // Rate limiting errors
@@ -78,6 +79,8 @@ export function getErrorMessage(code: ErrorCode): string {
       return 'Message not found.';
     case ERROR_CODES.FILE_NOT_FOUND:
       return 'File not found.';
+    case ERROR_CODES.CONNECTOR_NOT_FOUND:
+      return 'Connector not found or not connected.';
 
     // Rate limit errors
     case ERROR_CODES.DAILY_LIMIT_REACHED:

@@ -3,6 +3,7 @@
 import { FadersHorizontal, Globe } from '@phosphor-icons/react';
 import { useMutation } from 'convex/react';
 import { memo, useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { ConnectorIcon } from '@/app/components/common/connector-icon';
 import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,12 @@ function BaseButtonToolsDropdown({
       setTogglingType(type);
       try {
         await setConnectorEnabled({ type, enabled });
+      } catch (error: unknown) {
+        toast.error(
+          (error as Error)?.message === 'CONNECTOR_NOT_FOUND'
+            ? 'Connector not found. Please reconnect this service first.'
+            : 'Failed to update connector settings. Please try again.'
+        );
       } finally {
         setTogglingType(null);
       }

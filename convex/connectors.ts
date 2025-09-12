@@ -1,5 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
+import { ERROR_CODES } from '../lib/error-codes';
 import {
   internalMutation,
   internalQuery,
@@ -153,10 +154,11 @@ export const removeConnection = mutation({
       )
       .unique();
 
-    if (connector) {
-      await ctx.db.delete(connector._id);
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
     }
 
+    await ctx.db.delete(connector._id);
     return null;
   },
 });
@@ -179,12 +181,13 @@ export const updateConnectionStatus = mutation({
       )
       .unique();
 
-    if (connector) {
-      await ctx.db.patch(connector._id, {
-        isConnected: args.isConnected,
-      });
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
     }
 
+    await ctx.db.patch(connector._id, {
+      isConnected: args.isConnected,
+    });
     return null;
   },
 });
@@ -208,10 +211,11 @@ export const setConnectorEnabled = mutation({
       )
       .unique();
 
-    if (connector) {
-      await ctx.db.patch(connector._id, { enabled: args.enabled });
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
     }
 
+    await ctx.db.patch(connector._id, { enabled: args.enabled });
     return null;
   },
 });

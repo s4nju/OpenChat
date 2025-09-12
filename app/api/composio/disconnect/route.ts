@@ -67,7 +67,15 @@ export async function POST(request: Request) {
       success: true,
       message: 'Connection deleted successfully',
     });
-  } catch (_error) {
+  } catch (error: unknown) {
+    // Handle specific ConvexError cases
+    if ((error as Error)?.message === 'CONNECTOR_NOT_FOUND') {
+      return NextResponse.json(
+        { error: 'Connector not found or already disconnected' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to disconnect' },
       { status: 500 }

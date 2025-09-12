@@ -80,10 +80,12 @@ export function ConnectorCard({
       toast.success(
         `${config.displayName} ${checked ? 'enabled' : 'disabled'} successfully`
       );
-    } catch {
-      toast.error(
-        `Failed to ${checked ? 'enable' : 'disable'} ${config.displayName}`
-      );
+    } catch (error: unknown) {
+      const errorMessage =
+        (error as Error)?.message === 'CONNECTOR_NOT_FOUND'
+          ? `${config.displayName} connection not found. Please reconnect this service first.`
+          : `Failed to ${checked ? 'enable' : 'disable'} ${config.displayName}`;
+      toast.error(errorMessage);
     } finally {
       setIsToggling(false);
     }
