@@ -78,68 +78,23 @@ export const PERSONAS = [
 export const PERSONAS_MAP: Record<string, (typeof PERSONAS)[0]> =
   Object.fromEntries(PERSONAS.map((persona) => [persona.id, persona]));
 
-// Cache the integration list since CONNECTOR_CONFIGS is static at runtime
-let cachedIntegrationsList: string | null = null;
+const ALL_INTEGRATIONS = Object.values(CONNECTOR_CONFIGS)
+  .sort((a, b) => a.displayName.localeCompare(b.displayName))
+  .map((c) => `- ${c.displayName}: ${c.description}`)
+  .join('\n');
 
-/**
- * Generate all possible integrations list from CONNECTOR_CONFIGS
- * Cached for performance since this is called on every message
- */
-const generateAllPossibleIntegrations = (): string => {
-  if (cachedIntegrationsList === null) {
-    cachedIntegrationsList = Object.values(CONNECTOR_CONFIGS)
-      .sort((a, b) => a.displayName.localeCompare(b.displayName))
-      .map((config) => `- ${config.displayName}: ${config.description}`)
-      .join('\n');
-  }
-  return cachedIntegrationsList;
-};
+const generateAllPossibleIntegrations = (): string => ALL_INTEGRATIONS;
 
-/**
- * Map toolkit slugs to display names using CONNECTOR_CONFIGS
- */
+const isConnectorType = (s: string): s is ConnectorType =>
+  s in CONNECTOR_CONFIGS;
+
 const mapToolkitSlugToDisplayName = (slug: string): string => {
-  // Convert slug to lowercase and map to connector type
-  const slugLower = slug.toLowerCase();
-  let connectorType: ConnectorType;
-
-  switch (slugLower) {
-    case 'gmail':
-      connectorType = 'gmail';
-      break;
-    case 'googlecalendar':
-      connectorType = 'googlecalendar';
-      break;
-    case 'googledrive':
-      connectorType = 'googledrive';
-      break;
-    case 'googledocs':
-      connectorType = 'googledocs';
-      break;
-    case 'googlesheets':
-      connectorType = 'googlesheets';
-      break;
-    case 'notion':
-      connectorType = 'notion';
-      break;
-    case 'slack':
-      connectorType = 'slack';
-      break;
-    case 'linear':
-      connectorType = 'linear';
-      break;
-    case 'github':
-      connectorType = 'github';
-      break;
-    case 'twitter':
-      connectorType = 'twitter';
-      break;
-    default:
-      return slug; // fallback to original slug if not found
+  const key = slug.toLowerCase();
+  if (isConnectorType(key)) {
+    const cfg = CONNECTOR_CONFIGS[key];
+    return `${cfg.displayName}: ${cfg.description}`;
   }
-
-  const config = CONNECTOR_CONFIGS[connectorType];
-  return config ? `${config.displayName}: ${config.description}` : slug;
+  return slug;
 };
 
 /**
@@ -202,8 +157,8 @@ Do not use outdated information or make assumptions about the current date and t
 </context>
 
 <tools>
-You have access to a list of tools / integrations, not all of which may be enabled or provided in the moment.
-To work with a tool/integration, but it's not available, you can ask the user to connect the integration first in settings.
+You have access to tools/integrations; some may be unavailable.
+If a needed integration isn't available, ask the user to connect or enable it in Settings.
 
 All possible integrations are:
 ${generateAllPossibleIntegrations()}
