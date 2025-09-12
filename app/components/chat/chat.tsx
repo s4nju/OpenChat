@@ -26,7 +26,6 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { createChatErrorHandler } from '@/lib/chat-error-utils';
 import { MODEL_DEFAULT } from '@/lib/config';
-import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
 import {
   createOptimisticAttachments,
   revokeOptimisticAttachments,
@@ -50,7 +49,7 @@ import {
 } from '@/lib/user-utils';
 import { cn } from '@/lib/utils';
 
-// Schema for chat body
+// Schema for chat body (connector status now handled server-side)
 const ChatBodySchema = z.object({
   chatId: z.string(),
   model: z.string(),
@@ -60,14 +59,6 @@ const ChatBodySchema = z.object({
   userInfo: z
     .object({
       timezone: z.string().optional(),
-    })
-    .optional(),
-  enabledToolSlugs: z.array(z.string()).optional(),
-  connectorsStatus: z
-    .object({
-      enabled: z.array(z.string()).optional(),
-      disabled: z.array(z.string()).optional(),
-      notConnected: z.array(z.string()).optional(),
     })
     .optional(),
 });
@@ -90,47 +81,13 @@ export default function Chat() {
     isLoading: isUserLoading,
     hasApiKey,
     isApiKeysLoading,
-    connectors,
   } = useUser();
 
   // Initialize utilities
   const getValidModel = useMemo(() => createModelValidator(), []);
   const _convex = useConvex();
 
-  // Get enabled tool slugs from connected integrations
-  const enabledToolSlugs = useMemo(() => {
-    if (!connectors || connectors.length === 0) {
-      return [];
-    }
-
-    return connectors
-      .filter(
-        (connector) =>
-          connector.isConnected && connector.type && connector.enabled !== false
-      )
-      .map((connector) => connector.type.toUpperCase());
-  }, [connectors]);
-
-  const disabledToolSlugs = useMemo(() => {
-    if (!connectors || connectors.length === 0) {
-      return [];
-    }
-    return connectors
-      .filter(
-        (connector) => connector.isConnected && connector.enabled === false
-      )
-      .map((connector) => connector.type.toUpperCase());
-  }, [connectors]);
-
-  const notConnectedToolSlugs = useMemo(() => {
-    if (!(SUPPORTED_CONNECTORS && connectors)) {
-      return [];
-    }
-    const connectedTypes = new Set(connectors.map((c) => c.type));
-    return SUPPORTED_CONNECTORS.filter((type) => !connectedTypes.has(type)).map(
-      (t) => t.toUpperCase()
-    );
-  }, [connectors]);
+  // Connector status calculations removed - backend now handles this for security
 
   // Custom hooks
   const {
@@ -330,17 +287,7 @@ export default function Chat() {
           : {}),
         ...(isReasoningModel ? { reasoningEffort } : {}),
         ...(timezone ? { userInfo: { timezone } } : {}),
-        ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
-        connectorsStatus:
-          enabledToolSlugs.length > 0 ||
-          disabledToolSlugs.length > 0 ||
-          notConnectedToolSlugs.length > 0
-            ? {
-                enabled: enabledToolSlugs,
-                disabled: disabledToolSlugs,
-                notConnected: notConnectedToolSlugs,
-              }
-            : undefined,
+        // Note: connector status now calculated server-side for security
       };
 
       // Handle files if present
@@ -397,9 +344,6 @@ export default function Chat() {
       processFiles,
       sendMessage,
       setMessages,
-      enabledToolSlugs,
-      disabledToolSlugs,
-      notConnectedToolSlugs,
     ]
   );
 
@@ -609,7 +553,7 @@ export default function Chat() {
             : {}),
           ...(isReasoningModel ? { reasoningEffort } : {}),
           ...(timezone ? { userInfo: { timezone } } : {}),
-          ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
+          // Note: connector status now calculated server-side for security
         },
       };
       regenerate(options);
@@ -624,7 +568,6 @@ export default function Chat() {
       handleDeleteMessage,
       setIsDeleting,
       regenerate,
-      enabledToolSlugs,
     ]
   );
 
@@ -796,7 +739,7 @@ export default function Chat() {
               ? { reasoningEffort: editOptions.reasoningEffort }
               : {}),
             ...(timezone ? { userInfo: { timezone } } : {}),
-            ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
+            // Note: connector status now calculated server-side for security
           },
         };
 
@@ -815,7 +758,6 @@ export default function Chat() {
       personaId,
       setMessages,
       regenerate,
-      enabledToolSlugs,
       uploadFile,
       saveFileAttachment,
       selectedModel,

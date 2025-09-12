@@ -158,7 +158,9 @@ export const executeTask = internalAction({
         const disabledSlugs = allUserConnectors
           .filter((c) => c.isConnected && c.enabled === false)
           .map((c) => c.type.toUpperCase());
-        const presentTypes = new Set(allUserConnectors.map((c) => c.type));
+        const presentTypes = new Set(
+          allUserConnectors.filter((c) => c.isConnected).map((c) => c.type)
+        );
         // Supported types (server-safe, without importing UI modules)
         const SUPPORTED_TYPES = [
           'gmail',
