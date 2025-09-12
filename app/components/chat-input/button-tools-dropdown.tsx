@@ -2,6 +2,7 @@
 
 import { FadersHorizontal, Globe } from '@phosphor-icons/react';
 import { useMutation } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ConnectorIcon } from '@/app/components/common/connector-icon';
@@ -24,6 +25,7 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { MODELS_OPTIONS } from '@/lib/config';
 import { CONNECTOR_CONFIGS, SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import { ERROR_CODES } from '@/lib/error-codes';
 import type { ConnectorType } from '@/lib/types';
 import { PopoverContentAuth } from './popover-content-auth';
 
@@ -109,7 +111,8 @@ function BaseButtonToolsDropdown({
         await setConnectorEnabled({ type, enabled });
       } catch (error: unknown) {
         toast.error(
-          (error as Error)?.message === 'CONNECTOR_NOT_FOUND'
+          error instanceof ConvexError &&
+            error.data === ERROR_CODES.CONNECTOR_NOT_FOUND
             ? 'Connector not found. Please reconnect this service first.'
             : 'Failed to update connector settings. Please try again.'
         );

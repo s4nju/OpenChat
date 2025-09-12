@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { api } from '@/convex/_generated/api';
 import { disconnectAccount } from '@/lib/composio-server';
 import { SUPPORTED_CONNECTORS } from '@/lib/config/tools';
+import { createErrorResponse } from '@/lib/error-utils';
 import type { ConnectorType } from '@/lib/types';
 
 export async function POST(request: Request) {
@@ -68,17 +69,11 @@ export async function POST(request: Request) {
       message: 'Connection deleted successfully',
     });
   } catch (error: unknown) {
-    // Handle specific ConvexError cases
-    if ((error as Error)?.message === 'CONNECTOR_NOT_FOUND') {
-      return NextResponse.json(
-        { error: 'Connector not found or already disconnected' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to disconnect' },
-      { status: 500 }
-    );
+    // Use the established error handling system which provides:
+    // - Proper ConvexError detection and narrowing
+    // - Machine-readable error codes (e.g., CONNECTOR_NOT_FOUND)
+    // - Consistent error response format with `code` property
+    // - Correct HTTP status codes (404 for CONNECTOR_NOT_FOUND)
+    return createErrorResponse(error);
   }
 }

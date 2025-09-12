@@ -1,5 +1,6 @@
 'use client';
 
+import { ConvexError } from 'convex/values';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConnectorIcon } from '@/app/components/common/connector-icon';
@@ -15,6 +16,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import type { Id } from '@/convex/_generated/dataModel';
 import { getConnectorConfig } from '@/lib/config/tools';
+import { ERROR_CODES } from '@/lib/error-codes';
 import type { ConnectorType } from '@/lib/types';
 
 type ConnectorData = {
@@ -82,7 +84,8 @@ export function ConnectorCard({
       );
     } catch (error: unknown) {
       const errorMessage =
-        (error as Error)?.message === 'CONNECTOR_NOT_FOUND'
+        error instanceof ConvexError &&
+        error.data === ERROR_CODES.CONNECTOR_NOT_FOUND
           ? `${config.displayName} connection not found. Please reconnect this service first.`
           : `Failed to ${checked ? 'enable' : 'disable'} ${config.displayName}`;
       toast.error(errorMessage);
