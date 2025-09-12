@@ -694,7 +694,6 @@ export async function POST(req: Request) {
       enableSearch,
       enableTools,
       userInfo?.timezone,
-      connectorsStatus.enabled,
       undefined,
       undefined,
       connectorsStatus

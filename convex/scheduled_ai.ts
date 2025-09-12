@@ -195,7 +195,6 @@ export const executeTask = internalAction({
         task.enableSearch,
         Object.keys(composioTools).length > 0,
         task.timezone,
-        toolkitSlugs, // Use derived toolkit slugs from connectors
         task.emailNotifications, // Enable email mode when notifications are enabled
         true, // Enable task mode for autonomous execution
         connectorsStatus

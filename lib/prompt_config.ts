@@ -160,7 +160,6 @@ const formatDateInTimezone = (
 };
 
 export const getSystemPromptDefault = (
-  enabledToolSlugs?: string[],
   timezone?: string,
   connectorsStatus?: ConnectorStatusLists
 ) =>
@@ -203,8 +202,8 @@ All possible integrations are:
 
 Currently enabled integrations for this user:
 ${
-  enabledToolSlugs && enabledToolSlugs.length > 0
-    ? enabledToolSlugs
+  connectorsStatus?.enabled && connectorsStatus.enabled.length > 0
+    ? connectorsStatus.enabled
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')
     : '- None enabled.'
@@ -436,7 +435,6 @@ export function buildSystemPrompt(
   enableSearch?: boolean,
   enableTools?: boolean,
   timezone?: string,
-  enabledToolSlugs?: string[],
   emailMode?: boolean,
   taskMode?: boolean,
   connectorsStatus?: ConnectorStatusLists
@@ -445,8 +443,8 @@ export function buildSystemPrompt(
   let prompt =
     basePrompt ??
     (taskMode
-      ? getTaskPromptDefault(enabledToolSlugs, timezone)
-      : getSystemPromptDefault(enabledToolSlugs, timezone, connectorsStatus));
+      ? getTaskPromptDefault(connectorsStatus?.enabled ?? [], timezone)
+      : getSystemPromptDefault(timezone, connectorsStatus));
 
   prompt += `\n\n${FORMATTING_RULES}`;
 
