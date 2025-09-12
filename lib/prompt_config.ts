@@ -88,6 +88,7 @@ let cachedIntegrationsList: string | null = null;
 const generateAllPossibleIntegrations = (): string => {
   if (cachedIntegrationsList === null) {
     cachedIntegrationsList = Object.values(CONNECTOR_CONFIGS)
+      .sort((a, b) => a.displayName.localeCompare(b.displayName))
       .map((config) => `- ${config.displayName}: ${config.description}`)
       .join('\n');
   }
@@ -174,8 +175,12 @@ const formatDateInTimezone = (
 export const getSystemPromptDefault = (
   timezone?: string,
   connectorsStatus?: ConnectorStatusLists
-) =>
-  `
+) => {
+  const { date, time } = formatDateInTimezone(timezone);
+  const enabled = connectorsStatus?.enabled ?? [];
+  const disabled = connectorsStatus?.disabled ?? [];
+  const notConnected = connectorsStatus?.notConnected ?? [];
+  return `
 <identity>
 You are OS Chat, a thoughtful and clear agentic assistant.
 </identity>
@@ -191,7 +196,7 @@ You're here to help the user think clearly and move forward, not to overwhelm or
 </purpose>
 
 <context>
-The current date is ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
+The current date is ${date} (MM/DD/YYYY) at ${time}.
 Use this date and time to answer questions about current events, deadlines, or anything time-sensitive.
 Do not use outdated information or make assumptions about the current date and time.
 </context>
@@ -205,37 +210,40 @@ ${generateAllPossibleIntegrations()}
 
 Currently enabled integrations for this user:
 ${
-  connectorsStatus?.enabled && connectorsStatus.enabled.length > 0
-    ? connectorsStatus.enabled
-        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
-        .join('\n')
+  enabled.length > 0
+    ? enabled.map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`).join('\n')
     : '- None enabled.'
 }
 
 ${
-  connectorsStatus?.disabled && connectorsStatus.disabled.length > 0
-    ? `Connected but disabled:\n${connectorsStatus.disabled
+  disabled.length > 0
+    ? `Connected but disabled:\n${disabled
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')}`
     : ''
 }
 
 ${
-  connectorsStatus?.notConnected && connectorsStatus.notConnected.length > 0
-    ? `Not connected:\n${connectorsStatus.notConnected
+  notConnected.length > 0
+    ? `Not connected:\n${notConnected
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')}`
     : ''
 }
 
-If the user asks about using an integration that is not in the "Currently enabled" list above, direct them to connect it first in settings.
+If the user asks about an integration that is not in "Currently enabled", direct them to connect or enable it in settings.
 </tools>`.trim();
+};
 
 export const getTaskPromptDefault = (
   timezone?: string,
   connectorsStatus?: ConnectorStatusLists
-) =>
-  `
+) => {
+  const { date, time } = formatDateInTimezone(timezone);
+  const enabled = connectorsStatus?.enabled ?? [];
+  const disabled = connectorsStatus?.disabled ?? [];
+  const notConnected = connectorsStatus?.notConnected ?? [];
+  return `
 <identity>
 You are OS Chat, an autonomous AI assistant executing a scheduled task. You complete assigned tasks fully and independently.
 </identity>
@@ -249,7 +257,7 @@ Your primary objective is to execute the assigned task thoroughly. Apply domain 
 </task_completion>
 
 <context>
-Current execution time: ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
+Current execution time: ${date} (MM/DD/YYYY) at ${time}.
 Use this timestamp for time-sensitive operations, and context-aware task execution.
 </context>
 
@@ -261,24 +269,22 @@ ${generateAllPossibleIntegrations()}
 
 Currently enabled integrations:
 ${
-  connectorsStatus?.enabled && connectorsStatus.enabled.length > 0
-    ? connectorsStatus.enabled
-        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
-        .join('\n')
+  enabled.length > 0
+    ? enabled.map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`).join('\n')
     : '- None enabled.'
 }
 
 ${
-  connectorsStatus?.disabled && connectorsStatus.disabled.length > 0
-    ? `Connected but disabled:\n${connectorsStatus.disabled
+  disabled.length > 0
+    ? `Connected but disabled:\n${disabled
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')}`
     : ''
 }
 
 ${
-  connectorsStatus?.notConnected && connectorsStatus.notConnected.length > 0
-    ? `Not connected:\n${connectorsStatus.notConnected
+  notConnected.length > 0
+    ? `Not connected:\n${notConnected
         .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
         .join('\n')}`
     : ''
@@ -286,6 +292,7 @@ ${
 
 If your task requires an integration that is not in the "Currently enabled" list above, inform the user that they need to connect or enable the required integration in settings before this task can be completed successfully.
 </available_integrations>`.trim();
+};
 
 export const FORMATTING_RULES = String.raw`
 <Formatting Rules>
@@ -415,7 +422,7 @@ Actions are configured through Config.NOTION_ACTIONS.
 </content_management>
 </notion_information>
 
-</gmail_information>
+<gmail_information>
 - Use proper dates when getting content from Gmail.
 </gmail_information>
 
