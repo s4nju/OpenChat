@@ -222,7 +222,7 @@ function BaseButtonToolsDropdown({
               >
                 <div className="flex w-full cursor-pointer items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <ConnectorIcon className="size-4" connector={cfg} />
+                    <ConnectorIcon className="size-3.5" connector={cfg} />
                     <span>{cfg.displayName}</span>
                   </div>
                   {row.isConnected ? (
@@ -233,16 +233,9 @@ function BaseButtonToolsDropdown({
                       disabled={togglingType === row.type}
                     />
                   ) : (
-                    <Button
-                      aria-label={`Connect ${cfg.displayName}`}
-                      className="pointer-events-none h-7 cursor-pointer px-2"
-                      disabled={connectingType === row.type}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
+                    <span className="text-muted-foreground text-sm">
                       {connectingType === row.type ? 'Connecting…' : 'Connect'}
-                    </Button>
+                    </span>
                   )}
                 </div>
               </DropdownMenuItem>
@@ -258,6 +251,7 @@ function BaseButtonToolsDropdown({
               return;
             }
             onToggleSearch();
+            setMenuOpen(false);
           }}
         >
           <div className="flex w-full cursor-pointer items-center justify-between">
