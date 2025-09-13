@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUp, Stop } from '@phosphor-icons/react';
+import { ArrowUp, Globe, Stop, X } from '@phosphor-icons/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PromptInput,
@@ -18,7 +18,7 @@ import {
   UPLOAD_MAX_LABEL,
 } from '@/lib/config/upload';
 import { ButtonFileUpload } from './button-file-upload';
-import { ButtonSearch } from './button-search';
+import { ButtonToolsDropdown } from './button-tools-dropdown';
 import { FileList } from './file-list';
 import { PromptSystem } from './prompt-system';
 import { SelectModel } from './select-model';
@@ -71,6 +71,9 @@ export function ChatInput({
   // Local state for input value to prevent parent re-renders
   const [value, setValue] = useState(initialValue);
   const [searchEnabled, setSearchEnabled] = React.useState(false);
+  const toggleSearch = useCallback(() => {
+    setSearchEnabled((prev) => !prev);
+  }, []);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Track isEmpty state to prevent PromptSystem re-renders on every keystroke
@@ -288,12 +291,25 @@ export function ChatInput({
                 model={selectedModel}
                 onFileUpload={onFileUploadAction}
               />
-              <ButtonSearch
+              <ButtonToolsDropdown
                 isUserAuthenticated={isUserAuthenticated}
-                model={selectedModel}
-                onSearch={() => setSearchEnabled((prev) => !prev)}
+                onToggleSearch={toggleSearch}
                 searchEnabled={searchEnabled}
+                selectedModel={selectedModel}
               />
+              {searchEnabled && (
+                <Button
+                  aria-label="Disable search"
+                  className="group hidden size-9 rounded-full border border-blue-200 bg-blue-50 p-0 sm:flex dark:border-blue-800 dark:bg-blue-950/30"
+                  onClick={toggleSearch}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Globe className="size-4 text-blue-700 transition-opacity group-hover:opacity-0 dark:text-blue-400" />
+                  <X className="absolute size-4 text-blue-700 opacity-0 transition-opacity group-hover:opacity-100 dark:text-blue-400" />
+                </Button>
+              )}
               <SelectModel
                 isUserAuthenticated={isUserAuthenticated}
                 onSelectModel={onSelectModelAction}

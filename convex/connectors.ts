@@ -1,5 +1,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
+import { ERROR_CODES } from '../lib/error-codes';
 import {
   internalMutation,
   internalQuery,
@@ -35,6 +36,7 @@ export const listUserConnectors = query({
       type: CONNECTOR_TYPES,
       connectionId: v.string(),
       isConnected: v.boolean(),
+      enabled: v.optional(v.boolean()),
       displayName: v.optional(v.string()),
     })
   ),
@@ -67,6 +69,7 @@ export const getConnectorByType = query({
       type: CONNECTOR_TYPES,
       connectionId: v.string(),
       isConnected: v.boolean(),
+      enabled: v.optional(v.boolean()),
       displayName: v.optional(v.string()),
     }),
     v.null()
@@ -113,6 +116,8 @@ export const saveConnection = mutation({
       await ctx.db.patch(existingConnector._id, {
         connectionId: args.connectionId,
         isConnected: true,
+        // Ensure connector is enabled when (re)connecting
+        enabled: true,
         displayName: args.displayName,
       });
       return existingConnector._id;
@@ -124,6 +129,7 @@ export const saveConnection = mutation({
       type: args.type,
       connectionId: args.connectionId,
       isConnected: true,
+      enabled: true,
       displayName: args.displayName,
     });
 
@@ -148,10 +154,11 @@ export const removeConnection = mutation({
       )
       .unique();
 
-    if (connector) {
-      await ctx.db.delete(connector._id);
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
     }
 
+    await ctx.db.delete(connector._id);
     return null;
   },
 });
@@ -174,12 +181,41 @@ export const updateConnectionStatus = mutation({
       )
       .unique();
 
-    if (connector) {
-      await ctx.db.patch(connector._id, {
-        isConnected: args.isConnected,
-      });
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
     }
 
+    await ctx.db.patch(connector._id, {
+      isConnected: args.isConnected,
+    });
+    return null;
+  },
+});
+
+/**
+ * Enable/disable a connector for the authenticated user (without removing connection)
+ */
+export const setConnectorEnabled = mutation({
+  args: {
+    type: CONNECTOR_TYPES,
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await ensureAuthenticated(ctx);
+
+    const connector = await ctx.db
+      .query('connectors')
+      .withIndex('by_user_and_type', (q) =>
+        q.eq('userId', userId).eq('type', args.type)
+      )
+      .unique();
+
+    if (!connector) {
+      throw new ConvexError(ERROR_CODES.CONNECTOR_NOT_FOUND);
+    }
+
+    await ctx.db.patch(connector._id, { enabled: args.enabled });
     return null;
   },
 });
@@ -199,6 +235,7 @@ export const getConnectedConnectors = internalQuery({
       type: CONNECTOR_TYPES,
       connectionId: v.string(),
       isConnected: v.boolean(),
+      enabled: v.optional(v.boolean()),
       displayName: v.optional(v.string()),
     })
   ),
@@ -210,7 +247,11 @@ export const getConnectedConnectors = internalQuery({
       )
       .collect();
 
-    return connectors;
+    // Only include connectors that are explicitly enabled or don't have
+    // the flag set (backward-compatible default: enabled)
+    const enabledConnectors = connectors.filter((c) => c.enabled !== false);
+
+    return enabledConnectors;
   },
 });
 
@@ -229,5 +270,31 @@ export const syncConnectionStatus = internalMutation({
     });
 
     return null;
+  },
+});
+
+/**
+ * Internal: List all connectors for a given user (including disabled)
+ */
+export const getAllUserConnectors = internalQuery({
+  args: { userId: v.id('users') },
+  returns: v.array(
+    v.object({
+      _id: v.id('connectors'),
+      _creationTime: v.number(),
+      userId: v.id('users'),
+      type: CONNECTOR_TYPES,
+      connectionId: v.string(),
+      isConnected: v.boolean(),
+      enabled: v.optional(v.boolean()),
+      displayName: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const connectors = await ctx.db
+      .query('connectors')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .collect();
+    return connectors;
   },
 });

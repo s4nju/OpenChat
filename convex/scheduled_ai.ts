@@ -15,6 +15,7 @@ import utc from 'dayjs/plugin/utc';
 import { searchTool } from '@/app/api/tools/search';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
+import type { ConnectorStatusLists } from '@/lib/connector-utils';
 import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
 import { buildSystemPrompt } from '@/lib/prompt_config';
@@ -116,10 +117,16 @@ export const executeTask = internalAction({
       // 3. This ensures only connected services are available as tools
       let composioTools = {};
       let toolkitSlugs: string[] = [];
+      let connectorsStatus: ConnectorStatusLists | undefined;
       try {
         // Get user's connected connectors (Gmail, Google Calendar, Notion, etc.)
         const connectedConnectors = await ctx.runQuery(
           internal.connectors.getConnectedConnectors,
+          { userId: task.userId }
+        );
+        // Also get all connectors (including disabled) for status reporting
+        const allUserConnectors = await ctx.runQuery(
+          internal.connectors.getAllUserConnectors,
           { userId: task.userId }
         );
 
@@ -128,9 +135,9 @@ export const executeTask = internalAction({
         if (connectedConnectors.length > 0) {
           // Convert connector types to Composio toolkit slugs
           // e.g., 'gmail' -> 'GMAIL', 'googlecalendar' -> 'GOOGLECALENDAR'
-          toolkitSlugs = connectedConnectors.map((connector) =>
-            connector.type.toUpperCase()
-          );
+          toolkitSlugs = connectedConnectors
+            .filter((connector) => connector.enabled !== false)
+            .map((connector) => connector.type.toUpperCase());
           // console.log('Derived toolkit slugs:', toolkitSlugs);
           composioTools = await getComposioTools(task.userId, toolkitSlugs);
 
@@ -144,6 +151,37 @@ export const executeTask = internalAction({
             // );
           }
         }
+
+        // Compute connectors status lists for prompt clarity
+        const enabledSlugs = toolkitSlugs;
+        const disabledSlugs = allUserConnectors
+          .filter((c) => c.isConnected && c.enabled === false)
+          .map((c) => c.type.toUpperCase());
+        const presentTypes = new Set(
+          allUserConnectors.filter((c) => c.isConnected).map((c) => c.type)
+        );
+        // Supported types (server-safe, without importing UI modules)
+        const SUPPORTED_TYPES = [
+          'gmail',
+          'googlecalendar',
+          'googledrive',
+          'notion',
+          'googledocs',
+          'googlesheets',
+          'slack',
+          'linear',
+          'github',
+          'twitter',
+        ] as const;
+        const notConnectedSlugs = SUPPORTED_TYPES.filter(
+          (t) => !presentTypes.has(t)
+        ).map((t) => t.toUpperCase());
+
+        connectorsStatus = {
+          enabled: enabledSlugs,
+          disabled: disabledSlugs,
+          notConnected: notConnectedSlugs,
+        };
       } catch (_error) {
         // console.error('Failed to load Composio tools:', error);
         // Continue without Composio tools
@@ -156,9 +194,9 @@ export const executeTask = internalAction({
         task.enableSearch,
         Object.keys(composioTools).length > 0,
         task.timezone,
-        toolkitSlugs, // Use derived toolkit slugs from connectors
         task.emailNotifications, // Enable email mode when notifications are enabled
-        true // Enable task mode for autonomous execution
+        true, // Enable task mode for autonomous execution
+        connectorsStatus
       );
 
       // Get GPT-5 Mini model

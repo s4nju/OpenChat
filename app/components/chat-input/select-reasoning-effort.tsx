@@ -105,7 +105,10 @@ export function SelectReasoningEffort({
           <p>Select Reasoning Effort</p>
         </TooltipContent>
       </Tooltip>
-      <DropdownMenuContent>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <DropdownMenuItem onClick={() => onSelectReasoningEffortAction('low')}>
           Low
         </DropdownMenuItem>

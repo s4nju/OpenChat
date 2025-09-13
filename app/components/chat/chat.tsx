@@ -61,7 +61,6 @@ const ChatBodySchema = z.object({
       timezone: z.string().optional(),
     })
     .optional(),
-  enabledToolSlugs: z.array(z.string()).optional(),
 });
 
 type ChatBody = z.infer<typeof ChatBodySchema>;
@@ -82,23 +81,13 @@ export default function Chat() {
     isLoading: isUserLoading,
     hasApiKey,
     isApiKeysLoading,
-    connectors,
   } = useUser();
 
   // Initialize utilities
   const getValidModel = useMemo(() => createModelValidator(), []);
   const _convex = useConvex();
 
-  // Get enabled tool slugs from connected integrations
-  const enabledToolSlugs = useMemo(() => {
-    if (!connectors || connectors.length === 0) {
-      return [];
-    }
-
-    return connectors
-      .filter((connector) => connector.isConnected && connector.type)
-      .map((connector) => connector.type.toUpperCase());
-  }, [connectors]);
+  // Connector status is calculated server-side for security
 
   // Custom hooks
   const {
@@ -298,7 +287,6 @@ export default function Chat() {
           : {}),
         ...(isReasoningModel ? { reasoningEffort } : {}),
         ...(timezone ? { userInfo: { timezone } } : {}),
-        ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
       };
 
       // Handle files if present
@@ -355,7 +343,6 @@ export default function Chat() {
       processFiles,
       sendMessage,
       setMessages,
-      enabledToolSlugs,
     ]
   );
 
@@ -565,7 +552,6 @@ export default function Chat() {
             : {}),
           ...(isReasoningModel ? { reasoningEffort } : {}),
           ...(timezone ? { userInfo: { timezone } } : {}),
-          ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
         },
       };
       regenerate(options);
@@ -580,7 +566,6 @@ export default function Chat() {
       handleDeleteMessage,
       setIsDeleting,
       regenerate,
-      enabledToolSlugs,
     ]
   );
 
@@ -752,7 +737,6 @@ export default function Chat() {
               ? { reasoningEffort: editOptions.reasoningEffort }
               : {}),
             ...(timezone ? { userInfo: { timezone } } : {}),
-            ...(enabledToolSlugs.length > 0 ? { enabledToolSlugs } : {}),
           },
         };
 
@@ -771,7 +755,6 @@ export default function Chat() {
       personaId,
       setMessages,
       regenerate,
-      enabledToolSlugs,
       uploadFile,
       saveFileAttachment,
       selectedModel,

@@ -23,6 +23,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 import type { Message } from '@/convex/schema/message';
 import { getComposioTools } from '@/lib/composio-server';
 import { MODELS_MAP } from '@/lib/config';
+import { calculateConnectorStatus } from '@/lib/connector-utils';
 import { limitDepth } from '@/lib/depth-limiter';
 import { ERROR_CODES } from '@/lib/error-codes';
 import {
@@ -212,7 +213,6 @@ type ChatRequest = {
   enableSearch?: boolean;
   reasoningEffort?: ReasoningEffort;
   userInfo?: { timezone?: string };
-  enabledToolSlugs?: string[];
 };
 
 /**
@@ -476,7 +476,6 @@ export async function POST(req: Request) {
       enableSearch,
       reasoningEffort,
       userInfo,
-      enabledToolSlugs,
     } = (await req.json()) as ChatRequest;
 
     if (!(messages && chatId)) {
@@ -508,7 +507,7 @@ export async function POST(req: Request) {
 
     // --- Optimized Parallel Database Queries ---
     // Run independent queries in parallel to reduce latency
-    const [userKeys, isUserPremiumForPremiumModels, composioTools] =
+    const [userKeys, isUserPremiumForPremiumModels, userConnectors] =
       await Promise.all([
         // Get user API keys if model allows user keys
         selectedModel.apiKeyUsage?.allowUserKey
@@ -520,31 +519,34 @@ export async function POST(req: Request) {
               () => false
             )
           : Promise.resolve(false),
-        // Get Composio tools for connected accounts (only if model supports tool calling)
-        (async () => {
-          try {
-            // Only fetch tools if the model supports tool calling
-            if (!supportsToolCalling(selectedModel)) {
-              return {};
-            }
-
-            if (!user) {
-              return {};
-            }
-
-            // Use frontend-provided tool slugs (frontend is source of truth)
-            if (enabledToolSlugs && enabledToolSlugs.length > 0) {
-              return await getComposioTools(user._id, enabledToolSlugs);
-            }
-
-            // No tools available
-            return {};
-          } catch {
-            // If Composio tools fail to load, continue without them
-            return {};
-          }
-        })(),
+        // Get user connectors from database (authoritative source)
+        user
+          ? fetchQuery(api.connectors.listUserConnectors, {}, { token }).catch(
+              () => []
+            )
+          : Promise.resolve([]),
       ]);
+
+    // Calculate connector status from database (server is authoritative)
+    const connectorsStatus = calculateConnectorStatus(userConnectors);
+
+    // Get Composio tools based on enabled connectors
+    let composioTools = {};
+    if (
+      supportsToolCalling(selectedModel) &&
+      user &&
+      connectorsStatus.enabled.length > 0
+    ) {
+      try {
+        composioTools = await getComposioTools(
+          user._id,
+          connectorsStatus.enabled
+        );
+      } catch {
+        // If Composio tools fail to load, continue without them
+        composioTools = {};
+      }
+    }
 
     // const userId = user?._id;
 
@@ -692,7 +694,9 @@ export async function POST(req: Request) {
       enableSearch,
       enableTools,
       userInfo?.timezone,
-      enabledToolSlugs
+      undefined,
+      undefined,
+      connectorsStatus
     );
     // console.log('DEBUG: finalSystemPrompt', finalSystemPrompt);
     // Check if this is an image generation model

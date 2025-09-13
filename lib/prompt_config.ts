@@ -13,6 +13,8 @@ import timezonePlugin from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import type { Doc } from '@/convex/_generated/dataModel';
 import { CONNECTOR_CONFIGS } from '@/lib/config/tools';
+// Import the authoritative type from connector-utils
+import type { ConnectorStatusLists } from '@/lib/connector-utils';
 import type { ConnectorType } from '@/lib/types';
 
 // Extend dayjs with plugins
@@ -76,51 +78,23 @@ export const PERSONAS = [
 export const PERSONAS_MAP: Record<string, (typeof PERSONAS)[0]> =
   Object.fromEntries(PERSONAS.map((persona) => [persona.id, persona]));
 
-/**
- * Map toolkit slugs to display names using CONNECTOR_CONFIGS
- */
+const ALL_INTEGRATIONS = Object.values(CONNECTOR_CONFIGS)
+  .sort((a, b) => a.displayName.localeCompare(b.displayName))
+  .map((c) => `- ${c.displayName}: ${c.description}`)
+  .join('\n');
+
+const generateAllPossibleIntegrations = (): string => ALL_INTEGRATIONS;
+
+const isConnectorType = (s: string): s is ConnectorType =>
+  s in CONNECTOR_CONFIGS;
+
 const mapToolkitSlugToDisplayName = (slug: string): string => {
-  // Convert slug to lowercase and map to connector type
-  const slugLower = slug.toLowerCase();
-  let connectorType: ConnectorType;
-
-  switch (slugLower) {
-    case 'gmail':
-      connectorType = 'gmail';
-      break;
-    case 'googlecalendar':
-      connectorType = 'googlecalendar';
-      break;
-    case 'googledrive':
-      connectorType = 'googledrive';
-      break;
-    case 'googledocs':
-      connectorType = 'googledocs';
-      break;
-    case 'googlesheets':
-      connectorType = 'googlesheets';
-      break;
-    case 'notion':
-      connectorType = 'notion';
-      break;
-    case 'slack':
-      connectorType = 'slack';
-      break;
-    case 'linear':
-      connectorType = 'linear';
-      break;
-    case 'github':
-      connectorType = 'github';
-      break;
-    case 'twitter':
-      connectorType = 'twitter';
-      break;
-    default:
-      return slug; // fallback to original slug if not found
+  const key = slug.toLowerCase();
+  if (isConnectorType(key)) {
+    const cfg = CONNECTOR_CONFIGS[key];
+    return `${cfg.displayName}: ${cfg.description}`;
   }
-
-  const config = CONNECTOR_CONFIGS[connectorType];
-  return config ? `${config.displayName}: ${config.description}` : slug;
+  return slug;
 };
 
 /**
@@ -154,10 +128,14 @@ const formatDateInTimezone = (
 };
 
 export const getSystemPromptDefault = (
-  enabledToolSlugs?: string[],
-  timezone?: string
-) =>
-  `
+  timezone?: string,
+  connectorsStatus?: ConnectorStatusLists
+) => {
+  const { date, time } = formatDateInTimezone(timezone);
+  const enabled = connectorsStatus?.enabled ?? [];
+  const disabled = connectorsStatus?.disabled ?? [];
+  const notConnected = connectorsStatus?.notConnected ?? [];
+  return `
 <identity>
 You are OS Chat, a thoughtful and clear agentic assistant.
 </identity>
@@ -173,44 +151,54 @@ You're here to help the user think clearly and move forward, not to overwhelm or
 </purpose>
 
 <context>
-The current date is ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
+The current date is ${date} (MM/DD/YYYY) at ${time}.
 Use this date and time to answer questions about current events, deadlines, or anything time-sensitive.
 Do not use outdated information or make assumptions about the current date and time.
 </context>
 
 <tools>
-You have access to a list of tools / integrations, not all of which may be enabled or provided in the moment.
-To work with a tool/integration, but it's not available, you can ask the user to connect the integration first in settings.
+You have access to tools/integrations; some may be unavailable.
+If a needed integration isn't available, ask the user to connect or enable it in Settings.
 
 All possible integrations are:
-- Gmail: for reading, sending, managing emails and drafts
-- Google Calendar: for creating, managing, and finding events (including video meetings via conference_data)
-- Google Sheets: for reading, writing, and managing spreadsheet data
-- Google Docs: for creating and editing documents
-- Google Drive: for creating, sharing files and managing folders
-- Notion: for creating and managing pages, databases, etc.
-- Linear: for managing issues, projects, teams, etc.
-- Slack: for sending messages, managing channels, etc.
-- GitHub: for managing repositories, issues, pull requests, etc.
-- Twitter: for posting tweets, managing accounts, etc.
+${generateAllPossibleIntegrations()}
 
 Currently enabled integrations for this user:
 ${
-  enabledToolSlugs && enabledToolSlugs.length > 0
-    ? enabledToolSlugs
-        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
-        .join('\n')
-    : '- None connected yet. User needs to connect integrations in settings to use them.'
+  enabled.length > 0
+    ? enabled.map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`).join('\n')
+    : '- None enabled.'
 }
 
-If the user asks about using an integration that is not in the "Currently enabled" list above, direct them to connect it first in settings.
+${
+  disabled.length > 0
+    ? `Connected but disabled:\n${disabled
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+${
+  notConnected.length > 0
+    ? `Not connected:\n${notConnected
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+If the user asks about an integration that is not in "Currently enabled", direct them to connect or enable it in settings.
 </tools>`.trim();
+};
 
 export const getTaskPromptDefault = (
-  enabledToolSlugs?: string[],
-  timezone?: string
-) =>
-  `
+  timezone?: string,
+  connectorsStatus?: ConnectorStatusLists
+) => {
+  const { date, time } = formatDateInTimezone(timezone);
+  const enabled = connectorsStatus?.enabled ?? [];
+  const disabled = connectorsStatus?.disabled ?? [];
+  const notConnected = connectorsStatus?.notConnected ?? [];
+  return `
 <identity>
 You are OS Chat, an autonomous AI assistant executing a scheduled task. You complete assigned tasks fully and independently.
 </identity>
@@ -224,23 +212,42 @@ Your primary objective is to execute the assigned task thoroughly. Apply domain 
 </task_completion>
 
 <context>
-Current execution time: ${formatDateInTimezone(timezone).date} (MM/DD/YYYY) at ${formatDateInTimezone(timezone).time}.
+Current execution time: ${date} (MM/DD/YYYY) at ${time}.
 Use this timestamp for time-sensitive operations, and context-aware task execution.
 </context>
 
 <available_integrations>
-You have autonomous access to the following connected integrations:
+You have autonomous access to the following integrations:
 
+All possible integrations are:
+${generateAllPossibleIntegrations()}
+
+Currently enabled integrations:
 ${
-  enabledToolSlugs && enabledToolSlugs.length > 0
-    ? enabledToolSlugs
-        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
-        .join('\n')
-    : '- No integrations currently connected.'
+  enabled.length > 0
+    ? enabled.map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`).join('\n')
+    : '- None enabled.'
 }
 
-If your task requires an integration that is not listed above, inform the user that they need to connect the required integration in settings before this task can be completed successfully.
+${
+  disabled.length > 0
+    ? `Connected but disabled:\n${disabled
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+${
+  notConnected.length > 0
+    ? `Not connected:\n${notConnected
+        .map((slug) => `- ${mapToolkitSlugToDisplayName(slug)}`)
+        .join('\n')}`
+    : ''
+}
+
+If your task requires an integration that is not in the "Currently enabled" list above, inform the user that they need to connect or enable the required integration in settings before this task can be completed successfully.
 </available_integrations>`.trim();
+};
 
 export const FORMATTING_RULES = String.raw`
 <Formatting Rules>
@@ -370,7 +377,7 @@ Actions are configured through Config.NOTION_ACTIONS.
 </content_management>
 </notion_information>
 
-</gmail_information>
+<gmail_information>
 - Use proper dates when getting content from Gmail.
 </gmail_information>
 
@@ -413,16 +420,16 @@ export function buildSystemPrompt(
   enableSearch?: boolean,
   enableTools?: boolean,
   timezone?: string,
-  enabledToolSlugs?: string[],
   emailMode?: boolean,
-  taskMode?: boolean
+  taskMode?: boolean,
+  connectorsStatus?: ConnectorStatusLists
 ) {
   // Choose the appropriate base prompt based on mode
   let prompt =
     basePrompt ??
     (taskMode
-      ? getTaskPromptDefault(enabledToolSlugs, timezone)
-      : getSystemPromptDefault(enabledToolSlugs, timezone));
+      ? getTaskPromptDefault(timezone, connectorsStatus)
+      : getSystemPromptDefault(timezone, connectorsStatus));
 
   prompt += `\n\n${FORMATTING_RULES}`;
 
